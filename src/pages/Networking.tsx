@@ -183,23 +183,63 @@ const Networking = () => {
 
           {/* Profiles Tab */}
           <TabsContent value="profiles" className="space-y-6">
-            {/* Search Section */}
+            {/* Search & Filter Section */}
             <Card className="card-medical">
               <CardContent className="pt-6">
                 <div className="grid md:grid-cols-4 gap-4 mb-4">
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input placeholder="Search name/headline" className="pl-10" />
+                    <Input 
+                      placeholder="Search name/headline" 
+                      className="pl-10"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                    />
                   </div>
-                  <Input placeholder="Location" />
-                  <Input placeholder="Qualification" />
-                  <Input placeholder="Skill" />
+                  <Select>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Location" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="mumbai">Mumbai</SelectItem>
+                      <SelectItem value="bengaluru">Bengaluru</SelectItem>
+                      <SelectItem value="pune">Pune</SelectItem>
+                      <SelectItem value="delhi">Delhi</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Select>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Specialization" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="cardiology">Cardiology</SelectItem>
+                      <SelectItem value="pediatrics">Pediatrics</SelectItem>
+                      <SelectItem value="data-analyst">Data Analyst</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Select>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Skills" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="cardiology">Cardiology</SelectItem>
+                      <SelectItem value="sql">SQL</SelectItem>
+                      <SelectItem value="python">Python</SelectItem>
+                      <SelectItem value="pediatrics">Pediatrics</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="flex justify-between items-center">
                   <h3 className="text-lg font-semibold">My Professional Profile</h3>
-                  <Button className="btn-medical">
-                    Create / Edit
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm">
+                      <Filter className="h-4 w-4 mr-2" />
+                      Apply Filters
+                    </Button>
+                    <Button className="btn-medical">
+                      Create / Edit
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -298,15 +338,51 @@ const Networking = () => {
 
           {/* Jobs Tab */}
           <TabsContent value="jobs" className="space-y-6">
-            {/* Job Search */}
+            {/* Job Search & Filter */}
             <Card className="card-medical">
               <CardContent className="pt-6">
                 <div className="grid md:grid-cols-5 gap-4 mb-4">
-                  <Input placeholder="Search title" />
-                  <Input placeholder="Location" />
-                  <Input placeholder="Qualification" />
-                  <Input placeholder="Min exp" />
-                  <Input placeholder="Max exp" />
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input placeholder="Search job title" className="pl-10" />
+                  </div>
+                  <Select>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Location" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="remote">Remote</SelectItem>
+                      <SelectItem value="mumbai">Mumbai</SelectItem>
+                      <SelectItem value="pune">Pune</SelectItem>
+                      <SelectItem value="bengaluru">Bengaluru</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Select>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Experience" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="0-1">0-1 years</SelectItem>
+                      <SelectItem value="1-3">1-3 years</SelectItem>
+                      <SelectItem value="3-5">3-5 years</SelectItem>
+                      <SelectItem value="5+">5+ years</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Select>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Salary Range" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="0-5">₹0-5L</SelectItem>
+                      <SelectItem value="5-10">₹5-10L</SelectItem>
+                      <SelectItem value="10-15">₹10-15L</SelectItem>
+                      <SelectItem value="15+">₹15L+</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button className="btn-medical">
+                    <Filter className="h-4 w-4 mr-2" />
+                    Filter Jobs
+                  </Button>
                 </div>
                 <div className="grid md:grid-cols-3 gap-4 mb-4">
                   <Select>
@@ -317,6 +393,7 @@ const Networking = () => {
                       <SelectItem value="hospital">Hospital</SelectItem>
                       <SelectItem value="clinic">Clinic</SelectItem>
                       <SelectItem value="startup">Startup</SelectItem>
+                      <SelectItem value="pharma">Pharmaceutical</SelectItem>
                     </SelectContent>
                   </Select>
                   <Select>
@@ -327,9 +404,20 @@ const Networking = () => {
                       <SelectItem value="full-time">Full-time</SelectItem>
                       <SelectItem value="part-time">Part-time</SelectItem>
                       <SelectItem value="contract">Contract</SelectItem>
+                      <SelectItem value="remote">Remote</SelectItem>
                     </SelectContent>
                   </Select>
-                  <Input placeholder="Skill" />
+                  <Select>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Skills" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="sql">SQL</SelectItem>
+                      <SelectItem value="python">Python</SelectItem>
+                      <SelectItem value="pediatrics">Pediatrics</SelectItem>
+                      <SelectItem value="cardiology">Cardiology</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="flex items-center gap-4">
                   <label className="flex items-center gap-2">
@@ -455,15 +543,15 @@ const Networking = () => {
                   company.tier === 'premium' ? 'border-premium/30' : ''
                 }`}>
                   <CardContent className="p-6">
-                    <div className="flex justify-between items-start">
+                    <div className="flex flex-col lg:flex-row lg:items-start gap-4">
                       <div className="flex gap-4 flex-1">
-                        <div className="w-16 h-16 bg-gradient-primary rounded-lg flex items-center justify-center">
+                        <div className="w-16 h-16 bg-gradient-primary rounded-lg flex items-center justify-center flex-shrink-0">
                           <Building className="h-8 w-8 text-white" />
                         </div>
                         
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
-                            <h3 className="text-xl font-semibold">{company.name}</h3>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-wrap items-center gap-2 mb-3">
+                            <h3 className="text-xl font-semibold pr-2">{company.name}</h3>
                             <Badge variant="outline" className="text-xs">{company.type}</Badge>
                             <Badge variant="secondary" className="text-xs">{company.location}</Badge>
                             {company.tier === 'deluxe' && (
@@ -474,26 +562,28 @@ const Networking = () => {
                             )}
                           </div>
                           
-                          <p className="text-muted-foreground mb-3">{company.description}</p>
+                          <p className="text-muted-foreground mb-3 text-sm leading-relaxed">{company.description}</p>
                           
-                          {company.isLookingForInvestment && (
-                            <Badge variant="secondary" className="mb-3">
-                              Mark "Looking for Investment"
+                          <div className="flex flex-wrap gap-2 mb-2">
+                            {company.isLookingForInvestment && (
+                              <Badge variant="secondary" className="text-xs">
+                                Looking for Investment
+                              </Badge>
+                            )}
+                            <Badge variant="outline" className="text-xs">
+                              {company.employees} employees
                             </Badge>
-                          )}
-                          
-                          <div className="text-sm text-muted-foreground">
-                            {company.employees} employees
                           </div>
                         </div>
                       </div>
                       
-                      <div className="flex flex-col gap-2">
-                        <Button variant="outline" size="sm">Notify me</Button>
+                      <div className="flex flex-row lg:flex-col gap-2 flex-shrink-0">
+                        <Button variant="outline" size="sm" className="text-xs px-3">Follow</Button>
                         <Button className="btn-medical" size="sm">
-                          Advertise (Tier)
+                          <TrendingUp className="h-3 w-3 mr-1" />
+                          Advertise
                         </Button>
-                        <Button variant="ghost" size="sm">Add Contact</Button>
+                        <Button variant="ghost" size="sm" className="text-xs px-3">Contact</Button>
                       </div>
                     </div>
                   </CardContent>

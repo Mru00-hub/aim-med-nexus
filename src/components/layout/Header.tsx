@@ -84,11 +84,20 @@ export const Header = () => {
     <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container-medical">
         <div className="flex h-16 items-center justify-between">
-          {/* Logo */}
+          {/* Logo with Healthcare Element */}
           <Link to="/" className="flex items-center space-x-3 hover:opacity-80 transition-opacity">
-            <div className="w-10 h-10 bg-gradient-primary rounded-lg flex items-center justify-center shadow-medical">
-              <div className="w-6 h-6 bg-primary-foreground rounded-sm flex items-center justify-center">
-                <div className="w-3 h-3 bg-primary rounded-full"></div>
+            <div className="w-10 h-10 bg-gradient-primary rounded-lg flex items-center justify-center shadow-medical relative">
+              {/* Healthcare Cross Symbol */}
+              <div className="w-6 h-6 relative">
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-4 h-1 bg-primary-foreground rounded-sm"></div>
+                </div>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-1 h-4 bg-primary-foreground rounded-sm"></div>
+                </div>
+                {/* Network dots */}
+                <div className="absolute top-0 right-0 w-1.5 h-1.5 bg-accent rounded-full"></div>
+                <div className="absolute bottom-0 left-0 w-1.5 h-1.5 bg-success rounded-full"></div>
               </div>
             </div>
             <div className="flex flex-col">

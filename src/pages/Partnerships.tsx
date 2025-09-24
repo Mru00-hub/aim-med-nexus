@@ -11,7 +11,8 @@ import {
   Handshake, 
   Globe, 
   Send,
-  CheckCircle
+  CheckCircle,
+  Users
 } from 'lucide-react';
 import {
   Select,
@@ -97,7 +98,7 @@ const Partnerships = () => {
         </div>
 
         {/* Partnership Types */}
-        <div className="grid md:grid-cols-3 gap-8 mb-16 animate-slide-up">
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16 animate-slide-up">
           {[
             {
               icon: Building2,
@@ -116,6 +117,12 @@ const Partnerships = () => {
               title: 'Healthcare Technology',
               description: 'Technology companies serving healthcare professionals with innovative solutions.',
               benefits: ['Verified professional access', 'Product feedback loops', 'Innovation showcasing']
+            },
+            {
+              icon: Users,
+              title: 'Medical Associations & Clubs',
+              description: 'Medical associations, clubs, and societies for conferences, CME programs, event management, and elections.',
+              benefits: ['Conference management', 'CME registration system', 'Online/offline events', 'Elections management']
             }
           ].map((partnership, index) => (
             <Card key={index} className="card-medical h-full">
@@ -167,6 +174,7 @@ const Partnerships = () => {
                       <SelectContent>
                         <SelectItem value="hospital">Hospital/Healthcare System</SelectItem>
                         <SelectItem value="medical-school">Medical School/College</SelectItem>
+                        <SelectItem value="medical-association">Medical Association/Club</SelectItem>
                         <SelectItem value="technology">Healthcare Technology</SelectItem>
                         <SelectItem value="pharmaceutical">Pharmaceutical Company</SelectItem>
                         <SelectItem value="research">Research Institution</SelectItem>
@@ -186,6 +194,10 @@ const Partnerships = () => {
                         <SelectItem value="platform-integration">Platform Integration</SelectItem>
                         <SelectItem value="content-partnership">Content Partnership</SelectItem>
                         <SelectItem value="education">Educational Collaboration</SelectItem>
+                        <SelectItem value="conference-management">Conference Management</SelectItem>
+                        <SelectItem value="cme-registration">CME Registration System</SelectItem>
+                        <SelectItem value="event-management">Online/Offline Event Management</SelectItem>
+                        <SelectItem value="elections-management">Elections Management</SelectItem>
                         <SelectItem value="recruitment">Talent Recruitment</SelectItem>
                         <SelectItem value="technology">Technology Partnership</SelectItem>
                         <SelectItem value="sponsorship">Sponsorship</SelectItem>

@@ -11,6 +11,8 @@ import Feedback from "./pages/Feedback";
 import Social from "./pages/Social";
 import Inbox from "./pages/Inbox";
 import Notifications from "./pages/Notifications";
+import Register from "./pages/Register";
+import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -30,6 +32,8 @@ const App = () => (
           <Route path="/social" element={<Social />} />
           <Route path="/inbox" element={<Inbox />} />
           <Route path="/notifications" element={<Notifications />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/login" element={<Login />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

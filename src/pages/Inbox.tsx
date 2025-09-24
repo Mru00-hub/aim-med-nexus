@@ -149,11 +149,11 @@ const Inbox = () => {
         </div>
 
         {/* Messages Interface */}
-        <div className="grid lg:grid-cols-4 gap-6 h-[700px] animate-slide-up">
+        <div className="flex flex-col lg:grid lg:grid-cols-4 gap-6 min-h-[700px] animate-slide-up">
           {/* Conversations List */}
-          <Card className="card-medical lg:col-span-1">
-            <CardHeader className="pb-4">
-              <div className="flex items-center justify-between">
+          <Card className="card-medical lg:col-span-1 flex flex-col max-h-[700px]">
+            <CardHeader className="pb-4 flex-shrink-0">
+              <div className="flex items-center justify-between mb-4">
                 <CardTitle className="text-lg">Messages</CardTitle>
                 <Badge variant="secondary">{conversations.filter(c => c.unreadCount > 0).length} unread</Badge>
               </div>
@@ -171,39 +171,39 @@ const Inbox = () => {
                   <div
                     key={conversation.id}
                     onClick={() => setSelectedConversation(conversation.id)}
-                    className={`p-4 cursor-pointer hover:bg-muted/50 transition-colors border-l-2 ${
+                    className={`p-3 cursor-pointer hover:bg-muted/50 transition-colors border-l-2 ${
                       selectedConversation === conversation.id 
                         ? 'bg-primary/5 border-l-primary' 
                         : 'border-l-transparent'
                     }`}
                   >
-                    <div className="flex items-start gap-3">
-                      <div className="relative">
-                        <div className="w-12 h-12 bg-gradient-primary rounded-full flex items-center justify-center">
-                          <span className="text-white font-semibold text-sm">
+                    <div className="flex items-start gap-2">
+                      <div className="relative flex-shrink-0">
+                        <div className="w-10 h-10 bg-gradient-primary rounded-full flex items-center justify-center">
+                          <span className="text-white font-semibold text-xs">
                             {conversation.name.split(' ').map(n => n[0]).join('')}
                           </span>
                         </div>
                         {conversation.isOnline && (
-                          <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-success rounded-full border-2 border-card"></div>
+                          <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-success rounded-full border-2 border-card"></div>
                         )}
                       </div>
                       
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between mb-1">
-                          <h4 className="font-medium truncate">{conversation.name}</h4>
-                          <span className="text-xs text-muted-foreground">{conversation.timestamp}</span>
+                        <div className="flex items-start justify-between mb-1">
+                          <h4 className="font-medium text-sm truncate pr-2">{conversation.name}</h4>
+                          <span className="text-xs text-muted-foreground flex-shrink-0">{conversation.timestamp}</span>
                         </div>
                         
-                        <p className="text-xs text-muted-foreground mb-1">{conversation.title}</p>
+                        <p className="text-xs text-muted-foreground mb-1 truncate">{conversation.title}</p>
                         
                         <div className="flex items-center justify-between">
-                          <p className="text-sm text-muted-foreground truncate flex-1">
+                          <p className="text-xs text-muted-foreground truncate pr-2 flex-1">
                             {conversation.lastMessage}
                           </p>
                           
                           {conversation.unreadCount > 0 && (
-                            <Badge variant="destructive" className="ml-2 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs">
+                            <Badge variant="destructive" className="h-4 w-4 rounded-full p-0 flex items-center justify-center text-xs flex-shrink-0">
                               {conversation.unreadCount}
                             </Badge>
                           )}
