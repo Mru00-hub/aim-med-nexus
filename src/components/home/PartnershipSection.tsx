@@ -13,20 +13,20 @@ export const PartnershipSection = () => {
     {
       icon: Building2,
       title: 'Healthcare Organizations',
-      description: 'Partner with hospitals, clinics, and healthcare systems to provide networking opportunities for their staff and enhance professional development.',
-      benefits: ['Staff networking platform', 'Continued education support', 'Talent acquisition access']
+      description: 'AIMedNet provides a connecting platform for hospitals, clinics, and healthcare systems to offer their services to verified healthcare professionals. Premium members receive special discounts.',
+      benefits: ['Direct access to verified professionals', 'Premium member discounts', 'Enhanced service visibility']
     },
     {
       icon: Handshake,
-      title: 'Medical Education Partners',
-      description: 'Collaborate with medical schools, nursing colleges, and training institutions to bridge the gap between education and professional practice.',
-      benefits: ['Student-professional mentorship', 'Career placement support', 'Educational content partnership']
+      title: 'Medical Education & Associations',
+      description: 'Medical colleges, associations, and clubs can connect with our community to offer conferences, CME programs, elections, and event management services through our platform.',
+      benefits: ['Conference & CME registration platform', 'Elections management system', 'Event organization support']
     },
     {
       icon: Globe,
-      title: 'Healthcare Technology',
-      description: 'Technology companies serving healthcare can reach verified medical professionals and showcase innovations that improve patient care.',
-      benefits: ['Verified professional access', 'Product feedback loops', 'Innovation showcasing']
+      title: 'Healthcare Technology & Services',
+      description: 'Healthcare technology companies and service providers can showcase their solutions to our verified professional community with special benefits for premium members.',
+      benefits: ['Verified professional reach', 'Premium member advantages', 'Product showcase opportunities']
     }
   ];
 
@@ -40,9 +40,9 @@ export const PartnershipSection = () => {
             <span className="text-primary block">Opportunities</span>
           </h2>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-            Join us in building the future of healthcare professional networking. 
-            Partner with AIMedNet to reach verified healthcare professionals and 
-            contribute to better patient outcomes through collaboration.
+            AIMedNet serves as your connecting platform to reach verified healthcare professionals 
+            and hospitals. Offer your services through our network and provide exclusive benefits 
+            to our premium members.
           </p>
         </div>
 
@@ -84,8 +84,8 @@ export const PartnershipSection = () => {
                 Ready to Partner with AIMedNet?
               </CardTitle>
               <CardDescription className="text-lg">
-                Let's discuss how we can work together to advance healthcare 
-                professional networking and improve patient care outcomes.
+                Partner with AIMedNet to connect with verified healthcare professionals 
+                and offer your services through our platform with special premium member benefits.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -119,7 +119,7 @@ export const PartnershipSection = () => {
               </div>
               
               <p className="text-sm text-muted-foreground">
-                📧 For partnership inquiries: <a href="mailto:partnerships@aimednet.com" className="text-primary hover:underline">partnerships@aimednet.com</a>
+                📧 For partnership inquiries: <a href="mailto:mrudulabhalke75917@gmail.com" className="text-primary hover:underline">mrudulabhalke75917@gmail.com</a>
               </p>
             </CardContent>
           </Card>

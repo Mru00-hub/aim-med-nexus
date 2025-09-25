@@ -26,23 +26,12 @@ export const HeroSection = () => {
           {/* Hero Content */}
           <div className="space-y-8 animate-fade-in">
             <div className="space-y-4">
-              <h1 className="text-4xl md:text-6xl font-bold text-foreground leading-tight">
+              <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold text-foreground leading-tight">
                 Where Healthcare Professionals 
                 <span className="text-primary block">Connect, Collaborate,</span>
                 <span className="text-accent">and Grow</span>
               </h1>
-              
-              <p className="text-xl md:text-2xl text-muted-foreground leading-relaxed">
-                Your Complete Professional Ecosystem in One Platform
-              </p>
             </div>
-
-            {/* Sub-description */}
-            <p className="text-lg text-muted-foreground max-w-2xl">
-              Join the trusted, verified community built exclusively for healthcare professionals. 
-              Connect with peers, advance your career, and contribute to better patient outcomes 
-              through collaborative learning and professional networking.
-            </p>
 
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row gap-4">
@@ -59,6 +48,7 @@ export const HeroSection = () => {
                 variant="outline" 
                 size="lg"
                 className="text-lg px-8 py-6 border-primary text-primary hover:bg-primary/5"
+                onClick={() => window.location.href = '/forums'}
               >
                 Explore Platform
               </Button>

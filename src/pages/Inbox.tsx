@@ -243,20 +243,14 @@ const Inbox = () => {
                       </div>
                     </div>
                     
-                    <div className="flex items-center gap-2">
-                      <Button variant="ghost" size="sm">
-                        <Phone className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="sm">
-                        <Video className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="sm">
-                        <Star className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="sm">
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </div>
+                     <div className="flex items-center gap-2">
+                       <Button variant="ghost" size="sm">
+                         <Star className="h-4 w-4" />
+                       </Button>
+                       <Button variant="ghost" size="sm">
+                         <MoreVertical className="h-4 w-4" />
+                       </Button>
+                     </div>
                   </div>
                 </CardHeader>
 
@@ -295,10 +289,7 @@ const Inbox = () => {
                         placeholder="Type your message..."
                         className="min-h-[40px] max-h-32 resize-none"
                         onKeyDown={(e) => {
-                          if (e.key === 'Enter' && !e.shiftKey) {
-                            e.preventDefault();
-                            handleSendMessage(e);
-                          }
+                          // Allow Enter for new line, only send with button click
                         }}
                       />
                     </div>
@@ -317,7 +308,7 @@ const Inbox = () => {
                   </form>
                   
                   <p className="text-xs text-muted-foreground mt-2">
-                    Press Enter to send, Shift+Enter for new line
+                    Press Enter for new line, use Send button to send message
                   </p>
                 </div>
               </>
