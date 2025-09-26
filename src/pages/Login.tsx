@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -20,6 +21,9 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
  * Email and password authentication with Google OAuth option
  */
 const Login = () => {
+  const { signIn, signInWithGoogle } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -54,10 +58,9 @@ const Login = () => {
     }
   };
 
-  const handleGoogleLogin = () => {
-    // In real app, this would redirect to Google OAuth
-    console.log('Google OAuth login');
-    alert('Google OAuth login (This is a demo)');
+  const handleGoogleLogin = async () => {
+    const { signInWithGoogle } = useAuth();
+    await signInWithGoogle();
   };
 
   return (

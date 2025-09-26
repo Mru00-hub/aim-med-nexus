@@ -3,6 +3,8 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { AuthProvider } from "@/hooks/useAuth";
+import AuthGuard from "@/components/AuthGuard";
 import Index from "./pages/Index";
 import Forums from "./pages/Forums";
 import Networking from "./pages/Networking";
@@ -20,24 +22,26 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/forums" element={<Forums />} />
-          <Route path="/networking" element={<Networking />} />
-          <Route path="/partnerships" element={<Partnerships />} />
-          <Route path="/feedback" element={<Feedback />} />
-          <Route path="/social" element={<Social />} />
-          <Route path="/inbox" element={<Inbox />} />
-          <Route path="/notifications" element={<Notifications />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/login" element={<Login />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
+      <AuthProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/forums" element={<AuthGuard><Forums /></AuthGuard>} />
+            <Route path="/networking" element={<AuthGuard><Networking /></AuthGuard>} />
+            <Route path="/partnerships" element={<AuthGuard><Partnerships /></AuthGuard>} />
+            <Route path="/feedback" element={<AuthGuard><Feedback /></AuthGuard>} />
+            <Route path="/social" element={<AuthGuard><Social /></AuthGuard>} />
+            <Route path="/inbox" element={<AuthGuard><Inbox /></AuthGuard>} />
+            <Route path="/notifications" element={<AuthGuard><Notifications /></AuthGuard>} />
+            <Route path="/register" element={<AuthGuard requireAuth={false}><Register /></AuthGuard>} />
+            <Route path="/login" element={<AuthGuard requireAuth={false}><Login /></AuthGuard>} />
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );
