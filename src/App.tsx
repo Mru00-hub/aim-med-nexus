@@ -15,6 +15,7 @@ import Inbox from "./pages/Inbox";
 import Notifications from "./pages/Notifications";
 import Register from "./pages/Register";
 import Login from "./pages/Login";
+import PaymentPage from "./pages/PaymentPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -37,6 +38,7 @@ const App = () => (
             <Route path="/notifications" element={<AuthGuard><Notifications /></AuthGuard>} />
             <Route path="/register" element={<AuthGuard requireAuth={false}><Register /></AuthGuard>} />
             <Route path="/login" element={<AuthGuard requireAuth={false}><Login /></AuthGuard>} />
+            <Route path="/payment" element={<AuthGuard><PaymentPage /></AuthGuard>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

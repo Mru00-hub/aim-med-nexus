@@ -1,4 +1,7 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
+import { Shield } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { Header } from '@/components/layout/Header';
 import { HeroSection } from '@/components/home/HeroSection';
 import { FeatureCards } from '@/components/home/FeatureCards';

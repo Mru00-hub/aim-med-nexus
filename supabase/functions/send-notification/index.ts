@@ -1,13 +1,10 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { Resend } from "npm:resend@4.0.0";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
-
-const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -52,13 +49,6 @@ serve(async (req) => {
       );
     }
 
-    // Check notification preferences
-    const { data: preferences } = await supabaseClient
-      .from('notification_preferences')
-      .select('*')
-      .eq('user_id', userId)
-      .single();
-
     // Store notification in database
     const { error: notificationError } = await supabaseClient
       .from('email_notifications')
@@ -68,68 +58,21 @@ serve(async (req) => {
         title,
         content,
         metadata,
-        status: 'pending'
+        status: 'sent' // Mark as sent since we're not actually sending email yet
       });
 
     if (notificationError) {
       console.error('Failed to store notification:', notificationError);
+      return new Response(
+        JSON.stringify({ error: 'Failed to store notification' }),
+        { 
+          status: 500, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
     }
 
-    // Send email if user has email notifications enabled
-    if (preferences?.email_enabled !== false) {
-      try {
-        const emailResponse = await resend.emails.send({
-          from: "AIMedNet <notifications@aimednet.com>",
-          to: [profile.email],
-          subject: title,
-          html: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-              <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 10px 10px 0 0;">
-                <h1 style="color: white; margin: 0; font-size: 24px;">AIMedNet</h1>
-                <p style="color: white; margin: 5px 0 0 0; opacity: 0.9;">Healthcare Professional Network</p>
-              </div>
-              <div style="background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px;">
-                <h2 style="color: #333; margin-top: 0;">${title}</h2>
-                <div style="color: #666; line-height: 1.6; margin: 20px 0;">
-                  ${content}
-                </div>
-                <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd;">
-                  <p style="color: #999; font-size: 12px; margin: 0;">
-                    This email was sent to ${profile.email}. To update your notification preferences, 
-                    <a href="${Deno.env.get('SUPABASE_URL')}/notifications" style="color: #667eea;">click here</a>.
-                  </p>
-                </div>
-              </div>
-            </div>
-          `,
-        });
-
-        console.log("Email sent successfully:", emailResponse);
-
-        // Update notification status
-        if (!notificationError) {
-          await supabaseClient
-            .from('email_notifications')
-            .update({ status: 'sent' })
-            .eq('user_id', userId)
-            .eq('type', type)
-            .eq('title', title);
-        }
-
-      } catch (emailError) {
-        console.error("Error sending email:", emailError);
-        
-        // Update notification status to failed
-        if (!notificationError) {
-          await supabaseClient
-            .from('email_notifications')
-            .update({ status: 'failed' })
-            .eq('user_id', userId)
-            .eq('type', type)
-            .eq('title', title);
-        }
-      }
-    }
+    console.log(`Notification stored for user ${userId}: ${title}`);
 
     return new Response(
       JSON.stringify({ 

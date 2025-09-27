@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
 import { 
   Heart, 
   Bell, 
@@ -18,6 +19,7 @@ import { Badge } from '@/components/ui/badge';
  * Real-time counters and notification badges for professional healthcare networking
  */
 export const Header = () => {
+  const { user, signOut } = useAuth();
   // State for loving it counter - starts at 0 as requested
   const [lovingItCount, setLovingItCount] = useState(0);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -107,32 +109,15 @@ export const Header = () => {
           </Link>
 
           {/* Desktop Navigation Icons */}
-          <div className="hidden md:flex items-center space-x-4 lg:space-x-6">
-            {headerIcons.map((item, index) => (
-              <div key={index} className="relative">
-                {item.onClick ? (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={item.onClick}
-                    className={`relative p-3 hover:bg-muted/50 transition-colors ${item.color}`}
-                    title={item.label}
-                  >
-                    <item.icon className="h-5 w-5" />
-                    {item.showBadge && item.badge > 0 && (
-                      <Badge 
-                        variant="destructive" 
-                        className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs"
-                      >
-                        {item.badge > 99 ? '99+' : item.badge}
-                      </Badge>
-                    )}
-                  </Button>
-                ) : (
-                  <Link to={item.href || '#'}>
+          {user ? (
+            <div className="hidden md:flex items-center space-x-4 lg:space-x-6">
+              {headerIcons.map((item, index) => (
+                <div key={index} className="relative">
+                  {item.onClick ? (
                     <Button
                       variant="ghost"
                       size="sm"
+                      onClick={item.onClick}
                       className={`relative p-3 hover:bg-muted/50 transition-colors ${item.color}`}
                       title={item.label}
                     >
@@ -146,11 +131,53 @@ export const Header = () => {
                         </Badge>
                       )}
                     </Button>
-                  </Link>
-                )}
-              </div>
-            ))}
-          </div>
+                  ) : (
+                    <Link to={item.href || '#'}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={`relative p-3 hover:bg-muted/50 transition-colors ${item.color}`}
+                        title={item.label}
+                      >
+                        <item.icon className="h-5 w-5" />
+                        {item.showBadge && item.badge > 0 && (
+                          <Badge 
+                            variant="destructive" 
+                            className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs"
+                          >
+                            {item.badge > 99 ? '99+' : item.badge}
+                          </Badge>
+                        )}
+                      </Button>
+                    </Link>
+                  )}
+                </div>
+              ))}
+              
+              {/* Sign Out Button */}
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={signOut}
+                className="ml-4"
+              >
+                Sign Out
+              </Button>
+            </div>
+          ) : (
+            <div className="hidden md:flex items-center space-x-4">
+              <Link to="/login">
+                <Button variant="outline" size="sm">
+                  Sign In
+                </Button>
+              </Link>
+              <Link to="/register">
+                <Button size="sm" className="btn-medical">
+                  Join Now
+                </Button>
+              </Link>
+            </div>
+          )}
 
           {/* Mobile Menu Button */}
           <Button 

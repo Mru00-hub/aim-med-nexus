@@ -17,13 +17,14 @@ import {
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 /**
- * Login Page for AIMedNet
+ * Login Page for AIMedNet with Supabase Authentication
  * Email and password authentication with Google OAuth option
  */
 const Login = () => {
   const { signIn, signInWithGoogle } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -43,23 +44,21 @@ const Login = () => {
     setError('');
 
     try {
-      // In real app, this would authenticate with backend
-      console.log('Login attempt:', formData);
+      const { error } = await signIn(formData.email, formData.password);
       
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // For demo purposes, show success
-      alert('Login successful! (This is a demo)');
-    } catch (err) {
-      setError('Invalid email or password. Please try again.');
+      if (!error) {
+        // Redirect to intended page or networking page
+        const from = location.state?.from || '/networking';
+        navigate(from, { replace: true });
+      }
+    } catch (err: any) {
+      setError(err.message || 'Login failed. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleGoogleLogin = async () => {
-    const { signInWithGoogle } = useAuth();
     await signInWithGoogle();
   };
 

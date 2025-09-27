@@ -60,16 +60,17 @@ const UserRecommendations: React.FC = () => {
     
     setConnecting(targetUserId);
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .rpc('create_user_connection', {
           requester_id: user.id,
           addressee_id: targetUserId,
         });
 
-      if (error) {
+      if (error || (data && typeof data === 'object' && 'error' in data)) {
+        const errorMsg = (data as any)?.error || error?.message || "Failed to send connection request.";
         toast({
           title: "Error",
-          description: "Failed to send connection request.",
+          description: errorMsg,
           variant: "destructive",
         });
         return;
