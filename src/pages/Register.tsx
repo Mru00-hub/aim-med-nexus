@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -34,8 +35,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
  * Email verification with OTP system
  */
 const Register = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { signUp } = useAuth();
   const [step, setStep] = useState(1);
   const [registrationType, setRegistrationType] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
   const [formData, setFormData] = useState({
     // Personal Details
     firstName: '',
@@ -77,10 +83,39 @@ const Register = () => {
     if (step > 1) setStep(step - 1);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // In real app, this would submit to API and send OTP
-    console.log('Registration submitted:', formData);
+    setIsLoading(true);
+    setError('');
+    
+    // Basic validation
+    if (formData.password !== formData.confirmPassword) {
+      setError('Passwords do not match');
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const { error } = await signUp(formData.email, formData.password, {
+        first_name: formData.firstName,
+        last_name: formData.lastName,
+        phone: formData.phone,
+        location: formData.location,
+        registration_type: registrationType
+      });
+
+      if (error) {
+        setError(error.message || 'Registration failed. Please try again.');
+      } else {
+        // Redirect to intended page or networking page after successful registration
+        const from = location.state?.from || '/networking';
+        navigate(from, { replace: true });
+      }
+    } catch (err: any) {
+      setError(err.message || 'Registration failed. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

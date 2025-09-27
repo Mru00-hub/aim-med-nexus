@@ -124,9 +124,16 @@ export const FeatureCards = () => {
       isActive: true
     },
     {
-      title: 'Jobs & Networking',
-      description: 'Build your professional profile, discover career opportunities, connect with healthcare organizations, and explore collaboration opportunities across the medical field.',
+      title: 'Jobs & Career Opportunities',
+      description: 'Discover healthcare job openings, explore career paths, and connect with healthcare organizations. Find your perfect role in the medical field.',
       icon: Briefcase,
+      href: '/jobs',
+      isActive: true
+    },
+    {
+      title: 'Professional Networking',
+      description: 'Build your professional profile, connect with healthcare professionals, and explore collaboration opportunities across the medical field.',
+      icon: Users,
       href: '/networking',
       isActive: true
     }
@@ -194,7 +201,7 @@ export const FeatureCards = () => {
           <h3 className="text-2xl font-semibold mb-8 text-center">
             🚀 Available Now
           </h3>
-          <div className="grid md:grid-cols-2 gap-8 animate-slide-up">
+          <div className="grid md:grid-cols-3 gap-8 animate-slide-up">
             {activeFeatures.map((feature, index) => (
               <FeatureCard key={index} {...feature} />
             ))}

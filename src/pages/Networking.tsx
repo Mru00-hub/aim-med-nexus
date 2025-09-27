@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import UserRecommendations from '@/components/UserRecommendations';
+import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -157,6 +158,7 @@ const exampleCollaborations = [
 ];
 
 const Networking = () => {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('profiles');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -172,6 +174,13 @@ const Networking = () => {
             Connect with peers, discover jobs, companies, and collaborations.
           </p>
         </div>
+
+        {/* User Recommendations - Only for authenticated users */}
+        {user && (
+          <div className="mb-8 animate-slide-up">
+            <UserRecommendations />
+          </div>
+        )}
 
         {/* Main Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="animate-slide-up">
@@ -237,9 +246,15 @@ const Networking = () => {
                       <Filter className="h-4 w-4 mr-2" />
                       Apply Filters
                     </Button>
-                    <Button className="btn-medical">
-                      Create / Edit
-                    </Button>
+                    {user ? (
+                      <Button className="btn-medical">
+                        Create / Edit
+                      </Button>
+                    ) : (
+                      <Button variant="outline">
+                        Sign in to create profile
+                      </Button>
+                    )}
                   </div>
                 </div>
               </CardContent>
@@ -278,6 +293,11 @@ const Networking = () => {
             </Card>
 
             {/* Example Data Notice */}
+            {!user && (
+              <Badge variant="secondary" className="text-sm mr-2">
+                Preview Mode - Sign in to connect with professionals
+              </Badge>
+            )}
             <Badge variant="secondary" className="text-sm">
               Showing example data - Example only
             </Badge>
@@ -325,10 +345,16 @@ const Networking = () => {
                           size="sm"
                           className={!profile.isConnected ? "btn-medical" : ""}
                         >
-                          {profile.isConnected ? 'Connected' : 'Connect'}
+                          {user ? (profile.isConnected ? 'Connected' : 'Connect') : 'Sign in to Connect'}
                         </Button>
-                        <Button variant="outline" size="sm">Follow</Button>
-                        <Button variant="ghost" size="sm">Message</Button>
+                        {user ? (
+                          <>
+                            <Button variant="outline" size="sm">Follow</Button>
+                            <Button variant="ghost" size="sm">Message</Button>
+                          </>
+                        ) : (
+                          <Button variant="outline" size="sm">View Profile</Button>
+                        )}
                       </div>
                     </div>
                   </CardContent>

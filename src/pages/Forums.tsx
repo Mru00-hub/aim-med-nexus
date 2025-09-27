@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
+import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -136,6 +137,7 @@ const exampleThreads = [
 ];
 
 const Forums = () => {
+  const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState('All types');
   const [selectedSpecialty, setSelectedSpecialty] = useState('All specialties');
@@ -214,13 +216,19 @@ const Forums = () => {
               </div>
               
               <div className="flex justify-between items-center mt-4">
-                <Button className="btn-medical">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create forum/space
-                </Button>
+                {user ? (
+                  <Button className="btn-medical">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create forum/space
+                  </Button>
+                ) : (
+                  <Button variant="outline">
+                    Sign in to create forum
+                  </Button>
+                )}
                 
                 <Button variant="outline">
-                  Manage requests
+                  {user ? "Manage requests" : "Browse forums"}
                 </Button>
               </div>
             </CardContent>
@@ -229,6 +237,11 @@ const Forums = () => {
 
         {/* Example Data Notice */}
         <div className="mb-6">
+          {!user && (
+            <Badge variant="secondary" className="text-sm mr-2">
+              Preview Mode - Sign in to join forums and participate
+            </Badge>
+          )}
           <Badge variant="secondary" className="text-sm">
             Showing example data - Example only
           </Badge>
@@ -290,7 +303,7 @@ const Forums = () => {
                       size="sm"
                       className={forum.isJoined ? "" : "btn-medical"}
                     >
-                      {forum.isJoined ? 'Joined' : 'Join'}
+                      {user ? (forum.isJoined ? 'Joined' : 'Join') : 'Sign in to Join'}
                     </Button>
                   </div>
                 </CardContent>
@@ -303,10 +316,16 @@ const Forums = () => {
         <div className="animate-slide-up">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-semibold">Threads</h2>
-            <Button size="sm" className="btn-medical">
-              <Plus className="h-4 w-4 mr-2" />
-              New
-            </Button>
+            {user ? (
+              <Button size="sm" className="btn-medical">
+                <Plus className="h-4 w-4 mr-2" />
+                New Thread
+              </Button>
+            ) : (
+              <Button size="sm" variant="outline">
+                Sign in to create
+              </Button>
+            )}
           </div>
 
           <div className="space-y-4">
@@ -348,9 +367,11 @@ const Forums = () => {
           </div>
           
           <div className="text-center mt-8">
-            <p className="text-muted-foreground mb-4">Open a thread to start chatting</p>
+            <p className="text-muted-foreground mb-4">
+              {user ? "Open a thread to start chatting" : "Sign in to participate in discussions"}
+            </p>
             <Button className="btn-medical">
-              Browse All Discussions
+              {user ? "Browse All Discussions" : "Sign In to Continue"}
             </Button>
           </div>
         </div>

@@ -7,6 +7,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import AuthGuard from "@/components/AuthGuard";
 import Index from "./pages/Index";
 import Forums from "./pages/Forums";
+import Jobs from "./pages/Jobs";
 import Networking from "./pages/Networking";
 import Partnerships from "./pages/Partnerships";
 import Feedback from "./pages/Feedback";
@@ -29,9 +30,10 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Index />} />
-            <Route path="/forums" element={<AuthGuard><Forums /></AuthGuard>} />
-            <Route path="/networking" element={<AuthGuard><Networking /></AuthGuard>} />
-            <Route path="/partnerships" element={<AuthGuard><Partnerships /></AuthGuard>} />
+            <Route path="/forums" element={<Forums />} />
+            <Route path="/jobs" element={<Jobs />} />
+            <Route path="/networking" element={<Networking />} />
+            <Route path="/partnerships" element={<Partnerships />} />
             <Route path="/feedback" element={<AuthGuard><Feedback /></AuthGuard>} />
             <Route path="/social" element={<AuthGuard><Social /></AuthGuard>} />
             <Route path="/inbox" element={<AuthGuard><Inbox /></AuthGuard>} />

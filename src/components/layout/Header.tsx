@@ -8,7 +8,8 @@ import {
   Users, 
   MessageCircle,
   Menu,
-  X
+  X,
+  Briefcase
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -36,9 +37,9 @@ export const Header = () => {
   const headerIcons = [
     {
       icon: Heart,
-      label: `Loving it (${lovingItCount})`,
+      label: `Loving it`,
       onClick: handleLovingItClick,
-      showBadge: false,
+      showBadge: true,
       badge: lovingItCount,
       color: 'text-destructive hover:text-destructive/80'
     },
@@ -109,9 +110,77 @@ export const Header = () => {
           </Link>
 
           {/* Desktop Navigation Icons */}
-          {user ? (
-            <div className="hidden md:flex items-center space-x-4 lg:space-x-6">
-              {headerIcons.map((item, index) => (
+          <div className="hidden md:flex items-center space-x-4 lg:space-x-6">
+            {/* Show loving it counter for everyone */}
+            <div className="relative">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleLovingItClick}
+                className="relative p-3 hover:bg-muted/50 transition-colors text-destructive hover:text-destructive/80"
+                title="Loving it"
+              >
+                <Heart className="h-5 w-5" />
+                {lovingItCount > 0 && (
+                  <Badge 
+                    variant="destructive" 
+                    className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs"
+                  >
+                    {lovingItCount > 99 ? '99+' : lovingItCount}
+                  </Badge>
+                )}
+              </Button>
+            </div>
+            
+            {/* Show navigation links for partnerships */}
+            <Link to="/partnerships">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="relative p-3 hover:bg-muted/50 transition-colors text-accent hover:text-accent/80"
+                title="Partnerships"
+              >
+                <Users className="h-5 w-5" />
+              </Button>
+            </Link>
+
+            {/* Show navigation for forums, jobs, networking */}
+            <Link to="/forums">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="relative p-3 hover:bg-muted/50 transition-colors text-muted-foreground hover:text-primary"
+                title="Forums"
+              >
+                <MessageSquare className="h-5 w-5" />
+              </Button>
+            </Link>
+            
+            <Link to="/jobs">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="relative p-3 hover:bg-muted/50 transition-colors text-muted-foreground hover:text-primary"
+                title="Jobs"
+              >
+                <Briefcase className="h-5 w-5" />
+              </Button>
+            </Link>
+            
+            <Link to="/networking">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="relative p-3 hover:bg-muted/50 transition-colors text-muted-foreground hover:text-primary"
+                title="Networking"
+              >
+                <Users className="h-5 w-5" />
+              </Button>
+            </Link>
+
+            {user ? (
+              <>
+                {headerIcons.slice(1).map((item, index) => (
                 <div key={index} className="relative">
                   {item.onClick ? (
                     <Button
@@ -151,9 +220,27 @@ export const Header = () => {
                       </Button>
                     </Link>
                   )}
-                </div>
-              ))}
-              
+                  </div>
+                ))}
+              </>
+            ) : (
+              <div className="flex items-center space-x-4">
+                <Link to="/login">
+                  <Button variant="outline" size="sm">
+                    Sign In
+                  </Button>
+                </Link>
+                <Link to="/register">
+                  <Button size="sm" className="btn-medical">
+                    Join Now
+                  </Button>
+                </Link>
+              </div>
+            )}
+          </div>
+
+          {user && (
+            <div className="hidden md:flex">
               {/* Sign Out Button */}
               <Button 
                 variant="outline" 
@@ -163,19 +250,6 @@ export const Header = () => {
               >
                 Sign Out
               </Button>
-            </div>
-          ) : (
-            <div className="hidden md:flex items-center space-x-4">
-              <Link to="/login">
-                <Button variant="outline" size="sm">
-                  Sign In
-                </Button>
-              </Link>
-              <Link to="/register">
-                <Button size="sm" className="btn-medical">
-                  Join Now
-                </Button>
-              </Link>
             </div>
           )}
 
@@ -194,7 +268,45 @@ export const Header = () => {
         {mobileMenuOpen && (
           <div className="md:hidden border-t border-border bg-background">
             <div className="grid grid-cols-3 gap-4 p-4">
-              {headerIcons.map((item, index) => (
+              {/* Loving it counter for mobile */}
+              <div className="relative">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    handleLovingItClick();
+                    setMobileMenuOpen(false);
+                  }}
+                  className="w-full flex flex-col items-center gap-1 p-3 h-auto text-destructive hover:text-destructive/80"
+                >
+                  <div className="relative">
+                    <Heart className="h-5 w-5" />
+                    {lovingItCount > 0 && (
+                      <Badge 
+                        variant="destructive" 
+                        className="absolute -top-2 -right-2 h-4 w-4 rounded-full p-0 flex items-center justify-center text-xs"
+                      >
+                        {lovingItCount > 99 ? '99+' : lovingItCount}
+                      </Badge>
+                    )}
+                  </div>
+                  <span className="text-xs text-center">Loving it</span>
+                </Button>
+              </div>
+              
+              {/* Partnerships for mobile */}
+              <Link to="/partnerships" onClick={() => setMobileMenuOpen(false)}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full flex flex-col items-center gap-1 p-3 h-auto text-accent hover:text-accent/80"
+                >
+                  <Users className="h-5 w-5" />
+                  <span className="text-xs text-center">Partnerships</span>
+                </Button>
+              </Link>
+
+              {user && headerIcons.slice(1).map((item, index) => (
                 <div key={index} className="relative">
                   {item.onClick ? (
                     <Button
