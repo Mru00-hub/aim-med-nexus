@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/integrations/supabase/client';
 import { 
   Heart, 
   Bell, 
@@ -22,7 +21,7 @@ import { Badge } from '@/components/ui/badge';
  */
 export const Header = () => {
   const { user, signOut } = useAuth();
-  // Global loving it counter - platform-wide engagement metric
+  // State for loving it counter - starts at 0 as requested
   const [lovingItCount, setLovingItCount] = useState(0);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -31,63 +30,19 @@ export const Header = () => {
   const socialRequestCount = 3; // Connection requests  
   const inboxCount = 7; // Unread messages
 
-  // Load initial love counter value
-  useEffect(() => {
-    const fetchLoveCounter = async () => {
-      const { data, error } = await supabase
-        .from('global_engagement')
-        .select('counter_value')
-        .eq('counter_name', 'love_counter')
-        .single();
-      
-      if (data) {
-        setLovingItCount(data.counter_value);
-      }
-    };
-
-    fetchLoveCounter();
-
-    // Set up real-time subscription for love counter updates
-    const channel = supabase
-      .channel('love-counter-updates')
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'global_engagement',
-          filter: 'counter_name=eq.love_counter'
-        },
-        (payload) => {
-          if (payload.new && typeof payload.new.counter_value === 'number') {
-            setLovingItCount(payload.new.counter_value);
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
-
-  const handleLovingItClick = async () => {
-    try {
-      const { data, error } = await supabase.rpc('increment_global_counter', {
-        counter_name_param: 'love_counter'
-      });
-      
-      if (error) {
-        console.error('Error incrementing love counter:', error);
-      }
-      // Counter will be updated via real-time subscription
-    } catch (error) {
-      console.error('Error clicking love button:', error);
-    }
+  const handleLovingItClick = () => {
+    setLovingItCount(prev => prev + 1);
   };
 
-  // Clean header icons - removed duplicates, only show for registered users
-  const headerIcons = user ? [
+  const headerIcons = [
+    {
+      icon: Heart,
+      label: `Loving it`,
+      onClick: handleLovingItClick,
+      showBadge: true,
+      badge: lovingItCount,
+      color: 'text-destructive hover:text-destructive/80'
+    },
     {
       icon: Bell,
       label: 'Notifications',
@@ -97,6 +52,13 @@ export const Header = () => {
       color: 'text-warning hover:text-warning/80'
     },
     {
+      icon: Users,
+      label: 'Partnerships',
+      href: '/partnerships',
+      showBadge: false,
+      color: 'text-accent hover:text-accent/80'
+    },
+    {
       icon: MessageSquare,
       label: 'Feedback',
       href: '/feedback',
@@ -104,7 +66,7 @@ export const Header = () => {
       color: 'text-success hover:text-success/80'
     },
     {
-      icon: MessageCircle,
+      icon: Users,
       label: 'Social',
       href: '/social',
       showBadge: true,
@@ -119,7 +81,7 @@ export const Header = () => {
       badge: inboxCount,
       color: 'text-premium hover:text-premium/80'
     }
-  ] : [];
+  ];
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -218,12 +180,13 @@ export const Header = () => {
 
             {user ? (
               <>
-                {headerIcons.map((item, index) => (
+                {headerIcons.slice(1).map((item, index) => (
                 <div key={index} className="relative">
-                  <Link to={item.href || '#'}>
+                  {item.onClick ? (
                     <Button
                       variant="ghost"
                       size="sm"
+                      onClick={item.onClick}
                       className={`relative p-3 hover:bg-muted/50 transition-colors ${item.color}`}
                       title={item.label}
                     >
@@ -237,8 +200,27 @@ export const Header = () => {
                         </Badge>
                       )}
                     </Button>
-                  </Link>
-                </div>
+                  ) : (
+                    <Link to={item.href || '#'}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={`relative p-3 hover:bg-muted/50 transition-colors ${item.color}`}
+                        title={item.label}
+                      >
+                        <item.icon className="h-5 w-5" />
+                        {item.showBadge && item.badge > 0 && (
+                          <Badge 
+                            variant="destructive" 
+                            className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs"
+                          >
+                            {item.badge > 99 ? '99+' : item.badge}
+                          </Badge>
+                        )}
+                      </Button>
+                    </Link>
+                  )}
+                  </div>
                 ))}
               </>
             ) : (
@@ -324,12 +306,16 @@ export const Header = () => {
                 </Button>
               </Link>
 
-              {user && headerIcons.map((item, index) => (
+              {user && headerIcons.slice(1).map((item, index) => (
                 <div key={index} className="relative">
-                  <Link to={item.href || '#'} onClick={() => setMobileMenuOpen(false)}>
+                  {item.onClick ? (
                     <Button
                       variant="ghost"
                       size="sm"
+                      onClick={() => {
+                        item.onClick();
+                        setMobileMenuOpen(false);
+                      }}
                       className={`w-full flex flex-col items-center gap-1 p-3 h-auto ${item.color}`}
                     >
                       <div className="relative">
@@ -345,7 +331,28 @@ export const Header = () => {
                       </div>
                       <span className="text-xs text-center">{item.label}</span>
                     </Button>
-                  </Link>
+                  ) : (
+                    <Link to={item.href || '#'} onClick={() => setMobileMenuOpen(false)}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={`w-full flex flex-col items-center gap-1 p-3 h-auto ${item.color}`}
+                      >
+                        <div className="relative">
+                          <item.icon className="h-5 w-5" />
+                          {item.showBadge && item.badge > 0 && (
+                            <Badge 
+                              variant="destructive" 
+                              className="absolute -top-2 -right-2 h-4 w-4 rounded-full p-0 flex items-center justify-center text-xs"
+                            >
+                              {item.badge > 99 ? '99+' : item.badge}
+                            </Badge>
+                          )}
+                        </div>
+                        <span className="text-xs text-center">{item.label}</span>
+                      </Button>
+                    </Link>
+                  )}
                 </div>
               ))}
             </div>
