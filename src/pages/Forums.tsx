@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
@@ -179,6 +179,7 @@ const examplePublicThreads = [
   }
 ];
 
+const [threadSearchQuery, setThreadSearchQuery] = useState('');
 const Forums = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -192,9 +193,28 @@ const Forums = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState('All types');
   const [selectedSpecialty, setSelectedSpecialty] = useState('All specialties');
-  const [forums, setForums] = useState(exampleForums);
-  const [loading, setLoading] = useState(true);
-
+  const filteredSpaces = useMemo(() => {
+    return spaces
+      .filter(space => {
+        // Filter by search query (name or description)
+        const searchLower = searchQuery.toLowerCase();
+        return (
+          space.title.toLowerCase().includes(searchLower) ||
+          space.description.toLowerCase().includes(searchLower)
+        );
+      })
+      .filter(space => {
+        // Filter by type (e.g., 'Public Forums')
+        if (selectedType === 'All Types') return true;
+        return space.category === selectedType;
+      })
+      .filter(space => {
+      // Filter by specialty
+      if (selectedSpecialty === 'All specialties') return true;
+      return space.specialty === selectedSpecialty;
+      });
+      // You can add more .filter() calls for specialty, etc.
+  }, [spaces, searchQuery, selectedType, selectedSpecialty]); // Dependencies
   // --- NEW LOGIC: Fetch real data for logged-in users ---
   useEffect(() => {
     // This is an async function to fetch all necessary data for a logged-in user
@@ -236,7 +256,8 @@ const Forums = () => {
     description: string;
     joinMechanism: JoinMechanism;
     isPrivate: boolean;
-    institutionId?: string;
+    category: string;
+    specialty: string;
   }) => {
     // Implement space creation logic
     console.log('Creating space:', data);
@@ -269,6 +290,16 @@ const Forums = () => {
     'Professional & Association-Based Spaces'
   ];
 
+  const filteredPublicThreads = useMemo(() => {
+    return publicThreads.filter(thread => {
+      const searchLower = threadSearchQuery.toLowerCase();
+      return (
+        thread.title.toLowerCase().includes(searchLower) ||
+        thread.preview.toLowerCase().includes(searchLower) ||
+        thread.author.toLowerCase().includes(searchLower)
+      );
+    });
+  }, [publicThreads, threadSearchQuery]);
   // Helper to render a single Forum or Community Space card
   const renderSpaceCard = (space: any) => {
     // --- Step 1: Define the card's appearance ---
@@ -300,12 +331,9 @@ const Forums = () => {
                 </div>
               )}
             </div>
-            <Button 
-             variant={space.isJoined ? "outline" : "default"}
-             size="sm"
-             // CORRECTED: This now correctly handles the logic inside a single function
-             onClick={(e) => {
-               e.preventDefault(); // Stop the card's link from navigating
+            <Button variant={space.isJoined ? "outline" : "default"} 
+              size="sm" 
+              onClick={(e) => { e.preventDefault(); // Stop the card's link from navigating
                if (user) {
                  alert(`Join logic for ${space.title}`);
                } else {
@@ -313,7 +341,6 @@ const Forums = () => {
                }
              }}
             >
-              {/* CORRECTED: The parenthesis is now in the right place */}
               {user ? (space.isJoined ? 'Joined' : 'Join') : 'Sign in to Join'}
             </Button>
           </div>
@@ -437,7 +464,7 @@ const Forums = () => {
             <div>Loading...</div>
           ) : (
             <div className="grid md:grid-cols-2 gap-4">
-              {spaces.map(renderSpaceCard)}
+              {filteredSpaces.map(renderSpaceCard)}
             </div>
           )}
         </section>
@@ -450,11 +477,20 @@ const Forums = () => {
                 <Plus className="h-4 w-4 mr-2" /> Start a Thread
             </Button>
           </div>
+          <div className="relative mb-4">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search public threads..."
+              value={threadSearchQuery}
+              onChange={(e) => setThreadSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
           {loading ? (
             <div>Loading...</div>
           ) : (
             <div className="space-y-4">
-              {publicThreads.map(renderPublicThreadCard)}
+              {filteredPublicThreads.map(renderPublicThreadCard)}
             </div>
           )}
         </section>
