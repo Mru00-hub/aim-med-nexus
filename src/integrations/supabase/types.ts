@@ -335,6 +335,27 @@ export type Database = {
           },
         ]
       }
+      global_engagement: {
+        Row: {
+          counter_name: string
+          counter_value: number
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          counter_name: string
+          counter_value?: number
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          counter_name?: string
+          counter_value?: number
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       job_applications: {
         Row: {
           applicant_id: string | null
@@ -512,6 +533,63 @@ export type Database = {
           id?: string
           location?: string | null
           name?: string
+        }
+        Relationships: []
+      }
+      message_attachments: {
+        Row: {
+          created_at: string
+          file_name: string
+          file_size: number | null
+          file_type: string
+          file_url: string
+          id: string
+          message_id: number
+          uploaded_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          file_name: string
+          file_size?: number | null
+          file_type: string
+          file_url: string
+          id?: string
+          message_id: number
+          uploaded_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          file_name?: string
+          file_size?: number | null
+          file_type?: string
+          file_url?: string
+          id?: string
+          message_id?: number
+          uploaded_by?: string | null
+        }
+        Relationships: []
+      }
+      message_reactions: {
+        Row: {
+          created_at: string
+          id: string
+          message_id: number
+          reaction_emoji: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message_id: number
+          reaction_emoji: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message_id?: number
+          reaction_emoji?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -1146,6 +1224,10 @@ export type Database = {
           user_id: string
           years_experience: string
         }[]
+      }
+      increment_global_counter: {
+        Args: { counter_name_param: string }
+        Returns: number
       }
     }
     Enums: {
