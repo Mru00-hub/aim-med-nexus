@@ -9,7 +9,8 @@ import {
   MessageCircle,
   Menu,
   X,
-  Briefcase
+  Briefcase,
+  Handshake
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -36,27 +37,12 @@ export const Header = () => {
 
   const headerIcons = [
     {
-      icon: Heart,
-      label: `Loving it`,
-      onClick: handleLovingItClick,
-      showBadge: true,
-      badge: lovingItCount,
-      color: 'text-destructive hover:text-destructive/80'
-    },
-    {
       icon: Bell,
       label: 'Notifications',
       href: '/notifications',
       showBadge: true,
       badge: notificationCount,
       color: 'text-warning hover:text-warning/80'
-    },
-    {
-      icon: Users,
-      label: 'Partnerships',
-      href: '/partnerships',
-      showBadge: false,
-      color: 'text-accent hover:text-accent/80'
     },
     {
       icon: MessageSquare,
@@ -132,7 +118,7 @@ export const Header = () => {
               </Button>
             </div>
             
-            {/* Show navigation links for partnerships */}
+            {/* Show navigation links for partnerships (visible to everyone)*/}
             <Link to="/partnerships">
               <Button
                 variant="ghost"
@@ -140,47 +126,13 @@ export const Header = () => {
                 className="relative p-3 hover:bg-muted/50 transition-colors text-accent hover:text-accent/80"
                 title="Partnerships"
               >
-                <Users className="h-5 w-5" />
-              </Button>
-            </Link>
-
-            {/* Show navigation for forums, jobs, networking */}
-            <Link to="/forums">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="relative p-3 hover:bg-muted/50 transition-colors text-muted-foreground hover:text-primary"
-                title="Forums"
-              >
-                <MessageSquare className="h-5 w-5" />
-              </Button>
-            </Link>
-            
-            <Link to="/jobs">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="relative p-3 hover:bg-muted/50 transition-colors text-muted-foreground hover:text-primary"
-                title="Jobs"
-              >
-                <Briefcase className="h-5 w-5" />
-              </Button>
-            </Link>
-            
-            <Link to="/networking">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="relative p-3 hover:bg-muted/50 transition-colors text-muted-foreground hover:text-primary"
-                title="Networking"
-              >
-                <Users className="h-5 w-5" />
+                <Handshake className="h-5 w-5" />
               </Button>
             </Link>
 
             {user ? (
               <>
-                {headerIcons.slice(1).map((item, index) => (
+                {headerIcons.map((item, index) => (
                 <div key={index} className="relative">
                   {item.onClick ? (
                     <Button
@@ -301,12 +253,12 @@ export const Header = () => {
                   size="sm"
                   className="w-full flex flex-col items-center gap-1 p-3 h-auto text-accent hover:text-accent/80"
                 >
-                  <Users className="h-5 w-5" />
+                  <Handshake className="h-5 w-5" />
                   <span className="text-xs text-center">Partnerships</span>
                 </Button>
               </Link>
 
-              {user && headerIcons.slice(1).map((item, index) => (
+              {user && headerIcons.map((item, index) => (
                 <div key={index} className="relative">
                   {item.onClick ? (
                     <Button
