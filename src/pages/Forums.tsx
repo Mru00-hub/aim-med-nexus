@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { useAuth } from '@/hooks/useAuth';
+import { ForumsNav } from '@/components/forums/ForumsNav';
+import { SpaceCreator } from '@/components/forums/SpaceCreator';
+import { Space, SpaceType, JoinMechanism } from '@/types/forum';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -138,10 +141,24 @@ const exampleThreads = [
 
 const Forums = () => {
   const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState<'forums' | 'community'>('forums');
+  const [showSpaceCreator, setShowSpaceCreator] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState('All types');
   const [selectedSpecialty, setSelectedSpecialty] = useState('All specialties');
 
+  const handleCreateSpace = async (data: {
+    type: SpaceType;
+    name: string;
+    description: string;
+    joinMechanism: JoinMechanism;
+    isPrivate: boolean;
+    institutionId?: string;
+  }) => {
+    // Implement space creation logic
+    console.log('Creating space:', data);
+  };
+  
   const specialties = [
     'All specialties',
     'Cardiology',
@@ -169,6 +186,29 @@ const Forums = () => {
       <Header />
       
       <main className="container-medical py-8">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold mb-2">
+            {activeTab === 'forums' ? 'Forums' : 'Community Spaces'}
+          </h1>
+          <p className="text-muted-foreground">
+            {activeTab === 'forums'
+              ? 'Join professional discussions and share knowledge'
+              : 'Connect with your institution and organization members'}
+          </p>
+        </div>
+
+        <ForumsNav
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          onCreateNew={() => setShowSpaceCreator(true)}
+          isAuthenticated={!!user}
+        />
+
+        <SpaceCreator
+          isOpen={showSpaceCreator}
+          onClose={() => setShowSpaceCreator(false)}
+          onSubmit={handleCreateSpace}
+        />
         {/* Page Header */}
         <div className="mb-8 animate-fade-in">
           <h1 className="text-3xl font-bold mb-2">Forums & Community Spaces</h1>
