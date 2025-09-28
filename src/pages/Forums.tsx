@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { useAuth } from '@/hooks/useAuth';
@@ -352,15 +353,20 @@ const Forums = () => {
           </div>
         </div>
 
-        {/* Recent Threads */}
+        {/* Recent Threads - UPDATED */}
         <div className="animate-slide-up">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-semibold">Threads</h2>
+            {/* CHANGE 1: Title updated */}
+            <h2 className="text-2xl font-semibold">Public Threads </h2>
+            
+            {/* CHANGE 2: "New Thread" is now a Link to the creation page */}
             {user ? (
-              <Button size="sm" className="btn-medical">
-                <Plus className="h-4 w-4 mr-2" />
-                New Thread
-              </Button>
+              <Link to="/create-thread">
+                <Button size="sm" className="btn-medical">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Start a Thread
+                </Button>
+              </Link>
             ) : (
               <Button size="sm" variant="outline">
                 Sign in to create
@@ -370,48 +376,51 @@ const Forums = () => {
 
           <div className="space-y-4">
             {exampleThreads.map((thread) => (
-              <Card key={thread.id} className="card-medical hover:shadow-hover transition-all cursor-pointer">
-                <CardContent className="p-6">
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-lg mb-2 hover:text-primary transition-colors">
-                        {thread.title}
-                      </h3>
-                      <p className="text-muted-foreground mb-3">{thread.preview}</p>
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        <span className="font-medium text-foreground">{thread.author}</span>
-                        <span>{thread.timestamp}</span>
-                        <div className="flex items-center gap-1">
-                          <Reply className="h-4 w-4" />
-                          <span>{thread.replies} replies</span>
+              // CHANGE 3: Each thread card is now a Link to its own page
+              <Link to={`/thread/${thread.id}`} key={thread.id} className="block">
+                <Card className="card-medical hover:shadow-hover transition-all cursor-pointer">
+                  <CardContent className="p-6">
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-lg mb-2 hover:text-primary transition-colors">
+                          [span_0](start_span){thread.title}[span_0](end_span)
+                        </h3>
+                        <p className="text-muted-foreground mb-3">{thread.preview}</p>
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                          [span_1](start_span)<span className="font-medium text-foreground">{thread.author}</span>[span_1](end_span)
+                          [span_2](start_span)<span>{thread.timestamp}</span>[span_2](end_span)
+                          <div className="flex items-center gap-1">
+                            <Reply className="h-4 w-4" />
+                            [span_3](start_span)<span>{thread.replies} replies</span>[span_3](end_span)
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Heart className="h-4 w-4" />
+                            [span_4](start_span)<span>{thread.hearts}</span>[span_4](end_span)
+                          </div>
+                          {thread.isExample && (
+                            <Badge variant="secondary" className="text-xs">
+                              [span_5](start_span)Example only[span_5](end_span)
+                            </Badge>
+                          )}
                         </div>
-                        <div className="flex items-center gap-1">
-                          <Heart className="h-4 w-4" />
-                          <span>{thread.hearts}</span>
-                        </div>
-                        {thread.isExample && (
-                          <Badge variant="secondary" className="text-xs">
-                            Example only
-                          </Badge>
-                        )}
                       </div>
+                      
+                      <Button variant="ghost" size="sm">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
                     </div>
-                    
-                    <Button variant="ghost" size="sm">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              </Link>
             ))}
           </div>
           
           <div className="text-center mt-8">
             <p className="text-muted-foreground mb-4">
-              {user ? "Open a thread to start chatting" : "Sign in to participate in discussions"}
+              {user ? [span_6](start_span)"Open a thread to start chatting" : "Sign in to participate in discussions"}[span_6](end_span)
             </p>
             <Button className="btn-medical">
-              {user ? "Browse All Discussions" : "Sign In to Continue"}
+              {user ? [span_7](start_span)"Browse All Discussions" : "Sign In to Continue"}[span_7](end_span)
             </Button>
           </div>
         </div>
