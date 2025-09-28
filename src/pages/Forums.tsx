@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { useAuth } from '@/hooks/useAuth';
@@ -30,123 +30,205 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
+import { getForums } from '@/integrations/supabase/api';
 /**
  * Forums & Community Spaces Page
  * Comprehensive forum system with specialty-based discussions
  * Real-time messaging capabilities and community management
  */
 
-// Example forum data - in real app this would come from API
-const exampleForums = [
+// This array now represents both Forums and Community Spaces for discovery.
+// The `type` and `isPublic` fields are key to distinguishing them.
+const exampleSpaces = [
+  // --- Forums ---
   {
-    id: 1,
-    title: 'Global Cardiology',
-    type: 'forum',
-    specialty: 'Cardiology',
-    members: 12450,
-    description: 'Connect with cardiologists worldwide. Share cases, discuss latest research, and collaborate on complex cardiac conditions.',
-    isPublic: true,
-    isJoined: true,
-    activity: 'Very Active',
-    lastActive: '2 minutes ago',
-    isPremium: false
-  },
-  {
-    id: 2,
+    id: 'forum-1',
     title: 'AI in Healthcare',
-    type: 'forum',
+    type: 'forum', // This is a Forum
+    category: 'Public Forums',
     specialty: 'Radiology',
     members: 10320,
-    description: 'Exploring artificial intelligence applications in medical imaging and healthcare delivery systems.',
-    isPublic: true,
+    description: 'Exploring AI in medical imaging and healthcare delivery systems.',
+    isPublic: true, // This is a PUBLIC Forum (no approval needed to join)
     isJoined: false,
     activity: 'Active',
     lastActive: '15 minutes ago',
-    isPremium: true
+    isPremium: true,
+    exampleThreads: [
+      { id: 'thread-ai-1', title: 'Radiology AI' },
+      { id: 'thread-ai-2', title: 'Pathology AI' },
+      { id: 'thread-ai-3', title: 'Clinical Decision Support AI' }
+    ]
   },
   {
-    id: 3,
-    title: 'USMLE 2025 Prep',
-    type: 'college',
-    specialty: 'Pediatrics',
+    id: 'forum-2',
+    title: 'USMLE 2026 Prep',
+    type: 'forum', // This is a Forum
+    category: 'Private Forums',
+    specialty: 'Medical Education',
     members: 8740,
-    description: 'Medical students and residents preparing for USMLE exams. Share resources, study tips, and mock tests.',
-    isPublic: true,
+    description: 'Preparing for USMLE exams. Share resources, study tips, and mock tests.',
+    isPublic: false, // This is a PRIVATE Forum (moderator approval needed)
     isJoined: true,
     activity: 'Active',
     lastActive: '30 minutes ago',
-    isPremium: false
+    isPremium: false,
+    exampleThreads: [
+      { id: 'thread-usmle-1', title: 'Study Materials' },
+      { id: 'thread-usmle-2', title: 'Q&A Discussions' },
+      { id: 'thread-usmle-3', title: 'Important Notifications' }
+    ]
+  },
+  // --- Community Spaces ---
+  {
+    id: 'space-1',
+    title: 'Global Cardiology',
+    type: 'community_space', // This is a Community Space
+    category: 'Professional & Association-Based Spaces',
+    specialty: 'Cardiology',
+    members: 12450,
+    description: 'Connect with cardiologists worldwide. Share cases, discuss latest research, and collaborate on complex cardiac conditions.',
+    isPublic: false, // Community Spaces are always private (admin approval needed)
+    isJoined: true,
+    activity: 'Very Active',
+    lastActive: '2 minutes ago',
+    isPremium: false,
+    exampleThreads: [
+        { id: 'thread-cardio-1', title: 'World Heart Federation notifications' },
+        { id: 'thread-cardio-2', title: 'MI Updates' },
+        { id: 'thread-cardio-3', title: 'Drugs updates' }
+    ]
   },
   {
-    id: 4,
+    id: 'space-2',
     title: 'Hospital Admins Network',
-    type: 'hospital',
+    type: 'community_space', // This is a Community Space
+    category: 'Institution-Based Spaces',
     specialty: 'Hospital Network',
     members: 5620,
     description: 'Healthcare administrators discussing operational excellence, policy changes, and hospital management strategies.',
-    isPublic: false,
+    isPublic: false, // Community Spaces are always private
     isJoined: false,
     activity: 'Moderate',
     lastActive: '1 hour ago',
-    isPremium: true
+    isPremium: true,
+    exampleThreads: [
+        { id: 'thread-admin-1', title: 'Introductions' },
+        { id: 'thread-admin-2', title: 'Regulatory updates' },
+        { id: 'thread-admin-3', title: 'Collaborations' }
+    ]
   },
   {
-    id: 5,
+    id: 'space-3',
     title: 'Emergency Medicine Crisis Response',
-    type: 'forum',
+    type: 'community_space', // This is a Community Space
     specialty: 'Emergency Medicine',
+    category: 'Purpose-Driven Spaces',
     members: 15200,
     description: 'EM physicians sharing rapid response protocols, trauma cases, and emergency preparedness strategies.',
-    isPublic: true,
+    isPublic: false, // Community Spaces are always private
     isJoined: true,
     activity: 'Very Active',
     lastActive: '5 minutes ago',
-    isPremium: false
+    isPremium: false,
+    exampleThreads: [
+        { id: 'thread-em-1', title: 'Trauma Case discussions' },
+        { id: 'thread-em-2', title: 'Natural Disaster response' },
+        { id: 'thread-em-3', title: 'Poisoning treatment updates' }
+    ]
   }
 ];
 
-// Example recent threads - showing example data as requested
-const exampleThreads = [
+// This array now exclusively represents the Public Threads visible to everyone on the main page.
+const examplePublicThreads = [
   {
-    id: 1,
+    id: 'pub-thread-1',
     title: 'Best guidelines for AFib in 2025?',
     author: 'Dr. Chen',
-    timestamp: '24/09/2025, 10:19:02',
+    timestamp: '28/09/2025, 10:19:02',
     preview: 'Check the new ESC update with NOAC dosing...',
     replies: 23,
-    hearts: 15,
-    isExample: true
+    hearts: 15
   },
   {
-    id: 2,
+    id: 'pub-thread-2',
     title: 'Hospital EHR vendor comparison',
     author: 'Dr. Patel',
-    timestamp: '24/09/2025, 10:19:02',
-    preview: 'We migrated to Epic last quarter...',
+    timestamp: '28/09/2025, 08:45:10',
+    preview: 'We migrated to Epic last quarter and the transition was...',
     replies: 18,
-    hearts: 8,
-    isExample: true
+    hearts: 8
   },
   {
-    id: 3,
+    id: 'pub-thread-3',
     title: 'AI triage in ER—real results',
     author: 'Dr. Ahmed',
-    timestamp: '24/09/2025, 10:19:02',
+    timestamp: '27/09/2025, 19:30:55',
     preview: 'False positives dropped after threshold tuning...',
     replies: 31,
-    hearts: 24,
-    isExample: true
+    hearts: 24
+  },
+  {
+    id: 'pub-thread-4',
+    title: 'Medical Memes',
+    author: 'Dr. Lee',
+    timestamp: '27/09/2025, 14:12:00',
+    preview: 'Post your best ones here. We all need a laugh.',
+    replies: 102,
+    hearts: 88
   }
 ];
 
 const Forums = () => {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<'forums' | 'community'>('forums');
+  const navigate = useNavigate();
+  // --- STATE MANAGEMENT ---
+  // Default state is the mock data for guests
+  const [spaces, setSpaces] = useState(exampleSpaces);
+  const [publicThreads, setPublicThreads] = useState(examplePublicThreads);
+  const [loading, setLoading] = useState(true);
+  // Other UI state from your original file
   const [showSpaceCreator, setShowSpaceCreator] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState('All types');
   const [selectedSpecialty, setSelectedSpecialty] = useState('All specialties');
+  const [forums, setForums] = useState(exampleForums);
+  const [loading, setLoading] = useState(true);
+
+  // --- NEW LOGIC: Fetch real data for logged-in users ---
+  useEffect(() => {
+    // This is an async function to fetch all necessary data for a logged-in user
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        // Fetch both spaces and public threads in parallel for better performance
+        const [spacesData, publicThreadsData] = await Promise.all([
+          getSpaces(),
+          getPublicThreads(),
+        ]);
+        // Update the state with the real data from the database
+        setSpaces(spacesData || []);
+        setPublicThreads(publicThreadsData || []);
+      } catch (error) {
+        console.error("Failed to fetch real data:", error);
+        // In a real app, you might show an error message to the user here
+      } finally {
+        // This always runs, ensuring the loading indicator is turned off
+        setLoading(false);
+      }
+    };
+    // --- This is the main logic ---
+    if (user) {
+      // If the user is logged in, call the function to fetch real data
+      fetchData();
+    } else {
+      // If the user is a guest, reset the state to the mock data
+      setSpaces(exampleSpaces);
+      setPublicThreads(examplePublicThreads);
+      setLoading(false);
+    }
+  }, [user]); // This dependency ensures the code re-runs whenever the user logs in or out
+
 
   const handleCreateSpace = async (data: {
     type: SpaceType;
@@ -162,6 +244,7 @@ const Forums = () => {
   
   const specialties = [
     'All specialties',
+    'General Physician',
     'Cardiology',
     'Radiology', 
     'Pediatrics',
@@ -174,34 +257,97 @@ const Forums = () => {
   ];
 
   const forumTypes = [
-    'All types',
+    'All Types',
     'Public Forums',
-    'Private Forums',
-    'Hospital Networks',
-    'Medical Colleges',
-    'Research Groups'
+    'Private Forums'
   ];
 
+  const communityspaceTypes = [
+    'All Types',
+    'Institution-Based Spaces',
+    'Purpose-Driven Spaces',
+    'Professional & Association-Based Spaces'
+  ];
+
+  // Helper to render a single Forum or Community Space card
+  const renderSpaceCard = (space: any) => {
+    // --- Step 1: Define the card's appearance ---
+    const cardContent = (
+      <Card className="card-medical hover:shadow-hover transition-all">
+        <CardContent className="p-6">
+          <div className="flex justify-between items-start">
+            <div className="flex-1 pr-4"> {/* Added padding to prevent text touching the button */}
+              <div className="flex items-center gap-3 mb-2 flex-wrap"> {/* Added flex-wrap for smaller screens */}
+                <h3 className="text-xl font-semibold">{space.title}</h3>
+                <Badge variant={space.type === 'forum' ? 'secondary' : 'outline'}>
+                  {space.type === 'forum' ? 'Forum' : 'Community Space'}
+                </Badge>
+                {!space.isPublic && <Badge variant="destructive">Private</Badge>}
+              </div>
+              <p className="text-muted-foreground mb-3 text-sm">{space.description}</p>
+              {space.exampleThreads && space.exampleThreads.length > 0 && (
+                <div className="mt-4 border-t pt-3">
+                  <h4 className="text-xs font-semibold uppercase text-muted-foreground mb-2">Hot Topics</h4>
+                  <ul className="space-y-1 list-none pl-0">
+                    {space.exampleThreads.slice(0, 2).map((thread: any) => (
+                      <li key={thread.id} className="text-sm text-foreground/80 hover:text-primary transition-colors truncate">
+                        <Link to={user ? `/threads/${thread.id}` : '/login'} onClick={(e) => e.stopPropagation()}>
+                          › {thread.title}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+            <Button 
+             variant={space.isJoined ? "outline" : "default"}
+             size="sm"
+             // CORRECTED: This now correctly handles the logic inside a single function
+             onClick={(e) => {
+               e.preventDefault(); // Stop the card's link from navigating
+               if (user) {
+                 alert(`Join logic for ${space.title}`);
+               } else {
+                 navigate('/login');
+               }
+             }}
+            >
+              {/* CORRECTED: The parenthesis is now in the right place */}
+              {user ? (space.isJoined ? 'Joined' : 'Join') : 'Sign in to Join'}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+
+    // --- Step 2: Return the card with the correct wrapper ---
+    // This is the single, correct return block. The duplicate has been removed.
+    return user ? (
+      <Link to={`/forums/${space.id}`} key={space.id}>
+        {cardContent}
+      </Link>
+    ) : (
+      <div key={space.id} className="cursor-pointer" onClick={() => navigate('/login')}>
+        {cardContent}
+      </div>
+    );
+  };
+  
   return (
     <div className="min-h-screen bg-background">
       <Header />
       
       <main className="container-medical py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">
-            {activeTab === 'forums' ? 'Forums' : 'Community Spaces'}
-          </h1>
-          <p className="text-muted-foreground">
-            {activeTab === 'forums'
-              ? 'Join professional discussions and share knowledge'
-              : 'Connect with your institution and organization members'}
-          </p>
+          <h1 className="text-3xl font-bold mb-2">Forums & Community Spaces</h1>
+            <p className="text-muted-foreground">Join specialty communities, collaborate in spaces, and discuss with peers.</p>
         </div>
 
         <ForumsNav
           activeTab={activeTab}
           onTabChange={setActiveTab}
-          onCreateNew={() => setShowSpaceCreator(true)}
+          onCreateNew={() => user ? setShowSpaceCreator(true)} : navigate('/login')}
           isAuthenticated={!!user}
         />
 
