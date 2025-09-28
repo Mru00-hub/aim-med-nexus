@@ -18,6 +18,8 @@ import Register from "./pages/Register";
 import Login from "./pages/Login";
 import PaymentPage from "./pages/PaymentPage";
 import NotFound from "./pages/NotFound";
+import CreateThread from "./pages/CreateThread";
+import ThreadPage from "./pages/ThreadPage";
 
 const queryClient = new QueryClient();
 
@@ -31,6 +33,8 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/forums" element={<Forums />} />
+            <Route path="/create-thread" element={<AuthGuard><CreateThread /></AuthGuard>} />
+            <Route path="/thread/:threadId" element={<AuthGuard><ThreadPage /></AuthGuard>} />
             <Route path="/jobs" element={<Jobs />} />
             <Route path="/networking" element={<Networking />} />
             <Route path="/partnerships" element={<Partnerships />} />
