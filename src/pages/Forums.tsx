@@ -333,7 +333,30 @@ const Forums = () => {
       </div>
     );
   };
-  
+
+  // --- RENDER FUNCTION FOR PUBLIC THREADS ---
+  const renderPublicThreadCard = (thread: any) => {
+    const cardContent = (
+      <Card className="card-medical hover:shadow-hover transition-all">
+        <CardContent className="p-6">
+          <h3 className="font-semibold text-lg mb-2">{thread.title}</h3>
+          <p className="text-muted-foreground text-sm mb-3">{thread.preview}</p>
+          <div className="flex items-center gap-4 text-xs text-muted-foreground">
+            <span className="font-medium text-foreground">{thread.author}</span>
+            <div className="flex items-center gap-1"><MessageSquare className="h-3 w-3" /><span>{thread.replies} replies</span></div>
+            <div className="flex items-center gap-1"><Heart className="h-3 w-3" /><span>{thread.hearts}</span></div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+
+    return user ? (
+      <Link to={`/threads/${thread.id}`} key={thread.id}>{cardContent}</Link>
+    ) : (
+      <div key={thread.id} className="cursor-pointer" onClick={() => navigate('/login')}>{cardContent}</div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -341,27 +364,7 @@ const Forums = () => {
       <main className="container-medical py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">Forums & Community Spaces</h1>
-            <p className="text-muted-foreground">Join specialty communities, collaborate in spaces, and discuss with peers.</p>
-        </div>
-
-        <ForumsNav
-          activeTab={activeTab}
-          onTabChange={setActiveTab}
-          onCreateNew={() => user ? setShowSpaceCreator(true)} : navigate('/login')}
-          isAuthenticated={!!user}
-        />
-
-        <SpaceCreator
-          isOpen={showSpaceCreator}
-          onClose={() => setShowSpaceCreator(false)}
-          onSubmit={handleCreateSpace}
-        />
-        {/* Page Header */}
-        <div className="mb-8 animate-fade-in">
-          <h1 className="text-3xl font-bold mb-2">Forums & Community Spaces</h1>
-          <p className="text-muted-foreground text-lg">
-            Join specialty communities, collaborate in spaces, and discuss with peers.
-          </p>
+          <p className="text-muted-foreground">Join forums and community spaces, collaborate and discuss with peers.</p>
         </div>
 
         {/* Search and Filters */}
@@ -422,157 +425,41 @@ const Forums = () => {
           </Card>
         </div>
 
-        {/* Example Data Notice */}
-        <div className="mb-6">
-          {!user && (
-            <Badge variant="secondary" className="text-sm mr-2">
-              Preview Mode - Sign in to join forums and participate
-            </Badge>
-          )}
-          <Badge variant="secondary" className="text-sm">
-            Showing example data - Example only
-          </Badge>
-        </div>
-
-        {/* Forums List */}
-        <div className="mb-12 animate-slide-up">
-          <h2 className="text-2xl font-semibold mb-6">Your forums & community spaces</h2>
-          
-          <div className="space-y-4">
-            {exampleForums.map((forum) => (
-              <Card key={forum.id} className="card-medical hover:shadow-hover transition-all cursor-pointer">
-                <CardContent className="p-6">
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <h3 className="text-xl font-semibold">{forum.title}</h3>
-                        
-                        <div className="flex gap-2">
-                          <Badge variant="outline" className="text-xs">
-                            {forum.type}
-                          </Badge>
-                          <Badge variant="secondary" className="text-xs">
-                            {forum.specialty}
-                          </Badge>
-                          {forum.isPremium && (
-                            <Badge className="bg-gradient-premium text-xs">
-                              Premium
-                            </Badge>
-                          )}
-                          {!forum.isPublic && (
-                            <Badge variant="destructive" className="text-xs">
-                              Private
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                      
-                      <p className="text-muted-foreground mb-3">{forum.description}</p>
-                      
-                      <div className="flex items-center gap-6 text-sm text-muted-foreground">
-                        <div className="flex items-center gap-1">
-                          <Users className="h-4 w-4" />
-                          <span>{forum.members.toLocaleString()} members</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <TrendingUp className="h-4 w-4" />
-                          <span>{forum.activity}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Clock className="h-4 w-4" />
-                          <span>{forum.lastActive}</span>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <Button 
-                      variant={forum.isJoined ? "outline" : "default"}
-                      size="sm"
-                      className={forum.isJoined ? "" : "btn-medical"}
-                    >
-                      {user ? (forum.isJoined ? 'Joined' : 'Join') : 'Sign in to Join'}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-
-        {/* Recent Threads - UPDATED */}
-        <div className="animate-slide-up">
-          <div className="flex justify-between items-center mb-6">
-            {/* CHANGE 1: Title updated */}
-            <h2 className="text-2xl font-semibold">Public Threads </h2>
-            
-            {/* CHANGE 2: "New Thread" is now a Link to the creation page */}
-            {user ? (
-              <Link to="/create-thread">
-                <Button size="sm" className="btn-medical">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Start a Thread
-                </Button>
-              </Link>
-            ) : (
-              <Button size="sm" variant="outline">
-                Sign in to create
-              </Button>
-            )}
-          </div>
-
-          <div className="space-y-4">
-            {exampleThreads.map((thread) => (
-              // CHANGE 3: Each thread card is now a Link to its own page
-              <Link to={`/thread/${thread.id}`} key={thread.id} className="block">
-                <Card className="card-medical hover:shadow-hover transition-all cursor-pointer">
-                  <CardContent className="p-6">
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-lg mb-2 hover:text-primary transition-colors">
-                          [span_0](start_span){thread.title}[span_0](end_span)
-                        </h3>
-                        <p className="text-muted-foreground mb-3">{thread.preview}</p>
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                          [span_1](start_span)<span className="font-medium text-foreground">{thread.author}</span>[span_1](end_span)
-                          [span_2](start_span)<span>{thread.timestamp}</span>[span_2](end_span)
-                          <div className="flex items-center gap-1">
-                            <Reply className="h-4 w-4" />
-                            [span_3](start_span)<span>{thread.replies} replies</span>[span_3](end_span)
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Heart className="h-4 w-4" />
-                            [span_4](start_span)<span>{thread.hearts}</span>[span_4](end_span)
-                          </div>
-                          {thread.isExample && (
-                            <Badge variant="secondary" className="text-xs">
-                              [span_5](start_span)Example only[span_5](end_span)
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                      
-                      <Button variant="ghost" size="sm">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
-          </div>
-          
-          <div className="text-center mt-8">
-            <p className="text-muted-foreground mb-4">
-              {user ? [span_6](start_span)"Open a thread to start chatting" : "Sign in to participate in discussions"}[span_6](end_span)
-            </p>
-            <Button className="btn-medical">
-              {user ? [span_7](start_span)"Browse All Discussions" : "Sign In to Continue"}[span_7](end_span)
+        {/* Section for Forums and Community Spaces */}
+        <section className="mb-12">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-2xl font-semibold">Forums & Community Spaces</h2>
+            <Button size="sm" onClick={() => user ? setShowSpaceCreator(true) : navigate('/login')}>
+                <Plus className="h-4 w-4 mr-2" /> Create Space
             </Button>
           </div>
-        </div>
+          {loading ? (
+            <div>Loading...</div>
+          ) : (
+            <div className="grid md:grid-cols-2 gap-4">
+              {spaces.map(renderSpaceCard)}
+            </div>
+          )}
+        </section>
 
+        {/* Section for Public Threads */}
+        <section>
+           <div className="flex justify-between items-center mb-4">
+            <h2 className="text-2xl font-semibold">Public Threads</h2>
+            <Button size="sm" onClick={() => user ? navigate('/create-thread') : navigate('/login')}>
+                <Plus className="h-4 w-4 mr-2" /> Start a Thread
+            </Button>
+          </div>
+          {loading ? (
+            <div>Loading...</div>
+          ) : (
+            <div className="space-y-4">
+              {publicThreads.map(renderPublicThreadCard)}
+            </div>
+          )}
+        </section>
         {/* Top Forums Section */}
-        <div className="mt-16 animate-fade-in">
+        <section className="mb-16">
           <h2 className="text-2xl font-semibold mb-6">Top forums by members</h2>
           
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -593,12 +480,10 @@ const Forums = () => {
               </Card>
             ))}
           </div>
-        </div>
-
-        {/* Specialties */}
-        <div className="mt-16 animate-fade-in">
+        </section>
+        {/* 5. Specialties Section */}
+        <section>
           <h2 className="text-2xl font-semibold mb-6">Specialties</h2>
-          
           <div className="flex flex-wrap gap-3">
             {specialties.slice(1).map((specialty) => (
               <Button
@@ -611,12 +496,9 @@ const Forums = () => {
               </Button>
             ))}
           </div>
-        </div>
+        </section>
       </main>
-
       <Footer />
     </div>
   );
 };
-
-export default Forums;
