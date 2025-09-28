@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { 
@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { getLoveCount, incrementLoveCount } from '@/integrations/supabase/engagement';
 
 /**
  * AIMedNet Header Component
@@ -31,10 +32,28 @@ export const Header = () => {
   const socialRequestCount = 3; // Connection requests  
   const inboxCount = 7; // Unread messages
 
-  const handleLovingItClick = () => {
-    setLovingItCount(prev => prev + 1);
+  // 1. Fetch the initial count when the component loads
+useEffect(() => {
+  const fetchInitialCount = async () => {
+    const initialCount = await getLoveCount();
+    setLovingItCount(initialCount);
   };
 
+  fetchInitialCount();
+}, []); // The empty array [] ensures this runs only once on mount
+
+// 2. Update the click handler to call the backend
+const handleLovingItClick = async () => {
+  // Optimistic UI update: Make the change feel instant
+  setLovingItCount(prevCount => prevCount + 1);
+
+  // Call the backend function to update the database
+  const newCount = await incrementLoveCount();
+
+  // (Optional) Re-sync with the exact database value if needed,
+  // though the optimistic update is usually sufficient.
+  // setLovingItCount(newCount); 
+};
   const headerIcons = [
     {
       icon: Bell,
