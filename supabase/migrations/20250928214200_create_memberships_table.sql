@@ -1,4 +1,4 @@
--- supabase/migrations/2025092214500_create_memberships_table.sql
+-- supabase/migrations/2025092214200_create_memberships_table.sql
 
 -- Create membership_status enum
 CREATE TYPE public.membership_status AS ENUM ('PENDING', 'APPROVED', 'DENIED', 'BANNED');
