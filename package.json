@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0 --port 5000",
     "build": "tsc && vite build",
+    "build:dev": "vite build --mode development",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview --host 0.0.0.0 --port 5000",
     "supabase:gen-types": "supabase gen types typescript --project-id kkghalgyuxgzktcaxzht > src/integrations/supabase/types.ts"
