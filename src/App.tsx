@@ -9,7 +9,7 @@ import AuthGuard from "@/components/AuthGuard";
 // --- Start of page imports ---
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
-// import Forums from "./pages/Forums";
+import Forums from "./pages/Forums";
 // import Jobs from "./pages/Jobs";
 // import Networking from "./pages/Networking";
 // import Partnerships from "./pages/Partnerships";
@@ -38,7 +38,7 @@ const App = () => (
             <Route path="*" element={<NotFound />} />
 
             {/* --- Temporarily commented out routes --- */}
-            {/* <Route path="/forums" element={<Forums />} /> */}
+            <Route path="/forums" element={<Forums />} />
             {/* <Route path="/create-thread" element={<AuthGuard><CreateThread /></AuthGuard>} /> */}
             {/* <Route path="/thread/:threadId" element={<AuthGuard><ThreadPage /></AuthGuard>} /> */}
             {/* <Route path="/jobs" element={<Jobs />} /> */}
