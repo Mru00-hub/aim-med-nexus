@@ -1,4 +1,11 @@
 -- supabase/migrations/20250928215000_create_membership_management_functions.sql
+-- Create membership_status enum if it doesn't exist
+DO $$ 
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'membership_status') THEN
+        CREATE TYPE public.membership_status AS ENUM ('PENDING', 'APPROVED', 'DENIED', 'BANNED');
+    END IF;
+END $$;
 
 -- First, we need a helper function to check if the current user is a moderator or admin of a given space.
 -- This simplifies the logic in our main API functions and makes security checks reusable.
@@ -61,9 +68,9 @@ $$ LANGUAGE plpgsql;
 -- Allows a Moderator or Admin to change a user's membership status (e.g., approve, deny, ban).
 -- =================================================================
 CREATE OR REPLACE FUNCTION public.update_membership_status(p_membership_id UUID, p_new_status public.membership_status)
-RETURNS public.memberships AS $$
+RETURNS SETOF public.memberships AS $$
 DECLARE
-    v_membership public.memberships;
+    v_membership RECORD;
     v_space_id UUID;
     v_space_type public.space_type;
 BEGIN
@@ -87,7 +94,7 @@ BEGIN
     WHERE id = p_membership_id
     RETURNING * INTO v_membership;
 
-    RETURN v_membership;
+    RETURN v_membership.id;
 END;
 $$ LANGUAGE plpgsql;
 
