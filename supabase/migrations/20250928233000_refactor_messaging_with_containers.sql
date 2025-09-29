@@ -8,10 +8,21 @@ DROP TABLE IF EXISTS public.message_attachments;
 DROP TABLE IF EXISTS public.message_reactions;
 DROP TABLE IF EXISTS public.public_thread_messages;
 DROP TABLE IF EXISTS public.threads;
+DROP TABLE IF EXISTS public.forums CASCADE;
+DROP TABLE IF EXISTS public.community_spaces CASCADE;
+DROP TABLE IF EXISTS public.memberships CASCADE;
 DROP TYPE IF EXISTS public.space_type CASCADE;
 DROP TYPE IF EXISTS public.forum_type CASCADE;
 DROP TYPE IF EXISTS public.membership_role CASCADE;
 DROP TYPE IF EXISTS public.membership_status CASCADE;
+DROP FUNCTION IF EXISTS public.join_public_forum(UUID) CASCADE;
+DROP FUNCTION IF EXISTS public.request_to_join_space(UUID, public.space_type) CASCADE;
+DROP FUNCTION IF EXISTS public.create_thread(TEXT, TEXT, UUID) CASCADE;
+DROP FUNCTION IF EXISTS public.is_approved_member(UUID, UUID) CASCADE;
+DROP FUNCTION IF EXISTS public.can_view_thread(UUID) CASCADE;
+DROP FUNCTION IF EXISTS public.is_space_moderator_or_admin(UUID, public.space_type) CASCADE;
+DROP FUNCTION IF EXISTS public.get_pending_requests(UUID, public.space_type) CASCADE;
+DROP FUNCTION IF EXISTS public.update_membership_status(UUID, public.membership_status) CASCADE;
 
 -- =================================================================
 -- Step 1: Define Custom Types (ENUMs) for clarity and data integrity
@@ -67,7 +78,7 @@ CREATE TABLE public.memberships (
     status public.membership_status NOT NULL DEFAULT 'PENDING',
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    UNIQUE(user_id, space_id, space_type) -- Ensures a user has only one membership per space
+    UNIQUE(user_id, space_id) -- Ensures a user has only one membership per space
 );
 ALTER TABLE public.memberships ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can see their own memberships." ON public.memberships FOR SELECT USING (auth.uid() = user_id);
@@ -132,7 +143,7 @@ CREATE TABLE public.messages (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_threads_container ON public.threads(container_id, container_type);
+CREATE INDEX idx_threads_space_id ON public.threads(space_id);
 CREATE INDEX idx_messages_thread_id ON public.messages(thread_id);
 CREATE INDEX idx_messages_created_at ON public.messages(created_at);
 
@@ -193,6 +204,17 @@ ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Messages are viewable if the parent thread is viewable." ON public.messages FOR SELECT USING (can_view_thread(thread_id));
 CREATE POLICY "Users can insert messages in threads they can view." ON public.messages FOR INSERT WITH CHECK (user_id = auth.uid() AND can_view_thread(thread_id));
 
+CREATE POLICY "Admins/Mods can update memberships in their space" ON public.memberships FOR UPDATE
+USING (
+    EXISTS (
+        SELECT 1 FROM public.memberships m
+        WHERE m.user_id = auth.uid()
+        AND m.space_id = memberships.space_id
+        AND m.space_type = memberships.space_type
+        AND m.status = 'APPROVED'
+        AND m.role IN ('ADMIN', 'MODERATOR')
+    )
+);
 
 -- =================================================================
 -- Step 8: Re-create Ancillary Tables with Correct Foreign Keys
