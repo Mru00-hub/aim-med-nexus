@@ -20,6 +20,7 @@ import PaymentPage from "./pages/PaymentPage";
 import NotFound from "./pages/NotFound";
 import CreateThread from "./pages/CreateThread";
 import ThreadPage from "./pages/ThreadPage";
+import ConsoleInApp from './components/ConsoleInApp';
 
 const queryClient = new QueryClient();
 
