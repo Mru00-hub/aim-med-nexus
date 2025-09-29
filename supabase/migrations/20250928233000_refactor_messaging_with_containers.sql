@@ -92,14 +92,33 @@ CREATE TABLE public.threads (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     creator_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
     title TEXT NOT NULL CHECK (char_length(title) > 3),
-    -- New columns for container logic
-    container_id UUID, -- NULL for Global threads
-    container_type public.space_type, -- NULL for Global threads
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    -- Ensures that if one container field is set, the other is too
-    CONSTRAINT check_container_consistency CHECK ((container_id IS NULL AND container_type IS NULL) OR (container_id IS NOT NULL AND container_type IS NOT NULL))
+    space_id UUID, -- NULL for Global threads, otherwise points to forums.id or community_spaces.id
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+CREATE OR REPLACE FUNCTION public.create_thread(
+    p_title TEXT,
+    p_body TEXT,
+    p_space_id UUID DEFAULT NULL  -- NULL for Global threads
+)
+RETURNS UUID AS $$
+DECLARE
+    v_new_thread_id UUID;
+BEGIN
+    -- Insert the new thread
+    INSERT INTO public.threads (creator_id, title, space_id)
+    VALUES (auth.uid(), p_title, p_space_id)
+    RETURNING id INTO v_new_thread_id;
+
+    -- Insert the initial message if body is provided
+    IF p_body IS NOT NULL AND char_length(p_body) > 0 THEN
+        INSERT INTO public.messages (user_id, thread_id, body)
+        VALUES (auth.uid(), v_new_thread_id, p_body);
+    END IF;
+
+    RETURN v_new_thread_id;
+END;
+$$ LANGUAGE plpgsql;
 
 -- =================================================================
 -- Step 5: Create the 'messages' Table (replaces public_thread_messages)
@@ -120,7 +139,7 @@ CREATE INDEX idx_messages_created_at ON public.messages(created_at);
 -- =================================================================
 -- Step 6: Create RLS Helper Functions for Complex Permission Checks
 -- =================================================================
-CREATE OR REPLACE FUNCTION public.is_approved_member(p_user_id UUID, p_space_id UUID, p_space_type public.space_type)
+CREATE OR REPLACE FUNCTION public.is_approved_member(p_user_id UUID, p_space_id UUID)
 RETURNS BOOLEAN AS $$
 BEGIN
     RETURN EXISTS (
@@ -128,7 +147,6 @@ BEGIN
         FROM public.memberships
         WHERE user_id = p_user_id
           AND space_id = p_space_id
-          AND space_type = p_space_type
           AND status = 'APPROVED'
     );
 END;
@@ -137,23 +155,21 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 CREATE OR REPLACE FUNCTION public.can_view_thread(p_thread_id UUID)
 RETURNS BOOLEAN AS $$
 DECLARE
-    v_container_id UUID;
-    v_container_type public.space_type;
+    v_space_id UUID;
 BEGIN
-    SELECT container_id, container_type INTO v_container_id, v_container_type
+    SELECT space_id INTO v_space_id
     FROM public.threads
     WHERE id = p_thread_id;
 
     -- Global threads are visible to all authenticated users
-    IF v_container_id IS NULL THEN
+    IF v_space_id IS NULL THEN
         RETURN auth.role() = 'authenticated';
     END IF;
 
-    -- For container threads, check for approved membership
-    RETURN is_approved_member(auth.uid(), v_container_id, v_container_type);
+    -- For space threads, check for approved membership
+    RETURN is_approved_member(auth.uid(), v_space_id);
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
-
 
 -- =================================================================
 -- Step 7: Apply Advanced RLS Policies to Content Tables
@@ -166,9 +182,9 @@ CREATE POLICY "Users can insert threads into spaces they are members of (or glob
     creator_id = auth.uid() AND
     (
         -- Case 1: Creating a Global thread
-        container_id IS NULL OR
+        space_id IS NULL OR
         -- Case 2: Creating a thread in a Forum/Space
-        is_approved_member(auth.uid(), container_id, container_type)
+        is_approved_member(auth.uid(), space_id)
     )
 );
 
