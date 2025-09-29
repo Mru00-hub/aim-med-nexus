@@ -20,6 +20,9 @@ import PaymentPage from "./pages/PaymentPage";
 import NotFound from "./pages/NotFound";
 import CreateThread from "./pages/CreateThread";
 import ThreadPage from "./pages/ThreadPage";
+import ForumsPage from './pages/Forums';
+import SpaceDetailPage from './pages/SpaceDetailPage';
+import ThreadDetailPage from './pages/ThreadDetailPage';
 
 const queryClient = new QueryClient();
 
@@ -33,6 +36,9 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/forums" element={<Forums />} />
+            <Route path="/forums" element={<ForumsPage />} />
+            <Route path="/forums/:spaceId" element={<SpaceDetailPage />} />
+            <Route path="/threads/:threadId" element={<ThreadDetailPage />} />
             <Route path="/create-thread" element={<AuthGuard><CreateThread /></AuthGuard>} />
             <Route path="/thread/:threadId" element={<AuthGuard><ThreadPage /></AuthGuard>} />
             <Route path="/jobs" element={<Jobs />} />
