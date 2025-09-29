@@ -17,9 +17,11 @@ const SpaceDetailPage = () => {
   const [threads, setThreads] = useState<Thread[]>([]);
   const [loading, setLoading] = useState(true);
   const [spaceName, setSpaceName] = useState(''); // You'd fetch this too
+  const [spaceType, setSpaceType] = useState<string>('');
 
   useEffect(() => {
     if (!spaceId) return;
+    setLoading(true);
     Promise.all([
       getSpaceDetails(spaceId),
 
@@ -30,19 +32,25 @@ const SpaceDetailPage = () => {
     ])
       .then(([space, threads]) => {
         setSpaceName(space?.title || '');
-        setThreads(data || []);
+        setSpaceType(space?.type || '');
+        setThreads(threads || []);
       })
       .finally(() => setLoading(false));
       
   }, [spaceId]);
+
+  const [showThreadCreator, setShowThreadCreator] = useState(false);
 
   return (
     <div className="flex flex-col h-screen bg-background">
       <Header />
       <main className="container-medical py-8">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold">{spaceName || 'Forum Threads'}</h1>
-          <Button>
+          <h1 className="text-3xl font-bold">
+            {spaceType === 'COMMUNITYSPACE'? 'Community Space Threads' : 'Forum Threads'}
+          - {spaceName}
+          </h1>
+          <Button onClick={() => setShowThreadCreator(true)}>
             <Plus className="h-4 w-4 mr-2" />
             Start New Thread
           </Button>
@@ -71,6 +79,17 @@ const SpaceDetailPage = () => {
         )}
       </main>
     </div>
+    {showThreadCreator && (
+      <CreateThread
+        spaceId={spaceId}
+        onClose={() => setShowThreadCreator(false)}
+        onThreadCreated={(newThreadId) => {
+          setShowThreadCreator(false);
+          // Optionally navigate to thread detail page of the new thread:
+          navigate(`/threads/${newThreadId}`);
+        }}
+      />
+    )}
   );
 };
 
