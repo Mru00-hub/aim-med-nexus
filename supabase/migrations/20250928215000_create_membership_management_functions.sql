@@ -19,7 +19,7 @@ BEGIN
           AND space_id = p_space_id
           AND space_type = p_space_type
           AND status = 'APPROVED'
-          AND role IN ('MODERATOR', 'ADMIN')
+          AND (role = 'MODERATOR'::public.membership_role OR role = 'ADMIN'::public.membership_role)
     );
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -94,7 +94,8 @@ BEGIN
     WHERE id = p_membership_id
     RETURNING * INTO v_membership;
 
-    RETURN v_membership.id;
+    RETURN NEXT v_membership;
+        RETURN;
 END;
 $$ LANGUAGE plpgsql;
 
