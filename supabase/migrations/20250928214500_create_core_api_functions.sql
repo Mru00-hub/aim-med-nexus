@@ -4,7 +4,7 @@
 -- API Function 1: join_public_forum
 -- Allows a user to instantly join a forum that is 'PUBLIC'.
 -- =================================================================
-CREATE OR REPLACE FUNCTION public.join_public_forum(p_forum_id UUID)
+CREATE OR REPLACE FUNCTION public.join_public_forum(p_space_id UUID)
 RETURNS UUID AS $$
 DECLARE
     v_membership_id UUID;
@@ -22,7 +22,7 @@ BEGIN
     ON CONFLICT (user_id, space_id)
     DO UPDATE SET
         status = 'APPROVED',
-        role = 'MEMBER',
+        role = 'MEMBER'
     RETURNING id INTO v_membership_id;
 
     RETURN v_membership_id;
@@ -46,14 +46,14 @@ BEGIN
     INSERT INTO public.memberships (user_id, space_id, space_type, status, role)
     VALUES (auth.uid(), p_space_id, 'PENDING', 'MEMBER')
     ON CONFLICT (user_id, space_id)
-    DO NOTHING
+    DO NOTHING;
 
     -- If the insert was skipped (due to conflict), v_membership_id will be NULL.
     -- We can select the existing ID to return a consistent value.
     SELECT id INTO v_membership_id
     FROM public.memberships
     WHERE user_id = auth.uid()
-        AND space_id = p_space_id
+        AND space_id = p_space_id;
 
     RETURN v_membership_id;
 END;
@@ -68,7 +68,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 CREATE OR REPLACE FUNCTION public.create_thread(
     p_title TEXT,
     p_body TEXT,
-    p_space_id UUID DEFAULT NULL, -- NULL for Global threads
+    p_space_id UUID DEFAULT NULL -- NULL for Global threads
 )
 RETURNS UUID AS $$
 DECLARE
@@ -80,7 +80,7 @@ BEGIN
 
     -- Step 1: Insert the new thread and capture its generated ID.
     INSERT INTO public.threads (creator_id, title, space_id)
-    VALUES (auth.uid(), p_title, space_id)
+    VALUES (auth.uid(), p_title, p_space_id)
     RETURNING id INTO v_new_thread_id;
 
     -- Step 2: Insert the initial message for this new thread.
