@@ -107,6 +107,22 @@ CREATE TABLE public.threads (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- =================================================================
+-- Step 5: Create the 'messages' Table (replaces public_thread_messages)
+-- NOTE: parent_message_id is REMOVED to support continuous chat UI.
+-- =================================================================
+CREATE TABLE public.messages (
+    id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+    thread_id UUID REFERENCES public.threads(id) ON DELETE CASCADE NOT NULL,
+    body TEXT NOT NULL CHECK (char_length(body) > 0),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_threads_space_id ON public.threads(space_id);
+CREATE INDEX idx_messages_thread_id ON public.messages(thread_id);
+CREATE INDEX idx_messages_created_at ON public.messages(created_at);
+
 CREATE OR REPLACE FUNCTION public.create_thread(
     p_title TEXT,
     p_body TEXT,
@@ -130,22 +146,6 @@ BEGIN
     RETURN v_new_thread_id;
 END;
 $$ LANGUAGE plpgsql;
-
--- =================================================================
--- Step 5: Create the 'messages' Table (replaces public_thread_messages)
--- NOTE: parent_message_id is REMOVED to support continuous chat UI.
--- =================================================================
-CREATE TABLE public.messages (
-    id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
-    thread_id UUID REFERENCES public.threads(id) ON DELETE CASCADE NOT NULL,
-    body TEXT NOT NULL CHECK (char_length(body) > 0),
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
-CREATE INDEX idx_threads_space_id ON public.threads(space_id);
-CREATE INDEX idx_messages_thread_id ON public.messages(thread_id);
-CREATE INDEX idx_messages_created_at ON public.messages(created_at);
 
 -- =================================================================
 -- Step 6: Create RLS Helper Functions for Complex Permission Checks
@@ -198,11 +198,21 @@ CREATE POLICY "Users can insert threads into spaces they are members of (or glob
         is_approved_member(auth.uid(), space_id)
     )
 );
+CREATE POLICY "Users can update their own threads" ON public.threads FOR UPDATE
+USING (auth.uid() = creator_id);
+
+CREATE POLICY "Users can delete their own threads" ON public.threads FOR DELETE
+USING (auth.uid() = creator_id);
 
 -- Policies for 'messages'
 ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Messages are viewable if the parent thread is viewable." ON public.messages FOR SELECT USING (can_view_thread(thread_id));
 CREATE POLICY "Users can insert messages in threads they can view." ON public.messages FOR INSERT WITH CHECK (user_id = auth.uid() AND can_view_thread(thread_id));
+CREATE POLICY "Users can update their own messages" ON public.messages FOR UPDATE
+USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete their own messages" ON public.messages FOR DELETE
+USING (auth.uid() = user_id);
 
 CREATE POLICY "Admins/Mods can update memberships in their space" ON public.memberships FOR UPDATE
 USING (
