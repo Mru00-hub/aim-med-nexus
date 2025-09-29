@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Header } from '@/components/layout/Header';
-import { getThreads } from '@/integrations/supabase/api'; // Use our existing function
+import { getSpaceDetails, getThreadsForSpace } from '@/integrations/supabase/api'; // Use our existing function
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
@@ -20,12 +20,16 @@ const SpaceDetailPage = () => {
 
   useEffect(() => {
     if (!spaceId) return;
+    Promise.all([
+      getSpaceDetails(spaceId),
 
     // In a real app, you'd fetch space details (like its name) first.
     // For now, we'll just fetch the threads.
     // The 'FORUM' type might need to be dynamic if you have Community Spaces.
-    getThreads(spaceId, 'FORUM')
-      .then(data => {
+      getThreadsForSpace(spaceId)
+    ])
+      .then(([space, threads]) => {
+        setSpaceName(space?.title || '');
         setThreads(data || []);
       })
       .finally(() => setLoading(false));
