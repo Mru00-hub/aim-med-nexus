@@ -230,8 +230,120 @@ CREATE TABLE public.global_engagement (
   counter_value BIGINT NOT NULL DEFAULT 0,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
 ALTER TABLE public.global_engagement ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Global engagement is readable by all" ON public.global_engagement FOR SELECT USING (true);
 CREATE POLICY "Global engagement is updatable by authenticated users" ON public.global_engagement FOR UPDATE USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
 INSERT INTO public.global_engagement (counter_name, counter_value) VALUES ('love_counter', 0);
 
+-- =================================================================
+-- Step 10: Create API Functions for Space Joining
+-- =================================================================
+
+CREATE OR REPLACE FUNCTION public.join_public_forum(p_space_id UUID)
+RETURNS UUID AS $$
+DECLARE
+    v_membership_id UUID;
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM public.forums WHERE id = p_space_id AND type = 'PUBLIC') THEN
+        RAISE EXCEPTION 'Forum is not public or does not exist.';
+    END IF;
+
+    INSERT INTO public.memberships (user_id, space_id, space_type, status, role)
+    VALUES (auth.uid(), p_space_id, 'FORUM', 'APPROVED', 'MEMBER')
+    ON CONFLICT (user_id, space_id)
+    DO UPDATE SET status = 'APPROVED', role = 'MEMBER'
+    RETURNING id INTO v_membership_id;
+
+    RETURN v_membership_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE FUNCTION public.request_to_join_space(p_space_id UUID, p_space_type public.space_type)
+RETURNS UUID AS $$
+DECLARE
+    v_membership_id UUID;
+BEGIN
+    INSERT INTO public.memberships (user_id, space_id, space_type, status, role)
+    VALUES (auth.uid(), p_space_id, p_space_type, 'PENDING', 'MEMBER')
+    ON CONFLICT (user_id, space_id) DO NOTHING;
+
+    SELECT id INTO v_membership_id
+    FROM public.memberships
+    WHERE user_id = auth.uid() AND space_id = p_space_id;
+
+    RETURN v_membership_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- =================================================================
+-- Step 11: Create Membership Management Functions
+-- =================================================================
+
+CREATE OR REPLACE FUNCTION public.is_space_moderator_or_admin(p_space_id UUID, p_space_type public.space_type)
+RETURNS BOOLEAN AS $$
+BEGIN
+    RETURN EXISTS (
+        SELECT 1 FROM public.memberships
+        WHERE user_id = auth.uid()
+          AND space_id = p_space_id
+          AND space_type = p_space_type
+          AND status = 'APPROVED'
+          AND role IN ('MODERATOR', 'ADMIN')
+    );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE FUNCTION public.get_pending_requests(p_space_id UUID, p_space_type public.space_type)
+RETURNS TABLE (
+    membership_id UUID,
+    user_id UUID,
+    email TEXT,
+    requested_at TIMESTAMPTZ
+) AS $$
+BEGIN
+    IF NOT is_space_moderator_or_admin(p_space_id, p_space_type) THEN
+        RAISE EXCEPTION 'Permission denied: You must be a moderator or admin of this space.';
+    END IF;
+
+    RETURN QUERY
+    SELECT m.id, m.user_id, u.email, m.created_at
+    FROM public.memberships m
+    JOIN auth.users u ON m.user_id = u.id
+    WHERE m.space_id = p_space_id
+      AND m.space_type = p_space_type
+      AND m.status = 'PENDING'
+    ORDER BY m.created_at;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION public.update_membership_status(p_membership_id UUID, p_new_status public.membership_status)
+RETURNS SETOF public.memberships AS $$
+DECLARE
+    v_membership RECORD;
+BEGIN
+    SELECT * INTO v_membership FROM public.memberships WHERE id = p_membership_id;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Membership not found.';
+    END IF;
+
+    IF NOT is_space_moderator_or_admin(v_membership.space_id, v_membership.space_type) THEN
+        RAISE EXCEPTION 'Permission denied: You must be a moderator or admin of this space.';
+    END IF;
+
+    UPDATE public.memberships
+    SET status = p_new_status, updated_at = now()
+    WHERE id = p_membership_id
+    RETURNING * INTO v_membership;
+
+    RETURN NEXT v_membership;
+END;
+$$ LANGUAGE plpgsql;
+
+-- =================================================================
+-- Step 12: Add performance indexes
+-- =================================================================
+CREATE INDEX idx_memberships_user_id ON public.memberships(user_id);
+CREATE INDEX idx_memberships_space_id ON public.memberships(space_id);
+CREATE INDEX idx_memberships_status ON public.memberships(status);
+CREATE INDEX idx_memberships_space_type ON public.memberships(space_type);
