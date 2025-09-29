@@ -5,6 +5,7 @@ import { Footer } from '@/components/layout/Footer';
 import { useAuth } from '@/hooks/useAuth';
 import { ForumsNav } from '@/components/forums/ForumsNav';
 import { SpaceCreator } from '@/components/forums/SpaceCreator';
+import { createSpace } from '@/integrations/supabase/api';
 import type { Space, SpaceType, JoinMechanism } from '@/types/forum';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -434,7 +435,7 @@ const Forums = () => {
               
               <div className="flex justify-between items-center mt-4">
                 {user ? (
-                  <Button className="btn-medical">
+                  <Button className="btn-medical" onClick={() => setShowSpaceCreator(true)}>
                     <Plus className="h-4 w-4 mr-2" />
                     Create forum/space
                   </Button>
@@ -535,6 +536,17 @@ const Forums = () => {
         </section>
       </main>
       <Footer />
+      <SpaceCreator
+        isOpen={showSpaceCreator}
+        onClose={() => setShowSpaceCreator(false)}
+        onSubmit={async (spaceData) => {
+          const result = await createSpace(spaceData);
+          setShowSpaceCreator(false);
+          if (result?.id) {
+            navigate(`/forums/${result.id}`);
+          }
+        }}
+      />
     </div>
   );
 };
