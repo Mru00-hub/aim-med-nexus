@@ -8,7 +8,10 @@ DROP TABLE IF EXISTS public.message_attachments;
 DROP TABLE IF EXISTS public.message_reactions;
 DROP TABLE IF EXISTS public.public_thread_messages;
 DROP TABLE IF EXISTS public.threads;
-
+DROP TYPE IF EXISTS public.space_type CASCADE;
+DROP TYPE IF EXISTS public.forum_type CASCADE;
+DROP TYPE IF EXISTS public.membership_role CASCADE;
+DROP TYPE IF EXISTS public.membership_status CASCADE;
 
 -- =================================================================
 -- Step 1: Define Custom Types (ENUMs) for clarity and data integrity
@@ -110,6 +113,9 @@ CREATE TABLE public.messages (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+CREATE INDEX idx_threads_container ON public.threads(container_id, container_type);
+CREATE INDEX idx_messages_thread_id ON public.messages(thread_id);
+CREATE INDEX idx_messages_created_at ON public.messages(created_at);
 
 -- =================================================================
 -- Step 6: Create RLS Helper Functions for Complex Permission Checks
