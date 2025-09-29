@@ -36,7 +36,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- API Function 2: request_to_join_space
 -- Allows a user to request access to a 'PRIVATE' forum or a 'COMMUNITY_SPACE'.
 -- =================================================================
-CREATE OR REPLACE FUNCTION public.request_to_join_space(p_space_id UUID, p_space_type public.space_type)
+CREATE OR REPLACE FUNCTION public.request_to_join_space(p_space_id UUID, p_space_type TEXT)
 RETURNS UUID AS $$
 DECLARE
     v_membership_id UUID;
