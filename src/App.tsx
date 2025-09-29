@@ -6,7 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import AuthGuard from "@/components/AuthGuard";
 import Index from "./pages/Index";
-import Forums from "./pages/Forums";
+import { Forums } from "./pages/Forums";
 import Jobs from "./pages/Jobs";
 import Networking from "./pages/Networking";
 import Partnerships from "./pages/Partnerships";
