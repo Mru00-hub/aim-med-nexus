@@ -1,6 +1,6 @@
 // src/components/messaging/Message.tsx
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { MessageWithAuthor } from '@/integrations/supabase/types'; // We'll define this type soon
+import { MessageWithAuthor } from '@/types/forum'; // We'll define this type soon
 
 // In src/integrations/supabase/types.ts, add this helper type
 // export type MessageWithAuthor = Database['public']['Functions']['get_messages']['Returns'][number];

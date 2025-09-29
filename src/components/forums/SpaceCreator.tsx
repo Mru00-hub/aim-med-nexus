@@ -72,7 +72,7 @@ export const SpaceCreator: React.FC<SpaceCreatorProps> = ({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="forum">Forum</SelectItem>
-                <SelectItem value="community">Community Space</SelectItem>
+                <SelectItem value="community_space">Community Space</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -130,7 +130,7 @@ export const SpaceCreator: React.FC<SpaceCreatorProps> = ({
             </Select>
           </div>
 
-          {type === 'community' && (
+          {(type === 'community' || type === 'community_space') && (
             <div className="space-y-2">
               <Label>Institution</Label>
               <Select

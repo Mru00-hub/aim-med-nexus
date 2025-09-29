@@ -30,7 +30,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { getForums } from '@/integrations/supabase/api';
+import { getSpaces, getPublicThreads } from '@/integrations/supabase/api';
 /**
  * Forums & Community Spaces Page
  * Comprehensive forum system with specialty-based discussions
@@ -180,6 +180,7 @@ const examplePublicThreads = [
 ];
 
 const [threadSearchQuery, setThreadSearchQuery] = useState('');
+
 const Forums = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -499,17 +500,17 @@ const Forums = () => {
           <h2 className="text-2xl font-semibold mb-6">Top forums by members</h2>
           
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {exampleForums.slice(0, 4).map((forum, index) => (
-              <Card key={forum.id} className="card-medical text-center">
+            {exampleSpaces.slice(0, 4).map((space, index) => (
+              <Card key={space.id} className="card-medical text-center">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between mb-2">
-                    <h3 className="font-semibold">{forum.title}</h3>
+                    <h3 className="font-semibold">{space.title}</h3>
                     <Badge variant="outline" className="text-xs">
                       Most members
                     </Badge>
                   </div>
                   <div className="text-2xl font-bold text-primary mb-1">
-                    {forum.members.toLocaleString()}
+                    {space.members.toLocaleString()}
                   </div>
                   <div className="text-sm text-muted-foreground">members</div>
                 </CardContent>
@@ -538,3 +539,5 @@ const Forums = () => {
     </div>
   );
 };
+
+export default Forums;

@@ -2,7 +2,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { getMessages } from '@/integrations/supabase/api';
-import { MessageWithAuthor } from '@/integrations/supabase/types';
+import { MessageWithAuthor } from '@/types/forum';
 import { Message } from './Message';
 import { MessageInput } from './MessageInput';
 import { ScrollArea } from '@/components/ui/scroll-area';

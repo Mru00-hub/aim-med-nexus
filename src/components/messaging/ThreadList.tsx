@@ -1,12 +1,16 @@
 // src/components/messaging/ThreadList.tsx
 import { useState, useEffect } from 'react';
-import { getThreads } from '@/integrations/supabase/api';
+import { getThreadsForSpace } from '@/integrations/supabase/api';
 import { Database } from '@/integrations/supabase/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { Space } from './SpaceSidebar';
 
-// Define the Thread type based on the get_threads function return type
-type Thread = Database['public']['Functions']['get_threads']['Returns'][number];
+// Define the Thread type 
+type Thread = {
+  id: string;
+  title: string;
+  message_count: number;
+};
 
 interface ThreadListProps {
   space: Space | null;
@@ -25,7 +29,7 @@ export const ThreadList = ({ space, onSelectThread, activeThreadId }: ThreadList
       setLoading(true);
       const containerId = space.type === 'GLOBAL' ? null : space.id;
       const containerType = space.type === 'GLOBAL' ? null : space.type;
-      const data = await getThreads(containerId, containerType);
+      const data = await getThreadsForSpace(containerId || '');
       setThreads(data || []);
       setLoading(false);
     };

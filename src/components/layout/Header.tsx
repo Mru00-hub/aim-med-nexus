@@ -151,27 +151,8 @@ const handleLovingItClick = async () => {
 
             {user ? (
               <>
-                {headerIcons.map((item, index) => (
-                <div key={index} className="relative">
-                  {item.onClick ? (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={item.onClick}
-                      className={`relative p-3 hover:bg-muted/50 transition-colors ${item.color}`}
-                      title={item.label}
-                    >
-                      <item.icon className="h-5 w-5" />
-                      {item.showBadge && item.badge > 0 && (
-                        <Badge 
-                          variant="destructive" 
-                          className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs"
-                        >
-                          {item.badge > 99 ? '99+' : item.badge}
-                        </Badge>
-                      )}
-                    </Button>
-                  ) : (
+                 {headerIcons.map((item, index) => (
+                  <div key={index} className="relative">
                     <Link to={item.href || '#'}>
                       <Button
                         variant="ghost"
@@ -190,7 +171,6 @@ const handleLovingItClick = async () => {
                         )}
                       </Button>
                     </Link>
-                  )}
                   </div>
                 ))}
               </>
@@ -279,14 +259,10 @@ const handleLovingItClick = async () => {
 
               {user && headerIcons.map((item, index) => (
                 <div key={index} className="relative">
-                  {item.onClick ? (
+                  <Link to={item.href || '#'} onClick={() => setMobileMenuOpen(false)}>
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => {
-                        item.onClick();
-                        setMobileMenuOpen(false);
-                      }}
                       className={`w-full flex flex-col items-center gap-1 p-3 h-auto ${item.color}`}
                     >
                       <div className="relative">
@@ -302,28 +278,7 @@ const handleLovingItClick = async () => {
                       </div>
                       <span className="text-xs text-center">{item.label}</span>
                     </Button>
-                  ) : (
-                    <Link to={item.href || '#'} onClick={() => setMobileMenuOpen(false)}>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className={`w-full flex flex-col items-center gap-1 p-3 h-auto ${item.color}`}
-                      >
-                        <div className="relative">
-                          <item.icon className="h-5 w-5" />
-                          {item.showBadge && item.badge > 0 && (
-                            <Badge 
-                              variant="destructive" 
-                              className="absolute -top-2 -right-2 h-4 w-4 rounded-full p-0 flex items-center justify-center text-xs"
-                            >
-                              {item.badge > 99 ? '99+' : item.badge}
-                            </Badge>
-                          )}
-                        </div>
-                        <span className="text-xs text-center">{item.label}</span>
-                      </Button>
-                    </Link>
-                  )}
+                  </Link>
                 </div>
               ))}
             </div>
