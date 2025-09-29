@@ -1,9 +1,17 @@
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+
 function App() {
   return (
-    <div>
-      <h1>Hello World!</h1>
-      <p>If you can see this, the basic setup is working.</p>
-    </div>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={
+          <div>
+            <h1>Hello World!</h1>
+            <p>Step 1: Router is working.</p>
+          </div>
+        } />
+      </Routes>
+    </BrowserRouter>
   );
 }
 
