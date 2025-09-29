@@ -10,7 +10,7 @@ DECLARE
     v_membership_id UUID;
 BEGIN
     -- First, verify the forum is actually public to prevent misuse
-    IF NOT EXISTS (SELECT 1 FROM public.forums WHERE id = p_forum_id AND type = 'PUBLIC') THEN
+    IF NOT EXISTS (SELECT 1 FROM public.forums WHERE id = p_space_id AND type = 'FORUM' AND forum_type = 'PUBLIC') THEN
         RAISE EXCEPTION 'Forum is not public or does not exist.';
     END IF;
 
@@ -18,12 +18,11 @@ BEGIN
     -- If they already have a record (e.g., were previously denied or pending),
     -- this will update their status to 'APPROVED'.
     INSERT INTO public.memberships (user_id, space_id, space_type, status, role)
-    VALUES (auth.uid(), p_forum_id, 'FORUM', 'APPROVED', 'MEMBER')
-    ON CONFLICT (user_id, space_id, space_type)
+    VALUES (auth.uid(), p_space_id, 'FORUM', 'APPROVED', 'MEMBER')
+    ON CONFLICT (user_id, space_id)
     DO UPDATE SET
         status = 'APPROVED',
         role = 'MEMBER',
-        updated_at = now()
     RETURNING id INTO v_membership_id;
 
     RETURN v_membership_id;
@@ -45,20 +44,16 @@ BEGIN
     -- Insert the user with a 'PENDING' status.
     -- ON CONFLICT DO NOTHING prevents creating duplicate pending requests.
     INSERT INTO public.memberships (user_id, space_id, space_type, status, role)
-    VALUES (auth.uid(), p_space_id, p_space_type, 'PENDING', 'MEMBER')
-    ON CONFLICT (user_id, space_id, space_type)
+    VALUES (auth.uid(), p_space_id, 'PENDING', 'MEMBER')
+    ON CONFLICT (user_id, space_id)
     DO NOTHING
-    RETURNING id INTO v_membership_id;
 
     -- If the insert was skipped (due to conflict), v_membership_id will be NULL.
     -- We can select the existing ID to return a consistent value.
-    IF v_membership_id IS NULL THEN
-        SELECT id INTO v_membership_id
-        FROM public.memberships
-        WHERE user_id = auth.uid()
-          AND space_id = p_space_id
-          AND space_type = p_space_type;
-    END IF;
+    SELECT id INTO v_membership_id
+    FROM public.memberships
+    WHERE user_id = auth.uid()
+        AND space_id = p_space_id
 
     RETURN v_membership_id;
 END;
@@ -73,8 +68,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 CREATE OR REPLACE FUNCTION public.create_thread(
     p_title TEXT,
     p_body TEXT,
-    p_container_id UUID DEFAULT NULL, -- NULL for Global threads
-    p_container_type public.space_type DEFAULT NULL -- NULL for Global threads
+    p_space_id UUID DEFAULT NULL, -- NULL for Global threads
 )
 RETURNS UUID AS $$
 DECLARE
@@ -85,8 +79,8 @@ BEGIN
     -- The INSERT will fail automatically if they don't have permission.
 
     -- Step 1: Insert the new thread and capture its generated ID.
-    INSERT INTO public.threads (creator_id, title, container_id, container_type)
-    VALUES (auth.uid(), p_title, p_container_id, p_container_type)
+    INSERT INTO public.threads (creator_id, title, space_id)
+    VALUES (auth.uid(), p_title, space_id)
     RETURNING id INTO v_new_thread_id;
 
     -- Step 2: Insert the initial message for this new thread.
