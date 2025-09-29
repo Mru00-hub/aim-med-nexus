@@ -164,15 +164,15 @@
 @layer components {
   /* Medical Button Variants */
   .btn-medical {
-    @apply bg-gradient-to-r from-primary to-primary-light text-primary-foreground shadow-medical hover:shadow-hover transition-all duration-300;
+    @apply bg-primary text-primary-foreground shadow-medical hover:shadow-hover transition-all duration-300;
   }
 
   .btn-premium {
-    @apply bg-gradient-to-r from-premium to-primary text-premium-foreground shadow-premium hover:shadow-hover;
+    @apply bg-premium text-premium-foreground shadow-premium hover:shadow-hover;
   }
 
   .btn-deluxe {
-    @apply bg-gradient-to-r from-deluxe to-premium text-deluxe-foreground shadow-premium hover:shadow-hover;
+    @apply bg-deluxe text-deluxe-foreground shadow-premium hover:shadow-hover;
   }
 
   /* Medical Cards */
@@ -181,7 +181,7 @@
   }
 
   .card-premium {
-    @apply bg-gradient-to-br from-card to-secondary border border-premium/20 rounded-radius-lg shadow-premium;
+    @apply bg-card border border-premium/20 rounded-radius-lg shadow-premium;
   }
 
   /* Healthcare Icons */
