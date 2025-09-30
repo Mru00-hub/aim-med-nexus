@@ -34,20 +34,19 @@ export const Header = () => {
 
   // Fetch initial loving it count
   useEffect(() => {
-    console.log('🔴 useEffect running - fetching love count');
     const fetchInitialCount = async () => {
       const initialCount = await getLoveCount();
-      console.log('🔴 Love count from database:', initialCount);
       setLovingItCount(initialCount);
     };
     fetchInitialCount();
   }, []);
+
   // Handle loving it click
   const handleLovingItClick = async () => {
     setLovingItCount(prevCount => prevCount + 1);
     await incrementLoveCount();
   };
-  console.log('🔴 Current lovingItCount state:', lovingItCount);
+
   // Navigation icons - only shown to logged-in users
   const headerIcons = [
     {
