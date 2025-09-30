@@ -3,6 +3,9 @@
   "image": "mcr.microsoft.com/devcontainers/javascript-node:0-20",
 
   "features": {
+    "ghcr.io/devcontainers/features/docker-from-docker:1": {
+      "version": "latest"
+    },
     "ghcr.io/devcontainers/features/git-lfs:1": {}
   },
 
@@ -13,7 +16,8 @@
   "customizations": {
     "vscode": {
       "extensions": [
-        "dbaeumer.vscode-eslint"
+        "dbaeumer.vscode-eslint",
+        "ms-azuretools.vscode-docker"
       ]
     }
   }
