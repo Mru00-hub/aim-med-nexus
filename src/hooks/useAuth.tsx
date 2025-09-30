@@ -140,7 +140,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         full_name: fullName,
         phone: metadata.phone,
         current_location: metadata.location,
-        user_role: metadata.registration_type
+        user_role: metadata.registration_type,
         profile_picture_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}&background=random`
       };
 
