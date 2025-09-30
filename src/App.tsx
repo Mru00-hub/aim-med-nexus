@@ -6,7 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import AuthGuard from "@/components/AuthGuard";
 import Index from "./pages/Index";
-import Forums from "./pages/Forums";
+import Forums from "./pages/Community/Forums";
 import Jobs from "./pages/Jobs";
 import Networking from "./pages/Networking";
 import Partnerships from "./pages/Partnerships";
@@ -18,11 +18,11 @@ import Register from "./pages/Register";
 import Login from "./pages/Login";
 import PaymentPage from "./pages/PaymentPage";
 import NotFound from "./pages/NotFound";
-import CreateThread from "./pages/CreateThread";
-import ThreadPage from "./pages/ThreadPage";
-import ForumsPage from './pages/Forums';
-import SpaceDetailPage from './pages/SpaceDetailPage';
-import ThreadDetailPage from './pages/ThreadDetailPage';
+import CreateThread from "./pages/Community/CreateThread";
+import ThreadPage from "./pages/Community/ThreadPage";
+import ForumsPage from './pages/Community/Forums';
+import SpaceDetailPage from './pages/Community/SpaceDetailPage';
+import ThreadDetailPage from './pages/Community/ThreadDetailPage';
 
 const queryClient = new QueryClient();
 
