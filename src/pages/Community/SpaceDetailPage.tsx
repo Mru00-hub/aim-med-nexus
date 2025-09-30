@@ -149,23 +149,29 @@ export default function SpaceDetailPage() {
       </main>
       <Footer />
       
-      {/* STEP 4: Handle "Create Thread" with a Modal
-        NOTE: This is a placeholder for the modal. We will refactor CreateThread.tsx
-        in a future step to be a reusable component that can be placed here.
-      */}
-      {showCreateThread && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
-          <Card className="w-full max-w-lg">
-            <CardHeader>
-              <CardTitle>Create Thread in {space?.name}</CardTitle>
-              <Button variant="ghost" size="icon" onClick={() => setShowCreateThread(false)} className="absolute top-2 right-2">X</Button>
-            </CardHeader>
-            <CardContent>
-              <p className="text-center p-8">The Create Thread form component will go here.</p>
-            </CardContent>
-          </Card>
+      {/* Import Dialog components at the top of the file:
+    import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+    And import the CreateThreadForm component we created:
+    import { CreateThreadForm } from './CreateThreadPage'; // Assuming it's exported from the page file
+*/}
+<Dialog open={showCreateThread} onOpenChange={setShowCreateThread}>
+    <DialogContent>
+        <DialogHeader>
+            <DialogTitle>Create New Thread in {space?.name}</DialogTitle>
+            <DialogDescription>This thread will only be visible to members of this space.</DialogDescription>
+        </DialogHeader>
+        <div className="pt-4">
+            <CreateThreadForm
+                spaceId={spaceId}
+                spaceType={searchParams.get('type') === 'forum' ? 'FORUM' : 'COMMUNITY_SPACE'}
+                onThreadCreated={(newThreadId) => {
+                    setShowCreateThread(false);
+                    navigate(`/community/thread/${newThreadId}`);
+                }}
+            />
         </div>
-      )}
+    </DialogContent>
+</Dialog>
     </div>
   );
 };
