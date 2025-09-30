@@ -14,130 +14,29 @@ export type Database = {
   }
   public: {
     Tables: {
-      chat_messages: {
+      community_spaces: {
         Row: {
-          content: string
-          created_at: string | null
-          file_url: string | null
+          created_at: string
+          creator_id: string | null
+          description: string | null
           id: string
-          is_edited: boolean | null
-          message_type: string | null
-          room_id: string | null
-          sender_id: string | null
-          updated_at: string | null
+          name: string
         }
         Insert: {
-          content: string
-          created_at?: string | null
-          file_url?: string | null
+          created_at?: string
+          creator_id?: string | null
+          description?: string | null
           id?: string
-          is_edited?: boolean | null
-          message_type?: string | null
-          room_id?: string | null
-          sender_id?: string | null
-          updated_at?: string | null
+          name: string
         }
         Update: {
-          content?: string
-          created_at?: string | null
-          file_url?: string | null
+          created_at?: string
+          creator_id?: string | null
+          description?: string | null
           id?: string
-          is_edited?: boolean | null
-          message_type?: string | null
-          room_id?: string | null
-          sender_id?: string | null
-          updated_at?: string | null
+          name?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "chat_messages_room_id_fkey"
-            columns: ["room_id"]
-            isOneToOne: false
-            referencedRelation: "chat_rooms"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "chat_messages_sender_id_fkey"
-            columns: ["sender_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      chat_participants: {
-        Row: {
-          id: string
-          joined_at: string | null
-          last_read_at: string | null
-          room_id: string | null
-          user_id: string | null
-        }
-        Insert: {
-          id?: string
-          joined_at?: string | null
-          last_read_at?: string | null
-          room_id?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          id?: string
-          joined_at?: string | null
-          last_read_at?: string | null
-          room_id?: string | null
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "chat_participants_room_id_fkey"
-            columns: ["room_id"]
-            isOneToOne: false
-            referencedRelation: "chat_rooms"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "chat_participants_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      chat_rooms: {
-        Row: {
-          created_at: string | null
-          created_by: string | null
-          id: string
-          is_group: boolean | null
-          name: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          created_by?: string | null
-          id?: string
-          is_group?: boolean | null
-          name?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          created_by?: string | null
-          id?: string
-          is_group?: boolean | null
-          name?: string | null
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "chat_rooms_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       courses_programs: {
         Row: {
@@ -196,144 +95,32 @@ export type Database = {
         }
         Relationships: []
       }
-      forum_categories: {
+      forums: {
         Row: {
-          created_at: string | null
+          created_at: string
+          creator_id: string | null
           description: string | null
-          icon_name: string | null
           id: string
-          is_active: boolean | null
           name: string
+          type: Database["public"]["Enums"]["forum_type"]
         }
         Insert: {
-          created_at?: string | null
+          created_at?: string
+          creator_id?: string | null
           description?: string | null
-          icon_name?: string | null
           id?: string
-          is_active?: boolean | null
           name: string
+          type?: Database["public"]["Enums"]["forum_type"]
         }
         Update: {
-          created_at?: string | null
+          created_at?: string
+          creator_id?: string | null
           description?: string | null
-          icon_name?: string | null
           id?: string
-          is_active?: boolean | null
           name?: string
+          type?: Database["public"]["Enums"]["forum_type"]
         }
         Relationships: []
-      }
-      forum_posts: {
-        Row: {
-          author_id: string | null
-          content: string
-          created_at: string | null
-          id: string
-          is_deleted: boolean | null
-          parent_post_id: string | null
-          thread_id: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          author_id?: string | null
-          content: string
-          created_at?: string | null
-          id?: string
-          is_deleted?: boolean | null
-          parent_post_id?: string | null
-          thread_id?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          author_id?: string | null
-          content?: string
-          created_at?: string | null
-          id?: string
-          is_deleted?: boolean | null
-          parent_post_id?: string | null
-          thread_id?: string | null
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "forum_posts_author_id_fkey"
-            columns: ["author_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "forum_posts_parent_post_id_fkey"
-            columns: ["parent_post_id"]
-            isOneToOne: false
-            referencedRelation: "forum_posts"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "forum_posts_thread_id_fkey"
-            columns: ["thread_id"]
-            isOneToOne: false
-            referencedRelation: "forum_threads"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      forum_threads: {
-        Row: {
-          category_id: string | null
-          content: string
-          created_at: string | null
-          created_by: string | null
-          id: string
-          is_locked: boolean | null
-          is_pinned: boolean | null
-          last_activity_at: string | null
-          title: string
-          updated_at: string | null
-          view_count: number | null
-        }
-        Insert: {
-          category_id?: string | null
-          content: string
-          created_at?: string | null
-          created_by?: string | null
-          id?: string
-          is_locked?: boolean | null
-          is_pinned?: boolean | null
-          last_activity_at?: string | null
-          title: string
-          updated_at?: string | null
-          view_count?: number | null
-        }
-        Update: {
-          category_id?: string | null
-          content?: string
-          created_at?: string | null
-          created_by?: string | null
-          id?: string
-          is_locked?: boolean | null
-          is_pinned?: boolean | null
-          last_activity_at?: string | null
-          title?: string
-          updated_at?: string | null
-          view_count?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "forum_threads_category_id_fkey"
-            columns: ["category_id"]
-            isOneToOne: false
-            referencedRelation: "forum_categories"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "forum_threads_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       global_engagement: {
         Row: {
@@ -536,12 +323,45 @@ export type Database = {
         }
         Relationships: []
       }
+      memberships: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["membership_role"]
+          space_id: string
+          space_type: Database["public"]["Enums"]["space_type"]
+          status: Database["public"]["Enums"]["membership_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["membership_role"]
+          space_id: string
+          space_type: Database["public"]["Enums"]["space_type"]
+          status?: Database["public"]["Enums"]["membership_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["membership_role"]
+          space_id?: string
+          space_type?: Database["public"]["Enums"]["space_type"]
+          status?: Database["public"]["Enums"]["membership_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       message_attachments: {
         Row: {
           created_at: string
           file_name: string
-          file_size: number | null
-          file_type: string
+          file_size_bytes: number | null
+          file_type: string | null
           file_url: string
           id: string
           message_id: number
@@ -550,8 +370,8 @@ export type Database = {
         Insert: {
           created_at?: string
           file_name: string
-          file_size?: number | null
-          file_type: string
+          file_size_bytes?: number | null
+          file_type?: string | null
           file_url: string
           id?: string
           message_id: number
@@ -560,14 +380,22 @@ export type Database = {
         Update: {
           created_at?: string
           file_name?: string
-          file_size?: number | null
-          file_type?: string
+          file_size_bytes?: number | null
+          file_type?: string | null
           file_url?: string
           id?: string
           message_id?: number
           uploaded_by?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "message_attachments_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       message_reactions: {
         Row: {
@@ -591,32 +419,43 @@ export type Database = {
           reaction_emoji?: string
           user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "message_reactions_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       messages: {
         Row: {
           body: string
-          created_at: string | null
+          created_at: string
           id: number
-          is_read: boolean | null
-          sender_id: string
-          thread_id: number
+          is_edited: boolean
+          thread_id: string
+          updated_at: string
+          user_id: string
         }
         Insert: {
           body: string
-          created_at?: string | null
+          created_at?: string
           id?: never
-          is_read?: boolean | null
-          sender_id: string
-          thread_id: number
+          is_edited?: boolean
+          thread_id: string
+          updated_at?: string
+          user_id: string
         }
         Update: {
           body?: string
-          created_at?: string | null
+          created_at?: string
           id?: never
-          is_read?: boolean | null
-          sender_id?: string
-          thread_id?: number
+          is_edited?: boolean
+          thread_id?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: [
           {
@@ -887,56 +726,33 @@ export type Database = {
         }
         Relationships: []
       }
-      thread_participants: {
-        Row: {
-          id: number
-          joined_at: string | null
-          role: string | null
-          thread_id: number
-          user_id: string
-        }
-        Insert: {
-          id?: never
-          joined_at?: string | null
-          role?: string | null
-          thread_id: number
-          user_id: string
-        }
-        Update: {
-          id?: never
-          joined_at?: string | null
-          role?: string | null
-          thread_id?: number
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "thread_participants_thread_id_fkey"
-            columns: ["thread_id"]
-            isOneToOne: false
-            referencedRelation: "threads"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       threads: {
         Row: {
-          created_at: string | null
-          created_by: string
-          id: number
-          title: string | null
+          created_at: string
+          creator_id: string
+          id: string
+          space_id: string | null
+          space_type: Database["public"]["Enums"]["space_type"] | null
+          title: string
+          updated_at: string
         }
         Insert: {
-          created_at?: string | null
-          created_by: string
-          id?: never
-          title?: string | null
+          created_at?: string
+          creator_id: string
+          id?: string
+          space_id?: string | null
+          space_type?: Database["public"]["Enums"]["space_type"] | null
+          title: string
+          updated_at?: string
         }
         Update: {
-          created_at?: string | null
-          created_by?: string
-          id?: never
-          title?: string | null
+          created_at?: string
+          creator_id?: string
+          id?: string
+          space_id?: string | null
+          space_type?: Database["public"]["Enums"]["space_type"] | null
+          title?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -1197,6 +1013,21 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_view_thread: {
+        Args: { p_thread_id: string }
+        Returns: boolean
+      }
+      create_thread: {
+        Args:
+          | { p_body: string; p_space_id?: string; p_title: string }
+          | {
+              p_initial_message_body: string
+              p_space_id?: string
+              p_space_type?: Database["public"]["Enums"]["space_type"]
+              p_title: string
+            }
+        Returns: string
+      }
       create_user_connection: {
         Args: { addressee_id: string; requester_id: string }
         Returns: Json
@@ -1214,6 +1045,17 @@ export type Database = {
           title: string
         }[]
       }
+      get_messages: {
+        Args: { p_thread_id: string }
+        Returns: {
+          body: string
+          created_at: string
+          email: string
+          id: number
+          is_edited: boolean
+          user_id: string
+        }[]
+      }
       get_user_recommendations: {
         Args: { target_user_id: string }
         Returns: {
@@ -1229,10 +1071,42 @@ export type Database = {
         Args: { counter_name_param: string }
         Returns: number
       }
+      is_approved_member: {
+        Args: {
+          p_space_id: string
+          p_space_type: Database["public"]["Enums"]["space_type"]
+          p_user_id: string
+        }
+        Returns: boolean
+      }
+      join_public_forum: {
+        Args: { p_space_id: string }
+        Returns: string
+      }
+      post_message: {
+        Args: { p_body: string; p_thread_id: string }
+        Returns: {
+          body: string
+          created_at: string
+          id: number
+          is_edited: boolean
+          thread_id: string
+          updated_at: string
+          user_id: string
+        }
+      }
+      request_to_join_space: {
+        Args: { p_space_id: string; p_space_type: string }
+        Returns: string
+      }
     }
     Enums: {
       experience_level: "fresh" | "1-3" | "3-5" | "5-10" | "10+"
+      forum_type: "PUBLIC" | "PRIVATE"
       job_type: "full_time" | "part_time" | "contract" | "internship" | "locum"
+      membership_role: "MEMBER" | "MODERATOR" | "ADMIN"
+      membership_status: "PENDING" | "APPROVED" | "DENIED" | "BANNED"
+      space_type: "FORUM" | "COMMUNITY_SPACE" | "PUBLIC"
       specialization:
         | "general_medicine"
         | "cardiology"
@@ -1419,7 +1293,11 @@ export const Constants = {
   public: {
     Enums: {
       experience_level: ["fresh", "1-3", "3-5", "5-10", "10+"],
+      forum_type: ["PUBLIC", "PRIVATE"],
       job_type: ["full_time", "part_time", "contract", "internship", "locum"],
+      membership_role: ["MEMBER", "MODERATOR", "ADMIN"],
+      membership_status: ["PENDING", "APPROVED", "DENIED", "BANNED"],
+      space_type: ["FORUM", "COMMUNITY_SPACE", "PUBLIC"],
       specialization: [
         "general_medicine",
         "cardiology",
