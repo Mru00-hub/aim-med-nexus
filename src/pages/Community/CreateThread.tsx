@@ -27,7 +27,7 @@ interface CreateThreadProps {
 }
 
 // We've wrapped the form logic into its own component
-const CreateThreadForm: React.FC<CreateThreadProps> = ({ spaceId = null, spaceType = null, onThreadCreated }) => {
+export const CreateThreadForm: React.FC<CreateThreadProps> = ({ spaceId = null, spaceType = null, onThreadCreated }) => {
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [isLoading, setIsLoading] = useState(false);
