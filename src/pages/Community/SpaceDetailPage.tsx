@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Plus, Users, Hash } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/components/ui/use-toast';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 
 // STEP 1: Update Imports and Types
 import {
@@ -19,8 +20,7 @@ import {
   CommunitySpace,
   ThreadWithDetails
 } from '@/integrations/supabase/community.api';
-// NOTE: We will refactor CreateThread into a reusable component/modal later.
-// For now, we'll just handle the state to open it.
+import { CreateThreadForm } from './CreateThread';
 
 type Space = Forum | CommunitySpace;
 
@@ -148,13 +148,7 @@ export default function SpaceDetailPage() {
         )}
       </main>
       <Footer />
-      
-      {/* Import Dialog components at the top of the file:
-    import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-    And import the CreateThreadForm component we created:
-    import { CreateThreadForm } from './CreateThreadPage'; // Assuming it's exported from the page file
-*/}
-<Dialog open={showCreateThread} onOpenChange={setShowCreateThread}>
+    <Dialog open={showCreateThread} onOpenChange={setShowCreateThread}>
     <DialogContent>
         <DialogHeader>
             <DialogTitle>Create New Thread in {space?.name}</DialogTitle>
@@ -169,9 +163,9 @@ export default function SpaceDetailPage() {
                     navigate(`/community/thread/${newThreadId}`);
                 }}
             />
-        </div>
-    </DialogContent>
-</Dialog>
+         </div>
+      </DialogContent>
+      </Dialog>
     </div>
   );
 };
