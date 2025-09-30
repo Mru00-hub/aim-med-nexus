@@ -8,6 +8,12 @@ export type PublicThread = any;
 export type ThreadInSpace = any;
 export type MessageWithAuthor = any;
 
+// --- TYPE DEFINITIONS (same as before) ---
+export interface Category { id: number; name: string; description?: string; created_at: string; }
+export interface Thread { id: number; title: string; content: string; category_id: number; user_id: string; created_at: string; }
+export interface Post { id: number; content: string; thread_id: number; user_id: string; created_at: string; }
+export interface ThreadWithPosts extends Thread { forum_posts: Post[]; }
+
 // Mock API functions that return empty arrays to prevent build errors
 export const getSpaces = async () => {
   return [];
