@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { postMessage } from '@/integrations/supabase/Community/api';
+import { postMessage } from '@/integrations/supabase/community/api';
 import { useToast } from '@/components/ui/use-toast';
 
 interface MessageInputProps {
