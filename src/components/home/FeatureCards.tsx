@@ -120,7 +120,7 @@ export const FeatureCards = () => {
       title: 'Forums & Community Spaces',
       description: 'Join specialty-based discussions with verified clinicians. Create and manage professional communities, engage in real-time conversations, and share knowledge with your peers.',
       icon: MessageSquare,
-      href: '/forums',
+      href: '/community',
       isActive: true
     },
     {
