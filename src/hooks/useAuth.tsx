@@ -3,9 +3,19 @@ import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
 
+// Define a type for our user profile for better type safety
+export interface UserProfile {
+  id: string;
+  full_name: string;
+  current_location: string;
+  profile_picture_url: string;
+  user_role: string;
+  // Add any other fields from your profiles table you need globally
+}
 interface AuthContextType {
   user: User | null;
   session: Session | null;
+  profile: UserProfile | null;
   loading: boolean;
   signUp: (email: string, password: string, metadata?: any) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
@@ -26,24 +36,59 @@ export const useAuth = () => {
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null); 
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
+    const fetchSessionAndProfile = async () => {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      setSession(session);
+      setUser(session?.user ?? null);
+
+      // --- NEW --- If a user is logged in, fetch their profile
+      if (session?.user) {
+        const { data: userProfile, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+        
+        if (profileError) {
+          console.error("Error fetching profile on initial load:", profileError);
+        } else {
+          setProfile(userProfile);
+        }
+      }
+      setLoading(false);
+    };
+
+    fetchSessionAndProfile();
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      async (event, session) => {
         console.log('Auth state changed:', event, session?.user?.id);
         setSession(session);
         setUser(session?.user ?? null);
-        setLoading(false);
+
+        // --- NEW --- Fetch profile on SIGN_IN, or clear it on SIGN_OUT
+        if (event === 'SIGNED_IN' && session?.user) {
+          const { data: userProfile, error: profileError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+          
+          if (profileError) {
+            console.error("Error fetching profile after sign in:", profileError);
+          } else {
+            setProfile(userProfile);
+          }
+        } else if (event === 'SIGNED_OUT') {
+          setProfile(null);
+        }
       }
     );
-
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
 
     return () => subscription.unsubscribe();
   }, []);
@@ -88,13 +133,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       // Step 2: If auth is successful, create the public profile.
       // We map the metadata from the form to the columns in your `profiles` table.
+      const fullName = `${metadata.first_name || ''} ${metadata.last_name || ''}`.trim();
       const profileData = {
         id: data.user.id, // This links the profile to the authenticated user
         email: email,
-        full_name: `${metadata.first_name || ''} ${metadata.last_name || ''}`.trim(),
+        full_name: fullName,
         phone: metadata.phone,
         current_location: metadata.location,
         user_role: metadata.registration_type
+        profile_picture_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}&background=random`
       };
 
       const { error: profileError } = await supabase
@@ -227,6 +274,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const value = {
     user,
     session,
+    profile,
     loading,
     signUp,
     signIn,
