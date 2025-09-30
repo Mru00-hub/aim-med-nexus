@@ -148,24 +148,24 @@ export default function SpaceDetailPage() {
         )}
       </main>
       <Footer />
-    <Dialog open={showCreateThread} onOpenChange={setShowCreateThread}>
-    <DialogContent>
-        <DialogHeader>
+      <Dialog open={showCreateThread} onOpenChange={setShowCreateThread}>
+        <DialogContent>
+          <DialogHeader>
             <DialogTitle>Create New Thread in {space?.name}</DialogTitle>
             <DialogDescription>This thread will only be visible to members of this space.</DialogDescription>
-        </DialogHeader>
-        <div className="pt-4">
+          </DialogHeader>
+          <div className="pt-4">
             <CreateThreadForm
-                spaceId={spaceId}
-                spaceType={searchParams.get('type') === 'forum' ? 'FORUM' : 'COMMUNITY_SPACE'}
-                onThreadCreated={(newThreadId) => {
-                    setShowCreateThread(false);
-                    navigate(`/community/thread/${newThreadId}`);
-                }}
+              spaceId={spaceId}
+              spaceType={searchParams.get('type') === 'forum' ? 'FORUM' : 'COMMUNITY_SPACE'}
+              onThreadCreated={(newThreadId) => {
+                setShowCreateThread(false);
+                navigate(`/community/thread/${newThreadId}`);
+              }}
             />
-         </div>
-      </DialogContent>
+          </div>
+        </DialogContent>
       </Dialog>
     </div>
   );
-};
+}
