@@ -30,7 +30,7 @@ const SpaceDetailPage = () => {
     ])
       .then(([space, threads]) => {
         setSpaceName(space?.title || '');
-        setSpaceType(space?.type || '');
+        setSpaceType(space?.type || 'FORUM');
         setThreads(threads || []);
       })
       .finally(() => setLoading(false));
@@ -44,7 +44,7 @@ const SpaceDetailPage = () => {
         <main className="container-medical py-8">
           <div className="flex justify-between items-center mb-6">
             <h1 className="text-3xl font-bold">
-              {spaceType === 'COMMUNITYSPACE' ? 'Community Space Threads' : 'Forum Threads'}
+              {spaceType === 'COMMUNITY_SPACE' ? 'Community Space Threads' : 'Forum Threads'}
               {' - '}{spaceName}
             </h1>
             <Button onClick={() => setShowThreadCreator(true)}>
