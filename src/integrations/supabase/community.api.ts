@@ -1,79 +1,85 @@
-// src/integrations/supabase/api.ts
+// src/integrations/supabase/community.api.ts
+
 import { supabase } from './client';
 import { Database } from './types';
 
 // =================================================================
-// Step 1: Modern, Type-Safe Definitions
+// Modern, Type-Safe Definitions
 // =================================================================
-// Using types generated from your new DB schema
-export type Forum = Database['public']['Tables']['forums']['Row'];
-export type CommunitySpace = Database['public']['Tables']['community_spaces']['Row'];
-export type Thread = Database['public']['Tables']['threads']['Row'];
-export type Message = Database['public']['Tables']['messages']['Row'];
-export type Membership = Database['public']['Tables']['memberships']['Row'];
-export type Reaction = Database['public']['Tables']['message_reactions']['Row'];
-export type Attachment = Database['public']['Tables']['message_attachments']['Row'];
-export type Profile = Database['public']['Tables']['profiles']['Row'];
+
+// Aliases for our new database tables
+export type Forum = Database['public']['Tables']['forums']['row'];
+export type CommunitySpace = Database['public']['Tables']['community_spaces']['row'];
+export type Thread = Database['public']['Tables']['threads']['row'];
+export type Message = Database['public']['Tables']['messages']['row'];
+export type Membership = Database['public']['Tables']['memberships']['row'];
+export type Reaction = Database['public']['Tables']['message_reactions']['row'];
+export type Profile = Database['public']['Tables']['profiles']['row'];
 
 // Custom types for function return values that include joined data
-export type ThreadWithDetails = Awaited<ReturnType<typeof getThreadsForSpace>>[0];
-export type MessageWithAuthor = Awaited<ReturnType<typeof getMessages>>[0];
-export type SpaceForDiscovery = {
+// This mirrors the `RETURNS TABLE(...)` from our get_threads function
+export type ThreadWithDetails = {
   id: string;
-  name: string;
-  description: string | null;
-  type: 'FORUM' | 'COMMUNITY_SPACE';
-  member_count: number;
+  title: string;
+  creator_id: string;
+  creator_email: string;
+  created_at: string;
+  last_activity_at: string;
+  message_count: number;
+};
+
+// This mirrors the `RETURNS TABLE(...)` from our get_messages function
+export type MessageWithAuthor = {
+  id: number;
+  body: string;
+  created_at: string;
+  is_edited: boolean;
+  user_id: string;
+  email: string;
 };
 
 // =================================================================
-// Step 2: Rich Mock Data for Logged-Out Users
+// Rich Mock Data for Logged-Out Users
 // =================================================================
 
-const MOCK_FORUMS: Forum[] = [
-  { id: 'mock-forum-1', creator_id: 'mock-user', name: 'AI in Healthcare (Example)', description: 'Exploring AI in medical imaging and healthcare delivery systems.', type: 'PUBLIC', created_at: new Date('2025-09-29T10:00:00Z').toISOString() },
-  { id: 'mock-forum-2', creator_id: 'mock-user', name: 'USMLE 2026 Prep (Example)', description: 'Preparing for USMLE exams. Share resources, study tips, and mock tests.', type: 'PRIVATE', created_at: new Date('2025-09-28T11:00:00Z').toISOString() },
+// Corrected Mock Data to align with DB schema (e.g. `updated_at` not in MOCK_SPACES)
+const MOCK_SPACES: (Forum | CommunitySpace)[] = [
+  { id: 'mock-forum-1', name: 'AI in Healthcare (Example)', description: 'Exploring AI in medical imaging...', type: 'PUBLIC', creator_id: 'user-abc', created_at: '2025-09-30T10:00:00Z' },
+  { id: 'mock-forum-2', name: 'USMLE 2026 Prep (Example)', description: 'Preparing for USMLE exams...', type: 'PRIVATE', creator_id: 'user-def', created_at: '2025-09-29T11:00:00Z' },
+  { id: 'mock-space-1', name: 'Global Cardiology (Example)', description: 'Connect with cardiologists worldwide...', creator_id: 'user-ghi', created_at: '2025-09-28T12:00:00Z' },
 ];
 
-const MOCK_COMMUNITY_SPACES: CommunitySpace[] = [
-    { id: 'mock-space-1', creator_id: 'mock-user', name: 'Global Cardiology (Example)', description: 'Connect with cardiologists worldwide. Share cases, discuss latest research, and collaborate.', created_at: new Date('2025-09-27T12:00:00Z').toISOString() },
+const MOCK_PUBLIC_THREADS: ThreadWithDetails[] = [
+  { id: 'mock-pub-thread-1', title: 'Best guidelines for AFib in 2025? (Example)', creator_id: 'user-123', creator_email: 'dr.chen@example.com', created_at: '2025-09-28T10:19:02Z', last_activity_at: '2025-09-30T14:12:00Z', message_count: 23 },
+  { id: 'mock-pub-thread-2', title: 'Hospital EHR vendor comparison (Example)', creator_id: 'user-456', creator_email: 'dr.patel@example.com', created_at: '2025-09-28T08:45:10Z', last_activity_at: '2025-09-30T11:30:00Z', message_count: 18 },
 ];
 
-const MOCK_PUBLIC_THREADS: Thread[] = [
-    { id: 'mock-pub-thread-1', creator_id: 'mock-user-1', title: 'Best guidelines for AFib in 2025? (Example)', space_id: null, space_type: null, created_at: new Date('2025-09-28T10:19:02Z').toISOString(), updated_at: new Date('2025-09-28T10:19:02Z').toISOString() },
-    { id: 'mock-pub-thread-2', creator_id: 'mock-user-2', title: 'Hospital EHR vendor comparison (Example)', space_id: null, space_type: null, created_at: new Date('2025-09-28T08:45:10Z').toISOString(), updated_at: new Date('2025-09-28T08:45:10Z').toISOString() },
-];
-
+// Corrected Mock Messages to remove properties not in the MessageWithAuthor type
 const MOCK_MESSAGES: MessageWithAuthor[] = [
-    { id: 9901, thread_id: 'mock-pub-thread-1', user_id: 'mock-user-1', body: 'Has anyone seen the new ESC update? The NOAC dosing recommendations are interesting.', is_edited: false, created_at: '2025-09-28T10:19:02Z', updated_at: '2025-09-28T10:19:02Z', email: 'dr.chen@example.com' },
-    { id: 9902, thread_id: 'mock-pub-thread-1', user_id: 'mock-user-3', body: 'Yes, I was just reading it. It could change our standard practice for high-risk patients.', is_edited: false, created_at: '2025-09-28T10:25:15Z', updated_at: '2025-09-28T10:25:15Z', email: 'dr.patel@example.com' },
-    { id: 9903, thread_id: 'mock-pub-thread-1', user_id: 'mock-user-1', body: 'Exactly. I\'m drafting a summary for our department. I\'ll share it here when it\'s ready.', is_edited: true, created_at: '2025-09-28T10:31:45Z', updated_at: '2025-09-28T10:32:00Z', email: 'dr.chen@example.com' },
+    { id: 9901, user_id: 'user-123', email: 'dr.chen@example.com', body: 'Has anyone seen the new ESC update? The NOAC dosing recommendations are interesting.', created_at: '2025-09-28T10:19:02Z', is_edited: false },
+    { id: 9902, user_id: 'user-456', email: 'dr.patel@example.com', body: 'Yes, I was just reading it. It could change our standard practice for high-risk patients.', created_at: '2025-09-28T10:25:15Z', is_edited: false },
+    { id: 9903, user_id: 'user-123', email: 'dr.chen@example.com', body: 'Exactly. I\'m drafting a summary for our department.', created_at: '2025-09-28T10:31:45Z', is_edited: true },
 ];
 
-
 // =================================================================
-// Step 3: API Implementation with Conditional Logic
+// API Implementation
 // =================================================================
 
 // --- Authentication Helper ---
 const getSessionOrThrow = async () => {
   const { data: { session }, error } = await supabase.auth.getSession();
-  if (error) throw error;
-  if (!session) throw new Error("User not authenticated. Please log in.");
+  if (error) throw new Error(error.message);
+  if (!session) throw new Error("Authentication required. Please log in.");
   return session;
 };
 
-
 // --- Discovery & Public Views ---
 
-/**
- * Fetches all forums and community spaces for discovery.
- * Logged-out users see mock data.
- */
+/** Fetches all forums and community spaces. Returns mock data for guests. */
 export const getDiscoverySpaces = async (): Promise<(Forum | CommunitySpace)[]> => {
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return [...MOCK_FORUMS, ...MOCK_COMMUNITY_SPACES];
-    
+    if (!session) return MOCK_SPACES;
+
     const [forums, spaces] = await Promise.all([
         supabase.from('forums').select('*'),
         supabase.from('community_spaces').select('*')
@@ -85,53 +91,30 @@ export const getDiscoverySpaces = async (): Promise<(Forum | CommunitySpace)[]> 
     return [...forums.data, ...spaces.data];
 }
 
-/**
- * Fetches all global public threads.
- * Logged-out users see mock data.
- */
-export const getPublicThreads = async () => {
+/** Fetches all global public threads. Returns mock data for guests. */
+export const getPublicThreads = async (): Promise<ThreadWithDetails[]> => {
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      // Manually shape mock data to match the return type of get_threads
-      return MOCK_PUBLIC_THREADS.map(t => ({
-        ...t,
-        creator_email: 'author@example.com',
-        last_activity_at: t.updated_at,
-        message_count: Math.floor(Math.random() * 20) + 5
-      }));
-    }
+    if (!session) return MOCK_PUBLIC_THREADS;
 
-    const { data, error } = await supabase.rpc('get_threads');
+    const { data, error } = await supabase.rpc('get_threads'); // Calling with no args gets public threads
     if (error) throw error;
     return data;
 };
 
-
 // --- Space & Thread Creation ---
 
-/**
- * Creates a new Forum. User must be logged in.
- * Also creates a membership record, making the creator an ADMIN.
- */
-export const createForum = async (payload: { name: string; description?: string; type: 'PUBLIC' | 'PRIVATE' }): Promise<Forum> => {
+/** Creates a new Forum. User must be logged in. */
+export const createForum = async (payload: { name: string; description: string; type: 'PUBLIC' | 'PRIVATE' }): Promise<Forum> => {
     const session = await getSessionOrThrow();
-    
-    // Create the forum
-    const { data: newForum, error: forumError } = await supabase
-        .from('forums')
-        .insert({
-            name: payload.name,
-            description: payload.description,
-            type: payload.type,
-            creator_id: session.user.id
-        })
-        .select()
-        .single();
-    
-    if (forumError) throw forumError;
+    const { data: newForum, error } = await supabase.from('forums').insert({
+      ...payload,
+      creator_id: session.user.id
+    }).select().single();
+
+    if (error) throw error;
 
     // Make the creator an ADMIN of their new forum
-    const { error: membershipError } = await supabase.from('memberships').insert({
+    await supabase.from('memberships').insert({
         user_id: session.user.id,
         space_id: newForum.id,
         space_type: 'FORUM',
@@ -139,15 +122,32 @@ export const createForum = async (payload: { name: string; description?: string;
         status: 'APPROVED'
     });
 
-    if (membershipError) throw membershipError;
-
     return newForum;
 }
-// Note: A createCommunitySpace function would be nearly identical to the above.
 
-/**
- * Creates a new thread within a space or as a global public thread.
- */
+/** Creates a new Community Space. User must be logged in. */
+export const createCommunitySpace = async (payload: { name: string; description: string }): Promise<CommunitySpace> => {
+    const session = await getSessionOrThrow();
+    const { data: newSpace, error } = await supabase.from('community_spaces').insert({
+      ...payload,
+      creator_id: session.user.id
+    }).select().single();
+
+    if (error) throw error;
+
+    // Make the creator an ADMIN of their new space
+    await supabase.from('memberships').insert({
+        user_id: session.user.id,
+        space_id: newSpace.id,
+        space_type: 'COMMUNITY_SPACE',
+        role: 'ADMIN',
+        status: 'APPROVED'
+    });
+
+    return newSpace;
+}
+
+/** Creates a new thread. User must be logged in. */
 export const createThread = async (
   payload: { title: string; body: string; spaceId: string | null; spaceType: 'FORUM' | 'COMMUNITY_SPACE' | null }
 ): Promise<string> => {
@@ -160,19 +160,26 @@ export const createThread = async (
     });
 
     if (error) throw error;
-    return data; // Returns the new thread's UUID
+    return data;
 };
-
 
 // --- Viewing Spaces, Threads, and Messages ---
 
-/**
- * Fetches all threads for a specific space.
- * Logged-out users get mock data. RLS handles access for logged-in users.
- */
-export const getThreadsForSpace = async (spaceId: string, spaceType: 'FORUM' | 'COMMUNITY_SPACE') => {
+/** Fetches details for a single space. Returns mock data for guests. */
+export const getSpaceDetails = async(spaceId: string, spaceType: 'FORUM' | 'COMMUNITY_SPACE'): Promise<Forum | CommunitySpace | undefined> => {
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return []; // In a real app, you could return mock threads for this space
+    if (!session) return MOCK_SPACES.find(s => s.id === spaceId);
+
+    const fromTable = spaceType === 'FORUM' ? 'forums' : 'community_spaces';
+    const { data, error } = await supabase.from(fromTable).select('*').eq('id', spaceId).single();
+    if(error) throw error;
+    return data;
+}
+
+/** Fetches threads for a specific space. Returns mock data for guests. */
+export const getThreadsForSpace = async (spaceId: string, spaceType: 'FORUM' | 'COMMUNITY_SPACE'): Promise<ThreadWithDetails[]> => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return MOCK_PUBLIC_THREADS.slice(0, 2); // Return a couple of mock threads
 
     const { data, error } = await supabase.rpc('get_threads', {
         p_space_id: spaceId,
@@ -183,25 +190,19 @@ export const getThreadsForSpace = async (spaceId: string, spaceType: 'FORUM' | '
     return data;
 };
 
-/**
- * Fetches all messages for a single thread.
- * Logged-out users get mock data. RLS handles access for logged-in users.
- */
+/** Fetches messages for a single thread. Returns mock data for guests. */
 export const getMessages = async (threadId: string): Promise<MessageWithAuthor[]> => {
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return MOCK_MESSAGES.filter(m => m.thread_id === threadId);
+    if (!session) return MOCK_MESSAGES;
 
     const { data, error } = await supabase.rpc('get_messages', { p_thread_id: threadId });
     if (error) throw error;
     return data;
 };
 
-
 // --- Chat Interaction ---
 
-/**
- * Posts a new message to a thread. User must be logged in.
- */
+/** Posts a new message to a thread. User must be logged in. */
 export const postMessage = async (threadId: string, body: string): Promise<Message> => {
     await getSessionOrThrow();
     const { data, error } = await supabase.rpc('post_message', {
@@ -213,50 +214,33 @@ export const postMessage = async (threadId: string, body: string): Promise<Messa
     return data;
 };
 
-/**
- * Adds a reaction to a message. User must be logged in.
- */
+/** Adds a reaction to a message. User must be logged in. */
 export const addReaction = async (messageId: number, emoji: string): Promise<Reaction> => {
     const session = await getSessionOrThrow();
-    const { data, error } = await supabase
-        .from('message_reactions')
-        .insert({
-            message_id: messageId,
-            reaction_emoji: emoji,
-            user_id: session.user.id
-        })
-        .select()
-        .single();
-    
+    const { data, error } = await supabase.from('message_reactions').insert({
+      message_id: messageId,
+      reaction_emoji: emoji,
+      user_id: session.user.id
+    }).select().single();
     if (error) throw error;
     return data;
 };
 
-/**
- * Removes a reaction from a message. User must be logged in.
- */
+/** Removes a reaction from a message. User must be logged in. */
 export const removeReaction = async (messageId: number, emoji: string) => {
     const session = await getSessionOrThrow();
-    const { error } = await supabase
-        .from('message_reactions')
-        .delete()
-        .match({
-            message_id: messageId,
-            reaction_emoji: emoji,
-            user_id: session.user.id
-        });
-
+    const { error } = await supabase.from('message_reactions').delete().match({
+      message_id: messageId,
+      reaction_emoji: emoji,
+      user_id: session.user.id
+    });
     if (error) throw error;
     return { success: true };
 };
-// Note: Attaching files would involve Supabase Storage `upload` and then calling an `insert` on `message_attachments`.
-
 
 // --- Membership Management ---
 
-/**
- * Allows a user to join a public forum.
- */
+/** Joins a public forum. User must be logged in. */
 export const joinPublicForum = async (spaceId: string): Promise<Membership> => {
     await getSessionOrThrow();
     const { data, error } = await supabase.rpc('join_public_forum', { p_space_id: spaceId });
@@ -264,9 +248,7 @@ export const joinPublicForum = async (spaceId: string): Promise<Membership> => {
     return data;
 }
 
-/**
- * Allows a user to request to join a private space.
- */
+/** Requests to join a private space. User must be logged in. */
 export const requestToJoinSpace = async (spaceId: string, spaceType: 'FORUM' | 'COMMUNITY_SPACE'): Promise<Membership> => {
     await getSessionOrThrow();
     const { data, error } = await supabase.rpc('request_to_join_space', {
@@ -277,10 +259,8 @@ export const requestToJoinSpace = async (spaceId: string, spaceType: 'FORUM' | '
     return data;
 }
 
-/**
- * Fetches pending join requests for a space. Must be an admin/mod.
- */
-export const getPendingRequests = async (spaceId: string, spaceType: 'FORUM' | 'COMMUNITY_SPACE') => {
+/** Fetches pending join requests for a space. Must be an admin/mod. */
+export const getPendingRequests = async (spaceId: string, spaceType: 'FORUM' | 'COMMUNITY_SPACE'): Promise<any[] | null> => {
     await getSessionOrThrow();
     const { data, error } = await supabase.rpc('get_pending_requests', {
         p_space_id: spaceId,
@@ -291,9 +271,7 @@ export const getPendingRequests = async (spaceId: string, spaceType: 'FORUM' | '
     return data;
 };
 
-/**
- * Updates the status of a membership. Must be an admin/mod.
- */
+/** Updates a membership status. Must be an admin/mod. */
 export const updateMembershipStatus = async (membershipId: string, newStatus: 'APPROVED' | 'DENIED' | 'BANNED'): Promise<Membership> => {
     await getSessionOrThrow();
     const { data, error } = await supabase.rpc('update_membership_status', {
