@@ -1,6 +1,6 @@
 // src/components/messaging/ThreadList.tsx
 import { useState, useEffect } from 'react';
-import { getThreadsForSpace } from '@/integrations/supabase/api';
+import { getThreadsForSpace } from '@/integrations/supabase/community/api';
 import { Database } from '@/integrations/supabase/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { Space } from './SpaceSidebar';
