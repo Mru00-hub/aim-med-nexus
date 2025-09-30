@@ -1,3 +1,5 @@
+// src/App.tsx
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -6,7 +8,6 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import AuthGuard from "@/components/AuthGuard";
 import Index from "./pages/Index";
-import Forums from "./pages/Community/Forums";
 import Jobs from "./pages/Jobs";
 import Networking from "./pages/Networking";
 import Partnerships from "./pages/Partnerships";
@@ -18,11 +19,14 @@ import Register from "./pages/Register";
 import Login from "./pages/Login";
 import PaymentPage from "./pages/PaymentPage";
 import NotFound from "./pages/NotFound";
+
+// --- UPDATED COMMUNITY IMPORTS ---
+// We now only import the components we are actually using.
+// Note the correct path casing: pages/Community
+import Forums from "./pages/Community/Forums";
+import SpaceDetailPage from "./pages/Community/SpaceDetailPage";
+import ThreadDetailPage from "./pages/Community/ThreadDetailPage";
 import CreateThread from "./pages/Community/CreateThread";
-import ThreadPage from "./pages/Community/ThreadPage";
-import ForumsPage from './pages/Community/Forums';
-import SpaceDetailPage from './pages/Community/SpaceDetailPage';
-import ThreadDetailPage from './pages/Community/ThreadDetailPage';
 
 const queryClient = new QueryClient();
 
@@ -34,13 +38,12 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
+            {/* --- Core App Routes --- */}
             <Route path="/" element={<Index />} />
-            <Route path="/forums" element={<Forums />} />
-            <Route path="/forums" element={<ForumsPage />} />
-            <Route path="/forums/:spaceId" element={<SpaceDetailPage />} />
-            <Route path="/threads/:threadId" element={<ThreadDetailPage />} />
-            <Route path="/create-thread" element={<AuthGuard><CreateThread /></AuthGuard>} />
-            <Route path="/thread/:threadId" element={<AuthGuard><ThreadPage /></AuthGuard>} />
+            <Route path="/register" element={<AuthGuard requireAuth={false}><Register /></AuthGuard>} />
+            <Route path="/login" element={<AuthGuard requireAuth={false}><Login /></AuthGuard>} />
+            
+            {/* --- Other Feature Routes --- */}
             <Route path="/jobs" element={<Jobs />} />
             <Route path="/networking" element={<Networking />} />
             <Route path="/partnerships" element={<Partnerships />} />
@@ -48,10 +51,24 @@ const App = () => (
             <Route path="/social" element={<AuthGuard><Social /></AuthGuard>} />
             <Route path="/inbox" element={<AuthGuard><Inbox /></AuthGuard>} />
             <Route path="/notifications" element={<AuthGuard><Notifications /></AuthGuard>} />
-            <Route path="/register" element={<AuthGuard requireAuth={false}><Register /></AuthGuard>} />
-            <Route path="/login" element={<AuthGuard requireAuth={false}><Login /></AuthGuard>} />
             <Route path="/payment" element={<AuthGuard><PaymentPage /></AuthGuard>} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+
+            {/* === REVISED AND CLEANED COMMUNITY ROUTES === */}
+            {/* All community features now live under the /community path for consistency. */}
+
+            {/* The main discovery page */}
+            <Route path="/community" element={<Forums />} />
+
+            {/* Page for creating a new PUBLIC thread */}
+            <Route path="/community/create-thread" element={<AuthGuard><CreateThread /></AuthGuard>} />
+            
+            {/* Page for viewing a specific Forum or Community Space and its threads */}
+            <Route path="/community/space/:spaceId" element={<AuthGuard><SpaceDetailPage /></AuthGuard>} />
+            
+            {/* Page for viewing a single thread's chat interface */}
+            <Route path="/community/thread/:threadId" element={<AuthGuard><ThreadDetailPage /></AuthGuard>} />
+
+            {/* CATCH-ALL "*" ROUTE - MUST BE LAST */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
