@@ -14,6 +14,42 @@ export interface Thread { id: number; title: string; content: string; category_i
 export interface Post { id: number; content: string; thread_id: number; user_id: string; created_at: string; }
 export interface ThreadWithPosts extends Thread { forum_posts: Post[]; }
 
+// --- MOCK DATA FOR UNREGISTERED USERS ---
+const MOCK_CATEGORIES: Category[] = [
+    { id: 991, name: 'AI in Healthcare (Example)', description: 'Exploring AI in medical imaging and healthcare delivery systems.', created_at: '2025-09-29T10:00:00Z' },
+    { id: 992, name: 'USMLE 2026 Prep (Example)', description: 'Preparing for USMLE exams. Share resources, study tips, and mock tests.', created_at: '2025-09-28T11:00:00Z' },
+];
+const MOCK_THREADS: Thread[] = [
+    { id: 9901, title: 'Best guidelines for AFib in 2025? (Example)', content: 'Check the new ESC update with NOAC dosing...', category_id: 991, user_id: 'mock-user-1', created_at: '2025-09-28T10:19:02Z' },
+    { id: 9902, title: 'Hospital EHR vendor comparison (Example)', content: 'We migrated to Epic last quarter and the transition was...', category_id: 992, user_id: 'mock-user-2', created_at: '2025-09-28T08:45:10Z' },
+];
+
+// --- API FUNCTIONS (with conditional mock/real data logic) ---
+/** Fetches all Forums (Categories). */
+export const getForums = async (): Promise<Category[]> => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) return MOCK_CATEGORIES;
+    const { data, error } = await supabase.functions.invoke('get-categories');
+    if (error) throw error;
+    return data;
+};
+/** Fetches recent public threads. */
+export const getPublicThreads = async (): Promise<Thread[]> => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) return MOCK_THREADS;
+    const { data, error } = await supabase.functions.invoke('get-public-threads');
+    if (error) throw error;
+    return data;
+};
+
+/** Creates a new Forum (Category). Throws error if not logged in. */
+export const createForum = async (payload: { name: string; description: string; }): Promise<Category> => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) throw new Error('You must be logged in to create a forum.');
+    const { data, error } = await supabase.functions.invoke('create-forum', { body: payload });
+    if (error) throw error;
+    return data;
+};
 // Mock API functions that return empty arrays to prevent build errors
 export const getSpaces = async () => {
   return [];
@@ -118,3 +154,5 @@ export const getSpaceMembers = async (spaceId: string) => {
 export const deleteMessageAsModerator = async (messageId: number) => {
   return { success: true };
 };
+
+
