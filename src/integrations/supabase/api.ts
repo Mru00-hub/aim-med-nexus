@@ -36,7 +36,19 @@ export const getThreadsForSpace = async (spaceId: string) => {
 
 /*Creates a new thread inside a specific space or as a Public Thread.*/
 export const createThread = async (title: string, body: string, spaceId: string | null) => {
-  return { id: 'mock-thread-id' };
+  const { data, error } = await supabase.rpc('create_thread', {
+    p_title: title,
+    p_body: body,
+    p_space_id: spaceId,
+  });
+
+  if (error) {
+    console.error('Error creating thread:', error);
+    throw new Error(error.message);
+  }
+
+  // The RPC function returns the UUID of the new thread.
+  return data;
 };
 
 // --- Thread Hub (ThreadDetailPage.tsx & ThreadView.tsx) ---
