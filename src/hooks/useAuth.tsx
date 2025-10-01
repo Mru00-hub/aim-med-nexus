@@ -2,12 +2,15 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
+import { Profile } from '@/integrations/supabase/community.api'; // Import your Profile type
 
+// --- NEW: AuthContextType now includes the user's profile ---
 interface AuthContextType {
   user: User | null;
   session: Session | null;
+  profile: Profile | null; // Add the profile object
   loading: boolean;
-  signUp: (email: string, password: string, metadata?: any) => Promise<{ error: any }>;
+  signUp: (email: string, password: string, metadata?: any) => Promise<{ data: { user: User | null; }; error: any; }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   signInWithGoogle: () => Promise<{ error: any }>;
@@ -26,21 +29,41 @@ export const useAuth = () => {
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null); // State for the user profile
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.id);
+      async (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
+
+        // --- NEW: Fetch profile when user is logged in ---
+        if (session?.user) {
+          const { data, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+
+          if (error) {
+            console.error("Error fetching profile:", error);
+            setProfile(null);
+          } else {
+            setProfile(data);
+          }
+        } else {
+          // Clear profile on sign out
+          setProfile(null);
+        }
+
         setLoading(false);
       }
     );
 
-    // Get initial session
+    // Initial session load check
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
@@ -50,47 +73,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => subscription.unsubscribe();
   }, []);
 
+  // --- CHANGED: signUp now returns the user object on success ---
   const signUp = async (email: string, password: string, metadata?: any) => {
-    try {
-      setLoading(true);
-      const redirectUrl = `${window.location.origin}/`;
-      
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: redirectUrl,
-          data: metadata
-        }
-      });
-
-      if (error) {
-        toast({
-          title: "Registration Error",
-          description: error.message,
-          variant: "destructive",
-        });
-        return { error };
+    setLoading(true);
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/`,
+        data: metadata
       }
+    });
 
-      toast({
-        title: "Registration Successful",
-        description: "Please check your email to verify your account.",
-      });
-
-      return { error: null };
-    } catch (error: any) {
+    if (error) {
       toast({
         title: "Registration Error",
         description: error.message,
         variant: "destructive",
       });
-      return { error };
-    } finally {
-      setLoading(false);
+    } else {
+       toast({
+        title: "Registration Successful",
+        description: "Please check your email to verify your account.",
+      });
     }
+    setLoading(false);
+    // Return both data and error so the frontend can get the new user's ID
+    return { data: { user: data.user }, error }; 
   };
-
+  
+  // No changes needed for signIn, signInWithGoogle, signOut
   const signIn = async (email: string, password: string) => {
     try {
       setLoading(true);
@@ -185,6 +197,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const value = {
     user,
     session,
+    profile, // Provide the profile to the rest of the app
     loading,
     signUp,
     signIn,
