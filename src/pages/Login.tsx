@@ -38,24 +38,26 @@ const Login = () => {
     if (error) setError(''); // Clear error when user types
   };
 
+  // --- THIS FUNCTION HAS BEEN CORRECTED ---
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
 
-    try {
-      const { error } = await signIn(formData.email, formData.password);
-      
-      if (!error) {
-        // Redirect to intended page or networking page
-        const from = location.state?.from || '/networking';
-        navigate(from, { replace: true });
-      }
-    } catch (err: any) {
-      setError(err.message || 'Login failed. Please try again.');
-    } finally {
-      setIsLoading(false);
+    // The signIn function from useAuth returns an error object, it doesn't throw.
+    // We handle it directly without a try/catch block.
+    const { error } = await signIn(formData.email, formData.password);
+    
+    if (error) {
+      // If Supabase returns an error (like "Invalid login credentials"), set it in our state.
+      setError(error.message);
+    } else {
+      // If there's no error, the login was successful. Redirect the user.
+      const from = location.state?.from || '/networking';
+      navigate(from, { replace: true });
     }
+
+    setIsLoading(false);
   };
 
   const handleGoogleLogin = async () => {
