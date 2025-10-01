@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
+import { supabase } from '@/integrations/supabase/client';
 import { 
   ArrowRight, 
   User, 
@@ -85,34 +86,57 @@ const Register = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-    setError('');
-    
-    // Basic validation
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
-      setIsLoading(false);
       return;
     }
+    setIsLoading(true);
+    setError('');
 
     try {
-      const { error } = await signUp(formData.email, formData.password, {
+      // Step 1: Sign up the user. 
+      // The trigger needs the first_name and last_name from metadata to create the 'full_name'.
+      const { data: authData, error: authError } = await signUp(formData.email, formData.password, {
         first_name: formData.firstName,
         last_name: formData.lastName,
-        phone: formData.phone,
-        location: formData.location,
-        registration_type: registrationType
       });
 
-      if (error) {
-        setError(error.message || 'Registration failed. Please try again.');
-      } else {
-        // Redirect to intended page or networking page after successful registration
-        const from = location.state?.from || '/networking';
-        navigate(from, { replace: true });
+      if (authError) {
+        throw new Error(authError.message);
       }
+      
+      if (!authData.user) {
+        throw new Error('Registration successful, but no user data returned.');
+      }
+      
+      // Step 2: Update the profile created by the trigger with the rest of the form data.
+      // This object now maps correctly to YOUR schema.
+      const profileDataToUpdate = {
+        phone: formData.phone,
+        user_role: registrationType, // Mapping registrationType to user_role
+        current_location: formData.location, // Mapping location to current_location
+        bio: formData.bio,
+        years_experience: formData.experience, // Mapping experience to years_experience
+        // Add other fields from your form that match columns in your 'profiles' table
+        // institution: formData.institution, // etc. (You may need to add these columns to your DB table)
+      };
+
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update(profileDataToUpdate)
+        .eq('id', authData.user.id);
+
+      if (profileError) {
+        setError('Your account was created, but we failed to save your full profile. Please update it from your dashboard.');
+        console.error("Profile update error:", profileError);
+      }
+
+      // Step 3: Success! Navigate the user.
+      const from = location.state?.from || '/networking';
+      navigate(from, { replace: true });
+
     } catch (err: any) {
-      setError(err.message || 'Registration failed. Please try again.');
+      setError(err.message || 'An unexpected error occurred. Please try again.');
     } finally {
       setIsLoading(false);
     }
