@@ -19,6 +19,8 @@ import Register from "./pages/Register";
 import Login from "./pages/Login";
 import PaymentPage from "./pages/PaymentPage";
 import NotFound from "./pages/NotFound";
+// --- NEW: Import for the Simple Registration Test page ---
+import SimpleRegisterTest from "./pages/SimpleRegisterTest";
 
 // --- UPDATED COMMUNITY IMPORTS ---
 // We now only import the components we are actually using.
@@ -68,6 +70,10 @@ const App = () => (
             {/* Page for viewing a single thread's chat interface */}
             <Route path="/community/thread/:threadId" element={<AuthGuard><ThreadDetailPage /></AuthGuard>} />
 
+            {/* --- NEW: Route for the Simple Registration Test --- */}
+            {/* This is a temporary route for debugging the registration issue. */}
+            <Route path="/simple-test" element={<SimpleRegisterTest />} />
+            
             {/* CATCH-ALL "*" ROUTE - MUST BE LAST */}
             <Route path="*" element={<NotFound />} />
           </Routes>
