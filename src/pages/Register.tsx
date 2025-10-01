@@ -122,7 +122,7 @@ const Register = () => {
         user_role: registrationType,
         current_location: formData.location,
         bio: formData.bio,
-        years_experience: formData.experience ? parseInt(formData.experience.match(/\d+/)?.[0] || '0', 10) : null,
+        years_experience: formData.experience || null,
         
         // Add educational and professional details
         institution: formData.institution,
