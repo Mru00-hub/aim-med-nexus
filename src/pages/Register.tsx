@@ -90,45 +90,60 @@ const Register = () => {
       setError('Passwords do not match');
       return;
     }
+    if (!formData.agreeToTerms) {
+      setError('You must agree to the terms and conditions.');
+      return;
+    }
     setIsLoading(true);
     setError('');
 
     try {
-      // Step 1: Sign up the user. 
-      // The trigger needs the first_name and last_name from metadata to create the 'full_name'.
-      const { data: authData, error: authError } = await signUp(formData.email, formData.password, {
-        first_name: formData.firstName,
-        last_name: formData.lastName,
-      });
+      // Step 1: Sign up the user in the authentication system.
+      // We no longer pass metadata since we are handling the profile creation manually.
+      const { data: authData, error: authError } = await signUp(formData.email, formData.password);
 
       if (authError) {
+        // This will now give a clearer error if the user already exists, etc.
         throw new Error(authError.message);
       }
       
       if (!authData.user) {
-        throw new Error('Registration successful, but no user data returned.');
+        // This is a safety check.
+        throw new Error('Registration failed, no user data returned.');
       }
       
-      // Step 2: Update the profile created by the trigger with the rest of the form data.
-      // This object now maps correctly to YOUR schema.
-      const profileDataToUpdate = {
+      // Step 2: Manually and explicitly INSERT the full profile into the 'profiles' table.
+      // This is far more reliable than a trigger.
+      const profileDataToInsert = {
+        id: authData.user.id, // Link the profile to the auth user
+        email: formData.email,
+        full_name: `${formData.firstName} ${formData.lastName}`.trim(),
         phone: formData.phone,
-        user_role: registrationType, // Mapping registrationType to user_role
-        current_location: formData.location, // Mapping location to current_location
+        user_role: registrationType,
+        current_location: formData.location,
         bio: formData.bio,
-        years_experience: formData.experience, // Mapping experience to years_experience
-        // Add other fields from your form that match columns in your 'profiles' table
-        // institution: formData.institution, // etc. (You may need to add these columns to your DB table)
+        years_experience: formData.experience ? parseInt(formData.experience.match(/\d+/)?.[0] || '0', 10) : null,
+        
+        // Add educational and professional details
+        institution: formData.institution,
+        course: formData.course,
+        year_of_study: formData.yearOfStudy,
+        current_position: formData.currentPosition,
+        organization: formData.organization,
+        specialization: formData.specialization,
+        medical_license: formData.medicalLicense,
       };
 
       const { error: profileError } = await supabase
         .from('profiles')
-        .update(profileDataToUpdate)
-        .eq('id', authData.user.id);
+        .insert(profileDataToInsert);
 
       if (profileError) {
-        setError('Your account was created, but we failed to save your full profile. Please update it from your dashboard.');
-        console.error("Profile update error:", profileError);
+        // This error is now much more specific to a database problem (e.g., wrong column name).
+        // For the user's sake, we provide a helpful message.
+        // In a real scenario, you might want to delete the auth user to allow them to try again.
+        console.error("Database insert error:", profileError);
+        throw new Error('Your account was created, but we failed to save your profile. Please contact support.');
       }
 
       // Step 3: Success! Navigate the user.
