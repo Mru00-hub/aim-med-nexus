@@ -28,21 +28,33 @@ export type ThreadWithDetails = {
   message_count: number;
 };
 
-// This mirrors the `RETURNS TABLE(...)` from our get_messages function
+// =================================================================
+// CHANGE START: Updated MessageWithAuthor type
+// We are enriching this type to include the author's profile information.
+// =================================================================
 export type MessageWithAuthor = {
   id: number;
   body: string;
   created_at: string;
   is_edited: boolean;
   user_id: string;
-  email: string;
+  author: {
+    full_name: string | null;
+    profile_picture_url: string | null;
+  } | null;
+  // We keep the email here for the mock data, but the live data will use the author object.
+  email?: string;
 };
+// =================================================================
+// CHANGE END
+// =================================================================
+
 
 // =================================================================
 // Rich Mock Data for Logged-Out Users
+// NOTE: Mock data will not have the new 'author' object structure.
+// This is acceptable as it's only for logged-out users.
 // =================================================================
-
-// Corrected Mock Data to align with DB schema (e.g. `updated_at` not in MOCK_SPACES)
 const MOCK_SPACES: (Forum | CommunitySpace)[] = [
   { id: 'mock-forum-1', name: 'AI in Healthcare (Example)', description: 'Exploring AI in medical imaging...', type: 'PUBLIC', creator_id: 'user-abc', created_at: '2025-09-30T10:00:00Z' },
   { id: 'mock-forum-2', name: 'USMLE 2026 Prep (Example)', description: 'Preparing for USMLE exams...', type: 'PRIVATE', creator_id: 'user-def', created_at: '2025-09-29T11:00:00Z' },
@@ -54,11 +66,10 @@ const MOCK_PUBLIC_THREADS: ThreadWithDetails[] = [
   { id: 'mock-pub-thread-2', title: 'Hospital EHR vendor comparison (Example)', creator_id: 'user-456', creator_email: 'dr.patel@example.com', created_at: '2025-09-28T08:45:10Z', last_activity_at: '2025-09-30T11:30:00Z', message_count: 18 },
 ];
 
-// Corrected Mock Messages to remove properties not in the MessageWithAuthor type
 const MOCK_MESSAGES: MessageWithAuthor[] = [
-    { id: 9901, user_id: 'user-123', email: 'dr.chen@example.com', body: 'Has anyone seen the new ESC update? The NOAC dosing recommendations are interesting.', created_at: '2025-09-28T10:19:02Z', is_edited: false },
-    { id: 9902, user_id: 'user-456', email: 'dr.patel@example.com', body: 'Yes, I was just reading it. It could change our standard practice for high-risk patients.', created_at: '2025-09-28T10:25:15Z', is_edited: false },
-    { id: 9903, user_id: 'user-123', email: 'dr.chen@example.com', body: 'Exactly. I\'m drafting a summary for our department.', created_at: '2025-09-28T10:31:45Z', is_edited: true },
+    { id: 9901, user_id: 'user-123', email: 'dr.chen@example.com', body: 'Has anyone seen the new ESC update? The NOAC dosing recommendations are interesting.', created_at: '2025-09-28T10:19:02Z', is_edited: false, author: null },
+    { id: 9902, user_id: 'user-456', email: 'dr.patel@example.com', body: 'Yes, I was just reading it. It could change our standard practice for high-risk patients.', created_at: '2025-09-28T10:25:15Z', is_edited: false, author: null },
+    { id: 9903, user_id: 'user-123', email: 'dr.chen@example.com', body: 'Exactly. I\'m drafting a summary for our department.', created_at: '2025-09-28T10:31:45Z', is_edited: true, author: null },
 ];
 
 // =================================================================
@@ -190,15 +201,41 @@ export const getThreadsForSpace = async (spaceId: string, spaceType: 'FORUM' | '
     return data;
 };
 
+// =================================================================
+// CHANGE START: Updated getMessages function
+// Replaced the RPC call with a standard .select() to join profile data.
+// =================================================================
 /** Fetches messages for a single thread. Returns mock data for guests. */
 export const getMessages = async (threadId: string): Promise<MessageWithAuthor[]> => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return MOCK_MESSAGES;
 
-    const { data, error } = await supabase.rpc('get_messages', { p_thread_id: threadId });
+    // This query now fetches messages and the author's profile details in one go.
+    const { data, error } = await supabase
+      .from('messages')
+      .select(`
+        id,
+        body,
+        created_at,
+        is_edited,
+        user_id,
+        author:profiles (
+          full_name,
+          profile_picture_url
+        )
+      `)
+      .eq('thread_id', threadId)
+      .order('created_at', { ascending: true });
+
     if (error) throw error;
+
+    // The 'data' returned by the query already matches our new MessageWithAuthor type.
     return data;
 };
+// =================================================================
+// CHANGE END
+// =================================================================
+
 
 // --- Chat Interaction ---
 
@@ -281,3 +318,5 @@ export const updateMembershipStatus = async (membershipId: string, newStatus: 'A
     if (error) throw error;
     return data;
 };
+
+
