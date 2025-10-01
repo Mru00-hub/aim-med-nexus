@@ -48,31 +48,24 @@ export default function Forums() {
     const fetchData = async () => {
       setLoading(true);
       try {
-        if (user) {
-          const [spacesData, publicThreadsData] = await Promise.all([
-            getDiscoverySpaces(),
-            getPublicThreads(),
-          ]);
-          setSpaces(spacesData);
-          setPublicThreads(publicThreadsData);
-        } else {
-          // For logged-out users, we still get the mock data from the API layer
-          const [mockSpaces, mockPublicThreads] = await Promise.all([
-            getDiscoverySpaces(),
-            getPublicThreads(),
-          ]);
-          setSpaces(mockSpaces);
-          setPublicThreads(mockPublicThreads);
+        const spacesData = await getDiscoverySpaces();
+        setSpaces(spacesData || []);
+        try {
+          const publicThreadsData = await getPublicThreads();
+          setPublicThreads(publicThreadsData || []);
+        } catch (threadError) {
+          console.error("Could not fetch public threads (this is expected if none exist):", threadError);
+          setPublicThreads([]); 
         }
       } catch (error) {
-        console.error("Failed to fetch data:", error);
-        toast({ variant: 'destructive', title: 'Error', description: 'Could not fetch community data.' });
+        console.error("Failed to fetch spaces:", error);
+        toast({ variant: 'destructive', title: 'Error', description: 'Could not fetch community spaces.' });
       } finally {
         setLoading(false);
       }
     };
     fetchData();
-  }, [user, toast]);
+  }, [toast]);
 
   // STEP 4: Refactor Filtering Logic
   const filteredSpaces = useMemo(() => {
