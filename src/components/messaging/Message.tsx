@@ -4,7 +4,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/hooks/useAuth'; // To identify if the message is from the current user
 import { cn } from '@/lib/utils'; // A utility for conditional class names
 // Import our new, official type
-import { MessageWithAuthor } from '@/integrations/supabase/types';
+import { MessageWithAuthor } from '@/integrations/supabase/community.api';
 import { UserProfileCard } from '@/components/ui/UserProfileCard';
 
 interface MessageProps {
