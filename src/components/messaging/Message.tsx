@@ -1,10 +1,9 @@
 // components/messaging/Message.tsx
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { useAuth } from '@/hooks/useAuth'; // To identify if the message is from the current user
-import { cn } from '@/lib/utils'; // A utility for conditional class names
-// Import our new, official type
-import { MessageWithAuthor } from '@/integrations/supabase/community.api';
+import { useAuth } from '@/hooks/useAuth';
+import { cn } from '@/lib/utils';
+import { MessageWithAuthor } from '@/integrations/supabase/community.api'; // Correct import path
 import { UserProfileCard } from '@/components/ui/UserProfileCard';
 
 interface MessageProps {
@@ -14,8 +13,9 @@ interface MessageProps {
 export const Message = ({ message }: MessageProps) => {
   const { user } = useAuth();
   const isCurrentUser = message.user_id === user?.id;
+
   const displayName = message.author?.full_name || message.email || 'User';
-  const avatarUrl = message.author?.profile_picture_url; // Use the profile picture from the joined table
+  const avatarUrl = message.author?.profile_picture_url;
 
   return (
     <div className={cn(
@@ -23,13 +23,17 @@ export const Message = ({ message }: MessageProps) => {
         isCurrentUser ? "flex-row-reverse" : "flex-row"
     )}>
       <Avatar>
-        {/* Using a simple, consistent avatar service */}
         <AvatarImage src={avatarUrl ?? undefined} alt={displayName} />
         <AvatarFallback>{displayName?.split(' ').map(n => n[0]).join('')}</AvatarFallback>
       </Avatar>
-      <div className="flex items-center gap-2">
+
+      {/* --- FIX START: Added a wrapping div for all the text content --- */}
+      <div className={cn(
+          "flex flex-col rounded-lg px-3 py-2 bg-muted max-w-lg",
+          isCurrentUser ? "bg-primary text-primary-foreground" : "bg-muted"
+      )}>
+        <div className="flex items-center gap-2">
           {!isCurrentUser && (
-            // Wrap the display name with our new interactive card
             <UserProfileCard userId={message.user_id}>
               <span className="font-bold text-sm cursor-pointer hover:underline">
                 {displayName}
@@ -42,6 +46,8 @@ export const Message = ({ message }: MessageProps) => {
         </div>
         <p className="text-sm">{message.body} {message.is_edited && <span className="text-xs opacity-70">(edited)</span>}</p>
       </div>
+      {/* --- FIX END: The extra closing div from before is now correctly matched --- */}
+      
     </div>
   );
 };
