@@ -98,56 +98,55 @@ const Register = () => {
     setError('');
 
     try {
-      // Step 1: Sign up the user in the authentication system.
-      // We no longer pass metadata since we are handling the profile creation manually.
+      // Step 1: Sign up the user.
       const { data: authData, error: authError } = await signUp(formData.email, formData.password);
 
       if (authError) {
-        // This will now give a clearer error if the user already exists, etc.
         throw new Error(authError.message);
       }
       
       if (!authData.user) {
-        // This is a safety check.
         throw new Error('Registration failed, no user data returned.');
       }
       
-      // Step 2: Manually and explicitly INSERT the full profile into the 'profiles' table.
-      // This is far more reliable than a trigger.
-      const profileDataToInsert = {
-        id: authData.user.id, // Link the profile to the auth user
+      // --- THIS IS THE FIX ---
+      // We will now build the profile object defensively, only including fields that have a value.
+
+      // Start with the data that is always required.
+      const profileDataToInsert: { [key: string]: any } = {
+        id: authData.user.id,
         email: formData.email,
         full_name: `${formData.firstName} ${formData.lastName}`.trim(),
-        phone: formData.phone,
-        user_role: registrationType,
-        current_location: formData.location,
-        bio: formData.bio,
-        years_experience: formData.experience || null,
-        
-        // Add educational and professional details
-        institution: formData.institution,
-        course: formData.course,
-        year_of_study: formData.yearOfStudy,
-        current_position: formData.currentPosition,
-        organization: formData.organization,
-        specialization: formData.specialization,
-        medical_license: formData.medicalLicense,
+        user_role: registrationType, // This is always selected in step 1
       };
 
+      // Define all other optional fields from the form.
+      const optionalFields = [
+        'phone', 'current_location', 'bio', 'years_experience',
+        'institution', 'course', 'year_of_study', 'current_position',
+        'organization', 'specialization', 'medical_license'
+      ];
+
+      // Loop through the optional fields and only add them to the object if they have a value.
+      optionalFields.forEach(field => {
+        if (formData[field as keyof typeof formData]) {
+          profileDataToInsert[field] = formData[field as keyof typeof formData];
+        }
+      });
+
+      // Step 2: Insert the cleanly constructed profile data.
       const { error: profileError } = await supabase
         .from('profiles')
         .insert(profileDataToInsert);
 
       if (profileError) {
-        // This error is now much more specific to a database problem (e.g., wrong column name).
-        // For the user's sake, we provide a helpful message.
-        // In a real scenario, you might want to delete the auth user to allow them to try again.
+        // We can now see the specific database error in the browser console.
         console.error("Database insert error:", profileError);
         throw new Error('Your account was created, but we failed to save your profile. Please contact support.');
       }
 
-      // Step 3: Success! Navigate the user.
-      const from = location.state?.from || '/networking';
+      // Step 3: Success!
+      const from = location.state?.from || '/community';
       navigate(from, { replace: true });
 
     } catch (err: any) {
