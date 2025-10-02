@@ -181,6 +181,8 @@ const Register = () => {
       
     } catch (err: any) {
       console.error('handleSubmit caught an error:', err);
+      // Make the error impossible to miss
+      alert('AN ERROR OCCURRED:\n\n' + err.message);
       setError(err.message); // Display the specific error to the user
     } finally {
       setIsLoading(false);
