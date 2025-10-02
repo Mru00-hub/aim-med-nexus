@@ -681,7 +681,7 @@ const Register = () => {
                                   <SelectItem value="rheumatology">Rheumatology</SelectItem>
                                   <SelectItem value="emergency">Emergency Medicine</SelectItem>
                                   <SelectItem value="family-medicine">Family Medicine</SelectItem>
-                                  <SelectItem value="internal-medicine">Internal Medicine</龕>
+                                  <SelectItem value="internal-medicine">Internal Medicine</SelectItem>
                                   <SelectItem value="anesthesiology">Anesthesiology</SelectItem>
                                   <SelectItem value="radiology">Radiology</SelectItem>
                                   <SelectItem value="pathology">Pathology</SelectItem>
