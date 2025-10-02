@@ -116,7 +116,7 @@ const Register = () => {
       }
 
       // Step 2: On success, redirect to a new "please verify" page.
-      navigate('/please-verify', { replace: true });
+      navigate('/please-verify', { replace: true, state: { email: formData.email } });
 
     } catch (err: any) {
       // The catch block will now only show errors from the signUp process.
