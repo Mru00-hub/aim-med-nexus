@@ -90,7 +90,7 @@ const Register = () => {
   };
 
   // --- THIS IS THE FINAL, CORRECTED SUBMIT HANDLER ---
-  const handleSubmit = async (e: React.FormEvent) => {
+const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
@@ -115,7 +115,8 @@ const Register = () => {
         throw new Error('Registration failed, no user data returned.');
       }
       
-      // Build the profile object defensively, only including fields that have a value.
+      // --- THIS IS THE FINAL FIX ---
+      // Build the profile object ensuring all keys match the database's snake_case format.
       const profileDataToInsert: { [key: string]: any } = {
         id: authData.user.id,
         email: formData.email,
@@ -123,39 +124,37 @@ const Register = () => {
         user_role: registrationType,
       };
 
-      // Define all optional fields from the form.
-      const optionalFields: (keyof typeof formData)[] = [
-        'phone', 'bio', 'institution', 'course',
-        'currentPosition', 'organization', 'specialization', 'medicalLicense'
-      ];
-      
-      // Loop through optional fields and only add them if they have a non-empty value.
-      optionalFields.forEach(field => {
-        if (formData[field]) {
-          profileDataToInsert[field] = formData[field];
-        }
-      });
-      
-            // Handle explicit mapping and "Other" text fields
+      // Map form data (camelCase) to database columns (snake_case)
+      // and handle the "Other" text fields correctly.
+      if (formData.phone) profileDataToInsert.phone = formData.phone;
+      if (formData.bio) profileDataToInsert.bio = formData.bio;
+
       if (formData.location) {
-        profileDataToInsert['current_location'] = formData.location === 'other' ? formData.otherLocation : formData.location;
+        profileDataToInsert.current_location = formData.location === 'other' ? formData.otherLocation : formData.location;
+      }
+      if (formData.experience) {
+        profileDataToInsert.years_experience = formData.experience;
       }
       if (formData.institution) {
-        profileDataToInsert['institution'] = formData.institution === 'other' ? formData.otherInstitution : formData.institution;
+        profileDataToInsert.institution = formData.institution === 'other' ? formData.otherInstitution : formData.institution;
       }
       if (formData.course) {
-        profileDataToInsert['course'] = formData.course === 'other' ? formData.otherCourse : formData.course;
-      }
-      if (formData.specialization) {
-        profileDataToInsert['specialization'] = formData.specialization === 'other' ? formData.otherSpecialization : formData.specialization;
-      }
-
-      // Keep the existing mappings for fields without an "Other" option
-      if (formData.experience) {
-        profileDataToInsert['years_experience'] = formData.experience;
+        profileDataToInsert.course = formData.course === 'other' ? formData.otherCourse : formData.course;
       }
       if (formData.yearOfStudy) {
-        profileDataToInsert['year_of_study'] = formData.yearOfStudy;
+        profileDataToInsert.year_of_study = formData.yearOfStudy;
+      }
+      if (formData.currentPosition) {
+        profileDataToInsert.current_position = formData.currentPosition;
+      }
+      if (formData.organization) {
+        profileDataToInsert.organization = formData.organization;
+      }
+      if (formData.specialization) {
+        profileDataToInsert.specialization = formData.specialization === 'other' ? formData.otherSpecialization : formData.specialization;
+      }
+      if (formData.medicalLicense) {
+        profileDataToInsert.medical_license = formData.medicalLicense;
       }
 
       // Step 2: Insert the cleanly constructed profile data.
@@ -178,7 +177,6 @@ const Register = () => {
       setIsLoading(false);
     }
   };
-
 
   return (
     <div className="min-h-screen bg-background">
