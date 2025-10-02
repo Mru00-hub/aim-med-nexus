@@ -17,6 +17,7 @@ import Inbox from "./pages/Inbox";
 import Notifications from "./pages/Notifications";
 import Register from "./pages/Register";
 import Login from "./pages/Login";
+import PleaseVerify from "./pages/PleaseVerify";
 import PaymentPage from "./pages/PaymentPage";
 import NotFound from "./pages/NotFound";
 // --- NEW: Import for the Simple Registration Test page ---
@@ -43,6 +44,7 @@ const App = () => (
             {/* --- Core App Routes --- */}
             <Route path="/" element={<Index />} />
             <Route path="/register" element={<AuthGuard requireAuth={false}><Register /></AuthGuard>} />
+            <Route path="/please-verify" element={<PleaseVerify />}
             <Route path="/login" element={<AuthGuard requireAuth={false}><Login /></AuthGuard>} />
             
             {/* --- Other Feature Routes --- */}
