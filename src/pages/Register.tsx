@@ -713,8 +713,9 @@ const Register = () => {
                                   <SelectValue placeholder="Years of experience" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  <SelectItem value="0-1">0-1 years</SelectItem>
-                                  <SelectItem value="1-5">1-5 years</SelectItem>
+                                  <SelectItem value="fresh">0-1 years</SelectItem>
+                                  <SelectItem value="1-3">1-3 years</SelectItem>
+                                  <SelectItem value="3-5">3-5 years</SelectItem>
                                   <SelectItem value="5-10">5-10 years</SelectItem>
                                   <SelectItem value="10+">10+ years</SelectItem>
                                 </SelectContent>
