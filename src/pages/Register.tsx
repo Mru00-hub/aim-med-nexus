@@ -89,7 +89,6 @@ const Register = () => {
     if (step > 1) setStep(step - 1);
   };
 
-// --- THIS IS THE FINAL, BULLETPROOF SUBMIT HANDLER ---
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -105,90 +104,30 @@ const Register = () => {
     setError('');
 
     try {
-      // Step 1: Sign up the user in auth.users
-      const { data: authData, error: authError } = await supabase.auth.signUp({
+      // Step 1: ONLY sign up the user. All profile insertion logic is removed.
+      const { error } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
       });
 
-      if (authError) {
-        throw new Error(`Auth Error: ${authError.message}`);
-      }
-      if (!authData.user) {
-        throw new Error('Registration failed, no user data returned.');
+      if (error) {
+        // Let the catch block handle any signup errors (e.g., user already exists)
+        throw error;
       }
 
-      // Step 2: Prepare the data for the profiles table
-      const fullName = `${formData.firstName} ${formData.lastName}`.trim();
-      const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(
-        fullName
-      )}&background=random&color=fff`;
+      // Step 2: On success, redirect to a new "please verify" page.
+      navigate('/please-verify', { replace: true });
 
-      // Create the profile object with all REQUIRED fields
-      const profileDataToInsert: { [key: string]: any } = {
-        id: authData.user.id,
-        email: formData.email,
-        full_name: fullName,
-        user_role: registrationType,
-        profile_picture_url: avatarUrl,
-      };
-
-      // Conditionally add all OPTIONAL fields
-      if (formData.phone) profileDataToInsert.phone = formData.phone.trim();
-      if (formData.bio) profileDataToInsert.bio = formData.bio.trim();
-      if (formData.location)
-        profileDataToInsert.current_location =
-          formData.location === 'other'
-            ? formData.otherLocation.trim()
-            : formData.location;
-      if (formData.experience) profileDataToInsert.years_experience = formData.experience;
-      if (formData.institution)
-        profileDataToInsert.institution =
-          formData.institution === 'other'
-            ? formData.otherInstitution.trim()
-            : formData.institution;
-      if (formData.course)
-        profileDataToInsert.course =
-          formData.course === 'other' ? formData.otherCourse.trim() : formData.course;
-      if (formData.yearOfStudy) profileDataToInsert.year_of_study = formData.yearOfStudy;
-      if (formData.currentPosition)
-        profileDataToInsert.current_position = formData.currentPosition.trim();
-      if (formData.organization)
-        profileDataToInsert.organization = formData.organization.trim();
-      if (formData.specialization)
-        profileDataToInsert.specialization =
-          formData.specialization === 'other'
-            ? formData.otherSpecialization.trim()
-            : formData.specialization;
-      if (formData.medicalLicense)
-        profileDataToInsert.medical_license = formData.medicalLicense.trim();
-
-      // The alert for debugging on your tablet
-      alert('Data to be inserted:\n' + JSON.stringify(profileDataToInsert, null, 2));
-
-      // Step 3: Insert the complete profile object into the database
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert(profileDataToInsert);
-
-      if (profileError) {
-        throw new Error(`DATABASE INSERT FAILED: ${profileError.message}`);
-      }
-
-      console.log('Step 3: Profile inserted successfully!');
-      const from = location.state?.from || '/community';
-      navigate(from, { replace: true });
-      
     } catch (err: any) {
-      console.error('handleSubmit caught an error:', err);
-      // Make the error impossible to miss
-      alert('AN ERROR OCCURRED:\n\n' + err.message);
-      setError(err.message); // Display the specific error to the user
+      // The catch block will now only show errors from the signUp process.
+      // The alert we added for debugging can be removed from here if you like.
+      console.error('Registration failed:', err);
+      alert('REGISTRATION FAILED:\n\n' + err.message);
+      setError(err.message);
     } finally {
       setIsLoading(false);
     }
   };
-
 
   return (
     <div className="min-h-screen bg-background">
