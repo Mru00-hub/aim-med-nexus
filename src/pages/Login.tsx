@@ -53,7 +53,7 @@ const Login = () => {
       setError(error.message);
     } else {
       // If there's no error, the login was successful. Redirect the user.
-      const from = location.state?.from || '/networking';
+      const from = location.state?.from || '/community/Forums';
       navigate(from, { replace: true });
     }
 
