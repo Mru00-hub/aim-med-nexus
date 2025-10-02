@@ -65,6 +65,11 @@ const Register = () => {
     experience: '',
     medicalLicense: '',
     bio: '',
+
+    otherLocation: '',
+    otherInstitution: '',
+    otherCourse: '',
+    otherSpecialization: '',
     
     // Preferences
     subscriptionType: 'basic',
@@ -84,6 +89,7 @@ const Register = () => {
     if (step > 1) setStep(step - 1);
   };
 
+  // --- THIS IS THE FINAL, CORRECTED SUBMIT HANDLER ---
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (formData.password !== formData.confirmPassword) {
@@ -109,30 +115,48 @@ const Register = () => {
         throw new Error('Registration failed, no user data returned.');
       }
       
-      // --- THIS IS THE FIX ---
-      // We will now build the profile object defensively, only including fields that have a value.
-
-      // Start with the data that is always required.
+      // Build the profile object defensively, only including fields that have a value.
       const profileDataToInsert: { [key: string]: any } = {
         id: authData.user.id,
         email: formData.email,
         full_name: `${formData.firstName} ${formData.lastName}`.trim(),
-        user_role: registrationType, // This is always selected in step 1
+        user_role: registrationType,
       };
 
-      // Define all other optional fields from the form.
-      const optionalFields = [
-        'phone', 'current_location', 'bio', 'years_experience',
-        'institution', 'course', 'year_of_study', 'current_position',
-        'organization', 'specialization', 'medical_license'
+      // Define all optional fields from the form.
+      const optionalFields: (keyof typeof formData)[] = [
+        'phone', 'bio', 'institution', 'course',
+        'currentPosition', 'organization', 'specialization', 'medicalLicense'
       ];
-
-      // Loop through the optional fields and only add them to the object if they have a value.
+      
+      // Loop through optional fields and only add them if they have a non-empty value.
       optionalFields.forEach(field => {
-        if (formData[field as keyof typeof formData]) {
-          profileDataToInsert[field] = formData[field as keyof typeof formData];
+        if (formData[field]) {
+          profileDataToInsert[field] = formData[field];
         }
       });
+      
+            // Handle explicit mapping and "Other" text fields
+      if (formData.location) {
+        profileDataToInsert['current_location'] = formData.location === 'other' ? formData.otherLocation : formData.location;
+      }
+      if (formData.institution) {
+        profileDataToInsert['institution'] = formData.institution === 'other' ? formData.otherInstitution : formData.institution;
+      }
+      if (formData.course) {
+        profileDataToInsert['course'] = formData.course === 'other' ? formData.otherCourse : formData.course;
+      }
+      if (formData.specialization) {
+        profileDataToInsert['specialization'] = formData.specialization === 'other' ? formData.otherSpecialization : formData.specialization;
+      }
+
+      // Keep the existing mappings for fields without an "Other" option
+      if (formData.experience) {
+        profileDataToInsert['years_experience'] = formData.experience;
+      }
+      if (formData.yearOfStudy) {
+        profileDataToInsert['year_of_study'] = formData.yearOfStudy;
+      }
 
       // Step 2: Insert the cleanly constructed profile data.
       const { error: profileError } = await supabase
@@ -140,9 +164,8 @@ const Register = () => {
         .insert(profileDataToInsert);
 
       if (profileError) {
-        // We can now see the specific database error in the browser console.
         console.error("Database insert error:", profileError);
-        throw new Error('Your account was created, but we failed to save your profile. Please contact support.');
+        throw new Error(`Profile creation failed: ${profileError.message}`);
       }
 
       // Step 3: Success!
@@ -155,6 +178,7 @@ const Register = () => {
       setIsLoading(false);
     }
   };
+
 
   return (
     <div className="min-h-screen bg-background">
@@ -351,6 +375,16 @@ const Register = () => {
                               <SelectItem value="other">Other</SelectItem>
                             </SelectContent>
                           </Select>
+                          {formData.location === 'other' && (
+                            <div className="mt-2">
+                              <Input
+                                value={formData.otherLocation}
+                                onChange={(e) => handleInputChange('otherLocation', e.target.value)}
+                                placeholder="Please specify your location"
+                                required
+                              />
+                            </div>
+                          )}
                         </div>
                       </div>
 
@@ -420,6 +454,16 @@ const Register = () => {
                             <SelectItem value="other">Other</SelectItem>
                           </SelectContent>
                         </Select>
+                        {formData.institution === 'other' && (
+                          <div className="mt-2">
+                            <Input
+                              value={formData.otherInstitution}
+                              onChange={(e) => handleInputChange('otherInstitution', e.target.value)}
+                              placeholder="Please specify your institution"
+                              required
+                            />
+                          </div>
+                        )}
                       </div>
 
                       <div className="grid sm:grid-cols-2 gap-4">
@@ -458,6 +502,16 @@ const Register = () => {
                               <SelectItem value="other">Other</SelectItem>
                             </SelectContent>
                           </Select>
+                          {formData.course === 'other' && (
+                            <div className="mt-2">
+                              <Input
+                                value={formData.otherCourse}
+                                onChange={(e) => handleInputChange('otherCourse', e.target.value)}
+                                placeholder="Please specify your course"
+                                required
+                              />
+                            </div>
+                          )}
                         </div>
                         <div>
                           <label className="block text-sm font-medium mb-2">Year/Status *</label>
@@ -517,6 +571,7 @@ const Register = () => {
                                   <SelectValue placeholder="Select your field" />
                                 </SelectTrigger>
                                 <SelectContent className="max-h-48 overflow-y-auto">
+                                  <SelectItem value="healthcare-administration">Healthcare Service</SelectItem>
                                   <SelectItem value="healthcare-administration">Healthcare Administration</SelectItem>
                                   <SelectItem value="medical-devices">Medical Devices</SelectItem>
                                   <SelectItem value="pharmaceuticals">Pharmaceuticals</SelectItem>
@@ -533,6 +588,16 @@ const Register = () => {
                                   <SelectItem value="other">Other</SelectItem>
                                 </SelectContent>
                               </Select>
+                              {formData.specialization === 'other' && (
+                                <div className="mt-2">
+                                  <Input
+                                    value={formData.otherSpecialization}
+                                    onChange={(e) => handleInputChange('otherSpecialization', e.target.value)}
+                                    placeholder="Please specify your specialization"
+                                    required
+                                  />
+                                </div>
+                              )}
                             </div>
                             <div>
                               <label className="block text-sm font-medium mb-2">Experience</label>
@@ -601,6 +666,7 @@ const Register = () => {
                                   <SelectValue placeholder="Select specialization" />
                                 </SelectTrigger>
                                 <SelectContent className="max-h-48 overflow-y-auto">
+                                  <SelectItem value="cardiology">General Physician</SelectItem>
                                   <SelectItem value="cardiology">Cardiology</SelectItem>
                                   <SelectItem value="dermatology">Dermatology</SelectItem>
                                   <SelectItem value="endocrinology">Endocrinology</SelectItem>
@@ -615,7 +681,7 @@ const Register = () => {
                                   <SelectItem value="rheumatology">Rheumatology</SelectItem>
                                   <SelectItem value="emergency">Emergency Medicine</SelectItem>
                                   <SelectItem value="family-medicine">Family Medicine</SelectItem>
-                                  <SelectItem value="internal-medicine">Internal Medicine</SelectItem>
+                                  <SelectItem value="internal-medicine">Internal Medicine</龕>
                                   <SelectItem value="anesthesiology">Anesthesiology</SelectItem>
                                   <SelectItem value="radiology">Radiology</SelectItem>
                                   <SelectItem value="pathology">Pathology</SelectItem>
@@ -648,6 +714,16 @@ const Register = () => {
                                   <SelectItem value="other">Other</SelectItem>
                                 </SelectContent>
                               </Select>
+                              {formData.specialization === 'other' && (
+                                <div className="mt-2">
+                                  <Input
+                                    value={formData.otherSpecialization}
+                                    onChange={(e) => handleInputChange('otherSpecialization', e.target.value)}
+                                    placeholder="Please specify your specialization"
+                                    required
+                                  />
+                                </div>
+                              )}
                             </div>
                             <div>
                               <label className="block text-sm font-medium mb-2">Experience</label>
@@ -692,7 +768,7 @@ const Register = () => {
                           <Checkbox 
                             id="terms"
                             checked={formData.agreeToTerms}
-                            onCheckedChange={(checked) => handleInputChange('agreeToTerms', checked)}
+                            onCheckedChange={(checked) => handleInputChange('agreeToTerms', checked as boolean)}
                           />
                           <label htmlFor="terms" className="text-sm text-muted-foreground leading-5">
                             I agree to the <Link to="/terms" className="text-primary hover:underline">Terms of Service</Link> and{' '}
@@ -704,7 +780,7 @@ const Register = () => {
                           <Checkbox 
                             id="updates"
                             checked={formData.receiveUpdates}
-                            onCheckedChange={(checked) => handleInputChange('receiveUpdates', checked)}
+                            onCheckedChange={(checked) => handleInputChange('receiveUpdates', checked as boolean)}
                           />
                           <label htmlFor="updates" className="text-sm text-muted-foreground leading-5">
                             I want to receive updates about new features and opportunities
