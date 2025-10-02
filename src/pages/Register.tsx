@@ -100,12 +100,32 @@ const Register = () => {
       setError('You must agree to the terms and conditions.');
       return;
     }
-    if ( (registrationType === 'professional' || registrationType === 'premium') && !formData.experience ) {
-      setError('Please select your years of experience.');
-      return;
-    }
+    
     setIsLoading(true);
     setError('');
+
+    try {
+      // Step 0: Sign up the user (using the direct call is better)
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password
+      });
+
+      if (authError) throw authError;
+      if (!authData.user) throw new Error('Registration failed, no user data returned.');
+
+      // Step 1: Prepare the data, INCLUDING the avatar URL
+      const fullName = `${formData.firstName} ${formData.lastName}`.trim();
+      
+      // Use a service to generate an avatar URL from the user's name
+      const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}&background=random&color=fff`;
+      const profileDataToInsert: { [key: string]: any } = {
+        id: authData.user.id,
+        email: formData.email,
+        full_name: `${formData.firstName} ${formData.lastName}`.trim(),
+        user_role: registrationType,
+        profile_picture_url: avatarUrl,
+      };
 
     try {
       console.log('Step 1: Starting user signup...');
@@ -124,25 +144,19 @@ const Register = () => {
 
       
       console.log('Step 2: Building profile data object...');
-      const profileDataToInsert: { [key: string]: any } = {
-        id: authData.user.id,
-        email: formData.email,
-        full_name: `${formData.firstName} ${formData.lastName}`.trim(),
-        user_role: registrationType,
-      };
-
+      
       // Map form data to database columns, handling "Other" fields
-      if (formData.phone) profileDataToInsert.phone = formData.phone;
-      if (formData.bio) profileDataToInsert.bio = formData.bio;
-      if (formData.location) profileDataToInsert.current_location = formData.location === 'other' ? formData.otherLocation : formData.location;
-      if (formData.experience) profileDataToInsert.years_experience = formData.experience;
-      if (formData.institution) profileDataToInsert.institution = formData.institution === 'other' ? formData.otherInstitution : formData.institution;
-      if (formData.course) profileDataToInsert.course = formData.course === 'other' ? formData.otherCourse : formData.course;
-      if (formData.yearOfStudy) profileDataToInsert.year_of_study = formData.yearOfStudy;
-      if (formData.currentPosition) profileDataToInsert.current_position = formData.currentPosition;
-      if (formData.organization) profileDataToInsert.organization = formData.organization;
-      if (formData.specialization) profileDataToInsert.specialization = formData.specialization === 'other' ? formData.otherSpecialization : formData.specialization;
-      if (formData.medicalLicense) profileDataToInsert.medical_license = formData.medicalLicense;
+      if (formData.phone) profileDataToInsert.phone = formData.phone.trim();
+      if (formData.bio) profileDataToInsert.bio = formData.bio.trim();
+      if (formData.location) profileDataToInsert.current_location = formData.location === 'other' ? formData.otherLocation : formData.location.trim();
+      if (formData.experience) profileDataToInsert.years_experience = formData.experience.trim();
+      if (formData.institution) profileDataToInsert.institution = formData.institution === 'other' ? formData.otherInstitution : formData.institution.trim();
+      if (formData.course) profileDataToInsert.course = formData.course === 'other' ? formData.otherCourse : formData.course.trim();
+      if (formData.yearOfStudy) profileDataToInsert.year_of_study = formData.yearOfStudy.trim();
+      if (formData.currentPosition) profileDataToInsert.current_position = formData.currentPosition.trim();
+      if (formData.organization) profileDataToInsert.organization = formData.organization.trim();
+      if (formData.specialization) profileDataToInsert.specialization = formData.specialization === 'other' ? formData.otherSpecialization : formData.specialization.trim();
+      if (formData.medicalLicense) profileDataToInsert.medical_license = formData.medicalLicense.trim();
 
       console.log('Data to be inserted:', JSON.stringify(profileDataToInsert, null, 2));
 
