@@ -109,7 +109,10 @@ const Register = () => {
 
     try {
       console.log('Step 1: Starting user signup...');
-      const { data: authData, error: authError } = await signUp(formData.email, formData.password);
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password
+      });
 
       if (authError) {
         throw new Error(`Auth Error: ${authError.message}`);
