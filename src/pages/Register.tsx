@@ -571,7 +571,7 @@ const Register = () => {
                                   <SelectValue placeholder="Select your field" />
                                 </SelectTrigger>
                                 <SelectContent className="max-h-48 overflow-y-auto">
-                                  <SelectItem value="healthcare-administration">Healthcare Service</SelectItem>
+                                  <SelectItem value="healthcare-service">Healthcare Service</SelectItem>
                                   <SelectItem value="healthcare-administration">Healthcare Administration</SelectItem>
                                   <SelectItem value="medical-devices">Medical Devices</SelectItem>
                                   <SelectItem value="pharmaceuticals">Pharmaceuticals</SelectItem>
@@ -666,7 +666,7 @@ const Register = () => {
                                   <SelectValue placeholder="Select specialization" />
                                 </SelectTrigger>
                                 <SelectContent className="max-h-48 overflow-y-auto">
-                                  <SelectItem value="cardiology">General Physician</SelectItem>
+                                  <SelectItem value="general-physician">General Physician</SelectItem>
                                   <SelectItem value="cardiology">Cardiology</SelectItem>
                                   <SelectItem value="dermatology">Dermatology</SelectItem>
                                   <SelectItem value="endocrinology">Endocrinology</SelectItem>
