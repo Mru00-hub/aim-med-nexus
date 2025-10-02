@@ -89,8 +89,8 @@ const Register = () => {
     if (step > 1) setStep(step - 1);
   };
 
-  // --- THIS IS THE FINAL, CORRECTED SUBMIT HANDLER ---
-const handleSubmit = async (e: React.FormEvent) => {
+// --- THIS IS THE FINAL, BULLETPROOF SUBMIT HANDLER ---
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
@@ -104,19 +104,19 @@ const handleSubmit = async (e: React.FormEvent) => {
     setError('');
 
     try {
-      // Step 1: Sign up the user.
+      console.log('Step 1: Starting user signup...');
       const { data: authData, error: authError } = await signUp(formData.email, formData.password);
 
       if (authError) {
-        throw new Error(authError.message);
+        throw new Error(`Auth Error: ${authError.message}`);
       }
-      
       if (!authData.user) {
         throw new Error('Registration failed, no user data returned.');
       }
+      console.log('Step 1 complete. Auth user created:', authData.user.id);
+
       
-      // --- THIS IS THE FINAL FIX ---
-      // Build the profile object ensuring all keys match the database's snake_case format.
+      console.log('Step 2: Building profile data object...');
       const profileDataToInsert: { [key: string]: any } = {
         id: authData.user.id,
         email: formData.email,
@@ -124,55 +124,37 @@ const handleSubmit = async (e: React.FormEvent) => {
         user_role: registrationType,
       };
 
-      // Map form data (camelCase) to database columns (snake_case)
-      // and handle the "Other" text fields correctly.
+      // Map form data to database columns, handling "Other" fields
       if (formData.phone) profileDataToInsert.phone = formData.phone;
       if (formData.bio) profileDataToInsert.bio = formData.bio;
+      if (formData.location) profileDataToInsert.current_location = formData.location === 'other' ? formData.otherLocation : formData.location;
+      if (formData.experience) profileDataToInsert.years_experience = formData.experience;
+      if (formData.institution) profileDataToInsert.institution = formData.institution === 'other' ? formData.otherInstitution : formData.institution;
+      if (formData.course) profileDataToInsert.course = formData.course === 'other' ? formData.otherCourse : formData.course;
+      if (formData.yearOfStudy) profileDataToInsert.year_of_study = formData.yearOfStudy;
+      if (formData.currentPosition) profileDataToInsert.current_position = formData.currentPosition;
+      if (formData.organization) profileDataToInsert.organization = formData.organization;
+      if (formData.specialization) profileDataToInsert.specialization = formData.specialization === 'other' ? formData.otherSpecialization : formData.specialization;
+      if (formData.medicalLicense) profileDataToInsert.medical_license = formData.medicalLicense;
 
-      if (formData.location) {
-        profileDataToInsert.current_location = formData.location === 'other' ? formData.otherLocation : formData.location;
-      }
-      if (formData.experience) {
-        profileDataToInsert.years_experience = formData.experience;
-      }
-      if (formData.institution) {
-        profileDataToInsert.institution = formData.institution === 'other' ? formData.otherInstitution : formData.institution;
-      }
-      if (formData.course) {
-        profileDataToInsert.course = formData.course === 'other' ? formData.otherCourse : formData.course;
-      }
-      if (formData.yearOfStudy) {
-        profileDataToInsert.year_of_study = formData.yearOfStudy;
-      }
-      if (formData.currentPosition) {
-        profileDataToInsert.current_position = formData.currentPosition;
-      }
-      if (formData.organization) {
-        profileDataToInsert.organization = formData.organization;
-      }
-      if (formData.specialization) {
-        profileDataToInsert.specialization = formData.specialization === 'other' ? formData.otherSpecialization : formData.specialization;
-      }
-      if (formData.medicalLicense) {
-        profileDataToInsert.medical_license = formData.medicalLicense;
-      }
+      console.log('Data to be inserted:', JSON.stringify(profileDataToInsert, null, 2));
 
-      // Step 2: Insert the cleanly constructed profile data.
+      console.log('Step 2 complete. Attempting to insert profile...');
       const { error: profileError } = await supabase
         .from('profiles')
         .insert(profileDataToInsert);
 
       if (profileError) {
-        console.error("Database insert error:", profileError);
-        throw new Error(`Profile creation failed: ${profileError.message}`);
+        throw new Error(`DATABASE INSERT FAILED: ${profileError.message}`);
       }
 
-      // Step 3: Success!
+      console.log('Step 3: Profile inserted successfully!');
       const from = location.state?.from || '/community';
       navigate(from, { replace: true });
 
     } catch (err: any) {
-      setError(err.message || 'An unexpected error occurred. Please try again.');
+      console.error("handleSubmit caught an error:", err);
+      setError(err.message); // Display the specific error to the user
     } finally {
       setIsLoading(false);
     }
