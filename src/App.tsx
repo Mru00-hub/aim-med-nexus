@@ -44,7 +44,7 @@ const App = () => (
             {/* --- Core App Routes --- */}
             <Route path="/" element={<Index />} />
             <Route path="/register" element={<AuthGuard requireAuth={false}><Register /></AuthGuard>} />
-            <Route path="/please-verify" element={<PleaseVerify />}
+            <Route path="/please-verify" element={<PleaseVerify />} />
             <Route path="/login" element={<AuthGuard requireAuth={false}><Login /></AuthGuard>} />
             
             {/* --- Other Feature Routes --- */}
