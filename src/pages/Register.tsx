@@ -100,6 +100,10 @@ const Register = () => {
       setError('You must agree to the terms and conditions.');
       return;
     }
+    if ( (registrationType === 'professional' || registrationType === 'premium') && !formData.experience ) {
+      setError('Please select your years of experience.');
+      return;
+    }
     setIsLoading(true);
     setError('');
 
@@ -138,6 +142,8 @@ const Register = () => {
       if (formData.medicalLicense) profileDataToInsert.medical_license = formData.medicalLicense;
 
       console.log('Data to be inserted:', JSON.stringify(profileDataToInsert, null, 2));
+
+      alert('Data to be inserted:\n' + JSON.stringify(profileDataToInsert, null, 2));
 
       console.log('Step 2 complete. Attempting to insert profile...');
       const { error: profileError } = await supabase
@@ -580,7 +586,7 @@ const Register = () => {
                               )}
                             </div>
                             <div>
-                              <label className="block text-sm font-medium mb-2">Experience</label>
+                              <label className="block text-sm font-medium mb-2">Experience*</label>
                               <Select value={formData.experience} onValueChange={(value) => handleInputChange('experience', value)}>
                                 <SelectTrigger>
                                   <SelectValue placeholder="Years of experience" />
@@ -707,7 +713,7 @@ const Register = () => {
                               )}
                             </div>
                             <div>
-                              <label className="block text-sm font-medium mb-2">Experience</label>
+                              <label className="block text-sm font-medium mb-2">Experience*</label>
                               <Select value={formData.experience} onValueChange={(value) => handleInputChange('experience', value)}>
                                 <SelectTrigger>
                                   <SelectValue placeholder="Years of experience" />
