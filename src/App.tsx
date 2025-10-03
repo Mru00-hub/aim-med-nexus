@@ -22,6 +22,7 @@ import PaymentPage from "./pages/PaymentPage";
 import NotFound from "./pages/NotFound";
 // --- NEW: Import for the Simple Registration Test page ---
 import SimpleRegisterTest from "./pages/SimpleRegisterTest";
+import ProfilePage from './pages/ProfilePage';
 
 // --- UPDATED COMMUNITY IMPORTS ---
 // We now only import the components we are actually using.
@@ -46,6 +47,8 @@ const App = () => (
             <Route path="/register" element={<AuthGuard requireAuth={false}><Register /></AuthGuard>} />
             <Route path="/please-verify" element={<PleaseVerify />} />
             <Route path="/login" element={<AuthGuard requireAuth={false}><Login /></AuthGuard>} />
+            <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/profile/:userId" element={<ProfilePage />} />
             
             {/* --- Other Feature Routes --- */}
             <Route path="/jobs" element={<Jobs />} />
