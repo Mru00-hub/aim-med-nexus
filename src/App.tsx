@@ -23,6 +23,7 @@ import NotFound from "./pages/NotFound";
 // --- NEW: Import for the Simple Registration Test page ---
 import SimpleRegisterTest from "./pages/SimpleRegisterTest";
 import ProfilePage from './pages/ProfilePage';
+import CompleteProfile from "./pages/CompleteProfile";
 
 // --- UPDATED COMMUNITY IMPORTS ---
 // We now only import the components we are actually using.
@@ -37,10 +38,11 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <AuthProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
+      <BrowserRouter>
+        <AuthProvider>
+          <Toaster />
+          <Sonner />
+        
           <Routes>
             {/* --- Core App Routes --- */}
             <Route path="/" element={<Index />} />
@@ -82,8 +84,8 @@ const App = () => (
             {/* CATCH-ALL "*" ROUTE - MUST BE LAST */}
             <Route path="*" element={<NotFound />} />
           </Routes>
-        </BrowserRouter>
-      </AuthProvider>
+        </AuthProvider>
+      </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
 );
