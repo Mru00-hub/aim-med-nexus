@@ -4,7 +4,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
 import { Profile } from '@/integrations/supabase/community.api'; // Import your Profile type
 import { useNavigate } from 'react-router-dom'; // <--- ADD THIS IMPORT
-import React, { createContext, useContext, useEffect, useState } from 'react';
 
 // --- NEW: AuthContextType now includes the user's profile ---
 interface AuthContextType {
@@ -43,10 +42,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const currentUser = session?.user ?? null;
       setUser(currentUser);
 
-      // We only want to run this complex logic when a user actively signs in.
-      if (event === 'SIGNED_IN' && currentUser) {
+      // --- CORRECTED LOGIC: Check for both SIGNED_IN and INITIAL_SESSION ---
+      if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && currentUser) {
         // 1. Check if a profile already exists for this user.
-        // We only select 'id' to make this check lightweight.
         const { data: existingProfile } = await supabase
           .from('profiles')
           .select('id')
@@ -55,7 +53,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         // 2. If NO profile exists, this is their first login after registration.
         if (!existingProfile) {
-          console.log('First login detected. Creating profile...');
+          console.log('First session detected. Creating profile...');
           const registrationData = currentUser.user_metadata;
 
           // 3. Create the new profile by inserting the metadata saved during registration.
@@ -70,7 +68,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             .single();
 
           if (insertError) {
-            console.error("Error creating profile on first login:", insertError);
+            console.error("Error creating profile on first session:", insertError);
             toast({
               title: "Profile Creation Failed",
               description: "We couldn't set up your profile. Please contact support.",
@@ -88,8 +86,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setTimeout(() => navigate('/complete-profile', { replace: true }), 1500);
           }
         } else {
-          // 5. If a profile already exists, this is a normal login for a returning user.
-          // Just fetch their full profile data and set it in the state.
+          // 5. If a profile already exists, this is a normal session for a returning user.
           const { data, error } = await supabase
             .from('profiles')
             .select('*')
@@ -112,7 +109,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   );
 
-  // Don't forget the initial session load check.
+  // Initial session load check.
   supabase.auth.getSession().then(({ data: { session } }) => {
     if (session) {
       setSession(session);
@@ -122,7 +119,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   });
   
   return () => subscription.unsubscribe();
-}, [toast, navigate]); // <-- UPDATE THE DEPENDENCY ARRAY
+}, [toast, navigate]);
 
   // --- CHANGED: signUp now returns the user object on success ---
   const signUp = async (email: string, password: string, metadata?: any) => {
