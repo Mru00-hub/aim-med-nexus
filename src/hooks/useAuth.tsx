@@ -61,7 +61,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             .select().single();
 
           if (insertError) {
-            console.error("Error creating profile:", insertError);
+            console.group("--- DEBUG: PROFILE CREATION FAILED ---");
+            console.error("The Supabase insert query failed. Error object:", insertError);
+            console.log("This is the exact data that was sent to the database:", dataToInsert);
+            console.groupEnd();
+            toast({
+              title: "Profile Creation Failed",
+              description: "There was an error setting up your account. Please contact support.",
+              variant: "destructive",
+            });
             setProfile(null);
           } else {
             setProfile(createdProfile);
