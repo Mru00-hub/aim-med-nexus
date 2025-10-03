@@ -1,5 +1,6 @@
 // src/pages/CompleteProfile.tsx
 
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -12,14 +13,16 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Save } from 'lucide-react';
+import { Skeleton } from "@/components/ui/skeleton";
 
 const CompleteProfile = () => {
   const navigate = useNavigate();
-  const { user, profile, loading: authLoading } = useAuth(); // Get the user and their existing profile
+  const { user, profile, loading: authLoading } = useAuth();
   const { toast } = useToast();
   
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [avatarUrl, setAvatarUrl] = useState('');
   
   const [formData, setFormData] = useState({
     full_name: '',
@@ -29,11 +32,9 @@ const CompleteProfile = () => {
     organization: '',
     bio: '',
     resume_url: '',
-    skills: '', // We'll handle this as a comma-separated string in the UI
+    skills: '',
   });
 
-  // This effect runs when the component loads and whenever the user's profile data becomes available.
-  // It populates the form with the data that already exists in the database.
   useEffect(() => {
     if (profile) {
       setFormData({
@@ -44,8 +45,17 @@ const CompleteProfile = () => {
         organization: profile.organization || '',
         bio: profile.bio || '',
         resume_url: profile.resume_url || '',
-        skills: profile.skills ? profile.skills.join(', ') : '', // Convert array to string for the textarea
+        skills: profile.skills ? profile.skills.join(', ') : '',
       });
+
+      if (profile.profile_picture_url) {
+        setAvatarUrl(profile.profile_picture_url);
+      } else if (profile.full_name) {
+        const generatedUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(
+          profile.full_name
+        )}&background=0D8ABC&color=fff&size=256`;
+        setAvatarUrl(generatedUrl);
+      }
     }
   }, [profile]);
 
@@ -53,7 +63,6 @@ const CompleteProfile = () => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  // This handleSubmit now performs an UPDATE, not an INSERT.
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) {
@@ -65,7 +74,6 @@ const CompleteProfile = () => {
     setError('');
 
     try {
-      // Convert the comma-separated skills string back into an array for the database
       const skillsArray = formData.skills.split(',').map(s => s.trim()).filter(Boolean);
 
       const updates = {
@@ -77,13 +85,14 @@ const CompleteProfile = () => {
         bio: formData.bio,
         resume_url: formData.resume_url,
         skills: skillsArray,
-        updated_at: new Date().toISOString(), // Good practice to update this timestamp
+        profile_picture_url: avatarUrl,
+        updated_at: new Date().toISOString(),
       };
 
       const { error: updateError } = await supabase
         .from('profiles')
         .update(updates)
-        .eq('id', user.id); // IMPORTANT: Only update the row for the currently logged-in user
+        .eq('id', user.id);
 
       if (updateError) {
         throw updateError;
@@ -93,17 +102,44 @@ const CompleteProfile = () => {
         title: "Profile Updated!",
         description: "Your information has been saved successfully.",
       });
-      navigate('/community'); // Or navigate to a dedicated profile page
+      navigate('/profile');
 
     } catch (err: any) {
       setError(`Failed to update profile: ${err.message}`);
+      toast({
+        title: "Update Failed",
+        description: err.message,
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
   };
 
-  if (authLoading) {
-    return <div>Loading your profile...</div>; // Or a proper skeleton loader
+  if (authLoading || !profile) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <main className="container-medical py-12 px-4 sm:px-6">
+          <Card className="card-medical max-w-2xl mx-auto">
+            <CardHeader>
+              <Skeleton className="h-8 w-48" />
+              <Skeleton className="h-4 w-64 mt-2" />
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex flex-col items-center mb-8 space-y-2">
+                <Skeleton className="h-24 w-24 rounded-full" />
+              </div>
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-24 w-full" />
+              <Skeleton className="h-12 w-full" />
+            </CardContent>
+          </Card>
+        </main>
+        <Footer />
+      </div>
+    );
   }
 
   return (
@@ -112,37 +148,64 @@ const CompleteProfile = () => {
       <main className="container-medical py-12 px-4 sm:px-6">
         <Card className="card-medical max-w-2xl mx-auto">
           <CardHeader>
-            <CardTitle className="text-2xl sm:text-3xl">Edit Your Profile</CardTitle>
+            <CardTitle className="text-2xl sm:text-3xl">
+              {profile.bio ? "Edit Your Profile" : "Complete Your Profile"}
+            </CardTitle>
             <CardDescription>
-              Keep your professional information up to date.
+              {profile.bio 
+                ? "Keep your professional information up to date."
+                : "Welcome! Please review your information and add a few more details."}
             </CardDescription>
           </CardHeader>
           <CardContent>
+            {avatarUrl && (
+              <div className="flex flex-col items-center mb-8 space-y-2">
+                <Avatar className="h-24 w-24 border-2 border-primary/50">
+                  <AvatarImage src={avatarUrl} alt={profile?.full_name} />
+                  <AvatarFallback>
+                    {profile?.full_name?.split(' ').map(n => n[0]).join('')}
+                  </AvatarFallback>
+                </Avatar>
+                <p className="text-sm text-muted-foreground">
+                  Your profile avatar
+                </p>
+              </div>
+            )}
+            
             <form onSubmit={handleSubmit} className="space-y-6">
-              
-              {/* Add form fields for all the editable properties */}
               <div>
                 <label className="block text-sm font-medium mb-2">Full Name *</label>
                 <Input value={formData.full_name} onChange={(e) => handleInputChange('full_name', e.target.value)} required />
               </div>
-
               <div>
                 <label className="block text-sm font-medium mb-2">Current Position</label>
-                <Input value={formData.current_position} onChange={(e) => handleInputChange('current_position', e.target.value)} />
+                <Input value={formData.current_position} onChange={(e) => handleInputChange('current_position', e.target.value)} placeholder="e.g., Resident Doctor, Medical Student" />
               </div>
-
+               <div>
+                <label className="block text-sm font-medium mb-2">Organization</label>
+                <Input value={formData.organization} onChange={(e) => handleInputChange('organization', e.target.value)} placeholder="e.g., City Hospital, AIIMS Delhi" />
+              </div>
+               <div>
+                <label className="block text-sm font-medium mb-2">Location</label>
+                <Input value={formData.current_location} onChange={(e) => handleInputChange('current_location', e.target.value)} placeholder="e.g., Nagpur, India" />
+              </div>
+               <div>
+                <label className="block text-sm font-medium mb-2">Phone</label>
+                <Input value={formData.phone} onChange={(e) => handleInputChange('phone', e.target.value)} placeholder="+91 XXXXX XXXXX" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Professional Bio</label>
+                <Textarea value={formData.bio} onChange={(e) => handleInputChange('bio', e.target.value)} placeholder="A brief summary of your background, interests, and goals..." rows={4} />
+              </div>
               <div>
                 <label className="block text-sm font-medium mb-2">Skills (comma-separated)</label>
                 <Textarea value={formData.skills} onChange={(e) => handleInputChange('skills', e.target.value)} placeholder="e.g., Cardiology, Python, Public Speaking" />
               </div>
-              
               <div>
-                <label className="block text-sm font-medium mb-2">Resume URL</label>
-                <Input value={formData.resume_url} onChange={(e) => handleInputChange('resume_url', e.target.value)} placeholder="https://linkedin.com/in/your-profile/..." />
+                <label className="block text-sm font-medium mb-2">Resume/CV URL</label>
+                <Input type="url" value={formData.resume_url} onChange={(e) => handleInputChange('resume_url', e.g., target.value)} placeholder="https://linkedin.com/in/your-profile/..." />
               </div>
               
-              {/* Add any other fields you want to be editable here */}
-
               {error && <p className="text-sm text-destructive">{error}</p>}
 
               <Button type="submit" size="lg" className="btn-medical w-full" disabled={isLoading}>
