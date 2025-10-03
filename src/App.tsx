@@ -49,6 +49,8 @@ const App = () => (
             <Route path="/register" element={<AuthGuard requireAuth={false}><Register /></AuthGuard>} />
             <Route path="/please-verify" element={<PleaseVerify />} />
             <Route path="/login" element={<AuthGuard requireAuth={false}><Login /></AuthGuard>} />
+            <Route path="/auth/callback" element={<AuthGuard><AuthCallback /></AuthGuard>} />
+            <Route path="/complete-profile" element={<AuthGuard><CompleteProfile /></AuthGuard>}
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/profile/:userId" element={<ProfilePage />} />
             
