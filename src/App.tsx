@@ -24,6 +24,7 @@ import NotFound from "./pages/NotFound";
 import SimpleRegisterTest from "./pages/SimpleRegisterTest";
 import ProfilePage from './pages/ProfilePage';
 import CompleteProfile from "./pages/CompleteProfile";
+import AuthCallback from "./pages/AuthCallback";
 
 // --- UPDATED COMMUNITY IMPORTS ---
 // We now only import the components we are actually using.
