@@ -3,7 +3,7 @@ import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
 import { Profile } from '@/integrations/supabase/community.api'; // Import your Profile type
-import { useNavigate } from 'react-router-dom'; // <--- ADD THIS IMPORT
+import { useLocation, useNavigate } from 'react-router-dom'; // <--- ADD THIS IMPORT
 
 // --- NEW: AuthContextType now includes the user's profile ---
 interface AuthContextType {
@@ -34,6 +34,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
   const { data: { subscription } } = supabase.auth.onAuthStateChange(
