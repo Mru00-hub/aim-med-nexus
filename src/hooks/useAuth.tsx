@@ -42,74 +42,56 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const currentUser = session?.user ?? null;
       setUser(currentUser);
 
-      // --- CORRECTED LOGIC: Check for both SIGNED_IN and INITIAL_SESSION ---
       if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && currentUser) {
-        // 1. Check if a profile already exists for this user.
         const { data: existingProfile } = await supabase
           .from('profiles')
           .select('id')
           .eq('id', currentUser.id)
           .single();
 
-        // 2. If NO profile exists, this is their first login after registration.
         if (!existingProfile) {
+          // --- NEW USER PATH ---
+          // Profile creation and redirect to /complete-profile
           console.log('First session detected. Creating profile...');
           const registrationData = currentUser.user_metadata;
-
-          // 3. Create the new profile by inserting the metadata saved during registration.
           const { data: createdProfile, error: insertError } = await supabase
             .from('profiles')
-            .insert({
-              id: currentUser.id,
-              email: currentUser.email,
-              ...registrationData // This cleanly spreads all the fields we saved
-            })
-            .select()
-            .single();
+            .insert({ id: currentUser.id, email: currentUser.email, ...registrationData })
+            .select().single();
 
           if (insertError) {
-            console.error("Error creating profile on first session:", insertError);
-            toast({
-              title: "Profile Creation Failed",
-              description: "We couldn't set up your profile. Please contact support.",
-              variant: "destructive",
-            });
+            console.error("Error creating profile:", insertError);
             setProfile(null);
           } else {
-            // 4. Success! Set the new profile in state and redirect the user.
             setProfile(createdProfile);
-            toast({
-              title: "Welcome to AIMedNet!",
-              description: "Your profile has been created. Let's complete a few more details.",
-            });
-            // Redirect to the profile completion page after a short delay.
-            setTimeout(() => navigate('/complete-profile', { replace: true }), 1500);
+            toast({ title: "Welcome!", description: "Your profile has been created." });
+            // Redirect new users to complete their profile.
+            navigate('/complete-profile', { replace: true });
           }
         } else {
-          // 5. If a profile already exists, this is a normal session for a returning user.
-          const { data, error } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', currentUser.id)
-            .single();
+          // --- RETURNING USER PATH ---
+          // Fetch profile and redirect to /community
+          const { data, error } = await supabase.from('profiles').select('*').eq('id', currentUser.id).single();
 
           if (error) {
-            console.error("Error fetching existing profile:", error);
+            console.error("Error fetching profile:", error);
             setProfile(null);
           } else {
             setProfile(data);
+            // Redirect returning users to the community page.
+            const from = location.state?.from || '/community';
+            navigate(from, { replace: true });
           }
         }
       } else if (event === 'SIGNED_OUT') {
-        // Clear the profile from state when the user logs out.
         setProfile(null);
+        // Optional: redirect to login page on sign out
+        // navigate('/login'); 
       }
-
       setLoading(false);
     }
   );
 
-  // Initial session load check.
   supabase.auth.getSession().then(({ data: { session } }) => {
     if (session) {
       setSession(session);
@@ -119,7 +101,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   });
   
   return () => subscription.unsubscribe();
-}, [toast, navigate]);
+}, [toast, navigate, location]);
 
   // --- CHANGED: signUp now returns the user object on success ---
   const signUp = async (email: string, password: string, metadata?: any) => {
