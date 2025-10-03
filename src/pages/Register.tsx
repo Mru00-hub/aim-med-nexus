@@ -91,7 +91,6 @@ const Register = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
       return;
@@ -102,46 +101,47 @@ const Register = () => {
     }
     setIsLoading(true);
     setError('');
-
+    // --- START OF DEBUGGING SECTION ---
+    // 1. First, we construct the metadata object that we INTEND to send.
+    const metadataForSupabase = {
+      full_name: `${formData.firstName} ${formData.lastName}`.trim(),
+      phone: formData.phone,
+      user_role: registrationType,
+      current_location: formData.location === 'other' ? formData.otherLocation : formData.location,
+      institution: formData.institution === 'other' ? formData.otherInstitution : formData.institution,
+      course: formData.course === 'other' ? formData.otherCourse : formData.course,
+      year_of_study: formData.yearOfStudy,
+      current_position: formData.currentPosition,
+      organization: formData.organization,
+      specialization: formData.specialization === 'other' ? formData.otherSpecialization : formData.specialization,
+      years_experience: formData.experience,
+      medical_license: formData.medicalLicense,
+      bio: formData.bio,
+    };
+    // 2. Now, we log everything to the console for inspection.
+    console.group("--- DEBUG: Submitting Registration ---");
+    console.log("Full Form State (formData):", formData);
+    console.log("Selected Registration Type:", registrationType);
+    console.log("Final Metadata Object to be Sent:", metadataForSupabase);
+    console.groupEnd();
+    
+    // --- END OF DEBUGGING SECTION ---
     try {
-      // Step 1: Sign up the user AND pass all form data as metadata.
+      // 3. We use the metadata object we created in the signUp call.
       const { error } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
         options: {
-          // This attaches all collected details to the user's auth record.
-          data: {
-            full_name: `${formData.firstName} ${formData.lastName}`.trim(),
-            phone: formData.phone,
-            user_role: registrationType, // 'student', 'professional', or 'premium'
-            current_location: formData.location === 'other' ? formData.otherLocation : formData.location,
-            institution: formData.institution === 'other' ? formData.otherInstitution : formData.institution,
-            course: formData.course === 'other' ? formData.otherCourse : formData.course,
-            year_of_study: formData.yearOfStudy,
-            current_position: formData.currentPosition,
-            organization: formData.organization,
-            specialization: formData.specialization === 'other' ? formData.otherSpecialization : formData.specialization,
-            years_experience: formData.experience, // Mapped from your 'experience' state
-            medical_license: formData.medicalLicense,
-            bio: formData.bio,
-          },
-          // It's good practice to specify the redirect URL for the email verification link.
+          data: metadataForSupabase, // Use the constructed object here
           emailRedirectTo: `${window.location.origin}/login`,
         }
       });
-      
       if (error) {
-        // Let the catch block handle any signup errors
         throw error;
       }
-      
-      // Step 2: On success, redirect to the "please verify" page. This part remains the same.
       navigate('/please-verify', { replace: true, state: { email: formData.email } });
-
     } catch (err: any) {
-      // The catch block will now only show errors from the signUp process.
-      // The alert we added for debugging can be removed from here if you like.
-      console.error('Registration failed:', err);
+      console.error('Registration API call failed:', err);
       alert('REGISTRATION FAILED:\n\n' + err.message);
       setError(err.message);
     } finally {
