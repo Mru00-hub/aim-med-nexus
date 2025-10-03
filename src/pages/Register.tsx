@@ -104,18 +104,38 @@ const Register = () => {
     setError('');
 
     try {
-      // Step 1: ONLY sign up the user. All profile insertion logic is removed.
+      // Step 1: Sign up the user AND pass all form data as metadata.
       const { error } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
+        options: {
+          // This attaches all collected details to the user's auth record.
+          data: {
+            full_name: `${formData.firstName} ${formData.lastName}`.trim(),
+            phone: formData.phone,
+            user_role: registrationType, // 'student', 'professional', or 'premium'
+            current_location: formData.location === 'other' ? formData.otherLocation : formData.location,
+            institution: formData.institution === 'other' ? formData.otherInstitution : formData.institution,
+            course: formData.course === 'other' ? formData.otherCourse : formData.course,
+            year_of_study: formData.yearOfStudy,
+            current_position: formData.currentPosition,
+            organization: formData.organization,
+            specialization: formData.specialization === 'other' ? formData.otherSpecialization : formData.specialization,
+            years_experience: formData.experience, // Mapped from your 'experience' state
+            medical_license: formData.medicalLicense,
+            bio: formData.bio,
+          },
+          // It's good practice to specify the redirect URL for the email verification link.
+          emailRedirectTo: `${window.location.origin}/login`,
+        }
       });
-
+      
       if (error) {
-        // Let the catch block handle any signup errors (e.g., user already exists)
+        // Let the catch block handle any signup errors
         throw error;
       }
-
-      // Step 2: On success, redirect to a new "please verify" page.
+      
+      // Step 2: On success, redirect to the "please verify" page. This part remains the same.
       navigate('/please-verify', { replace: true, state: { email: formData.email } });
 
     } catch (err: any) {
