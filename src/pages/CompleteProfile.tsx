@@ -2,7 +2,7 @@
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
@@ -12,15 +12,17 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Save } from 'lucide-react';
+import { Save, AlertCircle } from 'lucide-react';
 import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const CompleteProfile = () => {
   const navigate = useNavigate();
   const { user, profile, loading: authLoading } = useAuth();
   const { toast } = useToast();
   
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  // --- ADDED STATE FOR PAGE-LEVEL ERRORS ---
   const [error, setError] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
   
@@ -35,27 +37,37 @@ const CompleteProfile = () => {
     skills: '',
   });
 
+  // --- THIS useEffect IS NOW WRAPPED IN TRY/CATCH ---
   useEffect(() => {
-    if (profile) {
-      setFormData({
-        full_name: profile.full_name || '',
-        phone: profile.phone || '',
-        current_location: profile.current_location || '',
-        current_position: profile.current_position || '',
-        organization: profile.organization || '',
-        bio: profile.bio || '',
-        resume_url: profile.resume_url || '',
-        skills: profile.skills ? profile.skills.join(', ') : '',
-      });
+    try {
+      if (profile) {
+        // This is a safer way to handle the skills array, preventing a crash if it's null
+        const skillsString = profile.skills && Array.isArray(profile.skills) ? profile.skills.join(', ') : '';
 
-      if (profile.profile_picture_url) {
-        setAvatarUrl(profile.profile_picture_url);
-      } else if (profile.full_name) {
-        const generatedUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(
-          profile.full_name
-        )}&background=0D8ABC&color=fff&size=256`;
-        setAvatarUrl(generatedUrl);
+        setFormData({
+          full_name: profile.full_name || '',
+          phone: profile.phone || '',
+          current_location: profile.current_location || '',
+          current_position: profile.current_position || '',
+          organization: profile.organization || '',
+          bio: profile.bio || '',
+          resume_url: profile.resume_url || '',
+          skills: skillsString,
+        });
+
+        if (profile.profile_picture_url) {
+          setAvatarUrl(profile.profile_picture_url);
+        } else if (profile.full_name) {
+          const generatedUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(
+            profile.full_name
+          )}&background=0D8ABC&color=fff&size=256`;
+          setAvatarUrl(generatedUrl);
+        }
       }
+    } catch (e: any) {
+      // --- CATCH AND DISPLAY ANY ERROR DURING DATA PROCESSING ---
+      console.error("Error processing profile data in CompleteProfile:", e);
+      setError("Failed to load your profile data. Please try refreshing the page.");
     }
   }, [profile]);
 
@@ -70,7 +82,7 @@ const CompleteProfile = () => {
       return;
     }
     
-    setIsLoading(true);
+    setIsSubmitting(true);
     setError('');
 
     try {
@@ -105,6 +117,7 @@ const CompleteProfile = () => {
       navigate('/profile');
 
     } catch (err: any) {
+      console.error("Failed to update profile:", err);
       setError(`Failed to update profile: ${err.message}`);
       toast({
         title: "Update Failed",
@@ -112,34 +125,35 @@ const CompleteProfile = () => {
         variant: "destructive",
       });
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
-  if (authLoading || !profile) {
-    return (
-      <div className="min-h-screen bg-background">
+  // --- ADDED A MORE COMPREHENSIVE LOADING/ERROR STATE ---
+
+  if (authLoading) {
+    return <PageSkeleton />; // Use a full-page skeleton
+  }
+
+  if (error) {
+     return (
+       <div className="min-h-screen bg-background">
         <Header />
-        <main className="container-medical py-12 px-4 sm:px-6">
-          <Card className="card-medical max-w-2xl mx-auto">
-            <CardHeader>
-              <Skeleton className="h-8 w-48" />
-              <Skeleton className="h-4 w-64 mt-2" />
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex flex-col items-center mb-8 space-y-2">
-                <Skeleton className="h-24 w-24 rounded-full" />
-              </div>
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-24 w-full" />
-              <Skeleton className="h-12 w-full" />
-            </CardContent>
-          </Card>
+        <main className="container-medical flex items-center justify-center py-20 px-4">
+          <Alert variant="destructive" className="max-w-lg">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>An Error Occurred</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
         </main>
         <Footer />
       </div>
     );
+  }
+
+  // If the user lands here but their profile hasn't loaded yet from the context
+  if (!profile) {
+    return <PageSkeleton />;
   }
 
   return (
@@ -203,13 +217,11 @@ const CompleteProfile = () => {
               </div>
               <div>
                 <label className="block text-sm font-medium mb-2">Resume/CV URL</label>
-                <Input type="url" value={formData.resume_url} onChange={(e) => handleInputChange('resume_url', e.g., target.value)} placeholder="https://linkedin.com/in/your-profile/..." />
+                <Input type="url" value={formData.resume_url} onChange={(e) => handleInputChange('resume_url', e.target.value)} placeholder="https://linkedin.com/in/your-profile/..." />
               </div>
               
-              {error && <p className="text-sm text-destructive">{error}</p>}
-
-              <Button type="submit" size="lg" className="btn-medical w-full" disabled={isLoading}>
-                {isLoading ? 'Saving...' : 'Save Changes'}
+              <Button type="submit" size="lg" className="btn-medical w-full" disabled={isSubmitting}>
+                {isSubmitting ? 'Saving...' : 'Save Changes'}
                 <Save className="ml-2 h-5 w-5" />
               </Button>
             </form>
@@ -221,4 +233,30 @@ const CompleteProfile = () => {
   );
 };
 
+// A simple full-page skeleton for a better loading experience
+const PageSkeleton = () => (
+  <div className="min-h-screen bg-background">
+    <Header />
+    <main className="container-medical py-12 px-4 sm:px-6">
+      <Card className="card-medical max-w-2xl mx-auto">
+        <CardHeader>
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="h-4 w-64 mt-2" />
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="flex flex-col items-center mb-8 space-y-2">
+            <Skeleton className="h-24 w-24 rounded-full" />
+          </div>
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-24 w-full" />
+          <Skeleton className="h-12 w-full" />
+        </CardContent>
+      </Card>
+    </main>
+    <Footer />
+  </div>
+);
+
 export default CompleteProfile;
+
