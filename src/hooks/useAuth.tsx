@@ -55,6 +55,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           // Profile creation and redirect to /complete-profile
           console.log('First session detected. Creating profile...');
           const registrationData = currentUser.user_metadata;
+          const dataToInsert = {
+            id: currentUser.id,
+            email: currentUser.email,
+            ...registrationData
+          };
           const { data: createdProfile, error: insertError } = await supabase
             .from('profiles')
             .insert({ id: currentUser.id, email: currentUser.email, ...registrationData })
