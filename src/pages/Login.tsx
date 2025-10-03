@@ -43,18 +43,14 @@ const Login = () => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
-    // The signIn function will trigger the onAuthStateChange listener in useAuth.
-    // We will let that listener handle ALL navigation from now on.
     const { error } = await signIn(formData.email, formData.password);
     if (error) {
-      // If Supabase returns an error (like "Invalid login credentials"), set it in our state.
       setError(error.message);
-      // Make sure to stop the loading spinner if there's an error.
       setIsLoading(false);
+    } else {
+      // SUCCESS: Navigate to the gatekeeper page. DO NOT navigate to /community.
+      navigate('/auth/callback', { replace: true });
     }
-    // On success, we DO NOTHING HERE. 
-    // We don't stop the loading spinner because the page will be redirected away
-    // by the logic in useAuth.tsx, which is now in control.
   };
   
   const handleGoogleLogin = async () => {
