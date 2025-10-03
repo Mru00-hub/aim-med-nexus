@@ -3,6 +3,8 @@ import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
 import { Profile } from '@/integrations/supabase/community.api'; // Import your Profile type
+import { useNavigate } from 'react-router-dom'; // <--- ADD THIS IMPORT
+import React, { createContext, useContext, useEffect, useState } from 'react';
 
 // --- NEW: AuthContextType now includes the user's profile ---
 interface AuthContextType {
@@ -32,46 +34,95 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [profile, setProfile] = useState<Profile | null>(null); // State for the user profile
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   useEffect(() => {
-    // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
+  const { data: { subscription } } = supabase.auth.onAuthStateChange(
+    async (event, session) => {
+      setSession(session);
+      const currentUser = session?.user ?? null;
+      setUser(currentUser);
 
-        // --- NEW: Fetch profile when user is logged in ---
-        if (session?.user) {
+      // We only want to run this complex logic when a user actively signs in.
+      if (event === 'SIGNED_IN' && currentUser) {
+        // 1. Check if a profile already exists for this user.
+        // We only select 'id' to make this check lightweight.
+        const { data: existingProfile } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('id', currentUser.id)
+          .single();
+
+        // 2. If NO profile exists, this is their first login after registration.
+        if (!existingProfile) {
+          console.log('First login detected. Creating profile...');
+          const registrationData = currentUser.user_metadata;
+
+          // 3. Create the new profile by inserting the metadata saved during registration.
+          const { data: createdProfile, error: insertError } = await supabase
+            .from('profiles')
+            .insert({
+              id: currentUser.id,
+              email: currentUser.email,
+              ...registrationData // This cleanly spreads all the fields we saved
+            })
+            .select()
+            .single();
+
+          if (insertError) {
+            console.error("Error creating profile on first login:", insertError);
+            toast({
+              title: "Profile Creation Failed",
+              description: "We couldn't set up your profile. Please contact support.",
+              variant: "destructive",
+            });
+            setProfile(null);
+          } else {
+            // 4. Success! Set the new profile in state and redirect the user.
+            setProfile(createdProfile);
+            toast({
+              title: "Welcome to AIMedNet!",
+              description: "Your profile has been created. Let's complete a few more details.",
+            });
+            // Redirect to the profile completion page after a short delay.
+            setTimeout(() => navigate('/complete-profile', { replace: true }), 1500);
+          }
+        } else {
+          // 5. If a profile already exists, this is a normal login for a returning user.
+          // Just fetch their full profile data and set it in the state.
           const { data, error } = await supabase
             .from('profiles')
             .select('*')
-            .eq('id', session.user.id)
+            .eq('id', currentUser.id)
             .single();
 
           if (error) {
-            console.error("Error fetching profile:", error);
+            console.error("Error fetching existing profile:", error);
             setProfile(null);
           } else {
             setProfile(data);
           }
-        } else {
-          // Clear profile on sign out
-          setProfile(null);
         }
-
-        setLoading(false);
+      } else if (event === 'SIGNED_OUT') {
+        // Clear the profile from state when the user logs out.
+        setProfile(null);
       }
-    );
 
-    // Initial session load check
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
       setLoading(false);
-    });
+    }
+  );
 
-    return () => subscription.unsubscribe();
-  }, []);
+  // Don't forget the initial session load check.
+  supabase.auth.getSession().then(({ data: { session } }) => {
+    if (session) {
+      setSession(session);
+      setUser(session.user);
+    }
+    setLoading(false);
+  });
+  
+  return () => subscription.unsubscribe();
+}, [toast, navigate]); // <-- UPDATE THE DEPENDENCY ARRAY
 
   // --- CHANGED: signUp now returns the user object on success ---
   const signUp = async (email: string, password: string, metadata?: any) => {
