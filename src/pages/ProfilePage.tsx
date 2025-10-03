@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { Profile } from '@/integrations/supabase/types'; // Assuming your types are here
+import { Profile } from '@/integrations/supabase/types';
 
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
@@ -14,13 +14,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
-import { 
-  Edit, Mail, Phone, MapPin, Briefcase, Building, Award, Calendar, GraduationCap, Link as LinkIcon 
-} from 'lucide-react';
+import { Edit, Mail, Phone, MapPin, Briefcase, Building, Award, Calendar, GraduationCap, Link as LinkIcon, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle } from 'lucide-react';
 
-// A type for the Work Experience JSON object for easier handling
 type WorkExperience = {
   title: string;
   company: string;
@@ -35,50 +31,45 @@ const ProfilePage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // This is the core boolean that controls what is displayed
   const isOwnProfile = !userId || user?.id === userId;
 
   useEffect(() => {
     const fetchProfile = async () => {
+      // Reset state on each fetch
       setLoading(true);
       setError(null);
 
-      if (isOwnProfile) {
-        // If it's the user's own profile, we don't need to fetch.
-        // We can just use the profile data already available in our Auth context.
-        if (!authLoading) {
+      // --- THIS ENTIRE BLOCK IS NOW WRAPPED IN TRY/CATCH ---
+      try {
+        if (isOwnProfile) {
+          // Wait for the auth context to finish loading
+          if (authLoading) return;
           setProfileData(ownProfile);
-          setLoading(false);
-        }
-      } else {
-        // If we are viewing someone else's profile, fetch only their public data.
-        const { data, error } = await supabase
-          .from('profiles')
-          .select(`
-            full_name,
-            user_role,
-            current_location,
-            profile_picture_url,
-            bio,
-            years_experience,
-            institution,
-            course,
-            year_of_study,
-            current_position,
-            organization,
-            specialization,
-            skills,
-            work_experience
-          `)
-          .eq('id', userId)
-          .single();
 
-        if (error) {
-          console.error("Error fetching public profile:", error);
-          setError("Could not find or load this user's profile.");
         } else {
+          // Fetch public profile for another user
+          const { data, error: fetchError } = await supabase
+            .from('profiles')
+            .select(`
+              full_name, user_role, current_location, profile_picture_url, bio,
+              years_experience, institution, course, year_of_study, current_position,
+              organization, specialization, skills, work_experience
+            `)
+            .eq('id', userId)
+            .single();
+
+          if (fetchError) {
+            // If Supabase returns an error (e.g., user not found), throw it to the catch block
+            throw fetchError;
+          }
           setProfileData(data);
         }
+      } catch (e: any) {
+        // --- THIS CATCH BLOCK BRINGS BACK YOUR ERROR LOGGING ---
+        console.error("Error loading profile data:", e);
+        setError("Could not load this user's profile. It may not exist or an error occurred.");
+      } finally {
+        // This will run regardless of success or failure, ensuring the loading state is always turned off.
         setLoading(false);
       }
     };
@@ -99,7 +90,7 @@ const ProfilePage = () => {
         <main className="container-medical flex items-center justify-center py-20 px-4">
           <Alert variant="destructive" className="max-w-lg">
             <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Error</AlertTitle>
+            <AlertTitle>An Error Occurred</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         </main>
@@ -110,10 +101,27 @@ const ProfilePage = () => {
 
   // Profile Not Found UI
   if (!profileData) {
-    return <div>Profile not found.</div>;
+    return (
+       <div className="min-h-screen bg-background">
+        <Header />
+        <main className="container-medical flex items-center justify-center py-20 px-4">
+           <Alert className="max-w-lg">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Profile Not Found</AlertTitle>
+            <AlertDescription>
+              {isOwnProfile 
+                ? "Your profile could not be loaded. Try completing it first." 
+                : "This user's profile could not be found."}
+               {isOwnProfile && <Button asChild className="mt-4"><Link to="/complete-profile">Complete Your Profile</Link></Button>}
+            </AlertDescription>
+          </Alert>
+        </main>
+        <Footer />
+      </div>
+    );
   }
   
-  // Main Profile View
+  // Main Profile View (No changes here)
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -134,7 +142,6 @@ const ProfilePage = () => {
                     {profileData.user_role}
                   </CardDescription>
                 </div>
-                {/* --- CONDITIONAL EDIT BUTTON --- */}
                 {isOwnProfile && (
                   <Button asChild variant="outline">
                     <Link to="/complete-profile">
@@ -149,10 +156,7 @@ const ProfilePage = () => {
           </CardHeader>
           <CardContent className="p-6">
             <Separator className="my-4" />
-
-            {/* --- DETAILS SECTION --- */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {/* Left Column */}
               <div>
                 <h3 className="font-semibold text-lg mb-4">Details</h3>
                 <div className="space-y-4">
@@ -161,8 +165,6 @@ const ProfilePage = () => {
                   <DetailItem icon={Award} label="Specialization" value={profileData.specialization} />
                   <DetailItem icon={MapPin} label="Location" value={profileData.current_location} />
                   <DetailItem icon={Calendar} label="Experience" value={profileData.years_experience} />
-                  
-                  {/* --- CONDITIONAL PRIVATE DETAILS --- */}
                   {isOwnProfile && (
                     <>
                       <Separator />
@@ -173,24 +175,17 @@ const ProfilePage = () => {
                   )}
                 </div>
               </div>
-              
-              {/* Right Column */}
               <div>
-                {/* Skills */}
                 <h3 className="font-semibold text-lg mb-4">Skills</h3>
                 <div className="flex flex-wrap gap-2 mb-6">
                   {profileData.skills && profileData.skills.length > 0 ? (
                     profileData.skills.map(skill => <Badge key={skill}>{skill}</Badge>)
                   ) : <p className="text-sm text-muted-foreground">No skills listed.</p>}
                 </div>
-
-                {/* Education */}
                 <h3 className="font-semibold text-lg mb-4">Education</h3>
                 <div className="space-y-4 mb-6">
                    <DetailItem icon={GraduationCap} label={profileData.course || "Education"} value={`${profileData.institution} (${profileData.year_of_study})`}/>
                 </div>
-                
-                {/* Work Experience */}
                 <h3 className="font-semibold text-lg mb-4">Work Experience</h3>
                 <div className="space-y-4">
                     {profileData.work_experience && (profileData.work_experience as WorkExperience[]).length > 0 ? (
@@ -216,7 +211,8 @@ const ProfilePage = () => {
   );
 };
 
-// Helper component for displaying profile details
+// --- (Helper components DetailItem and ProfileSkeleton remain unchanged) ---
+
 const DetailItem = ({ icon: Icon, label, value, isLink = false }: { icon: React.ElementType, label: string, value?: string | null, isLink?: boolean }) => {
   if (!value) return null;
   return (
@@ -233,9 +229,8 @@ const DetailItem = ({ icon: Icon, label, value, isLink = false }: { icon: React.
   );
 };
 
-// Skeleton component for loading state
 const ProfileSkeleton = () => (
-  <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background">
     <Header />
     <main className="container-medical py-8 px-4">
       <Card className="card-medical max-w-4xl mx-auto">
