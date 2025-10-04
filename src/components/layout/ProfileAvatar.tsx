@@ -1,4 +1,6 @@
-import React from 'react';
+// src/components/ProfileAvatar.tsx
+
+import React, { useMemo } from 'react'; // FIX 1: Added missing useMemo import
 import { useAuth } from '@/hooks/useAuth';
 import {
   DropdownMenu,
@@ -17,28 +19,31 @@ export const ProfileAvatar = () => {
   const { user, profile, signOut, loading } = useAuth();
 
   const initials = useMemo(() => {
-    if (!profile?.full_name) return '??'; // Added robustness
+    if (!profile?.full_name) return '??';
     const names = profile.full_name.split(' ');
     if (names.length > 1) {
       return `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase();
     }
     return profile.full_name.substring(0, 2).toUpperCase();
-  }, [profile?.full_name]); // Dependency array
+  }, [profile?.full_name]);
 
   const formattedRole = useMemo(() => {
     if (!profile?.user_role) return '';
     return profile.user_role.charAt(0).toUpperCase() + profile.user_role.slice(1);
-  }, [profile?.user_role]); // Dependency array
+  }, [profile?.user_role]);
 
+  // Handle loading state
   if (loading) {
     return <Skeleton className="h-10 w-10 rounded-full" />;
   }
-  // ... rest of the component
-  
-  // Later in the JSX, use the memoized values:
-  // <AvatarFallback>{initials}</AvatarFallback>
-  // <p>{formattedRole} &middot; {profile.current_location}</p>
-};
+
+  // FIX 2: Re-added the important check for logged-out users or missing profiles
+  if (!user || !profile) {
+    return null;
+  }
+
+  // FIX 3: Removed the incorrect closing brace '}' that was here.
+  // The component function now continues correctly to the return statement.
 
   return (
     <DropdownMenu>
@@ -52,7 +57,6 @@ export const ProfileAvatar = () => {
         <DropdownMenuLabel>
             <div className="flex flex-col space-y-1">
                 <p className="text-sm font-medium leading-none">{profile.full_name}</p>
-                {/* --- CHANGED: Display user role and location instead of email --- */}
                 <p className="text-xs leading-none text-muted-foreground">
                   {formattedRole} &middot; {profile.current_location}
                 </p>
@@ -79,4 +83,4 @@ export const ProfileAvatar = () => {
       </DropdownMenuContent>
     </DropdownMenu>
   );
-};
+}; // The component function correctly ends here.
