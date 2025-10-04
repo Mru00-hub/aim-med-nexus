@@ -11,7 +11,8 @@ interface AuthContextType {
   session: Session | null;
   profile: Profile | null;
   loading: boolean;
-  loadingMessage: string; // For displaying messages like "Generating your profile..."
+  loadingMessage: string;// For displaying messages like "Generating your profile..."
+  refreshProfile: () => Promise<void>;
   signUp: (email: string, password: string, metadata?: any) => Promise<{ data: { user: User | null; }; error: any; }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
@@ -260,6 +261,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     profile,
     loading,
     loadingMessage,
+    refreshProfile,
     signUp,
     signIn,
     signOut,
