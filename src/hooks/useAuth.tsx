@@ -37,6 +37,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
+  const refreshProfile = async () => {
+    if (!user) return;
+    const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+    setProfile(data);
 
   useEffect(() => {
     console.log("[useAuth] ✅ useEffect initialized. Setting up auth listener.");
