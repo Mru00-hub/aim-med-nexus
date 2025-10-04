@@ -37,85 +37,118 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const location = useLocation();
 
   useEffect(() => {
-  const { data: { subscription } } = supabase.auth.onAuthStateChange(
-    async (event, session) => {
-      setSession(session);
-      const currentUser = session?.user ?? null;
-      setUser(currentUser);
+    console.log("🔵 [useAuth] useEffect initialized");
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log("🟢 [useAuth] Auth state changed:", event);
+        console.log("📦 [useAuth] Session data:", session ? "Session exists" : "No session");
+        
+        setSession(session);
+        const currentUser = session?.user ?? null;
+        setUser(currentUser);
+        
+        if (currentUser) {
+          console.log("👤 [useAuth] Current user ID:", currentUser.id);
+          console.log("📧 [useAuth] Current user email:", currentUser.email);
+          console.log("📋 [useAuth] User metadata:", JSON.stringify(currentUser.user_metadata, null, 2));
+        }
+        
+        if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && currentUser) {
+          console.log("🔐 [useAuth] Processing sign-in for user:", currentUser.id);
+          try {
+            // Check if profile exists
+            console.log("🔍 [useAuth] Checking if profile exists in database...");
+            const { data: existingProfile, error: fetchError } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', currentUser.id)
+              .single();
+            
+            console.log("📊 [useAuth] Profile query result:");
+            console.log("  - Data:", existingProfile ? "Profile found" : "No profile");
+            console.log("  - Error:", fetchError ? fetchError.message : "No error");
+          
+            if (fetchError) {
+              console.log("  - Error code:", fetchError.code);
+              console.log("  - Error details:", JSON.stringify(fetchError, null, 2));
+            }
 
-      if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && currentUser) {
-        const { data: existingProfile } = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('id', currentUser.id)
-          .single();
+            if (fetchError && fetchError.code !== 'PGRST116') {
+              // Real error (not "no rows" error)
+              console.error("❌ [useAuth] Real error checking profile:", fetchError);
+              toast({
+                title: "Profile Check Failed",
+                description: "Could not verify your profile status. Please try again.",
+                variant: "destructive",
+              });
+              setProfile(null);
+              setLoading(false);
+              return;
+            }
 
-        if (!existingProfile) {
-          // --- NEW USER PATH ---
-          // Profile creation and redirect to /complete-profile
-          console.log('First session detected. Creating profile...');
-          const registrationData = currentUser.user_metadata;
-          const dataToInsert = {
-            id: currentUser.id,
-            email: currentUser.email,
-            ...registrationData
-          };
-          const { data: createdProfile, error: insertError } = await supabase
-            .from('profiles')
-            .insert({ id: currentUser.id, email: currentUser.email, ...registrationData })
-            .select().single();
-
-          if (insertError) {
-            console.group("--- DEBUG: PROFILE CREATION FAILED ---");
-            console.error("The Supabase insert query failed. Error object:", insertError);
-            console.log("This is the exact data that was sent to the database:", dataToInsert);
-            console.groupEnd();
+            if (!existingProfile) {
+              // NEW USER - No profile exists yet
+              console.log("🆕 [useAuth] NEW USER DETECTED - No profile found");
+              console.log("➡️  [useAuth] Redirecting to /complete-profile");
+              setProfile(null);
+              toast({
+                title: "Welcome!",
+                description: "Let's set up your profile.",
+              });
+              navigate('/complete-profile', { replace: true });
+            } else {
+              // RETURNING USER - Profile exists
+              console.log("✅ [useAuth] RETURNING USER - Profile found");
+              console.log("📄 [useAuth] Profile data:", JSON.stringify(existingProfile, null, 2));
+              console.log("➡️  [useAuth] Redirecting to /community");
+              setProfile(existingProfile);
+              const from = location.state?.from || '/community';
+              toast({
+                title: "Welcome back!",
+                description: "Redirecting to your community...",
+              });
+              navigate(from, { replace: true });
+            }
+          } catch (error: any) {
+            console.error("💥 [useAuth] Unexpected error in auth flow:", error);
+            console.error("  - Error message:", error.message);
+            console.error("  - Error stack:", error.stack);
             toast({
-              title: "Profile Creation Failed",
-              description: "There was an error setting up your account. Please contact support.",
+              title: "Authentication Error",
+              description: "An unexpected error occurred. Please contact support.",
               variant: "destructive",
             });
             setProfile(null);
-          } else {
-            setProfile(createdProfile);
-            toast({ title: "Welcome!", description: "Your profile has been created." });
-            // Redirect new users to complete their profile.
-            navigate('/complete-profile', { replace: true });
           }
+        } else if (event === 'SIGNED_OUT') {
+          console.log("👋 [useAuth] User signed out");
+          setProfile(null);
         } else {
-          // --- RETURNING USER PATH ---
-          // Fetch profile and redirect to /community
-          const { data, error } = await supabase.from('profiles').select('*').eq('id', currentUser.id).single();
-
-          if (error) {
-            console.error("Error fetching profile:", error);
-            setProfile(null);
-          } else {
-            setProfile(data);
-            // Redirect returning users to the community page.
-            const from = location.state?.from || '/community';
-            navigate(from, { replace: true });
-          }
+          console.log("⚪ [useAuth] Other auth event, no action needed");
         }
-      } else if (event === 'SIGNED_OUT') {
-        setProfile(null);
-        // Optional: redirect to login page on sign out
-        // navigate('/login'); 
+      
+        console.log("🏁 [useAuth] Setting loading to false");
+        setLoading(false);
+      }
+    );
+
+    console.log("🔄 [useAuth] Getting initial session...");
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        console.log("✅ [useAuth] Initial session found:", session.user.id);
+        setSession(session);
+        setUser(session.user);
+      } else {
+        console.log("⚪ [useAuth] No initial session");
       }
       setLoading(false);
-    }
-  );
-
-  supabase.auth.getSession().then(({ data: { session } }) => {
-    if (session) {
-      setSession(session);
-      setUser(session.user);
-    }
-    setLoading(false);
-  });
+    });
   
-  return () => subscription.unsubscribe();
-}, [toast, navigate, location]);
+    return () => {
+      console.log("🔴 [useAuth] Cleaning up auth subscription");
+      subscription.unsubscribe();
+    };
+  }, [toast, navigate, location]);
 
   // --- CHANGED: signUp now returns the user object on success ---
   const signUp = async (email: string, password: string, metadata?: any) => {
