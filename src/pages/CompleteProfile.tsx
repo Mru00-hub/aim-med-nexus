@@ -176,8 +176,11 @@ const CompleteProfile = () => {
       console.log(JSON.stringify(profileData, null, 2));
       console.log("[CompleteProfile] Calling Supabase upsert...");
 
-      const { error: upsertError } = await supabase.from('profiles').upsert(profileData);
-
+      const { data: upsertedData, error: upsertError } = await supabase
+        .from('profiles')
+        .upsert(profileData, {
+          returning: 'representation', // This option tells Supabase to return the saved data
+        });
       if (upsertError) {
         console.error("[CompleteProfile] Upsert failed");
         console.error("[CompleteProfile] Error code", upsertError.code);
@@ -197,6 +200,7 @@ const CompleteProfile = () => {
       }
 
       console.log("[CompleteProfile] Profile saved successfully!");
+      // Now the 'upsertedData' variable exists and this line will work correctly
       console.log("[CompleteProfile] Upserted data:", JSON.stringify(upsertedData, null, 2));
       toast({
         title: "Profile Saved!",
@@ -228,7 +232,7 @@ const CompleteProfile = () => {
     }
   };
 
-  const handleSkip = () => {
+  const handleSkip = async () => {
     if (!user) {
         toast({ title: "Error", description: "User not found.", variant: "destructive" });
         return;
