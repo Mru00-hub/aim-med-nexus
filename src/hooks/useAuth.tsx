@@ -37,45 +37,45 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const location = useLocation();
 
   useEffect(() => {
-    console.log("🔵 [useAuth] useEffect initialized");
+    console.log("[useAuth] useEffect initialized");
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log("🟢 [useAuth] Auth state changed:", event);
-        console.log("📦 [useAuth] Session data:", session ? "Session exists" : "No session");
+        console.log("[useAuth] Auth state changed:", event);
+        console.log("[useAuth] Session data:", session ? "Session exists" : "No session");
         
         setSession(session);
         const currentUser = session?.user ?? null;
         setUser(currentUser);
         
         if (currentUser) {
-          console.log("👤 [useAuth] Current user ID:", currentUser.id);
-          console.log("📧 [useAuth] Current user email:", currentUser.email);
-          console.log("📋 [useAuth] User metadata:", JSON.stringify(currentUser.user_metadata, null, 2));
+          console.log("[useAuth] Current user ID:", currentUser.id);
+          console.log("[useAuth] Current user email:", currentUser.email);
+          console.log("[useAuth] User metadata:", JSON.stringify(currentUser.user_metadata, null, 2));
         }
         
         if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && currentUser) {
-          console.log("🔐 [useAuth] Processing sign-in for user:", currentUser.id);
+          console.log("[useAuth] Processing sign-in for user:", currentUser.id);
           try {
             // Check if profile exists
-            console.log("🔍 [useAuth] Checking if profile exists in database...");
+            console.log("[useAuth] Checking if profile exists in database...");
             const { data: existingProfile, error: fetchError } = await supabase
               .from('profiles')
               .select('*')
               .eq('id', currentUser.id)
               .single();
             
-            console.log("📊 [useAuth] Profile query result:");
-            console.log("  - Data:", existingProfile ? "Profile found" : "No profile");
-            console.log("  - Error:", fetchError ? fetchError.message : "No error");
+            console.log("[useAuth] Profile query result:");
+            console.log("[useAuth] Profile found:", !!existingProfile);
+            console.log("[useAuth] Fetch error:", fetchError?.message || "none");
           
             if (fetchError) {
-              console.log("  - Error code:", fetchError.code);
-              console.log("  - Error details:", JSON.stringify(fetchError, null, 2));
+              console.log("[useAuth] Error code:", fetchError.code);
+              console.log("[useAuth] details:", JSON.stringify(fetchError, null, 2));
             }
 
             if (fetchError && fetchError.code !== 'PGRST116') {
               // Real error (not "no rows" error)
-              console.error("❌ [useAuth] Real error checking profile:", fetchError);
+              console.error("[useAuth] Real error checking profile:", fetchError);
               toast({
                 title: "Profile Check Failed",
                 description: "Could not verify your profile status. Please try again.",
@@ -88,31 +88,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
             if (!existingProfile) {
               // NEW USER - No profile exists yet
-              console.log("🆕 [useAuth] NEW USER DETECTED - No profile found");
-              console.log("➡️  [useAuth] Redirecting to /complete-profile");
+              console.log("[useAuth] NEW USER DETECTED - No profile found");
+              console.log("[useAuth] Redirecting to /complete-profile");
               setProfile(null);
-              toast({
-                title: "Welcome!",
-                description: "Let's set up your profile.",
-              });
-              navigate('/complete-profile', { replace: true });
+              setTimeout(() => {
+                console.log("[useAuth] Executing redirect to /complete-profile");
+                toast({
+                  title: "Welcome!",
+                  description: "Let's set up your profile.",
+                });
+                navigate('/complete-profile', { replace: true });
+              }, 100);
             } else {
               // RETURNING USER - Profile exists
-              console.log("✅ [useAuth] RETURNING USER - Profile found");
-              console.log("📄 [useAuth] Profile data:", JSON.stringify(existingProfile, null, 2));
-              console.log("➡️  [useAuth] Redirecting to /community");
+              console.log("[useAuth] RETURNING USER - Profile found");
+              console.log("[useAuth] Profile data:", JSON.stringify(existingProfile, null, 2));
+              console.log("[useAuth] Redirecting to /community");
               setProfile(existingProfile);
-              const from = location.state?.from || '/community';
-              toast({
-                title: "Welcome back!",
-                description: "Redirecting to your community...",
-              });
-              navigate(from, { replace: true });
+              setTimeout(() => {
+                console.log("[useAuth] Executing redirect to /community");
+                const from = location.state?.from || '/community';
+                toast({
+                  title: "Welcome back!",
+                  description: "Redirecting to your community...",
+                });
+                navigate(from, { replace: true });
+              }, 100);
             }
           } catch (error: any) {
-            console.error("💥 [useAuth] Unexpected error in auth flow:", error);
-            console.error("  - Error message:", error.message);
-            console.error("  - Error stack:", error.stack);
+            console.error("[useAuth] UNEXPECTED ERROR in auth flow:", error);
+            console.error("[useAuth] Error name:", error.name);
+            console.error("[useAuth] Error message:", error.message);
+            console.error("[useAuth] Error stack:", error.stack);
             toast({
               title: "Authentication Error",
               description: "An unexpected error occurred. Please contact support.",
@@ -121,10 +128,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setProfile(null);
           }
         } else if (event === 'SIGNED_OUT') {
-          console.log("👋 [useAuth] User signed out");
+          console.log("[useAuth] User signed out");
           setProfile(null);
         } else {
-          console.log("⚪ [useAuth] Other auth event, no action needed");
+          console.log("[useAuth] Other auth event, no action needed");
         }
       
         console.log("🏁 [useAuth] Setting loading to false");
@@ -132,20 +139,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     );
 
-    console.log("🔄 [useAuth] Getting initial session...");
+    console.log("[useAuth] Getting initial session...");
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
-        console.log("✅ [useAuth] Initial session found:", session.user.id);
+        console.log("[useAuth] Initial session found:", session.user.id);
         setSession(session);
         setUser(session.user);
       } else {
-        console.log("⚪ [useAuth] No initial session");
+        console.log("[useAuth] No initial session");
       }
       setLoading(false);
     });
   
     return () => {
-      console.log("🔴 [useAuth] Cleaning up auth subscription");
+      console.log("[useAuth] Cleaning up auth subscription");
       subscription.unsubscribe();
     };
   }, [toast, navigate, location]);
