@@ -15,7 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const CompleteProfile = () => {
-  console.log("🔵 [CompleteProfile] Component mounted");
+  console.log("[CompleteProfile] Component mounted");
   
   const navigate = useNavigate();
   const { user, profile, loading: authLoading } = useAuth();
@@ -36,21 +36,21 @@ const CompleteProfile = () => {
     skills: '',
   });
 
-  console.log("📊 [CompleteProfile] Current state:");
-  console.log("  - authLoading:", authLoading);
-  console.log("  - user:", user ? user.id : "null");
-  console.log("  - profile:", profile ? "exists" : "null");
+  console.log("[CompleteProfile] Current state:");
+  console.log("[CompleteProfile] authLoading:", authLoading);
+  console.log("[CompleteProfile] user:", user ? user.id : "null");
+  console.log("[CompleteProfile] profile:", profile ? "exists" : "null");
 
   useEffect(() => {
-    console.log("🔄 [CompleteProfile] useEffect triggered");
-    console.log("  - User:", user ? user.id : "null");
-    console.log("  - Profile:", profile ? "exists" : "null");
+    console.log("[CompleteProfile] useEffect triggered");
+    console.log("[CompleteProfile] User:", user ? user.id : "null");
+    console.log("[CompleteProfile] Profile:", profile ? "exists" : "null");
     
     try {
       if (user) {
-        console.log("👤 [CompleteProfile] Processing user data");
+        console.log("[CompleteProfile] Processing user data");
         const metadata = user.user_metadata || {};
-        console.log("📋 [CompleteProfile] User metadata:", JSON.stringify(metadata, null, 2));
+        console.log("[CompleteProfile] User metadata:", JSON.stringify(metadata, null, 2));
         
         // Map metadata to form fields - COMPLETE MAPPING
         const mappedData = {
@@ -64,7 +64,7 @@ const CompleteProfile = () => {
           skills: metadata.specialization ? metadata.specialization : '',
         };
         
-        console.log("📝 [CompleteProfile] Mapped form data:", JSON.stringify(mappedData, null, 2));
+        console.log("[CompleteProfile] Mapped form data:", JSON.stringify(mappedData, null, 2));
         setFormData(mappedData);
 
         // Generate avatar from metadata name
@@ -72,15 +72,15 @@ const CompleteProfile = () => {
           const generatedUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(
             metadata.full_name
           )}&background=0D8ABC&color=fff&size=256`;
-          console.log("🖼️  [CompleteProfile] Generated avatar URL:", generatedUrl);
+          console.log("[CompleteProfile] Generated avatar URL:", generatedUrl);
           setAvatarUrl(generatedUrl);
         }
       }
 
       // If profile exists (editing scenario), override with profile data
       if (profile) {
-        console.log("✏️  [CompleteProfile] Profile exists - entering EDIT mode");
-        console.log("📄 [CompleteProfile] Profile data:", JSON.stringify(profile, null, 2));
+        console.log("[CompleteProfile] Profile exists - entering EDIT mode");
+        console.log("[CompleteProfile] Profile data:", JSON.stringify(profile, null, 2));
         
         const skillsString = profile.skills && Array.isArray(profile.skills) 
           ? profile.skills.join(', ') 
@@ -97,58 +97,58 @@ const CompleteProfile = () => {
           skills: skillsString,
         };
         
-        console.log("📝 [CompleteProfile] Profile-based form data:", JSON.stringify(profileData, null, 2));
+        console.log("[CompleteProfile] Profile-based form data:", JSON.stringify(profileData, null, 2));
         setFormData(profileData);
 
         if (profile.profile_picture_url) {
-          console.log("🖼️  [CompleteProfile] Using existing avatar:", profile.profile_picture_url);
+          console.log("[CompleteProfile] Using existing avatar:", profile.profile_picture_url);
           setAvatarUrl(profile.profile_picture_url);
         }
       }
     } catch (e: any) {
-      console.error("❌ [CompleteProfile] Error processing data:", e);
-      console.error("  - Error message:", e.message);
-      console.error("  - Error stack:", e.stack);
+      console.error("[CompleteProfile] Error processing data:", e);
+      console.error("[CompleteProfile] Error message:", e.message);
+      console.error("[CompleteProfile] Error stack:", e.stack);
       setError("Failed to load your profile data. Please try refreshing the page.");
     }
   }, [profile, user]);
 
   const handleInputChange = (field: string, value: string) => {
-    console.log(`✏️  [CompleteProfile] Field changed: ${field} = ${value.substring(0, 50)}...`);
+    console.log(`[CompleteProfile] Field changed: ${field} = ${value.substring(0, 50)}...`);
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("🚀 [CompleteProfile] Form submitted");
+    console.log("[CompleteProfile] Form submitted");
     
     if (!user) {
-      console.error("❌ [CompleteProfile] No user found");
+      console.error("[CompleteProfile] No user found");
       setError("User not found. Please log in again.");
       return;
     }
     
-    console.log("👤 [CompleteProfile] Submitting for user:", user.id);
-    console.log("📝 [CompleteProfile] Form data:", JSON.stringify(formData, null, 2));
+    console.log("[CompleteProfile] Submitting for user:", user.id);
+    console.log("[CompleteProfile] Form data:", JSON.stringify(formData, null, 2));
     
     setIsSubmitting(true);
     setError('');
 
     try {
       const metadata = user.user_metadata || {};
-      console.log("📋 [CompleteProfile] User metadata for profile creation:", JSON.stringify(metadata, null, 2));
+      console.log("[CompleteProfile] User metadata for profile creation:", JSON.stringify(metadata, null, 2));
       
       const skillsArray = formData.skills
         .split(',')
         .map(s => s.trim())
         .filter(Boolean);
-      console.log("🏷️  [CompleteProfile] Processed skills array:", skillsArray);
+      console.log("[CompleteProfile] Processed skills array:", skillsArray);
 
       const finalAvatarUrl = avatarUrl || 
         `https://ui-avatars.com/api/?name=${encodeURIComponent(
           formData.full_name
         )}&background=0D8ABC&color=fff&size=256`;
-      console.log("🖼️  [CompleteProfile] Final avatar URL:", finalAvatarUrl);
+      console.log("[CompleteProfile] Final avatar URL:", finalAvatarUrl);
 
       // Complete profile data with metadata fallbacks
       const profileData = {
@@ -175,9 +175,9 @@ const CompleteProfile = () => {
         updated_at: new Date().toISOString(),
       };
 
-      console.log("💾 [CompleteProfile] Final profile data to upsert:");
+      console.log("[CompleteProfile] Final profile data to upsert:");
       console.log(JSON.stringify(profileData, null, 2));
-      console.log("🔄 [CompleteProfile] Calling Supabase upsert...");
+      console.log("[CompleteProfile] Calling Supabase upsert...");
 
       const { data: upsertedData, error: upsertError } = await supabase
         .from('profiles')
@@ -192,7 +192,7 @@ const CompleteProfile = () => {
       console.log("[CompleteProfile] Error:", upsertError ? "YES" : "NO");
 
       if (upsertError) {
-        console.error("❌ [CompleteProfile] Upsert failed");
+        console.error("[CompleteProfile] Upsert failed");
         console.error("[CompleteProfile] Error code", upsertError.code);
         console.error("[CompleteProfile] Error message", upsertError.message);
         console.error("[CompleteProfile] Error details:", upsertError.details);
@@ -209,24 +209,24 @@ const CompleteProfile = () => {
         }
       }
 
-      console.log("✅ [CompleteProfile] Profile saved successfully!");
+      console.log("[CompleteProfile] Profile saved successfully!");
       console.log("[CompleteProfile] Upserted data:", JSON.stringify(upsertedData, null, 2));
       toast({
         title: "Profile Saved!",
         description: "Your profile has been created successfully.",
       });
       
-      console.log("➡️  [CompleteProfile] Navigating to /community");
+      console.log("[CompleteProfile] Navigating to /community");
       navigate('/community', { replace: true });
 
     } catch (err: any) {
-      console.error("💥 [CompleteProfile] Fatal error in handleSubmit:", err);
+      console.error("[CompleteProfile] Fatal error in handleSubmit:", err);
       console.error("[CompleteProfile] Error type:", err.constructor.name);
       console.error("[CompleteProfile] Error message:", err.message);
       console.error("[CompleteProfile] Error stack:", err.stack);
       
       const errorMessage = `Failed to save profile: ${err.message}`;
-      console.error("📢 [CompleteProfile] Showing error to user:", errorMessage);
+      console.error("[CompleteProfile] Showing error to user:", errorMessage);
       
       setError(`Failed to save profile: ${errorMessage}`);
       toast({
@@ -245,18 +245,18 @@ const CompleteProfile = () => {
   };
 
   const handleSkip = () => {
-    console.log("⏭️  [CompleteProfile] User clicked Skip for Now");
-    console.log("➡️  [CompleteProfile] Navigating to /community without saving");
+    console.log("[CompleteProfile] User clicked Skip for Now");
+    console.log("[CompleteProfile] Navigating to /community without saving");
     navigate('/community', { replace: true });
   };
 
   if (authLoading) {
-    console.log("⏳ [CompleteProfile] Auth still loading, showing skeleton");
+    console.log("[CompleteProfile] Auth still loading, showing skeleton");
     return <PageSkeleton />;
   }
 
   if (error) {
-    console.log("❌ [CompleteProfile] Error state, showing error alert");
+    console.log("[CompleteProfile] Error state, showing error alert");
     return (
       <div className="min-h-screen bg-background">
         <Header />
@@ -273,11 +273,11 @@ const CompleteProfile = () => {
   }
 
   if (!user) {
-    console.log("⚠️  [CompleteProfile] No user found, showing skeleton");
+    console.log("[CompleteProfile] No user found, showing skeleton");
     return <PageSkeleton />;
   }
 
-  console.log("✅ [CompleteProfile] Rendering form");
+  console.log("[CompleteProfile] Rendering form");
   return (
     <div className="min-h-screen bg-background">
       <Header />
