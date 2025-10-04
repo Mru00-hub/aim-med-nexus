@@ -126,26 +126,21 @@ const Register = () => {
     console.groupEnd();
     
     // --- END OF DEBUGGING SECTION ---
-    try {
-      // 3. We use the metadata object we created in the signUp call.
-      const { error } = await supabase.auth.signUp({
-        email: formData.email,
-        password: formData.password,
-        options: {
-          data: metadataForSupabase, // Use the constructed object here
-          emailRedirectTo: `${window.location.origin}/login`,
-        }
-      });
-      if (error) {
-        throw error;
-      }
+    // Use the signUp function from the useAuth hook
+    const { data, error: signUpError } = await signUp(
+      formData.email,
+      formData.password,
+      metadataForSupabase
+    );
+
+    setIsLoading(false);
+
+    if (signUpError) {
+      setError(signUpError.message);
+    } else if (data.user) {
+      // SUCCESS: On successful sign-up, navigate to the verification page.
+      console.log("Registration successful, navigating to /please-verify");
       navigate('/please-verify', { replace: true, state: { email: formData.email } });
-    } catch (err: any) {
-      console.error('Registration API call failed:', err);
-      alert('REGISTRATION FAILED:\n\n' + err.message);
-      setError(err.message);
-    } finally {
-      setIsLoading(false);
     }
   };
 
