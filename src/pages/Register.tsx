@@ -571,10 +571,10 @@ const Register = () => {
                                 </SelectTrigger>
                                 <SelectContent>
                                   <SelectItem value="fresh">0-1 years</SelectItem>
-                                  <SelectItem value="1-3">1-3 years</SelectItem>
-                                  <SelectItem value="3-5">3-5 years</SelectItem>
-                                  <SelectItem value="5-10">5-10 years</SelectItem>
-                                  <SelectItem value="10+">10+ years</SelectItem>
+                                  <SelectItem value="one_to_three">1-3 years</SelectItem>
+                                  <SelectItem value="three_to_five">3-5 years</SelectItem>
+                                  <SelectItem value="five_to_ten">5-10 years</SelectItem>
+                                  <SelectItem value="ten_plus">10+ years</SelectItem>
                                 </SelectContent>
                                </Select>
                              </div>
@@ -698,10 +698,10 @@ const Register = () => {
                                 </SelectTrigger>
                                 <SelectContent>
                                   <SelectItem value="fresh">0-1 years</SelectItem>
-                                  <SelectItem value="1-3">1-3 years</SelectItem>
-                                  <SelectItem value="3-5">3-5 years</SelectItem>
-                                  <SelectItem value="5-10">5-10 years</SelectItem>
-                                  <SelectItem value="10+">10+ years</SelectItem>
+                                  <SelectItem value="one_to_three">1-3 years</SelectItem>
+                                  <SelectItem value="three_to_five">3-5 years</SelectItem>
+                                  <SelectItem value="five_to_ten">5-10 years</SelectItem>
+                                  <SelectItem value="ten_plus">10+ years</SelectItem>
                                 </SelectContent>
                               </Select>
                             </div>
