@@ -10,6 +10,10 @@ import { useAuth } from '@/hooks/useAuth';
 
 // Import our new API function and types
 import { getMessages, MessageWithAuthor } from '@/integrations/supabase/community.api';
+import { Database } from '@/integrations/supabase/types'; // Assuming you have this for the raw row type
+
+// Define the raw message row type for the payload
+type MessagesRow = Database['public']['Tables']['messages']['Row'];
 
 interface ThreadViewProps {
   threadId: string;
@@ -50,30 +54,40 @@ export const ThreadView = ({ threadId }: ThreadViewProps) => {
     // --- 2. Set up Real-time Subscription ---
     const channel = supabase
       .channel(`messages_thread_${threadId}`)
-      .on<Message>(
+      .on<MessagesRow>(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'messages', filter: `thread_id=eq.${threadId}` },
         async (payload) => {
-          // When a new message arrives, we can't just use payload.new because it's missing the author's email.
-          // The best practice is to refetch the latest message to get the joined data.
-          // A simpler, optimistic approach is shown here:
           const newMessage = payload.new;
 
-          // Optimistically create the full MessageWithAuthor object
-          // NOTE: In a production app with profiles, you might fetch the profile separately
-          const authorEmail = user?.email ?? 'New User'; // A fallback email
+          // --- THIS IS THE CORRECTED LOGIC ---
+          //
+          // We can't use payload.new directly because it's missing the author's profile.
+          // Instead, we fetch the author's profile using the `user_id` from the new message.
+          
+          // Safety check: If MessageInput does its own optimistic update, this prevents duplicates.
+          if (newMessage.user_id === user?.id) {
+            return;
+          }
 
-          setMessages((currentMessages) => [
-            ...currentMessages,
-            {
-                id: newMessage.id,
-                body: newMessage.body,
-                created_at: newMessage.created_at,
-                is_edited: newMessage.is_edited,
-                user_id: newMessage.user_id,
-                email: authorEmail, // Add the email here
-            },
-          ]);
+          const { data: authorProfile, error: profileError } = await supabase
+            .from('profiles')
+            .select('*') // Select all profile fields you might need
+            .eq('id', newMessage.user_id)
+            .single();
+
+          if (profileError) {
+            console.error("Error fetching profile for new message:", profileError);
+            return; // Don't add the message if we can't get the author
+          }
+
+          // Now, construct the complete `MessageWithAuthor` object with the fetched profile
+          const completeMessage: MessageWithAuthor = {
+            ...newMessage,
+            author: authorProfile, // Your 'MessageWithAuthor' type should expect a nested author object
+          };
+
+          setMessages((currentMessages) => [...currentMessages, completeMessage]);
           setTimeout(scrollToBottom, 50);
         }
       )
