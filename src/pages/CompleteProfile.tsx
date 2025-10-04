@@ -185,10 +185,17 @@ const CompleteProfile = () => {
           ignoreDuplicates: false 
         })
         .select();
+      const { refreshProfile } = useAuth();
 
       console.log("[CompleteProfile] Upsert operation completed");
       console.log("[CompleteProfile] Returned data:", upsertedData ? "Success" : "No data");
       console.log("[CompleteProfile] Error:", upsertError ? "YES" : "NO");
+
+      const { error: upsertError } = await supabase.from('profiles').upsert(...);
+      if (!upsertError) {
+        await refreshProfile(); // Manually refresh the context state
+        navigate('/community');
+      }
 
       if (upsertError) {
         console.error("[CompleteProfile] Upsert failed");
