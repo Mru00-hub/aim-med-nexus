@@ -2,24 +2,30 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { postMessage } from '@/integrations/supabase/community.api';
-import { useToast } from '@/components/ui/use-toast';
+// No longer need these imports here
+// import { postMessage } from '@/integrations/supabase/community.api';
+// import { useToast } from '@/components/ui/use-toast';
 
 interface MessageInputProps {
   threadId: string;
+  // This is the new prop we will pass from the parent
+  onSendMessage: (body: string) => Promise<void>;
 }
 
-export const MessageInput = ({ threadId }: MessageInputProps) => {
+export const MessageInput = ({ threadId, onSendMessage }: MessageInputProps) => {
   const [body, setBody] = useState('');
-  const { toast } = useToast();
+  const [isSending, setIsSending] = useState(false);
 
   const handleSend = async () => {
-    if (body.trim() === '') return;
+    if (body.trim() === '' || isSending) return;
+    
+    setIsSending(true);
     try {
-      await postMessage(threadId, body);
+      // Call the function passed down from the parent
+      await onSendMessage(body);
       setBody(''); // Clear input on success
-    } catch (error: any) {
-      toast({ variant: 'destructive', title: 'Error sending message', description: error.message });
+    } finally {
+      setIsSending(false);
     }
   };
 
@@ -37,8 +43,11 @@ export const MessageInput = ({ threadId }: MessageInputProps) => {
             }
           }}
           className="pr-20"
+          disabled={isSending}
         />
-        <Button onClick={handleSend} className="absolute bottom-2 right-2">Send</Button>
+        <Button onClick={handleSend} className="absolute bottom-2 right-2" disabled={isSending}>
+          {isSending ? 'Sending...' : 'Send'}
+        </Button>
       </div>
     </div>
   );
