@@ -36,7 +36,7 @@ import CreateThread from "./pages/Community/CreateThread";
 
 const queryClient = new QueryClient();
 
-const App = () => (
+const App = () => {
   console.log("App component is rendering. Current time:", new Date().toLocaleTimeString());
   return (
     <QueryClientProvider client={queryClient}>
@@ -85,6 +85,6 @@ const App = () => (
       </TooltipProvider>
     </QueryClientProvider>
   );            
-);
+};
 
 export default App;
