@@ -18,7 +18,7 @@ const CompleteProfile = () => {
   console.log("[CompleteProfile] Component mounted");
   
   const navigate = useNavigate();
-  const { user, profile, loading: authLoading } = useAuth();
+  const { user, profile, loading: authLoading, refreshProfile } = useAuth();
   const { toast } = useToast();
   
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -69,9 +69,7 @@ const CompleteProfile = () => {
 
         // Generate avatar from metadata name
         if (metadata.full_name) {
-          const generatedUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(
-            metadata.full_name
-          )}&background=0D8ABC&color=fff&size=256`;
+          const generatedUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(metadata.full_name)}&background=0D8ABC&color=fff&size=256`;
           console.log("[CompleteProfile] Generated avatar URL:", generatedUrl);
           setAvatarUrl(generatedUrl);
         }
@@ -178,24 +176,7 @@ const CompleteProfile = () => {
       console.log(JSON.stringify(profileData, null, 2));
       console.log("[CompleteProfile] Calling Supabase upsert...");
 
-      const { data: upsertedData, error: upsertError } = await supabase
-        .from('profiles')
-        .upsert(profileData, { 
-          onConflict: 'id',
-          ignoreDuplicates: false 
-        })
-        .select();
-      const { refreshProfile } = useAuth();
-
-      console.log("[CompleteProfile] Upsert operation completed");
-      console.log("[CompleteProfile] Returned data:", upsertedData ? "Success" : "No data");
-      console.log("[CompleteProfile] Error:", upsertError ? "YES" : "NO");
-
-      const { error: upsertError } = await supabase.from('profiles').upsert(...);
-      if (!upsertError) {
-        await refreshProfile(); // Manually refresh the context state
-        navigate('/community');
-      }
+      const { error: upsertError } = await supabase.from('profiles').upsert(profileData);
 
       if (upsertError) {
         console.error("[CompleteProfile] Upsert failed");
@@ -221,7 +202,8 @@ const CompleteProfile = () => {
         title: "Profile Saved!",
         description: "Your profile has been created successfully.",
       });
-      
+
+      await refreshProfile();
       console.log("[CompleteProfile] Navigating to /community");
       navigate('/community', { replace: true });
 
@@ -240,13 +222,32 @@ const CompleteProfile = () => {
         description: errorMessage,
         variant: "destructive",
       });
+    } finally {
+      setIsSubmitting(false); // Ensure the button is re-enabled on success or failure
       // The navigate call has been removed. The user stays on the page.
     }
+  };
 
   const handleSkip = () => {
-    console.log("[CompleteProfile] User clicked Skip for Now");
-    console.log("[CompleteProfile] Navigating to /community without saving");
-    navigate('/community', { replace: true });
+    if (!user) {
+        toast({ title: "Error", description: "User not found.", variant: "destructive" });
+        return;
+    }
+    setIsSubmitting(true);
+    console.log("[CompleteProfile] User clicked Skip. Marking as onboarded.");
+    
+    const { error: skipError } = await supabase
+        .from('profiles')
+        .update({ is_onboarded: true })
+        .eq('id', user.id);
+
+    if (skipError) {
+        toast({ title: "Error", description: "Could not process request. Please try again.", variant: "destructive" });
+        setIsSubmitting(false);
+    } else {
+        await refreshProfile(); // Refresh the context
+        navigate('/community', { replace: true });
+    }
   };
 
   if (authLoading) {
