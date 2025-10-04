@@ -82,6 +82,27 @@ const ProfilePage = () => {
     return <ProfileSkeleton />;
   }
 
+  if (isOwnProfile && ownProfile && !ownProfile.is_onboarded) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <main className="container-medical flex items-center justify-center py-20 px-4">
+          <Alert className="max-w-lg">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Your Profile is Incomplete</AlertTitle>
+            <AlertDescription>
+              Please complete your profile to view it and access all of AIMedNet's features.
+              <Button asChild className="mt-4 w-full">
+                <Link to="/complete-profile">Complete Your Profile Now</Link>
+              </Button>
+            </AlertDescription>
+          </Alert>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
   // Error State UI
   if (error) {
     return (
