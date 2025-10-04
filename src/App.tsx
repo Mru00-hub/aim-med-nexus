@@ -37,66 +37,54 @@ import CreateThread from "./pages/Community/CreateThread";
 const queryClient = new QueryClient();
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <BrowserRouter>
-        <AuthProvider>
-          <Toaster />
-          <Sonner />
+  console.log("App component is rendering. Current time:", new Date().toLocaleTimeString());
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <BrowserRouter>
+          <AuthProvider>
+            <Toaster />
+            <Sonner />
         
-          <Routes>
-            {/* --- Core App Routes --- */}
-            <Route path="/" element={<Index />} />
-            <Route path="/please-verify" element={<PleaseVerify />} />
-            <Route path="/simple-test" element={<SimpleRegisterTest />} />
-            <Route element={<AuthGuard requireAuth={false} />}>
-              <Route path="/register" element={<Register />} />
-              <Route path="/login" element={<Login />} />
-            </Route>
-            <Route element={<AuthGuard />}>
-              <Route path="/complete-profile" element={<CompleteProfile />} />
-            </Route>
-            <Route element={<AuthGuard><OnboardingGuard /></AuthGuard>}>
-              <Route path="/profile" element={<ProfilePage />} />
-            </Route>
-            <Route element={<AuthGuard />}>
-              <Route path="/profile/:userId" element={<ProfilePage />} />
-            </Route>
-            
-            {/* --- Other Feature Routes --- */}
-            <Route path="/jobs" element={<Jobs />} />
-            <Route path="/networking" element={<Networking />} />
-            <Route path="/partnerships" element={<Partnerships />} />
-            <Route path="/feedback" element={<AuthGuard><Feedback /></AuthGuard>} />
-            <Route path="/social" element={<AuthGuard><Social /></AuthGuard>} />
-            <Route path="/inbox" element={<AuthGuard><Inbox /></AuthGuard>} />
-            <Route path="/notifications" element={<AuthGuard><Notifications /></AuthGuard>} />
-            <Route path="/payment" element={<AuthGuard><PaymentPage /></AuthGuard>} />
-
-            {/* === REVISED AND CLEANED COMMUNITY ROUTES === */}
-            {/* All community features now live under the /community path for consistency. */}
-
-            {/* The main discovery page */}
-            <Route path="/community" element={<Forums />} />
-
-            {/* Page for creating a new PUBLIC thread */}
-            <Route path="/community/create-thread" element={<AuthGuard><CreateThread /></AuthGuard>} />
-            
-            {/* Page for viewing a specific Forum or Community Space and its threads */}
-            <Route path="/community/space/:spaceId" element={<AuthGuard><SpaceDetailPage /></AuthGuard>} />
-            
-            {/* Page for viewing a single thread's chat interface */}
-            <Route path="/community/thread/:threadId" element={<AuthGuard><ThreadDetailPage /></AuthGuard>} />
-
-            {/* --- NEW: Route for the Simple Registration Test --- */}
-            {/* This is a temporary route for debugging the registration issue. */}
-            {/* CATCH-ALL "*" ROUTE - MUST BE LAST */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </AuthProvider>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
+            <Routes>
+              {/* --- Core App Routes --- */}
+              <Route path="/" element={<Index />} />
+              <Route path="/please-verify" element={<PleaseVerify />} />
+              <Route path="/simple-test" element={<SimpleRegisterTest />} />
+              <Route path="/jobs" element={<Jobs />} />
+              <Route path="/networking" element={<Networking />} />
+              <Route path="/partnerships" element={<Partnerships />} />
+              <Route path="/community" element={<Forums />} />
+              <Route element={<AuthGuard requireAuth={false} />}>
+                <Route path="/register" element={<Register />} />
+                <Route path="/login" element={<Login />} />
+              </Route>
+              <Route element={<AuthGuard />}>
+                <Route path="/complete-profile" element={<CompleteProfile />} />
+                <Route path="/profile/:userId" element={<ProfilePage />} />
+                <Route path="/feedback" element={<AuthGuard><Feedback />} />
+                <Route path="/social" element={<AuthGuard><Social />} />
+                <Route path="/inbox" element={<AuthGuard><Inbox />} />
+                <Route path="/notifications" element={<AuthGuard><Notifications />} />
+                <Route path="/payment" element={<AuthGuard><PaymentPage />} />
+                {/* Community Actions */}
+                <Route path="/community/create-thread" element={<CreateThread />} />
+                <Route path="/community/space/:spaceId" element={<SpaceDetailPage />} />
+                <Route path="/community/thread/:threadId" element={<ThreadDetailPage />} />
+                {/* Routes that ALSO require the user to be fully onboarded */}
+                <Route element={<OnboardingGuard />}>
+                  <Route path="/profile" element={<ProfilePage />} />
+                  {/* You can add other routes here that need onboarding */}
+                </Route>
+              </Route>
+              {/* CATCH-ALL "*" ROUTE - MUST BE LAST */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </AuthProvider>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  );            
 );
 
 export default App;
