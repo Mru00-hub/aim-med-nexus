@@ -7,12 +7,11 @@ import { MessageInput } from './MessageInput';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/components/ui/use-toast';
+import { getMessages, postMessage, MessageWithAuthor } from '@/integrations/supabase/community.api';
+import { Database } from '@/integrations/supabase/types';
 
-// Import our new API function and types
-import { getMessages, MessageWithAuthor } from '@/integrations/supabase/community.api';
-import { Database } from '@/integrations/supabase/types'; // Assuming you have this for the raw row type
-
-// Define the raw message row type for the payload
+// Define the raw message row type for the subscription payload
 type MessagesRow = Database['public']['Tables']['messages']['Row'];
 
 interface ThreadViewProps {
@@ -20,20 +19,19 @@ interface ThreadViewProps {
 }
 
 export const ThreadView = ({ threadId }: ThreadViewProps) => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth(); // Ensure `profile` is provided by your useAuth hook
+  const { toast } = useToast();
   const [messages, setMessages] = useState<MessageWithAuthor[]>([]);
   const [loading, setLoading] = useState(true);
   const scrollViewportRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Helper function to scroll to the bottom of the chat
     const scrollToBottom = () => {
       if (scrollViewportRef.current) {
         scrollViewportRef.current.scrollTop = scrollViewportRef.current.scrollHeight;
       }
     };
 
-    // --- 1. Fetch Initial Messages ---
     const fetchInitialMessages = async () => {
       if (!threadId) return;
       setLoading(true);
@@ -44,14 +42,12 @@ export const ThreadView = ({ threadId }: ThreadViewProps) => {
         console.error('Error fetching messages:', error);
       } finally {
         setLoading(false);
-        // Use a short delay to ensure DOM has updated before scrolling
         setTimeout(scrollToBottom, 50);
       }
     };
 
     fetchInitialMessages();
 
-    // --- 2. Set up Real-time Subscription ---
     const channel = supabase
       .channel(`messages_thread_${threadId}`)
       .on<MessagesRow>(
@@ -60,31 +56,26 @@ export const ThreadView = ({ threadId }: ThreadViewProps) => {
         async (payload) => {
           const newMessage = payload.new;
 
-          // --- THIS IS THE CORRECTED LOGIC ---
-          //
-          // We can't use payload.new directly because it's missing the author's profile.
-          // Instead, we fetch the author's profile using the `user_id` from the new message.
-          
-          // Safety check: If MessageInput does its own optimistic update, this prevents duplicates.
+          // Ignore the real-time event for our own messages, as they are handled optimistically
           if (newMessage.user_id === user?.id) {
             return;
           }
 
+          // For messages from OTHERS, fetch their profile to build the complete object
           const { data: authorProfile, error: profileError } = await supabase
             .from('profiles')
-            .select('*') // Select all profile fields you might need
+            .select('*')
             .eq('id', newMessage.user_id)
             .single();
 
           if (profileError) {
             console.error("Error fetching profile for new message:", profileError);
-            return; // Don't add the message if we can't get the author
+            return; 
           }
 
-          // Now, construct the complete `MessageWithAuthor` object with the fetched profile
           const completeMessage: MessageWithAuthor = {
             ...newMessage,
-            author: authorProfile, // Your 'MessageWithAuthor' type should expect a nested author object
+            author: authorProfile,
           };
 
           setMessages((currentMessages) => [...currentMessages, completeMessage]);
@@ -93,12 +84,43 @@ export const ThreadView = ({ threadId }: ThreadViewProps) => {
       )
       .subscribe();
 
-    // --- 3. Cleanup ---
-    // This function is called when the component unmounts
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [threadId, user]); // Rerun effect if threadId or user changes
+  }, [threadId, user]);
+
+  // --- NEW: Function to handle sending messages with optimistic updates ---
+  const handleSendMessage = async (body: string) => {
+    if (!user || !profile || !threadId) {
+      toast({ variant: 'destructive', title: 'Could not send message', description: 'User not found or profile is not loaded.' });
+      return;
+    }
+
+    // 1. Create the optimistic message object using our own profile data
+    const optimisticMessage: MessageWithAuthor = {
+      id: crypto.randomUUID(), // Temporary unique ID for the React key
+      created_at: new Date().toISOString(),
+      body: body,
+      is_edited: false,
+      thread_id: threadId,
+      user_id: user.id,
+      author: profile,
+    };
+
+    // 2. Add the optimistic message to the UI immediately
+    setMessages((currentMessages) => [...currentMessages, optimisticMessage]);
+
+    // 3. Send the actual message to the database in the background
+    try {
+      await postMessage(threadId, body);
+    } catch (error: any) {
+      toast({ variant: 'destructive', title: 'Error sending message', description: error.message });
+      // On failure, remove the optimistic message from the UI
+      setMessages((currentMessages) =>
+        currentMessages.filter((m) => m.id !== optimisticMessage.id)
+      );
+    }
+  };
 
   if (!threadId) {
     return <div className="flex-1 flex items-center justify-center text-muted-foreground">Select a thread to start chatting.</div>;
@@ -123,7 +145,8 @@ export const ThreadView = ({ threadId }: ThreadViewProps) => {
           )}
         </ScrollArea>
       </div>
-      <MessageInput threadId={threadId} />
+      {/* --- MODIFIED: Pass the new handler function as a prop --- */}
+      <MessageInput threadId={threadId} onSendMessage={handleSendMessage} />
     </div>
   );
 };
