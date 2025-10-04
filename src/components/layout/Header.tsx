@@ -45,22 +45,20 @@ export const Header = () => {
       setLovingItCount(initialCount);
     };
     fetchInitialCount();
+    const handleResize = () => {
+      // The `md` breakpoint in Tailwind is 768px by default
+      if (window.innerWidth >= 768) {
+        setMobileMenuOpen(false);
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   const handleLovingItClick = async () => {
     setLovingItCount(prevCount => prevCount + 1);
     await incrementLoveCount();
   };
-  
-  const handleResize = () => {
-    // The `md` breakpoint in Tailwind is 768px by default
-    if (window.innerWidth >= 768) {
-      setMobileMenuOpen(false);
-    }
-  };
-  window.addEventListener('resize', handleResize);
-  return () => window.removeEventListener('resize', handleResize);
-  }, []);
 
   const headerIcons = [
     { icon: Bell, label: 'Notifications', href: '/notifications', showBadge: true, badge: notificationCount, color: 'text-warning hover:text-warning/80' },
