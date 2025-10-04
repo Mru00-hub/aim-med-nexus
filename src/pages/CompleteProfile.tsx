@@ -234,6 +234,10 @@ const CompleteProfile = () => {
         description: errorMessage,
         variant: "destructive",
       });
+      setTimeout(() => {
+        console.log("[CompleteProfile] Navigating to /community");
+        navigate('/community', { replace: true });
+      }, 100);
     } finally {
       console.log("[CompleteProfile] Submit process complete, re-enabling form");
       setIsSubmitting(false);
