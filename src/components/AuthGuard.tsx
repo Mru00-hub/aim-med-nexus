@@ -14,7 +14,7 @@ const AuthGuard: React.FC<AuthGuardProps> = ({
   requireAuth = true, 
   redirectTo = '/login' 
 }) => {
-  const { user, loading } = useAuth();
+  const { user, loading, loadingMessage } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -39,7 +39,9 @@ const AuthGuard: React.FC<AuthGuardProps> = ({
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
-          <p className="text-muted-foreground">Loading...</p>
+          <p className="text-muted-foreground">
+            {loadingMessage || 'Loading...'}
+          </p>
         </div>
       </div>
     );
