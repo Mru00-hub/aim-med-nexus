@@ -30,9 +30,14 @@ export const Header = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Mock notification counts
-  const notificationCount = 5;
-  const socialRequestCount = 3;
-  const inboxCount = 7;
+  // For future development, these will be fetched via a custom hook
+  const MOCK_DATA = {
+    notificationCount: 5,
+    socialRequestCount: 3,
+    inboxCount: 7,
+  };
+  // Then use it like this:
+  const { notificationCount, socialRequestCount, inboxCount } = MOCK_DATA;
 
   useEffect(() => {
     const fetchInitialCount = async () => {
@@ -47,6 +52,16 @@ export const Header = () => {
     await incrementLoveCount();
   };
   
+  const handleResize = () => {
+    // The `md` breakpoint in Tailwind is 768px by default
+    if (window.innerWidth >= 768) {
+      setMobileMenuOpen(false);
+    }
+  };
+  window.addEventListener('resize', handleResize);
+  return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const headerIcons = [
     { icon: Bell, label: 'Notifications', href: '/notifications', showBadge: true, badge: notificationCount, color: 'text-warning hover:text-warning/80' },
     { icon: MessageSquare, label: 'Feedback', href: '/feedback', showBadge: false, color: 'text-success hover:text-success/80' },
