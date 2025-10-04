@@ -93,7 +93,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
             if (insertError) {
               console.error("[useAuth] 🛑 FATAL: Could not create shell profile.", insertError);
-              toast({ title: "Account Setup Failed", description: "Please contact support.", variant: "destructive" });
+              let description = "Please contact support.";
+              if (insertError.code === '42501') {
+                description = "Database permission denied. Please check RLS policies.";
+              }
+              toast({ title: "Account Setup Failed", description: description, variant: "destructive" });
               setLoading(false);
               return;
             }
