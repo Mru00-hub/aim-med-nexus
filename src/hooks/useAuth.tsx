@@ -80,17 +80,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             console.log("[useAuth] 👶 No profile found. Creating a new shell profile for the user.");
             setLoadingMessage('Generating your profile...');
 
+            const profileData = {
+              id: currentUser.id,
+              email: currentUser.email,
+              is_onboarded: false,
+              full_name: currentUser.user_metadata.full_name,
+              phone: currentUser.user_metadata.phone,
+              user_role: currentUser.user_metadata.user_role,
+              current_location: currentUser.user_metadata.current_location,
+              institution: currentUser.user_metadata.institution,
+              course: currentUser.user_metadata.course,
+              year_of_study: currentUser.user_metadata.year_of_study,
+              current_position: currentUser.user_metadata.current_position,
+              organization: currentUser.user_metadata.organization,
+              specialization: currentUser.user_metadata.specialization,
+              years_experience: currentUser.user_metadata.years_experience,
+              medical_license: currentUser.user_metadata.medical_license,
+              bio: currentUser.user_metadata.bio,
+            };
+
             const { data: newProfile, error: insertError } = await supabase
               .from('profiles')
-              .insert({ 
-                id: currentUser.id, 
-                email: currentUser.email,
-                ...currentUser.user_metadata,
-                is_onboarded: false // Explicitly set to false
-              })
+              .insert(profileData) // Use the clean profileData object
               .select('*, is_onboarded')
               .single();
-
+            
             if (insertError) {
               console.error("[useAuth] 🛑 FATAL: Could not create shell profile.", insertError);
               let description = "Please contact support.";
