@@ -171,8 +171,7 @@ const CompleteProfile = () => {
         medical_license: metadata.medical_license || null,
         resume_url: formData.resume_url,
         skills: skillsArray,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
+        is_onboarded: true,
       };
 
       console.log("[CompleteProfile] Final profile data to upsert:");
@@ -228,21 +227,14 @@ const CompleteProfile = () => {
       const errorMessage = `Failed to save profile: ${err.message}`;
       console.error("[CompleteProfile] Showing error to user:", errorMessage);
       
-      setError(`Failed to save profile: ${errorMessage}`);
+      setError(errorMessage); // Set the error state to display it in the UI
       toast({
         title: "Save Failed",
         description: errorMessage,
         variant: "destructive",
       });
-      setTimeout(() => {
-        console.log("[CompleteProfile] Navigating to /community");
-        navigate('/community', { replace: true });
-      }, 100);
-    } finally {
-      console.log("[CompleteProfile] Submit process complete, re-enabling form");
-      setIsSubmitting(false);
+      // The navigate call has been removed. The user stays on the page.
     }
-  };
 
   const handleSkip = () => {
     console.log("[CompleteProfile] User clicked Skip for Now");
