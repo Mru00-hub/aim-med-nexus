@@ -7,6 +7,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import AuthGuard from "@/components/AuthGuard";
+import OnboardingGuard from "@/components/OnboardingGuard";
+// page imports
 import Index from "./pages/Index";
 import Jobs from "./pages/Jobs";
 import Networking from "./pages/Networking";
@@ -20,11 +22,9 @@ import Login from "./pages/Login";
 import PleaseVerify from "./pages/PleaseVerify";
 import PaymentPage from "./pages/PaymentPage";
 import NotFound from "./pages/NotFound";
-// --- NEW: Import for the Simple Registration Test page ---
 import SimpleRegisterTest from "./pages/SimpleRegisterTest";
 import ProfilePage from './pages/ProfilePage';
 import CompleteProfile from "./pages/CompleteProfile";
-import AuthCallback from "./pages/AuthCallback";
 
 // --- UPDATED COMMUNITY IMPORTS ---
 // We now only import the components we are actually using.
@@ -47,12 +47,21 @@ const App = () => (
           <Routes>
             {/* --- Core App Routes --- */}
             <Route path="/" element={<Index />} />
-            <Route path="/register" element={<AuthGuard requireAuth={false}><Register /></AuthGuard>} />
             <Route path="/please-verify" element={<PleaseVerify />} />
-            <Route path="/login" element={<AuthGuard requireAuth={false}><Login /></AuthGuard>} />
-            <Route path="/complete-profile" element={<AuthGuard><CompleteProfile /></AuthGuard>} />
-            <Route path="/profile" element={<ProfilePage />} />
-            <Route path="/profile/:userId" element={<ProfilePage />} />
+            <Route path="/simple-test" element={<SimpleRegisterTest />} />
+            <Route element={<AuthGuard requireAuth={false} />}>
+              <Route path="/register" element={<Register />} />
+              <Route path="/login" element={<Login />} />
+            </Route>
+            <Route element={<AuthGuard />}>
+              <Route path="/complete-profile" element={<CompleteProfile />} />
+            </Route>
+            <Route element={<AuthGuard><OnboardingGuard /></AuthGuard>}>
+              <Route path="/profile" element={<ProfilePage />} />
+            </Route>
+            <Route element={<AuthGuard />}>
+              <Route path="/profile/:userId" element={<ProfilePage />} />
+            </Route>
             
             {/* --- Other Feature Routes --- */}
             <Route path="/jobs" element={<Jobs />} />
@@ -81,8 +90,6 @@ const App = () => (
 
             {/* --- NEW: Route for the Simple Registration Test --- */}
             {/* This is a temporary route for debugging the registration issue. */}
-            <Route path="/simple-test" element={<SimpleRegisterTest />} />
-            
             {/* CATCH-ALL "*" ROUTE - MUST BE LAST */}
             <Route path="*" element={<NotFound />} />
           </Routes>
