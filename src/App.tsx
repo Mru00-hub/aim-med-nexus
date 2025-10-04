@@ -27,8 +27,6 @@ import ProfilePage from './pages/ProfilePage';
 import CompleteProfile from "./pages/CompleteProfile";
 
 // --- UPDATED COMMUNITY IMPORTS ---
-// We now only import the components we are actually using.
-// Note the correct path casing: pages/Community
 import Forums from "./pages/Community/Forums";
 import SpaceDetailPage from "./pages/Community/SpaceDetailPage";
 import ThreadDetailPage from "./pages/Community/ThreadDetailPage";
@@ -55,28 +53,38 @@ const App = () => {
               <Route path="/networking" element={<Networking />} />
               <Route path="/partnerships" element={<Partnerships />} />
               <Route path="/community" element={<Forums />} />
+
+              {/* --- Public Routes (AuthGuard redirects if logged in) --- */}
               <Route element={<AuthGuard requireAuth={false} />}>
                 <Route path="/register" element={<Register />} />
                 <Route path="/login" element={<Login />} />
               </Route>
+
+              {/* --- Protected Routes (AuthGuard redirects if NOT logged in) --- */}
               <Route element={<AuthGuard />}>
                 <Route path="/complete-profile" element={<CompleteProfile />} />
                 <Route path="/profile/:userId" element={<ProfilePage />} />
-                <Route path="/feedback" element={<AuthGuard><Feedback />} />
-                <Route path="/social" element={<AuthGuard><Social />} />
-                <Route path="/inbox" element={<AuthGuard><Inbox />} />
-                <Route path="/notifications" element={<AuthGuard><Notifications />} />
-                <Route path="/payment" element={<AuthGuard><PaymentPage />} />
+
+                {/* --- CORRECTED & SIMPLIFIED ROUTES --- */}
+                {/* These are already protected by the parent AuthGuard, so no inner wrapper is needed. */}
+                <Route path="/feedback" element={<Feedback />} />
+                <Route path="/social" element={<Social />} />
+                <Route path="/inbox" element={<Inbox />} />
+                <Route path="/notifications" element={<Notifications />} />
+                <Route path="/payment" element={<PaymentPage />} />
+
                 {/* Community Actions */}
                 <Route path="/community/create-thread" element={<CreateThread />} />
                 <Route path="/community/space/:spaceId" element={<SpaceDetailPage />} />
                 <Route path="/community/thread/:threadId" element={<ThreadDetailPage />} />
+                
                 {/* Routes that ALSO require the user to be fully onboarded */}
                 <Route element={<OnboardingGuard />}>
                   <Route path="/profile" element={<ProfilePage />} />
                   {/* You can add other routes here that need onboarding */}
                 </Route>
               </Route>
+              
               {/* CATCH-ALL "*" ROUTE - MUST BE LAST */}
               <Route path="*" element={<NotFound />} />
             </Routes>
