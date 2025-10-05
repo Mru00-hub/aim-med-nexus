@@ -8,12 +8,12 @@ import { Database } from './types';
 // =================================================================
 
 // Aliases for our new database tables
-export type Forum = Database['public']['Tables']['forums']['row'];
-export type CommunitySpace = Database['public']['Tables']['community_spaces']['row'];
+export type Space = Database['public']['Tables']['spaces']['Row'];
 export type Thread = Database['public']['Tables']['threads']['row'];
 export type Message = Database['public']['Tables']['messages']['row'];
 export type Membership = Database['public']['Tables']['memberships']['row'];
-export type Reaction = Database['public']['Tables']['message_reactions']['row'];
+export type MessageReaction = Database['public']['Tables']['message_reactions']['row'];
+export type MessageAttachment = Database['public']['Tables']['message_attachments']['Row'];
 export type Profile = Database['public']['Tables']['profiles']['row'];
 
 // Custom types for function return values that include joined data
@@ -87,21 +87,19 @@ const getSessionOrThrow = async () => {
 // --- Discovery & Public Views ---
 
 /** Fetches all forums and community spaces. Returns mock data for guests. */
-export const getDiscoverySpaces = async (): Promise<(Forum | CommunitySpace)[]> => {
+export const getDiscoverySpaces = async (): Promise<Space[]> => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return MOCK_SPACES;
 
-    const [forums, spaces] = await Promise.all([
-        supabase.from('forums').select('*'),
-        supabase.from('community_spaces').select('*')
-    ]);
+    const { data, error } = await supabase
+        .from('spaces')
+        .select('*')
+        .neq('space_type', 'PUBLIC') // Public is usually fetched separately/implicitly
+        .order('name', { ascending: true });
 
-    if (forums.error) throw forums.error;
-    if (spaces.error) throw spaces.error;
-
-    return [...forums.data, ...spaces.data];
+    if (error) throw error;
+    return data;
 }
-
 /** Fetches all global public threads. Returns mock data for guests. */
 export const getPublicThreads = async (): Promise<ThreadWithDetails[]> => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -114,45 +112,30 @@ export const getPublicThreads = async (): Promise<ThreadWithDetails[]> => {
 
 // --- Space & Thread Creation ---
 
-/** Creates a new Forum. User must be logged in. */
-export const createForum = async (payload: { name: string; description: string; type: 'PUBLIC' | 'PRIVATE' }): Promise<Forum> => {
+export const createSpace = async (
+  payload: {
+    name: string;
+    description: string;
+    space_type: 'FORUM' | 'COMMUNITY_SPACE';
+    join_level: 'OPEN' | 'INVITE_ONLY'; // Only relevant for FORUM
+  }
+): Promise<Space> => {
     const session = await getSessionOrThrow();
-    const { data: newForum, error } = await supabase.from('forums').insert({
+    
+    // NOTE: This inserts into the unified 'spaces' table
+    const { data: newSpace, error } = await supabase.from('spaces').insert({
       ...payload,
       creator_id: session.user.id
     }).select().single();
 
     if (error) throw error;
 
-    // Make the creator an ADMIN of their new forum
-    await supabase.from('memberships').insert({
-        user_id: session.user.id,
-        space_id: newForum.id,
-        space_type: 'FORUM',
-        role: 'ADMIN',
-        status: 'APPROVED'
-    });
-
-    return newForum;
-}
-
-/** Creates a new Community Space. User must be logged in. */
-export const createCommunitySpace = async (payload: { name: string; description: string }): Promise<CommunitySpace> => {
-    const session = await getSessionOrThrow();
-    const { data: newSpace, error } = await supabase.from('community_spaces').insert({
-      ...payload,
-      creator_id: session.user.id
-    }).select().single();
-
-    if (error) throw error;
-
-    // Make the creator an ADMIN of their new space
+    // Automatically make the creator an ADMIN of their new space
     await supabase.from('memberships').insert({
         user_id: session.user.id,
         space_id: newSpace.id,
-        space_type: 'COMMUNITY_SPACE',
         role: 'ADMIN',
-        status: 'APPROVED'
+        status: 'ACTIVE' // Use 'ACTIVE' not 'APPROVED'
     });
 
     return newSpace;
@@ -177,30 +160,32 @@ export const createThread = async (
 // --- Viewing Spaces, Threads, and Messages ---
 
 /** Fetches details for a single space. Returns mock data for guests. */
-export const getSpaceDetails = async(spaceId: string, spaceType: 'FORUM' | 'COMMUNITY_SPACE'): Promise<Forum | CommunitySpace | undefined> => {
+export const getSpaceDetails = async(spaceId: string): Promise<Space | undefined> => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return MOCK_SPACES.find(s => s.id === spaceId);
 
-    const fromTable = spaceType === 'FORUM' ? 'forums' : 'community_spaces';
-    const { data, error } = await supabase.from(fromTable).select('*').eq('id', spaceId).single();
+    // This now hits the unified 'spaces' table, allowing RLS to validate membership
+    const { data, error } = await supabase.from('spaces').select('*').eq('id', spaceId).single();
+    
+    // RLS will return null data if the user is not a member of a private space.
     if(error) throw error;
     return data;
 }
 
 /** Fetches threads for a specific space. Returns mock data for guests. */
-export const getThreadsForSpace = async (spaceId: string, spaceType: 'FORUM' | 'COMMUNITY_SPACE'): Promise<ThreadWithDetails[]> => {
+export const getThreadsForSpace = async (spaceId: string): Promise<ThreadWithDetails[]> => {
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return MOCK_PUBLIC_THREADS.slice(0, 2); // Return a couple of mock threads
+    if (!session) return MOCK_PUBLIC_THREADS.slice(0, 2);
 
+    // Call the RPC with the space_id. RLS handles the thread access check.
     const { data, error } = await supabase.rpc('get_threads', {
         p_space_id: spaceId,
-        p_space_type: spaceType,
+        // p_space_type is no longer required as the function can infer from p_space_id
     });
 
     if (error) throw error;
     return data;
 };
-
 // =================================================================
 // CHANGE START: Updated getMessages function
 // Replaced the RPC call with a standard .select() to join profile data.
