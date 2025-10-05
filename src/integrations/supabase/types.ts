@@ -14,6 +14,22 @@ export type Database = {
   }
   public: {
     Tables: {
+      spaces: {
+        Row: {
+          id: string // UUID
+          creator_id: string // Links to profiles(id)
+          name: string
+          space_type: Database["public"]["Enums"]["space_type"] // CRITICAL
+          join_level: Database["public"]["Enums"]["join_level"] // OPEN or INVITE_ONLY
+          created_at: string
+          // Add other relevant columns like 'description' if applicable
+        }
+        Insert: { /* ... */ }
+        Update: { /* ... */ }
+        Relationships: [
+          // Foreign Key to Profiles table for creator_id
+        ]
+      }
       community_spaces: {
         Row: {
           created_at: string
@@ -438,6 +454,7 @@ export type Database = {
           thread_id: string
           updated_at: string
           user_id: string
+          parent_message_id: number | null
         }
         Insert: {
           body: string
@@ -447,6 +464,7 @@ export type Database = {
           thread_id: string
           updated_at?: string
           user_id: string
+          parent_message_id?: number | null
         }
         Update: {
           body?: string
@@ -456,8 +474,16 @@ export type Database = {
           thread_id?: string
           updated_at?: string
           user_id?: string
+          parent_message_id?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "messages_parent_message_id_fkey"
+            columns: ["parent_message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "messages_thread_id_fkey"
             columns: ["thread_id"]
@@ -1107,6 +1133,7 @@ export type Database = {
       membership_role: "MEMBER" | "MODERATOR" | "ADMIN"
       membership_status: "PENDING" | "APPROVED" | "DENIED" | "BANNED"
       space_type: "FORUM" | "COMMUNITY_SPACE" | "PUBLIC"
+      join_level: "OPEN" | "INVITE_ONLY"
       specialization:
         | "general_medicine"
         | "cardiology"
