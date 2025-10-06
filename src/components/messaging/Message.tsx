@@ -1,287 +1,303 @@
-// components/messaging/Message.tsx
-
-import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Skeleton } from '@/components/ui/skeleton';
+import React, { useState, useMemo } from 'react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/components/ui/use-toast';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2 } from 'lucide-react';
-
+import { cn } from '@/lib/utils';
 import { 
-  getMessagesWithDetails,
-  postMessage, 
-  MessageWithDetails,
-  // Add functions for reaction and edit/delete here for completeness
+    MessageWithDetails, 
+    MessageReaction, 
+    addReaction, 
+    removeReaction 
 } from '@/integrations/supabase/community.api'; 
+import { UserProfileCard } from '@/components/ui/UserProfileCard';
+import { Reply, Trash2, Pencil, Paperclip } from 'lucide-react';
 
-// ======================================================================
-// PLACEHOLDER CHILD COMPONENTS (Define in their respective files later)
-// ======================================================================
+// --- PLACEHOLDER API FUNCTIONS (Assume these are in community.api.ts) ---
+const deleteMessage = async (messageId: number) => {
+    // NOTE: RLS must enforce that only the creator or an Admin/Mod can delete.
+    // await supabase.from('messages').delete().eq('id', messageId);
+    return { success: true }; 
+};
+const editMessage = async (messageId: number, newBody: string) => {
+    // NOTE: RLS must enforce that only the creator can edit.
+    // await supabase.from('messages').update({ body: newBody, is_edited: true, updated_at: new Date().toISOString() }).eq('id', messageId);
+    return { success: true }; 
+};
 
-// Placeholder for Message component
-interface MessageProps {
-    message: MessageWithDetails;
-    currentUserId: string;
-    isReply?: boolean;
-    refetchMessages: () => Promise<void>;
-    // You'd also pass moderation props, edit/delete handlers, etc.
-}
-const Message: React.FC<MessageProps> = ({ message }) => (
-    <div 
-      className={`p-3 rounded-lg max-w-lg ${message.user_id === message.currentUserId ? 'bg-primary/10 ml-auto' : 'bg-muted/50'} ${message.isReply ? 'mt-2 text-sm' : 'mt-4'}`}
-    >
-        <div className="font-semibold text-xs">{message.author?.full_name || 'Anonymous'}</div>
-        <p className="text-sm">{message.body}</p>
-        <span className="text-xs text-muted-foreground block text-right">{new Date(message.created_at).toLocaleTimeString()}</span>
-        {/* Placeholder for reactions/attachments */}
+// --- PLACEHOLDER COMPONENTS (Use shadcn Popover/Dropdown in production) ---
+const EmojiPicker: React.FC<{ onSelect: (emoji: string) => void }> = ({ onSelect }) => (
+    <div className="flex gap-1 p-1 bg-white border rounded-full shadow-lg">
+        {['👍', '❤️', '🔥', '🤔'].map(emoji => (
+            <span key={emoji} className="cursor-pointer hover:bg-gray-100 rounded-full p-1 transition-colors" onClick={() => onSelect(emoji)}>{emoji}</span>
+        ))}
     </div>
 );
+// --- END PLACEHOLDERS ---
 
-// Placeholder for MessageInput component
-interface MessageInputProps {
-    threadId: string;
-    onSendMessage: (body: string, parentMessageId: number | null) => Promise<void>;
-    // Future: Add logic for replying to a specific message
+
+interface MessageProps {
+    message: MessageWithDetails;
+    currentUserId: string; // Passed down from ThreadView for faster comparison
+    isReply?: boolean; // For styling nested replies
+    refetchMessages: () => Promise<void>; // To refresh the parent view after CRUD operations
+    onReplyClick: (message: MessageWithDetails) => void; // To set the input field to reply mode
 }
-const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage }) => {
-    const [body, setBody] = useState('');
-    const [isSending, setIsSending] = useState(false);
+
+export const Message: React.FC<MessageProps> = ({ 
+    message, 
+    currentUserId, 
+    isReply = false, 
+    refetchMessages, 
+    onReplyClick 
+}) => {
+    const { user } = useAuth();
+    const { toast } = useToast();
+    const [isEditing, setIsEditing] = useState(false);
+    const [editedBody, setEditedBody] = useState(message.body);
+    const [showPicker, setShowPicker] = useState(false);
+
+    const isCurrentUser = message.user_id === currentUserId;
+    const displayName = message.author?.full_name || 'User';
+    const avatarUrl = message.author?.profile_picture_url;
+    // NOTE: This should come from CommunityContext, assuming user has 'ADMIN' or 'MODERATOR' role in the parent space.
+    const canModerate = false; 
     
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!body.trim() || isSending) return;
-        
-        setIsSending(true);
-        await onSendMessage(body, null); // For now, always send as a main message
-        setBody('');
-        setIsSending(false);
+    // Group and count reactions
+    const reactionCounts = useMemo(() => {
+        return message.reactions.reduce((acc, reaction) => {
+            acc[reaction.reaction_emoji] = (acc[reaction.reaction_emoji] || 0) + 1;
+            return acc;
+        }, {} as Record<string, number>);
+    }, [message.reactions]);
+
+    // --- Action Handlers ---
+
+    const handleReaction = async (emoji: string) => {
+        try {
+            if (!user) throw new Error("Login required to react.");
+            
+            // Check if user has already reacted with this specific emoji
+            const existingReaction = message.reactions.find(
+                r => r.user_id === currentUserId && r.reaction_emoji === emoji
+            );
+
+            if (existingReaction) {
+                await removeReaction(message.id, emoji);
+            } else {
+                await addReaction(message.id, emoji);
+            }
+            refetchMessages(); 
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: 'Reaction Failed', description: error.message });
+        } finally {
+            setShowPicker(false);
+        }
     };
+    
+    const handleDelete = async () => {
+        // Use custom modal/dialog instead of browser confirm() in your final application!
+        if (!window.confirm("Are you sure you want to delete this message?")) return; 
+        try {
+            await deleteMessage(message.id);
+            toast({ title: 'Deleted', description: 'Message removed successfully.' });
+            refetchMessages(); 
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: 'Deletion Failed', description: error.message });
+        }
+    };
+
+    const handleEditSave = async () => {
+        if (editedBody === message.body || !editedBody.trim()) {
+            setIsEditing(false);
+            return;
+        }
+        try {
+            await editMessage(message.id, editedBody);
+            toast({ title: 'Updated', description: 'Message edited successfully.' });
+            setIsEditing(false);
+            refetchMessages(); 
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: 'Edit Failed', description: error.message });
+        }
+    };
+    
+    const handleReply = () => {
+        onReplyClick(message);
+    }
+
+    const messageContent = isEditing ? (
+        <div className="flex flex-col gap-2 w-full">
+            <Textarea 
+                value={editedBody} 
+                onChange={(e) => setEditedBody(e.target.value)} 
+                rows={isReply ? 2 : 4}
+            />
+            <div className="flex justify-end gap-2">
+                <Button variant="ghost" size="sm" onClick={() => setIsEditing(false)}>Cancel</Button>
+                <Button size="sm" onClick={handleEditSave} disabled={!editedBody.trim()}>Save</Button>
+            </div>
+        </div>
+    ) : (
+        <p className="text-sm break-words whitespace-pre-wrap">{message.body} {message.is_edited && <span className="text-xs opacity-70">(edited)</span>}</p>
+    );
+    
+    const messageStyle = cn(
+        "flex flex-col rounded-xl px-4 py-3 max-w-[85%] sm:max-w-lg shadow-sm transition-all duration-200",
+        isCurrentUser ? "bg-primary text-primary-foreground self-end" : "bg-card border self-start",
+        isReply && "text-sm" // Smaller text for replies
+    );
+
 
     return (
-        <form onSubmit={handleSubmit} className="flex gap-2">
-            <Textarea 
-                value={body}
-                onChange={(e) => setBody(e.target.value)}
-                placeholder="Write your message..."
-                disabled={isSending}
-                rows={1}
-                className="flex-grow resize-none"
-            />
-            <Button type="submit" disabled={isSending}>
-                {isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Send'}
-            </Button>
-        </form>
-    );
-};
-// ======================================================================
+        <div className={cn("flex w-full gap-3", isCurrentUser ? "justify-end" : "justify-start")}>
+            {/* Avatar (Only visible for others' messages) */}
+            {!isCurrentUser && (
+                <Avatar className={cn(isReply && "h-7 w-7 mt-3")}>
+                    <AvatarImage src={avatarUrl ?? undefined} alt={displayName} />
+                    <AvatarFallback>{displayName?.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                </Avatar>
+            )}
 
+            <div className="flex flex-col">
+                {/* Author & Timestamp (Above the message bubble) */}
+                <div className={cn(
+                    "flex items-center gap-2 mb-1", 
+                    isCurrentUser ? "flex-row-reverse" : "flex-row"
+                )}>
+                    {/* Display name only for others or if it's a main message */}
+                    {!isCurrentUser && !isReply && (
+                        <UserProfileCard userId={message.user_id}>
+                          <span className="font-bold text-sm cursor-pointer hover:underline text-foreground">
+                            {displayName}
+                          </span>
+                        </UserProfileCard>
+                    )}
+                    <span className={cn("text-xs", isCurrentUser ? "text-primary-foreground/70" : "text-muted-foreground")}>
+                        {new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                </div>
 
-// --- Type Definitions for the display layer ---
-type ThreadedMessage = MessageWithDetails & {
-    replies: MessageWithDetails[];
-}
+                {/* Message Bubble & Reactions */}
+                <div className="flex gap-1 items-start">
+                    {/* Action Menu (Reply and Reaction for others' messages) */}
+                    {!isCurrentUser && !isEditing && (
+                        <div className="relative mt-2 flex flex-col gap-1">
+                             <Button 
+                                variant="ghost" 
+                                size="xs" 
+                                className="p-1 h-6 hover:bg-muted/50" 
+                                onClick={handleReply}
+                                title="Reply to Message"
+                            >
+                                <Reply className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                                variant="ghost" 
+                                size="xs" 
+                                className="p-1 h-6 hover:bg-muted/50" 
+                                onClick={() => setShowPicker(!showPicker)}
+                                title="Add Reaction"
+                            >
+                                {/* Using the pencil icon as a toggle for the picker */}
+                                <Pencil className="h-4 w-4 transform rotate-90" /> 
+                            </Button>
+                           
+                            {showPicker && (
+                                <div className="absolute top-0 right-0 z-10 -translate-y-full mb-1">
+                                    <EmojiPicker onSelect={handleReaction} />
+                                </div>
+                            )}
+                        </div>
+                    )}
 
-interface ThreadViewProps {
-  threadId: string;
-}
-
-// ======================================================================
-// CENTRALIZED HOOK: Handles all Data, Real-Time, and Threading Logic
-// ======================================================================
-
-const useThreadData = (threadId: string, currentUserId: string | undefined) => {
-    const { toast } = useToast();
-    const [messages, setMessages] = useState<MessageWithDetails[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-    
-    // --- 1. Fetching & Refetching (The source of truth) ---
-    const fetchAndSyncMessages = useCallback(async () => {
-      if (!threadId) return;
-      setIsLoading(true);
-      try {
-        const data = await getMessagesWithDetails(threadId);
-        setMessages(data);
-      } catch (error) {
-        console.error('Error fetching messages:', error);
-      } finally {
-        // Only set loading to false if this is the initial fetch
-        if (messages.length === 0) setIsLoading(false);
-        // Ensure subsequent fetches don't toggle the skeleton
-        if (isLoading) setIsLoading(false); 
-      }
-    }, [threadId]);
-
-    // Initial load
-    useEffect(() => {
-        fetchAndSyncMessages();
-    }, [threadId, fetchAndSyncMessages]);
-    
-    // --- 2. Real-Time Subscription (Handles ALL changes: Reactions, Attachments, CRUD) ---
-    useEffect(() => {
-        if (!threadId || !currentUserId) return;
-
-        // Function to handle ALL real-time events
-        const handleRealtimeEvent = (payload: any) => {
-            // Check if the change originated from the current user (optimistic update bypass)
-            const changedBySelf = payload.new?.user_id === currentUserId || payload.old?.user_id === currentUserId;
-            
-            // Only refetch if the change is NOT from the current user, or if it's a DELETE (always refetch delete)
-            if (!changedBySelf || payload.eventType === 'DELETE') {
-                fetchAndSyncMessages(); 
-            }
-        };
-
-        const channel = supabase
-            .channel(`thread_chat_${threadId}`)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'messages', filter: `thread_id=eq.${threadId}` }, handleRealtimeEvent)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'message_reactions', filter: `thread_id=eq.${threadId}` }, handleRealtimeEvent)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'message_attachments', filter: `thread_id=eq.${threadId}` }, handleRealtimeEvent)
-            .subscribe();
-
-        return () => {
-            supabase.removeChannel(channel);
-        };
-    }, [threadId, currentUserId, fetchAndSyncMessages]);
-    
-    // --- 3. Threaded Message Grouping ---
-    const threadedMessages = useMemo(() => {
-        const primaryMessages = messages.filter(m => m.parent_message_id === null);
-        const repliesMap = messages.filter(m => m.parent_message_id !== null).reduce((acc, reply) => {
-            const parentId = reply.parent_message_id as number;
-            if (!acc.has(parentId)) {
-                acc.set(parentId, []);
-            }
-            acc.get(parentId)!.push(reply);
-            return acc;
-        }, new Map<number, MessageWithDetails[]>());
-        
-        // Structure the final display array
-        return primaryMessages.map(m => ({
-            ...m,
-            replies: repliesMap.get(m.id) || []
-        })) as ThreadedMessage[];
-    }, [messages]);
-
-    return { 
-        threadedMessages, 
-        isLoading, 
-        refetchMessages: fetchAndSyncMessages 
-    };
-};
-
-// ======================================================================
-// THREAD VIEW COMPONENT (Renderer)
-// ======================================================================
-
-export const ThreadView: React.FC<ThreadViewProps> = ({ threadId }) => {
-  const { user, profile } = useAuth();
-  const { toast } = useToast();
-  
-  // Use the centralized data hook
-  const { threadedMessages, isLoading, refetchMessages } = useThreadData(threadId, user?.id);
-  
-  const scrollViewportRef = useRef<HTMLDivElement>(null);
-
-  // --- Utility for scrolling to bottom ---
-  const scrollToBottom = useCallback(() => {
-    if (scrollViewportRef.current) {
-      scrollViewportRef.current.scrollTop = scrollViewportRef.current.scrollHeight;
-    }
-  }, []);
-  
-  // Scroll to bottom on initial load and whenever messages update (from others)
-  useEffect(() => {
-      scrollToBottom();
-  }, [threadedMessages]); // Scroll whenever the message content changes
-
-  // --- Message Posting Handler (Accepts reply target) ---
-  const handleSendMessage = async (body: string, parentMessageId: number | null = null) => {
-    if (!user || !threadId) {
-      toast({ variant: 'destructive', title: 'Login Required', description: 'Please log in to post a message.' });
-      return;
-    }
-    
-    try {
-      // REVISED API CALL: Includes parentMessageId for replies
-      await postMessage(threadId, body, parentMessageId);
-      
-      // Force a refetch to update the UI immediately with the DB-confirmed message.
-      await refetchMessages(); 
-      
-      // Scroll to bottom immediately
-      setTimeout(scrollToBottom, 50);
-
-    } catch (error: any) {
-      // RLS will typically throw an error here if the user lacks posting permission
-      const errorMessage = error.message.includes('permission denied') 
-                           ? 'Access Denied: You cannot post to this thread.' 
-                           : error.message || 'Failed to send message.';
-
-      toast({ variant: 'destructive', title: 'Error sending message', description: errorMessage });
-    }
-  };
-
-  if (!threadId) {
-    return <div className="flex-1 flex items-center justify-center text-muted-foreground">Select a thread to start chatting.</div>;
-  }
-
-  return (
-    <div className="flex flex-col h-full border rounded-lg bg-card shadow-lg">
-      <CardHeader className="p-4 border-b">
-        <CardTitle className="text-xl font-bold">Discussion Stream</CardTitle>
-        <p className="text-sm text-muted-foreground">Thread ID: {threadId.substring(0, 8)}...</p>
-      </CardHeader>
-
-      <div className="flex-1 overflow-y-hidden">
-        <ScrollArea className="h-full p-4" viewportRef={scrollViewportRef}>
-          {isLoading ? (
-            <div className="space-y-4">
-              <Skeleton className="h-16 w-3/4" />
-              <Skeleton className="h-16 w-2/3 ml-auto" />
-              <Skeleton className="h-16 w-3/4" />
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {threadedMessages.length === 0 ? (
-                <div className="text-center py-10 text-muted-foreground">No messages yet. Start the conversation!</div>
-              ) : (
-                threadedMessages.map((msg) => (
-                    <div key={msg.id} className="space-y-2">
-                        {/* Render the parent message */}
-                        <Message 
-                            message={msg} 
-                            currentUserId={user?.id || ''}
-                            refetchMessages={refetchMessages}
-                        />
+                    <div className={messageStyle}>
+                        {messageContent}
                         
-                        {/* Render replies, indented */}
-                        {msg.replies.length > 0 && (
-                            <div className="ml-6 sm:ml-10 border-l pl-4 space-y-2">
-                                {msg.replies.map(reply => (
-                                    <Message 
-                                        key={reply.id} 
-                                        message={reply} 
-                                        currentUserId={user?.id || ''}
-                                        isReply={true} 
-                                        refetchMessages={refetchMessages}
-                                    />
+                        {/* Attachments Section */}
+                        {message.attachments?.length > 0 && (
+                            <div className="mt-2 pt-2 border-t border-current/20">
+                                {message.attachments.map(att => (
+                                    <a key={att.id} href={att.file_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs underline hover:no-underline">
+                                        <Paperclip className="h-3 w-3" />
+                                        {att.file_name}
+                                    </a>
+                                ))}
+                            </div>
+                        )}
+                        
+                        {/* Reactions Bar */}
+                        {Object.keys(reactionCounts).length > 0 && (
+                            <div className="mt-2 flex gap-2 pt-1 border-t border-current/20">
+                                {Object.entries(reactionCounts).map(([emoji, count]) => (
+                                    <span 
+                                        key={emoji} 
+                                        className={cn(
+                                            "flex items-center gap-1 px-2 py-0.5 rounded-full text-xs cursor-pointer",
+                                            (message.reactions.filter(r => r.reaction_emoji === emoji && r.user_id === currentUserId).length > 0)
+                                                ? (isCurrentUser ? "bg-black/20" : "bg-primary/20 border-primary") // Highlight if current user reacted
+                                                : (isCurrentUser ? "bg-black/10" : "bg-muted-foreground/10")
+                                        )}
+                                        onClick={() => handleReaction(emoji)}
+                                    >
+                                        {emoji} 
+                                        <span className="font-medium">{count}</span>
+                                    </span>
                                 ))}
                             </div>
                         )}
                     </div>
-                ))
-              )}
+
+                    {/* Action Menu (Edit/Delete for current user or Moderator/Admin) */}
+                    {!isEditing && (isCurrentUser || canModerate) && (
+                        <div className="relative mt-2 flex flex-col gap-1">
+                            {isCurrentUser && (
+                                <Button 
+                                    variant="ghost" 
+                                    size="xs" 
+                                    className="p-1 h-6 hover:bg-muted/50" 
+                                    onClick={() => setIsEditing(true)}
+                                    title="Edit Message"
+                                >
+                                    <Pencil className="h-4 w-4" />
+                                </Button>
+                            )}
+                            {(isCurrentUser || canModerate) && (
+                                <Button 
+                                    variant="ghost" 
+                                    size="xs" 
+                                    className="p-1 h-6 hover:bg-red-100" 
+                                    onClick={handleDelete}
+                                    title="Delete Message"
+                                >
+                                    <Trash2 className="h-4 w-4 text-red-500" />
+                                </Button>
+                            )}
+                             {!isCurrentUser && (
+                                <Button 
+                                    variant="ghost" 
+                                    size="xs" 
+                                    className="p-1 h-6 hover:bg-muted/50" 
+                                    onClick={handleReply}
+                                    title="Reply to Message"
+                                >
+                                    <Reply className="h-4 w-4" />
+                                </Button>
+                            )}
+                        </div>
+                    )}
+
+                </div>
             </div>
-          )}
-        </ScrollArea>
-      </div>
-      
-      {/* Input at the bottom */}
-      <div className="mt-4 p-4 border-t bg-background">
-        <MessageInput threadId={threadId} onSendMessage={handleSendMessage} />
-      </div>
-    </div>
-  );
+            
+            {/* Avatar (Only visible for current user) */}
+            {isCurrentUser && (
+                <Avatar className={cn(isReply && "h-7 w-7 mt-3")}>
+                    <AvatarImage src={avatarUrl ?? undefined} alt={displayName} />
+                    <AvatarFallback>{displayName?.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                </Avatar>
+            )}
+        </div>
+    );
 };
