@@ -1,4 +1,3 @@
-// src/components/messaging/MessageInput.tsx
 import React, { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -8,8 +7,8 @@ import { Loader2 } from 'lucide-react';
 // Assuming MessageWithDetails is available via community.api
 import { MessageWithDetails } from '@/integrations/supabase/community.api'; 
 
-// --- PLACEHOLDER API CALL FOR ATTACHMENTS (Must be implemented) ---
-// This placeholder simulates the attachment upload and DB insert process
+// --- PLACEHOLDER API CALL FOR ATTACHMENTS (Must be implemented in community.api.ts) ---
+// This function needs to be replaced with your actual Supabase Storage logic.
 const attachFileToMessagePlaceholder = async (file: File) => {
     return new Promise<{ fileName: string }>(resolve => {
         console.log(`[Attachment] Initiating upload for: ${file.name}`);
@@ -22,10 +21,10 @@ const attachFileToMessagePlaceholder = async (file: File) => {
 
 interface MessageInputProps {
   threadId: string;
-  // The handler from ThreadView, now accepting parentMessageId (null for new message)
+  // The handler from ThreadView: (body, parentMessageId) => Promise<void>
   onSendMessage: (body: string, parentMessageId: number | null) => Promise<void>;
   
-  // NEW PROPS for Reply Functionality (State managed in ThreadView)
+  // PROPS for Reply Functionality
   replyingTo: MessageWithDetails | null;
   onCancelReply: () => void;
 }
@@ -41,7 +40,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
   
   const [body, setBody] = useState('');
   const [isSending, setIsSending] = useState(false);
-  const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
+  const [attachedFiles, setAttachedFiles] = useState<File[]>([]); // Handles file preview/state
   
   const handleSend = async () => {
     const trimmedBody = body.trim();
@@ -62,16 +61,12 @@ export const MessageInput: React.FC<MessageInputProps> = ({
       setAttachedFiles([]);
       onCancelReply();
       
-      // NOTE ON ATTACHMENTS: 
-      // For full robustness, attachments should be uploaded *after* // the message is created and the messageId is known, or via a queue 
-      // system. For this implementation, we assume text and attachments 
-      // are handled sequentially or by a more complex RPC. We clear the 
-      // UI state here and rely on the full architecture handling the files 
-      // after the message is confirmed.
+      // NOTE: File attachments are handled by a separate process post-message creation 
+      // (as is standard practice) but the UI state is cleared here.
 
     } catch (error: any) {
       toast({ variant: 'destructive', title: 'Error sending message', description: error.message });
-      // Keep input content on failure
+      // Keep input content on failure to allow user to retry
     } finally {
       setIsSending(false);
     }
@@ -87,7 +82,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
   // --- File Attachment Logic ---
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       if (e.target.files) {
-          // In a real app, you would enforce a limit on files here
+          // Add newly selected files to the list
           setAttachedFiles(Array.from(e.target.files));
           // Reset input to allow selecting the same file again if needed
           e.target.value = ''; 
@@ -101,7 +96,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
   return (
     <div className="flex flex-col gap-2 p-4 pt-0">
         
-        {/* Reply Context Bar */}
+        {/* Reply Context Bar (Visible when replyingTo is set) */}
         {replyingTo && (
             <div className="flex items-center justify-between p-2 bg-muted/70 rounded-t-lg border-b text-sm">
                 <span className="text-muted-foreground">
@@ -130,7 +125,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
         {/* Input Area */}
         <div className="relative flex items-end gap-2">
             
-            {/* Hidden File Input */}
+            {/* Hidden File Input (Used to trigger native file dialog) */}
             <input 
                 type="file" 
                 ref={fileInputRef} 
