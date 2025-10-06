@@ -1,7 +1,7 @@
 // src/pages/community/SpaceDetailPage.tsx
 
-import React, { useState, useEffect } from 'react';
-import { useParams, useSearchParams, Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -12,72 +12,120 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/components/ui/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 
-// STEP 1: Update Imports and Types
+// ----------------------------------------------------------------------
+// REVISED IMPORTS - Use the unified API and the new Context
+// ----------------------------------------------------------------------
 import {
-  getSpaceDetails,
   getThreadsForSpace,
-  Forum,
-  CommunitySpace,
-  ThreadWithDetails
+  ThreadWithDetails,
 } from '@/integrations/supabase/community.api';
-import { CreateThreadForm } from './CreateThread';
+import { useCommunity } from '@/context/CommunityContext'; 
+import { CreateThreadForm } from './CreateThread'; // We'll review this next
 
-type Space = Forum | CommunitySpace;
+// ======================================================================
+// NEW: Custom Hook for fetching Threads within a Space
+// ======================================================================
+interface UseSpaceThreadsResult {
+    threads: ThreadWithDetails[];
+    isLoadingThreads: boolean;
+    refreshThreads: () => void;
+}
 
+const useSpaceThreads = (spaceId: string): UseSpaceThreadsResult => {
+    const { toast } = useToast();
+    const [threads, setThreads] = useState<ThreadWithDetails[]>([]);
+    const [isLoadingThreads, setIsLoadingThreads] = useState(true);
+    const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+    const fetchThreads = useCallback(async () => {
+        setIsLoadingThreads(true);
+        try {
+            // NOTE: The API function is now simpler and only requires spaceId
+            const threadsData = await getThreadsForSpace(spaceId);
+            setThreads(threadsData);
+        } catch (error: any) {
+            console.error("Failed to fetch space threads:", error);
+            toast({ variant: 'destructive', title: 'Error', description: 'Failed to load discussions for this space.' });
+            setThreads([]);
+        } finally {
+            setIsLoadingThreads(false);
+        }
+    }, [spaceId, toast]);
+
+    useEffect(() => {
+        if (spaceId) {
+            fetchThreads();
+        }
+    }, [spaceId, refreshTrigger, fetchThreads]);
+
+    const refreshThreads = () => setRefreshTrigger(prev => prev + 1);
+
+    return { threads, isLoadingThreads, refreshThreads };
+};
+
+
+// ======================================================================
+// REFACTORED SPACE DETAIL PAGE
+// ======================================================================
 export default function SpaceDetailPage() {
   const { user } = useAuth();
   const { spaceId } = useParams<{ spaceId: string }>();
-  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { toast } = useToast();
+  
+  // ----------------------------------------------------------------------
+  // CONTEXT CONSUMPTION
+  // ----------------------------------------------------------------------
+  const { spaces, isLoadingSpaces, isMemberOf } = useCommunity();
 
-  // STEP 2: Update State Management
-  const [space, setSpace] = useState<Space | null | undefined>(null);
-  const [threads, setThreads] = useState<ThreadWithDetails[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Find the space object from the global context
+  const space = useMemo(() => spaces.find(s => s.id === spaceId), [spaces, spaceId]);
+
+  // Use the custom hook to fetch threads for the found space
+  const { threads, isLoadingThreads, refreshThreads } = useSpaceThreads(spaceId || '');
+
+  // Local UI State
   const [showCreateThread, setShowCreateThread] = useState(false);
 
-  // STEP 3: Update Data Fetching with spaceType from URL
+  // ----------------------------------------------------------------------
+  // VALIDATION & PERMISSION LOGIC
+  // ----------------------------------------------------------------------
+  const loading = isLoadingSpaces || !spaceId; // Combined loading state
+
+  // Check if the user is allowed to post a new thread (RLS is the final check, but UI should guide)
+  const canCreateThread = useMemo(() => {
+    if (!user) return false;
+    if (!space) return false;
+    
+    // Public Forums (space_type: FORUM, join_level: OPEN) allow posting by any logged-in user 
+    // whose RLS policy automatically makes them a MEMBER.
+    if (space.space_type === 'FORUM' && space.join_level === 'OPEN') return true;
+    
+    // Private spaces require active membership, which is guaranteed if it's in the `spaces` list.
+    return isMemberOf(space.id);
+  }, [user, space, isMemberOf]);
+
   useEffect(() => {
-    // Determine the space type from the URL query parameter
-    const typeParam = searchParams.get('type');
-    const spaceType = typeParam === 'forum' ? 'FORUM' : 'COMMUNITY_SPACE';
-
-    if (!spaceId) {
-      navigate('/community'); // Redirect if no ID is provided
-      return;
-    }
-
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const [spaceData, threadsData] = await Promise.all([
-          getSpaceDetails(spaceId, spaceType),
-          getThreadsForSpace(spaceId, spaceType)
-        ]);
-        
-        if (!spaceData) {
-          toast({ variant: 'destructive', title: 'Error', description: 'This space could not be found.' });
+      // Redirect if context finished loading but space wasn't found
+      if (!loading && !space) {
+          toast({ variant: 'destructive', title: 'Access Denied', description: 'Space not found or you do not have permission to view it.' });
           navigate('/community');
-          return;
-        }
-
-        setSpace(spaceData);
-        setThreads(threadsData);
-      } catch (error: any) {
-        console.error("Failed to fetch space details:", error);
-        toast({ variant: 'destructive', title: 'Error', description: error.message });
-      } finally {
-        setLoading(false);
       }
-    };
+  }, [loading, space, navigate, toast]);
 
-    fetchData();
-  }, [spaceId, searchParams, navigate, toast]);
 
+  // ----------------------------------------------------------------------
+  // RENDER COMPONENTS
+  // ----------------------------------------------------------------------
   const ThreadList = () => (
     <div className="space-y-4">
-      {threads.length > 0 ? (
+      {isLoadingThreads ? (
+        // Loading Skeletons for the thread list
+        <>
+            <Skeleton className="h-20 w-full" />
+            <Skeleton className="h-20 w-full" />
+        </>
+      ) : threads.length > 0 ? (
         threads.map(thread => (
           <Link to={`/community/thread/${thread.id}`} key={thread.id}>
             <Card className="transition-all duration-300 hover:border-primary/50 hover:shadow-lg cursor-pointer">
@@ -94,7 +142,11 @@ export default function SpaceDetailPage() {
         <Card>
             <CardContent className="p-6 text-center text-muted-foreground">
                 <p>No threads have been started in this space yet.</p>
-                <Button variant="link" onClick={() => user ? setShowCreateThread(true) : navigate('/login')} className="mt-2">
+                <Button 
+                    variant="link" 
+                    onClick={() => user && canCreateThread ? setShowCreateThread(true) : navigate('/login')} 
+                    className="mt-2"
+                >
                     Be the first to start one!
                 </Button>
             </CardContent>
@@ -107,6 +159,7 @@ export default function SpaceDetailPage() {
     <div className="min-h-screen bg-background flex flex-col">
       <Header />
       <main className="container mx-auto py-8 px-4 flex-grow">
+        {/* Loading State: Use combined loading */}
         {loading ? (
           <>
             <Skeleton className="h-12 w-3/4 mb-4" />
@@ -118,10 +171,16 @@ export default function SpaceDetailPage() {
           </>
         ) : space ? (
           <>
+            {/* Display Space Details from Context */}
             <Card className="mb-8">
               <CardHeader>
                 <CardTitle className="text-3xl">{space.name}</CardTitle>
-                <CardDescription>{space.description}</CardDescription>
+                <CardDescription>
+                    {space.description} 
+                    <Badge variant={space.join_level === 'INVITE_ONLY' ? 'destructive' : 'secondary'} className="ml-2">
+                        {space.join_level === 'INVITE_ONLY' ? 'Private' : 'Open Access'}
+                    </Badge>
+                </CardDescription>
               </CardHeader>
               <CardContent>
                   {/* Future: Add member list and other details here */}
@@ -133,7 +192,12 @@ export default function SpaceDetailPage() {
                 <Hash className="h-6 w-6" />
                 Threads
               </h2>
-              <Button onClick={() => user ? setShowCreateThread(true) : navigate('/login')}>
+              {/* Conditional Button: Disable if user cannot post */}
+              <Button 
+                onClick={() => user ? setShowCreateThread(true) : navigate('/login')}
+                disabled={!canCreateThread}
+                title={!canCreateThread ? "You must be a member to start a thread here." : "Start a new discussion."}
+              >
                 <Plus className="h-4 w-4 mr-2" />
                 Start New Thread
               </Button>
@@ -143,23 +207,29 @@ export default function SpaceDetailPage() {
           </>
         ) : (
             <div className="text-center">
-                <p className="text-lg text-muted-foreground">Space not found.</p>
+                <p className="text-lg text-muted-foreground">Space not found or unauthorized access attempt.</p>
             </div>
         )}
       </main>
       <Footer />
+      
+      {/* Create Thread Dialog */}
       <Dialog open={showCreateThread} onOpenChange={setShowCreateThread}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Create New Thread in {space?.name}</DialogTitle>
-            <DialogDescription>This thread will only be visible to members of this space.</DialogDescription>
+            <DialogDescription>
+                {space?.join_level === 'INVITE_ONLY' 
+                    ? 'This thread will only be visible to members of this private space.' 
+                    : 'This thread will be visible to all members.'}
+            </DialogDescription>
           </DialogHeader>
           <div className="pt-4">
             <CreateThreadForm
-              spaceId={spaceId}
-              spaceType={searchParams.get('type') === 'forum' ? 'FORUM' : 'COMMUNITY_SPACE'}
+              spaceId={spaceId!} // spaceId is guaranteed to exist here
               onThreadCreated={(newThreadId) => {
                 setShowCreateThread(false);
+                refreshThreads(); // <--- REFRESH THREADS AFTER CREATION
                 navigate(`/community/thread/${newThreadId}`);
               }}
             />
