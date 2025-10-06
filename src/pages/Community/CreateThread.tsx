@@ -14,20 +14,20 @@ import { Loader2, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import AuthGuard from '@/components/AuthGuard';
 
-// Import our new API function and types
+// Import our new API function
 import { createThread } from '@/integrations/supabase/community.api';
 
-// STEP 1: Define props to make the component reusable
+// ----------------------------------------------------------------------
+// REVISED PROPS - Removed the redundant 'spaceType'
+// ----------------------------------------------------------------------
 interface CreateThreadProps {
-  // These will be provided when used as a modal inside a space
-  spaceId?: string | null;
-  spaceType?: 'FORUM' | 'COMMUNITY_SPACE' | null;
+  // If null/undefined, the thread will be created in the special PUBLIC space (handled by the API)
+  spaceId?: string | null; 
   // This callback is for when it's used as a modal
   onThreadCreated?: (newThreadId: string) => void;
 }
 
-// We've wrapped the form logic into its own component
-export const CreateThreadForm: React.FC<CreateThreadProps> = ({ spaceId = null, spaceType = null, onThreadCreated }) => {
+export const CreateThreadForm: React.FC<CreateThreadProps> = ({ spaceId = null, onThreadCreated }) => {
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -45,12 +45,13 @@ export const CreateThreadForm: React.FC<CreateThreadProps> = ({ spaceId = null, 
     setError('');
 
     try {
-      // STEP 2: Update handleSubmit to use the props
+      // ----------------------------------------------------------------------
+      // REVISED API CALL - Only needs title, body, and spaceId
+      // ----------------------------------------------------------------------
       const newThreadId = await createThread({
           title,
           body,
-          spaceId,
-          spaceType
+          spaceId, // This is null if it's the public page, or the spaceId if it's the modal
       });
       
       toast({
@@ -58,7 +59,7 @@ export const CreateThreadForm: React.FC<CreateThreadProps> = ({ spaceId = null, 
         description: "Your thread has been created.",
       });
 
-      // If there's a callback, use it (for modals). Otherwise, navigate (for the page).
+      // If there's a callback (modal use-case), call it. Otherwise, navigate (page use-case).
       if (onThreadCreated) {
         onThreadCreated(newThreadId);
       } else {
@@ -66,10 +67,15 @@ export const CreateThreadForm: React.FC<CreateThreadProps> = ({ spaceId = null, 
       }
 
     } catch (err: any) {
-      setError(err.message || 'Failed to create thread. Please try again.');
+      // NOTE: The RLS/API will throw an error here if the user doesn't have permission 
+      // to post to the provided spaceId.
+      const errorMessage = err.message.includes('permission denied') 
+                           ? 'Permission Denied: You cannot post to this space.' 
+                           : err.message || 'Failed to create thread. Please try again.';
+      setError(errorMessage);
       toast({
         title: "Error",
-        description: err.message || 'Failed to create thread.',
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -118,27 +124,31 @@ export const CreateThreadForm: React.FC<CreateThreadProps> = ({ spaceId = null, 
 
 // The page component now just provides the layout and renders the form
 const CreateThreadPage = () => {
-  return (
-    <AuthGuard>
-      <div className="min-h-screen bg-background">
-        <Header />
-        <main className="container mx-auto py-8 px-4">
-          <Card className="max-w-3xl mx-auto">
-            <CardHeader>
-              <CardTitle>Start a New Public Thread</CardTitle>
-              <CardDescription>
-                This thread will be visible to everyone in the main Community Hub.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-                <CreateThreadForm />
-            </CardContent>
-          </Card>
-        </main>
-        <Footer />
-      </div>
-    </AuthGuard>
-  );
+    // Determine the header/description text based on the public space
+    const isPublic = true; // This page is always for public threads
+    
+    return (
+      <AuthGuard>
+        <div className="min-h-screen bg-background">
+          <Header />
+          <main className="container mx-auto py-8 px-4">
+            <Card className="max-w-3xl mx-auto">
+              <CardHeader>
+                <CardTitle>Start a New Public Thread</CardTitle>
+                <CardDescription>
+                  This thread will be visible to everyone in the main Community Hub.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                  {/* When spaceId is omitted, the API must default the thread to the PUBLIC space ID. */}
+                  <CreateThreadForm spaceId={null} /> 
+              </CardContent>
+            </Card>
+          </main>
+          <Footer />
+        </div>
+      </AuthGuard>
+    );
 };
 
 export default CreateThreadPage;
