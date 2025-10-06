@@ -63,6 +63,67 @@ const useSpaceThreads = (spaceId: string): UseSpaceThreadsResult => {
     return { threads, isLoadingThreads, refreshThreads };
 };
 
+const useSpaceMetrics = (spaceId: string) => {
+    // ... (State initialization for memberCount, threadCount, isLoadingMetrics) ...
+    const [memberCount, setMemberCount] = useState<number | null>(null);
+    const [threadCount, setThreadCount] = useState<number | null>(null);
+    const [isLoadingMetrics, setIsLoadingMetrics] = useState(true);
+
+    useEffect(() => {
+        const fetchMetrics = async () => {
+            setIsLoadingMetrics(true);
+            try {
+                // Use the new API functions
+                const [members, threads] = await Promise.all([
+                    getSpaceMemberCount(spaceId), 
+                    getThreadsCountForSpace(spaceId)
+                ]); 
+                setMemberCount(members);
+                setThreadCount(threads);
+            } catch (e) {
+                console.error("Failed to fetch space metrics:", e);
+                setMemberCount(null);
+                setThreadCount(null);
+            } finally {
+                setIsLoadingMetrics(false);
+            }
+        };
+
+        if (spaceId) {
+            fetchMetrics();
+        }
+    }, [spaceId]);
+
+    return { memberCount, threadCount, isLoadingMetrics }; // Return threadCount now
+};
+
+const useSpaceMemberList = (spaceId: string) => {
+    const [memberList, setMemberList] = useState<MemberProfile[]>([]);
+    const [isLoadingList, setIsLoadingList] = useState(true);
+
+    useEffect(() => {
+        const fetchList = async () => {
+            setIsLoadingList(true);
+            try {
+                const list = await getSpaceMemberList(spaceId); 
+                setMemberList(list);
+            } catch (e) {
+                // This is expected to fail via RLS for non-admins/non-mods. 
+                // We suppress the error but log it.
+                console.warn(`Access check: Failed to fetch full member list for ${spaceId}.`, e);
+                setMemberList([]); 
+            } finally {
+                setIsLoadingList(false);
+            }
+        };
+
+        if (spaceId) {
+            fetchList();
+        }
+    }, [spaceId]);
+
+    return { memberList, isLoadingList };
+};
 
 // ======================================================================
 // REFACTORED SPACE DETAIL PAGE
@@ -70,6 +131,8 @@ const useSpaceThreads = (spaceId: string): UseSpaceThreadsResult => {
 export default function SpaceDetailPage() {
   const { user } = useAuth();
   const { spaceId } = useParams<{ spaceId: string }>();
+  const { memberCount, threadCount, isLoadingMetrics } = useSpaceMetrics(spaceId || '');
+  const { memberList, isLoadingList } = useSpaceMemberList(spaceId || '');
   const navigate = useNavigate();
   const { toast } = useToast();
   
@@ -183,7 +246,49 @@ export default function SpaceDetailPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                  {/* Future: Add member list and other details here */}
+                  <div className="flex items-center gap-4 pt-4 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-1">
+                        <Users className="h-4 w-4 text-primary" />
+                        <span>
+                            {isLoadingMetrics ? (
+                                <Skeleton className="h-4 w-16 inline-block align-middle" />
+                            ) : (
+                                **{memberCount}** Active Members
+                            )}
+                        </span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                        <Hash className="h-4 w-4 text-primary" />
+                        <span>
+                            {isLoadingMetrics ? (
+                                <Skeleton className="h-4 w-12 inline-block align-middle" />
+                            ) : (
+                                **{threadCount}** Discussion Threads
+                            )}
+                        </span>
+                    </div>
+                </div>
+    
+                {/* NEW: Member List for Admins/Mods */}
+                {/* RLS is the true gate, but we check if we received data */}
+                {memberList.length > 0 && (
+                    <div className="mt-6 pt-4 border-t">
+                        <h4 className="font-semibold text-base mb-3">Space Members ({memberList.length})</h4>
+                        {isLoadingList ? (
+                            <Skeleton className="h-10 w-full" />
+                        ) : (
+                            <div className="flex flex-wrap gap-2 max-h-24 overflow-y-auto">
+                                {/* Only display a few members, or open a modal for the full list */}
+                                {memberList.slice(0, 10).map(member => (
+                                    <Badge key={member.id} variant={member.role === 'ADMIN' ? 'destructive' : member.role === 'MODERATOR' ? 'secondary' : 'default'}>
+                                        {member.full_name} ({member.role.slice(0, 1)})
+                                    </Badge>
+                                ))}
+                                {memberList.length > 10 && <span className="text-xs text-muted-foreground self-center ml-1">+{memberList.length - 10} more</span>}
+                            </div>
+                          )}
+                      </div>
+                  )}
               </CardContent>
             </Card>
 
