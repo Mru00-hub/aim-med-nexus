@@ -1,38 +1,43 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, MessageSquare, Sparkles } from 'lucide-react';
+import { Loader2, Sparkles } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
+import { MessageWithDetails } from '@/integrations/supabase/community.api';
+
+// NOTE: This component is designed to be passed the full list of messages 
+// and its logic is now contained entirely in the Edge Function, as is the 
+// most robust way to handle RLS and unread status filtering.
 
 interface MessageSummarizerProps {
-  threadId?: string;
-  messages?: Array<{
-    id: string;
-    content: string;
-    sender_id: string;
-    created_at: string;
-    is_read: boolean;
-  }>;
+  /** The ID of the thread to summarize. Mandatory for the Edge Function call. */
+  threadId: string;
+  /** The full list of messages from the ThreadView component. */
+  messages: MessageWithDetails[];
+  /** The ID of the currently selected space (used for context, not strictly needed for API) */
+  spaceId?: string;
 }
 
 const MessageSummarizer: React.FC<MessageSummarizerProps> = ({ 
   threadId, 
-  messages = [] 
+  messages 
 }) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [summary, setSummary] = useState('');
   const [loading, setLoading] = useState(false);
+  
+  // NOTE: Since the frontend cannot reliably determine 'is_read' status (it's a backend concern),
+  // we focus on summarizing the LATEST 20 messages for context, and let the backend 
+  // Edge Function handle true 'unread' status filtering if needed.
+  const latestMessages = messages.slice(-20);
+  const messageCount = latestMessages.length;
 
-  // Count unread messages
-  const unreadCount = messages.filter(msg => 
-    !msg.is_read && msg.sender_id !== user?.id
-  ).length;
 
-  const handleSummarize = async () => {
+  const handleSummarize = useCallback(async () => {
     if (!user || !threadId) {
       toast({
         title: "Error",
@@ -41,22 +46,32 @@ const MessageSummarizer: React.FC<MessageSummarizerProps> = ({
       });
       return;
     }
-
-    if (unreadCount === 0) {
-      toast({
-        title: "No unread messages",
-        description: "All messages in this conversation have been read.",
-      });
-      return;
+    
+    // Safety check if thread is empty
+    if (messageCount === 0) {
+        toast({
+            title: "No messages to summarize",
+            description: "The thread is currently empty.",
+        });
+        return;
     }
 
     setLoading(true);
+    setSummary('');
+
     try {
-      // Call the existing summarize-unread-messages edge function
+      // Data sent to the Edge Function. 
+      // The function must use thread_id and the user's JWT (automatically passed by Supabase) 
+      // to query the database, filter by read status, and generate the summary.
       const { data, error } = await supabase.functions.invoke(
         'summarize-unread-messages',
         {
-          body: { thread_id: threadId }
+          body: { 
+            thread_id: threadId,
+            // OPTIONAL: Pass the latest message text as context if the Edge Function needs it
+            // latest_messages: latestMessages.map(m => m.body), 
+          },
+          method: 'POST'
         }
       );
 
@@ -69,57 +84,62 @@ const MessageSummarizer: React.FC<MessageSummarizerProps> = ({
         });
         return;
       }
-
-      setSummary(data.summary || 'No summary available.');
       
-      toast({
-        title: "Summary Generated",
-        description: `Successfully summarized ${unreadCount} unread messages.`,
-      });
+      // Ensure data.summary exists (assuming the Edge Function returns { summary: string })
+      if (data && data.summary) {
+          setSummary(data.summary);
+          toast({
+            title: "Summary Generated",
+            description: "Successfully summarized unread messages.",
+          });
+      } else {
+           setSummary('No unread messages found or summary could not be generated.');
+           toast({
+            title: "Info",
+            description: "No new unread messages were found since your last visit.",
+          });
+      }
 
     } catch (error: any) {
       console.error('Error calling summarization function:', error);
       toast({
         title: "Error",
-        description: "Something went wrong. Please try again.",
+        description: "An unexpected error occurred. Please try again.",
         variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, threadId, messageCount, toast]);
 
   if (!user) return null;
 
   return (
-    <Card className="card-medical">
+    <Card className="shadow-lg border">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Sparkles className="h-5 w-5 text-primary" />
-          AI Message Summary
+        <CardTitle className="flex items-center gap-2 text-xl">
+          <Sparkles className="h-5 w-5 text-indigo-500" />
+          AI Thread Catch-Up
         </CardTitle>
         <CardDescription>
-          Quickly catch up on unread messages using AI summarization
+          Generate a concise summary of the unread portion of the discussion.
         </CardDescription>
       </CardHeader>
       
       <CardContent className="space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <MessageSquare className="h-4 w-4" />
+            {/* Display the total number of messages we are considering for context */}
             <span>
-              {unreadCount > 0 
-                ? `${unreadCount} unread message${unreadCount > 1 ? 's' : ''}`
-                : 'All messages read'
-              }
+              Analyzing **{messageCount}** total message{messageCount !== 1 ? 's' : ''} for new content.
             </span>
           </div>
           
           <Button 
             onClick={handleSummarize}
-            disabled={loading || unreadCount === 0}
+            disabled={loading || messageCount === 0}
             size="sm"
-            className="btn-medical"
+            className="bg-indigo-600 hover:bg-indigo-700 text-white transition-colors"
           >
             {loading ? (
               <>
@@ -129,7 +149,7 @@ const MessageSummarizer: React.FC<MessageSummarizerProps> = ({
             ) : (
               <>
                 <Sparkles className="h-4 w-4 mr-2" />
-                Summarize
+                Catch Up
               </>
             )}
           </Button>
@@ -137,21 +157,21 @@ const MessageSummarizer: React.FC<MessageSummarizerProps> = ({
 
         {summary && (
           <div className="mt-4">
-            <label className="block text-sm font-medium mb-2">Summary</label>
+            <label className="block text-sm font-medium mb-2 text-indigo-600">AI Summary</label>
             <Textarea 
               value={summary}
               readOnly
-              className="min-h-[120px] resize-none bg-muted/30"
+              className="min-h-[120px] resize-none bg-indigo-50/50 border-indigo-200 shadow-inner"
               placeholder="AI summary will appear here..."
             />
           </div>
         )}
 
         {!summary && !loading && (
-          <div className="text-center py-6 text-muted-foreground">
-            <MessageSquare className="h-12 w-12 mx-auto mb-2 opacity-50" />
+          <div className="text-center py-6 text-muted-foreground bg-gray-50 rounded-lg">
+            <Sparkles className="h-8 w-8 mx-auto mb-2 text-indigo-400" />
             <p className="text-sm">
-              Click "Summarize" to get an AI-powered summary of unread messages
+              Click **Catch Up** to process the thread history.
             </p>
           </div>
         )}
