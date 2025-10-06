@@ -13,7 +13,7 @@ export type Message = Tables<'messages'>;
 export type Membership = Tables<'memberships'>;
 export type MessageReaction = Tables<'message_reactions'>;
 export type MessageAttachment = Tables<'message_attachments'>;
-export type Profile = Tables<'profiles'>; // Corrected alias to avoid conflict
+export type Profile = Tables<'profiles'>;
 
 export type MemberProfile = {
     id: string;
@@ -33,7 +33,6 @@ export type ThreadWithDetails = {
   message_count: number;
 };
 
-// --- FIX: Corrected the intersection type definition ---
 export type MessageWithDetails = Message & {
   author: {
     full_name: string | null;
@@ -42,20 +41,25 @@ export type MessageWithDetails = Message & {
   reactions: MessageReaction[];
   attachments: MessageAttachment[];
 };
-// =================================================================
-// END FIX
-// =================================================================
+
+// Type for the get_pending_requests function return value
+export type PendingRequest = {
+  membership_id: string;
+  user_id: string;
+  full_name: string;
+  profile_picture_url: string | null;
+  requested_at: string;
+};
 
 
 // =================================================================
 // Rich Mock Data for Logged-Out Users
-// NOTE: Mock data should include all mandatory fields from the 'Space' type
 // =================================================================
 const MOCK_SPACES: Space[] = [
-  { id: 'mock-pub-1', name: 'Public Discussions', space_type: 'PUBLIC', join_level:'OPEN', creator_id: 'sys-user', created_at: new Date().toISOString() },
-  { id: 'mock-forum-1', name: 'AI in Healthcare (Example)', description: 'Exploring AI in medical imaging...', space_type: 'FORUM', join_level:'OPEN', creator_id: 'user-abc', created_at: new Date().toISOString() },
-  { id: 'mock-forum-2', name: 'USMLE 2026 Prep (Example)', description: 'Preparing for USMLE exams...', space_type: 'FORUM', join_level: 'INVITE_ONLY', creator_id: 'user-def', created_at: new Date().toISOString() },
-  { id: 'mock-comm-1', name: 'Global Cardiology (Example)', description: 'Connect with cardiologists worldwide...', space_type: 'COMMUNITY_SPACE', join_level: 'INVITE_ONLY', creator_id: 'user-ghi', created_at: new Date().toISOString() },
+  { id: 'mock-pub-1', name: 'Public Discussions', space_type: 'PUBLIC', join_level:'OPEN', creator_id: 'sys-user', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+  { id: 'mock-forum-1', name: 'AI in Healthcare (Example)', description: 'Exploring AI in medical imaging...', space_type: 'FORUM', join_level:'OPEN', creator_id: 'user-abc', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+  { id: 'mock-forum-2', name: 'USMLE 2026 Prep (Example)', description: 'Preparing for USMLE exams...', space_type: 'FORUM', join_level: 'INVITE_ONLY', creator_id: 'user-def', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+  { id: 'mock-comm-1', name: 'Global Cardiology (Example)', description: 'Connect with cardiologists worldwide...', space_type: 'COMMUNITY_SPACE', join_level: 'INVITE_ONLY', creator_id: 'user-ghi', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
 ];
 
 const MOCK_PUBLIC_THREADS: ThreadWithDetails[] = [
@@ -63,39 +67,8 @@ const MOCK_PUBLIC_THREADS: ThreadWithDetails[] = [
   { id: 'mock-pub-thread-2', title: 'Hospital EHR vendor comparison (Example)', creator_id: 'user-456', creator_email: 'dr.patel@example.com', created_at: new Date().toISOString(), last_activity_at: new Date().toISOString(), message_count: 18 },
 ];
 
-const MOCK_MESSAGES: MessageWithDetails[] = [
-    // Thread 1: AFib Guidelines
-    { 
-        id: 9901, user_id: 'user-123', thread_id: 'mock-pub-thread-1', parent_message_id: null,
-        body: 'Has anyone seen the new ESC update? The NOAC dosing recommendations are quite interesting for high-risk patients.', 
-        created_at: new Date(Date.now() - 100000).toISOString(), is_edited: false, updated_at: new Date(Date.now() - 100000).toISOString(),
-        author: { full_name: 'Dr. David Chen', profile_picture_url: 'https://placehold.co/40x40/0000FF/FFFFFF?text=DC' }, 
-        reactions: [], attachments: [] 
-    },
-    { 
-        id: 9902, user_id: 'user-456', thread_id: 'mock-pub-thread-1', parent_message_id: 9901, // REPLY
-        body: 'Yes, I was just reading it. Specifically, the guidelines around watchman devices are going to be debated heavily in the US market.', 
-        created_at: new Date(Date.now() - 80000).toISOString(), is_edited: false, updated_at: new Date(Date.now() - 80000).toISOString(),
-        author: { full_name: 'Dr. Neha Patel', profile_picture_url: 'https://placehold.co/40x40/FF0000/FFFFFF?text=NP' }, 
-        reactions: [], attachments: [] 
-    },
-    { 
-        id: 9903, user_id: 'user-789', thread_id: 'mock-pub-thread-1', parent_message_id: null, // NEW TOP-LEVEL MESSAGE
-        body: 'On a related note, has anyone used the new AI ECG reading software? My hospital is trialing it next month.', 
-        created_at: new Date(Date.now() - 60000).toISOString(), is_edited: true, updated_at: new Date(Date.now() - 50000).toISOString(),
-        author: { full_name: 'Dr. Lisa Brown', profile_picture_url: 'https://placehold.co/40x40/008000/FFFFFF?text=LB' }, 
-        reactions: [], attachments: [] 
-    },
-    
-    // Thread 2: EHR Vendor Comparison
-    { 
-        id: 9904, user_id: 'user-001', thread_id: 'mock-pub-thread-2', parent_message_id: null,
-        body: 'Our clinic is moving away from Epic. Can anyone recommend a solid alternative with better integration for specialized EMRs?', 
-        created_at: new Date(Date.now() - 200000).toISOString(), is_edited: false, updated_at: new Date(Date.now() - 200000).toISOString(),
-        author: { full_name: 'Dr. Ethan Singh', profile_picture_url: 'https://placehold.co/40x40/FFA500/000000?text=ES' }, 
-        reactions: [], attachments: [] 
-    },
-];
+const MOCK_MESSAGES: MessageWithDetails[] = [];
+
 
 // =================================================================
 // API Implementation
@@ -116,7 +89,6 @@ export const getUserSpaces = async (): Promise<Space[]> => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return MOCK_SPACES;
 
-    // RLS will ensure the user only sees spaces they are ACTIVE members of, or PUBLIC/OPEN spaces.
     const { data, error } = await supabase
         .from('spaces')
         .select('*')
@@ -168,17 +140,12 @@ export const getThreadsCountForSpace = async (spaceId: string): Promise<number> 
 export const getSpaceMemberList = async (spaceId: string): Promise<MemberProfile[]> => {
     const { data, error } = await supabase
         .from('memberships')
-        .select(`
-            role,
-            user_id,
-            profiles (full_name, profile_picture_url)
-        `)
+        .select('role, user_id, profiles (full_name, profile_picture_url)')
         .eq('space_id', spaceId)
         .eq('status', 'ACTIVE');
 
     if (error) throw error;
     
-    // Transform the data to match the MemberProfile type
     const members: MemberProfile[] = data.map(m => ({
         id: m.user_id,
         role: m.role,
@@ -189,12 +156,11 @@ export const getSpaceMemberList = async (spaceId: string): Promise<MemberProfile
     return members;
 };
 
-/** Fetches all global public threads. */
+/** Fetches all global public threads using the new DB function. */
 export const getPublicThreads = async (): Promise<ThreadWithDetails[]> => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return MOCK_PUBLIC_THREADS;
 
-    // Assumption: RPC handles fetching threads for the special PUBLIC space ID when p_space_id is null.
     const { data, error } = await supabase.rpc('get_threads'); 
     if (error) throw error;
     return data;
@@ -204,29 +170,19 @@ export const getPublicThreads = async (): Promise<ThreadWithDetails[]> => {
 
 /** Creates a new Space and assigns the appropriate creator role. */
 export const createSpace = async (
-  payload: {
-    name: string;
-    description?: string;
-    space_type: 'FORUM' | 'COMMUNITY_SPACE';
-    join_level: Enums<'join_level'>; 
-  }
+  payload: { name: string; description?: string; space_type: 'FORUM' | 'COMMUNITY_SPACE'; join_level: Enums<'join_level'>; }
 ): Promise<Space> => {
     const session = await getSessionOrThrow();
     
-    // --- FIX: Corrected Role Assignment Logic ---
-    const creatorRole: Enums<'membership_role'> = 
-        payload.space_type === 'COMMUNITY_SPACE' ? 'ADMIN' : 'MODERATOR';
+    const creatorRole: Enums<'membership_role'> = payload.space_type === 'COMMUNITY_SPACE' ? 'ADMIN' : 'MODERATOR';
     
-    // 1. Insert into the unified 'spaces' table
     const { data: newSpace, error } = await supabase.from('spaces').insert({
       ...payload,
       creator_id: session.user.id
     }).select().single();
 
-    // --- FIX: Used 'error' variable instead of undefined 'spaceError' ---
     if (error) throw error; 
 
-    // 2. Automatically make the creator an ADMIN/MODERATOR of their new space
     const { error: memberError } = await supabase.from('memberships').insert({
         user_id: session.user.id,
         space_id: newSpace.id,
@@ -240,7 +196,7 @@ export const createSpace = async (
 
 /** Creates a new thread. User must be logged in. */
 export const createThread = async (
-  payload: { title: string; body: string; spaceId: string | null } // spaceId can be null for Public Threads
+  payload: { title: string; body: string; spaceId: string | null }
 ): Promise<string> => {
     await getSessionOrThrow();
     const { data, error } = await supabase.rpc('create_thread', {
@@ -255,16 +211,12 @@ export const createThread = async (
 
 // --- Viewing Threads ---
 
-/** Fetches threads for a specific space. Returns mock data for guests. */
+/** Fetches threads for a specific space using the new DB function. */
 export const getThreadsForSpace = async (spaceId: string): Promise<ThreadWithDetails[]> => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return MOCK_PUBLIC_THREADS.slice(0, 2);
 
-    // Call the RPC with the space_id. RLS handles the thread access check.
-    const { data, error } = await supabase.rpc('get_threads', {
-        p_space_id: spaceId,
-    });
-
+    const { data, error } = await supabase.rpc('get_threads', { p_space_id: spaceId });
     if (error) throw error;
     return data;
 };
@@ -272,28 +224,22 @@ export const getThreadsForSpace = async (spaceId: string): Promise<ThreadWithDet
 /** Fetches messages, including author profile, reactions, and attachments. */
 export const getMessagesWithDetails = async (threadId: string): Promise<MessageWithDetails[]> => {
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return MOCK_MESSAGES as MessageWithDetails[];
+    if (!session) return MOCK_MESSAGES;
 
     const { data, error } = await supabase
       .from('messages')
-      .select(`
-        *, // Fetch all message columns (including parent_message_id)
-        author:profiles (full_name, profile_picture_url),
-        reactions:message_reactions (*),
-        attachments:message_attachments (*)
-      `)
+      .select('*, author:profiles (full_name, profile_picture_url), reactions:message_reactions (*), attachments:message_attachments (*)')
       .eq('thread_id', threadId)
       .order('created_at', { ascending: true });
 
     if (error) throw error;
-    
     return data as MessageWithDetails[];
 };
 
 
 // --- Chat Interaction ---
 
-/** Posts a new message to a thread. User must be logged in. */
+/** Posts a new message or a reply to a thread using the new DB function. */
 export const postMessage = async (
     threadId: string, 
     body: string, 
@@ -304,14 +250,14 @@ export const postMessage = async (
     const { data, error } = await supabase.rpc('post_message_with_reply', {
         p_thread_id: threadId,
         p_body: body,
-        p_parent_message_id: parentMessageId // New argument for replies
+        p_parent_message_id: parentMessageId
     }).returns<Message>().single();
 
     if (error) throw error;
     return data;
 };
 
-/** Adds a reaction to a message. User must be logged in. */
+/** Adds a reaction to a message. */
 export const addReaction = async (messageId: number, emoji: string): Promise<MessageReaction> => {
     const session = await getSessionOrThrow();
     const { data, error } = await supabase.from('message_reactions').insert({
@@ -323,7 +269,7 @@ export const addReaction = async (messageId: number, emoji: string): Promise<Mes
     return data;
 };
 
-/** Removes a reaction from a message. User must be logged in. */
+/** Removes a reaction from a message. */
 export const removeReaction = async (messageId: number, emoji: string) => {
     const session = await getSessionOrThrow();
     const { error } = await supabase.from('message_reactions').delete().match({
@@ -338,27 +284,24 @@ export const removeReaction = async (messageId: number, emoji: string) => {
 /** Placeholder: Uploads a file and links it to a message. */
 export const addAttachmentToMessage = async (messageId: number, file: File): Promise<MessageAttachment> => {
     await getSessionOrThrow();
-    // This is the implementation placeholder for file upload to Supabase Storage.
     console.log(`Attachment upload placeholder: ${file.name} for message ${messageId}`);
-    
-    // Return a mock attachment record
     return { created_at: new Date().toISOString(), file_name: file.name, file_url: '/mock/url', id: crypto.randomUUID(), message_id: messageId, uploaded_by: 'user-id', file_size_bytes: file.size, file_type: file.type || 'application/octet-stream' };
 };
 
 // --- Membership Management ---
 
-/** FIX: Consolidated and renamed from the duplicate definition. */
+/** Allows a user to join an open forum using the new standardized DB function. */
 export const joinSpaceAsMember = async (spaceId: string): Promise<Membership> => {
     await getSessionOrThrow();
-    // Assuming 'join_space_as_member' is the RPC for open access joining
     const { data, error } = await supabase.rpc('join_space_as_member', { p_space_id: spaceId });
     if (error) throw error;
     return data;
 }
 
-/** Requests to join a private space. User must be logged in. */
+/** Requests to join a private space. */
 export const requestToJoinSpace = async (spaceId: string, spaceType: 'FORUM' | 'COMMUNITY_SPACE'): Promise<Membership> => {
     await getSessionOrThrow();
+    // FINAL CORRECTION: The p_space_type parameter is required by the original DB function and has been restored here.
     const { data, error } = await supabase.rpc('request_to_join_space', {
         p_space_id: spaceId,
         p_space_type: spaceType,
@@ -368,11 +311,11 @@ export const requestToJoinSpace = async (spaceId: string, spaceType: 'FORUM' | '
 }
 
 /** Fetches pending join requests for a space. Must be an admin/mod. */
-export const getPendingRequests = async (spaceId: string, spaceType: 'FORUM' | 'COMMUNITY_SPACE'): Promise<any[] | null> => {
+export const getPendingRequests = async (spaceId: string): Promise<PendingRequest[] | null> => {
     await getSessionOrThrow();
+    // This call is now correct and matches the new DB function which only needs p_space_id.
     const { data, error } = await supabase.rpc('get_pending_requests', {
         p_space_id: spaceId,
-        p_space_type: spaceType,
     });
 
     if (error) throw error;
@@ -380,7 +323,7 @@ export const getPendingRequests = async (spaceId: string, spaceType: 'FORUM' | '
 };
 
 /** Updates a membership status. Must be an admin/mod. */
-export const updateMembershipStatus = async (membershipId: string, newStatus: 'ACTIVE' | 'PENDING' | 'BANNED'): Promise<Membership> => {
+export const updateMembershipStatus = async (membershipId: string, newStatus: Enums<'membership_status'>): Promise<Membership> => {
     await getSessionOrThrow();
     const { data, error } = await supabase.rpc('update_membership_status', {
         p_membership_id: membershipId,
