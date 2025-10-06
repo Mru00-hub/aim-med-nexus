@@ -88,6 +88,38 @@ export default function Forums() {
   // ----------------------------------------------------------------------
   // REFACTORED USER ACTIONS
   // ----------------------------------------------------------------------
+
+  const handleCreateSpace = async (data: {
+    name: string;
+    description?: string;
+    space_type: Enums<'space_type'>;
+    join_level: Enums<'join_level'>;
+  }) => {
+    if (!user) {
+      toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in to create a space.' });
+      return;
+    }
+
+    toast({ title: 'Creating space...' });
+    try {
+      // Call the API function you've already imported
+      await createSpace({
+        name: data.name,
+        description: data.description,
+        space_type: data.space_type,
+        join_level: data.join_level,
+        // The creator_id is handled by the API/database
+      });
+
+      toast({ title: 'Success!', description: `The space "${data.name}" has been created.` });
+      setShowSpaceCreator(false); // Close the creation modal
+      await fetchSpaces();       // IMPORTANT: Refresh the spaces list from the context
+
+    } catch (error: any) {
+      toast({ variant: 'destructive', title: 'Creation Failed', description: error.message });
+    }
+  };
+
   const handleJoin = async (e: React.MouseEvent, space: Space) => {
       e.preventDefault();
       e.stopPropagation();
