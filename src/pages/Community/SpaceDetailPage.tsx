@@ -1,5 +1,4 @@
 // src/pages/community/SpaceDetailPage.tsx
-
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Header } from '@/components/layout/Header';
@@ -11,16 +10,21 @@ import { Plus, Users, Hash } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/components/ui/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
 
 // ----------------------------------------------------------------------
-// REVISED IMPORTS - Use the unified API and the new Context
+// REVISED IMPORTS - ADDED MISSING METRIC/MEMBER IMPORTS
 // ----------------------------------------------------------------------
 import {
   getThreadsForSpace,
+  getSpaceMemberCount, 
+  getThreadsCountForSpace,
+  getSpaceMemberList,
   ThreadWithDetails,
+  MemberProfile // Added for useSpaceMemberList hook
 } from '@/integrations/supabase/community.api';
 import { useCommunity } from '@/context/CommunityContext'; 
-import { CreateThreadForm } from './CreateThread'; // We'll review this next
+import { CreateThreadForm } from './CreateThread'; 
 
 // ======================================================================
 // NEW: Custom Hook for fetching Threads within a Space
@@ -40,7 +44,6 @@ const useSpaceThreads = (spaceId: string): UseSpaceThreadsResult => {
     const fetchThreads = useCallback(async () => {
         setIsLoadingThreads(true);
         try {
-            // NOTE: The API function is now simpler and only requires spaceId
             const threadsData = await getThreadsForSpace(spaceId);
             setThreads(threadsData);
         } catch (error: any) {
@@ -63,8 +66,10 @@ const useSpaceThreads = (spaceId: string): UseSpaceThreadsResult => {
     return { threads, isLoadingThreads, refreshThreads };
 };
 
+// ======================================================================
+// NEW: Custom Hook for fetching Space Metrics (Count)
+// ======================================================================
 const useSpaceMetrics = (spaceId: string) => {
-    // ... (State initialization for memberCount, threadCount, isLoadingMetrics) ...
     const [memberCount, setMemberCount] = useState<number | null>(null);
     const [threadCount, setThreadCount] = useState<number | null>(null);
     const [isLoadingMetrics, setIsLoadingMetrics] = useState(true);
@@ -73,7 +78,7 @@ const useSpaceMetrics = (spaceId: string) => {
         const fetchMetrics = async () => {
             setIsLoadingMetrics(true);
             try {
-                // Use the new API functions
+                // Use the imported API functions
                 const [members, threads] = await Promise.all([
                     getSpaceMemberCount(spaceId), 
                     getThreadsCountForSpace(spaceId)
@@ -94,9 +99,12 @@ const useSpaceMetrics = (spaceId: string) => {
         }
     }, [spaceId]);
 
-    return { memberCount, threadCount, isLoadingMetrics }; // Return threadCount now
+    return { memberCount, threadCount, isLoadingMetrics };
 };
 
+// ======================================================================
+// NEW: Custom Hook for fetching Member List (For Admin/Mod)
+// ======================================================================
 const useSpaceMemberList = (spaceId: string) => {
     const [memberList, setMemberList] = useState<MemberProfile[]>([]);
     const [isLoadingList, setIsLoadingList] = useState(true);
@@ -108,8 +116,7 @@ const useSpaceMemberList = (spaceId: string) => {
                 const list = await getSpaceMemberList(spaceId); 
                 setMemberList(list);
             } catch (e) {
-                // This is expected to fail via RLS for non-admins/non-mods. 
-                // We suppress the error but log it.
+                // Suppress expected RLS error for non-admins/non-mods
                 console.warn(`Access check: Failed to fetch full member list for ${spaceId}.`, e);
                 setMemberList([]); 
             } finally {
@@ -131,8 +138,11 @@ const useSpaceMemberList = (spaceId: string) => {
 export default function SpaceDetailPage() {
   const { user } = useAuth();
   const { spaceId } = useParams<{ spaceId: string }>();
+  
+  // Use the custom data hooks
   const { memberCount, threadCount, isLoadingMetrics } = useSpaceMetrics(spaceId || '');
   const { memberList, isLoadingList } = useSpaceMemberList(spaceId || '');
+  
   const navigate = useNavigate();
   const { toast } = useToast();
   
@@ -153,18 +163,17 @@ export default function SpaceDetailPage() {
   // ----------------------------------------------------------------------
   // VALIDATION & PERMISSION LOGIC
   // ----------------------------------------------------------------------
-  const loading = isLoadingSpaces || !spaceId; // Combined loading state
+  // Combined loading state: wait for space list to load OR thread data to load
+  const loading = isLoadingSpaces || !spaceId; 
 
-  // Check if the user is allowed to post a new thread (RLS is the final check, but UI should guide)
+  // Check if the user is allowed to post a new thread (UI side guidance)
   const canCreateThread = useMemo(() => {
-    if (!user) return false;
-    if (!space) return false;
+    if (!user || !space) return false;
     
-    // Public Forums (space_type: FORUM, join_level: OPEN) allow posting by any logged-in user 
-    // whose RLS policy automatically makes them a MEMBER.
+    // Open Forums allow posting by any authenticated user who has a membership row (even implicit)
     if (space.space_type === 'FORUM' && space.join_level === 'OPEN') return true;
     
-    // Private spaces require active membership, which is guaranteed if it's in the `spaces` list.
+    // Private spaces require active membership (checked via isMemberOf)
     return isMemberOf(space.id);
   }, [user, space, isMemberOf]);
 
@@ -253,7 +262,8 @@ export default function SpaceDetailPage() {
                             {isLoadingMetrics ? (
                                 <Skeleton className="h-4 w-16 inline-block align-middle" />
                             ) : (
-                                **{memberCount}** Active Members
+                                // FIX: Removed extra asterisks
+                                <>{memberCount} Active Members</>
                             )}
                         </span>
                     </div>
@@ -263,7 +273,8 @@ export default function SpaceDetailPage() {
                             {isLoadingMetrics ? (
                                 <Skeleton className="h-4 w-12 inline-block align-middle" />
                             ) : (
-                                **{threadCount}** Discussion Threads
+                                // FIX: Removed extra asterisks
+                                <>{threadCount} Discussion Threads</>
                             )}
                         </span>
                     </div>
