@@ -5,76 +5,15 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/components/ui/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2 } from 'lucide-react';
-
-import { 
-  getMessagesWithDetails,
+import {
   postMessage, 
+  getMessagesWithDetails,
   MessageWithDetails,
-  // Add functions for reaction and edit/delete here for completeness
 } from '@/integrations/supabase/community.api'; 
 
-// ======================================================================
-// PLACEHOLDER CHILD COMPONENTS (Define in their respective files later)
-// ======================================================================
-
-// Placeholder for Message component
-interface MessageProps {
-    message: MessageWithDetails;
-    currentUserId: string;
-    isReply?: boolean;
-    refetchMessages: () => Promise<void>;
-    // You'd also pass moderation props, edit/delete handlers, etc.
-}
-const Message: React.FC<MessageProps> = ({ message }) => (
-    <div 
-      className={`p-3 rounded-lg max-w-lg ${message.user_id === message.currentUserId ? 'bg-primary/10 ml-auto' : 'bg-muted/50'} ${message.isReply ? 'mt-2 text-sm' : 'mt-4'}`}
-    >
-        <div className="font-semibold text-xs">{message.author?.full_name || 'Anonymous'}</div>
-        <p className="text-sm">{message.body}</p>
-        <span className="text-xs text-muted-foreground block text-right">{new Date(message.created_at).toLocaleTimeString()}</span>
-        {/* Placeholder for reactions/attachments */}
-    </div>
-);
-
-// Placeholder for MessageInput component
-interface MessageInputProps {
-    threadId: string;
-    onSendMessage: (body: string, parentMessageId: number | null) => Promise<void>;
-    // Future: Add logic for replying to a specific message
-}
-const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage }) => {
-    const [body, setBody] = useState('');
-    const [isSending, setIsSending] = useState(false);
-    
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!body.trim() || isSending) return;
-        
-        setIsSending(true);
-        await onSendMessage(body, null); // For now, always send as a main message
-        setBody('');
-        setIsSending(false);
-    };
-
-    return (
-        <form onSubmit={handleSubmit} className="flex gap-2">
-            <Textarea 
-                value={body}
-                onChange={(e) => setBody(e.target.value)}
-                placeholder="Write your message..."
-                disabled={isSending}
-                rows={1}
-                className="flex-grow resize-none"
-            />
-            <Button type="submit" disabled={isSending}>
-                {isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Send'}
-            </Button>
-        </form>
-    );
-};
-// ======================================================================
-
+// Import the actual child components
+import { Message } from './Message'; 
+import { MessageInput } from './MessageInput'; 
 
 // --- Type Definitions for the display layer ---
 type ThreadedMessage = MessageWithDetails & {
@@ -93,6 +32,8 @@ const useThreadData = (threadId: string, currentUserId: string | undefined) => {
     const { toast } = useToast();
     const [messages, setMessages] = useState<MessageWithDetails[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    // NEW STATE: For handling a reply target in the input field
+    const [replyingTo, setReplyingTo] = useState<MessageWithDetails | null>(null);
     
     // --- 1. Fetching & Refetching (The source of truth) ---
     const fetchAndSyncMessages = useCallback(async () => {
@@ -104,9 +45,7 @@ const useThreadData = (threadId: string, currentUserId: string | undefined) => {
       } catch (error) {
         console.error('Error fetching messages:', error);
       } finally {
-        // Only set loading to false if this is the initial fetch
         if (messages.length === 0) setIsLoading(false);
-        // Ensure subsequent fetches don't toggle the skeleton
         if (isLoading) setIsLoading(false); 
       }
     }, [threadId]);
@@ -116,16 +55,13 @@ const useThreadData = (threadId: string, currentUserId: string | undefined) => {
         fetchAndSyncMessages();
     }, [threadId, fetchAndSyncMessages]);
     
-    // --- 2. Real-Time Subscription (Handles ALL changes: Reactions, Attachments, CRUD) ---
+    // --- 2. Real-Time Subscription ---
     useEffect(() => {
         if (!threadId || !currentUserId) return;
 
-        // Function to handle ALL real-time events
         const handleRealtimeEvent = (payload: any) => {
-            // Check if the change originated from the current user (optimistic update bypass)
             const changedBySelf = payload.new?.user_id === currentUserId || payload.old?.user_id === currentUserId;
             
-            // Only refetch if the change is NOT from the current user, or if it's a DELETE (always refetch delete)
             if (!changedBySelf || payload.eventType === 'DELETE') {
                 fetchAndSyncMessages(); 
             }
@@ -155,7 +91,6 @@ const useThreadData = (threadId: string, currentUserId: string | undefined) => {
             return acc;
         }, new Map<number, MessageWithDetails[]>());
         
-        // Structure the final display array
         return primaryMessages.map(m => ({
             ...m,
             replies: repliesMap.get(m.id) || []
@@ -165,7 +100,9 @@ const useThreadData = (threadId: string, currentUserId: string | undefined) => {
     return { 
         threadedMessages, 
         isLoading, 
-        refetchMessages: fetchAndSyncMessages 
+        refetchMessages: fetchAndSyncMessages,
+        replyingTo,
+        setReplyingTo
     };
 };
 
@@ -174,11 +111,11 @@ const useThreadData = (threadId: string, currentUserId: string | undefined) => {
 // ======================================================================
 
 export const ThreadView: React.FC<ThreadViewProps> = ({ threadId }) => {
-  const { user, profile } = useAuth();
+  const { user } = useAuth();
   const { toast } = useToast();
   
   // Use the centralized data hook
-  const { threadedMessages, isLoading, refetchMessages } = useThreadData(threadId, user?.id);
+  const { threadedMessages, isLoading, refetchMessages, replyingTo, setReplyingTo } = useThreadData(threadId, user?.id);
   
   const scrollViewportRef = useRef<HTMLDivElement>(null);
 
@@ -189,10 +126,10 @@ export const ThreadView: React.FC<ThreadViewProps> = ({ threadId }) => {
     }
   }, []);
   
-  // Scroll to bottom on initial load and whenever messages update (from others)
+  // Scroll to bottom whenever messages update
   useEffect(() => {
       scrollToBottom();
-  }, [threadedMessages]); // Scroll whenever the message content changes
+  }, [threadedMessages]); 
 
   // --- Message Posting Handler (Accepts reply target) ---
   const handleSendMessage = async (body: string, parentMessageId: number | null = null) => {
@@ -202,17 +139,15 @@ export const ThreadView: React.FC<ThreadViewProps> = ({ threadId }) => {
     }
     
     try {
-      // REVISED API CALL: Includes parentMessageId for replies
       await postMessage(threadId, body, parentMessageId);
       
-      // Force a refetch to update the UI immediately with the DB-confirmed message.
-      await refetchMessages(); 
+      // Clear reply state after successful send
+      setReplyingTo(null);
       
-      // Scroll to bottom immediately
+      await refetchMessages(); 
       setTimeout(scrollToBottom, 50);
 
     } catch (error: any) {
-      // RLS will typically throw an error here if the user lacks posting permission
       const errorMessage = error.message.includes('permission denied') 
                            ? 'Access Denied: You cannot post to this thread.' 
                            : error.message || 'Failed to send message.';
@@ -220,6 +155,10 @@ export const ThreadView: React.FC<ThreadViewProps> = ({ threadId }) => {
       toast({ variant: 'destructive', title: 'Error sending message', description: errorMessage });
     }
   };
+  
+  const handleReplyClick = (message: MessageWithDetails) => {
+      setReplyingTo(message);
+  }
 
   if (!threadId) {
     return <div className="flex-1 flex items-center justify-center text-muted-foreground">Select a thread to start chatting.</div>;
@@ -252,6 +191,7 @@ export const ThreadView: React.FC<ThreadViewProps> = ({ threadId }) => {
                             message={msg} 
                             currentUserId={user?.id || ''}
                             refetchMessages={refetchMessages}
+                            onReplyClick={handleReplyClick} // Pass the reply handler
                         />
                         
                         {/* Render replies, indented */}
@@ -264,6 +204,7 @@ export const ThreadView: React.FC<ThreadViewProps> = ({ threadId }) => {
                                         currentUserId={user?.id || ''}
                                         isReply={true} 
                                         refetchMessages={refetchMessages}
+                                        onReplyClick={handleReplyClick} // Pass the reply handler
                                     />
                                 ))}
                             </div>
@@ -278,7 +219,12 @@ export const ThreadView: React.FC<ThreadViewProps> = ({ threadId }) => {
       
       {/* Input at the bottom */}
       <div className="mt-4 p-4 border-t bg-background">
-        <MessageInput threadId={threadId} onSendMessage={handleSendMessage} />
+        <MessageInput 
+            threadId={threadId} 
+            onSendMessage={handleSendMessage} 
+            replyingTo={replyingTo}
+            onCancelReply={() => setReplyingTo(null)}
+        />
       </div>
     </div>
   );
