@@ -78,9 +78,8 @@ export default function Forums() {
       const searchLower = threadSearchQuery.toLowerCase();
       return (
         thread.title.toLowerCase().includes(searchLower) ||
-        // NOTE: creator_email is now likely replaced by creator_name/full_name 
-        // in a joined profile object, but we keep creator_email for now.
-        thread.full_name?.toLowerCase().includes(searchLower) 
+        // FIX: Using creator_email as the guaranteed available search field.
+        thread.creator_email.toLowerCase().includes(searchLower) 
       );
     });
   }, [publicThreads, threadSearchQuery]);
@@ -99,11 +98,12 @@ export default function Forums() {
 
       toast({ title: 'Joining...', description: `Attempting to join ${space.name}.` });
       try {
-          // A Forum is public if join_level is OPEN
+          // A Forum is public if space_type is FORUM and join_level is OPEN
           const isPublicForum = space.space_type === 'FORUM' && space.join_level === 'OPEN';
           
           if (isPublicForum) {
-              await joinPublicForum(space.id); // This RPC handles immediate membership
+              // CORRECTED API FUNCTION CALL
+              await joinSpaceAsMember(space.id); 
               toast({ title: 'Success!', description: `You have joined ${space.name}.` });
           } else { 
               // This handles Private Forums and all Community Spaces (which are INVITE_ONLY)
@@ -115,37 +115,6 @@ export default function Forums() {
       } catch (error: any) {
           toast({ variant: 'destructive', title: 'Error', description: error.message });
       }
-  };
-
-  const handleCreateSpace = async (data: { 
-      name: string; 
-      description: string; 
-      type: 'FORUM' | 'COMMUNITY_SPACE'; 
-      forumType: 'PUBLIC' | 'PRIVATE' 
-  }) => {
-    try {
-      // Map the UI form data to the unified API types
-      const payload = {
-        name: data.name,
-        description: data.description,
-        space_type: data.type as Enums<'space_type'>,
-        join_level: (data.type === 'FORUM' && data.forumType === 'PUBLIC') 
-            ? 'OPEN' as Enums<'join_level'> 
-            : 'INVITE_ONLY' as Enums<'join_level'>,
-      };
-
-      const newSpace = await createSpace(payload);
-      toast({ title: 'Success!', description: `${newSpace.name} has been created.` });
-      setShowSpaceCreator(false);
-      
-      // Update the global state with the new space
-      await fetchSpaces(); 
-      
-      // Redirect to the newly created space detail page
-      navigate(`/community/space/${newSpace.id}`);
-    } catch (error: any) {
-      toast({ variant: 'destructive', title: 'Creation Failed', description: error.message });
-    }
   };
 
   const renderSpaceCard = (space: Space) => {
