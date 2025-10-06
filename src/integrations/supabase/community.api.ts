@@ -16,6 +16,13 @@ export type MessageReaction = Tables<'message_reactions'>;
 export type MessageAttachment = Tables<'message_attachments'>;
 export type Profiles = Tables<'profiles'>;
 
+export type MemberProfile = {
+    id: string;
+    full_name: string;
+    profile_picture_url: string | null;
+    role: Enums<'membership_role'>;
+    // Add any other profile details needed for a member list display
+};
 // Custom types for function return values that include joined data
 // This mirrors the `RETURNS TABLE(...)` from our get_threads function
 export type ThreadWithDetails = {
@@ -109,6 +116,56 @@ export const getSpaceDetails = async(spaceId: string): Promise<Space | undefined
     if(error) throw error;
     return data || undefined;
 }
+
+export const getSpaceMemberCount = async (spaceId: string): Promise<number> => {
+    // This relies on RLS ensuring the user has SELECT permission on 'memberships' 
+    // (at least for the count, which should be public for all members of the space).
+    const { count, error } = await supabase
+        .from('memberships')
+        .select('*', { count: 'exact', head: true })
+        .eq('space_id', spaceId)
+        .eq('status', 'ACTIVE'); // Only count approved members
+
+    if (error) throw error;
+    // Note: count can be null if the query fails, but we expect a number or 0.
+    return count || 0; 
+};
+
+export const getThreadsCountForSpace = async (spaceId: string): Promise<number> => {
+    // RLS will ensure the user can only count threads they are permitted to view.
+    const { count, error } = await supabase
+        .from('threads')
+        .select('*', { count: 'exact', head: true })
+        .eq('space_id', spaceId);
+
+    if (error) throw error;
+    return count || 0;
+};
+
+export const getSpaceMemberList = async (spaceId: string): Promise<MemberProfile[]> => {
+    const { data, error } = await supabase
+        .from('memberships')
+        .select(`
+            id,
+            role,
+            user_id,
+            profiles (full_name, profile_picture_url)
+        `)
+        .eq('space_id', spaceId)
+        .eq('status', 'ACTIVE'); // Only fetch active members
+
+    if (error) throw error;
+    
+    // Transform the data to match the MemberProfile type
+    const members: MemberProfile[] = data.map(m => ({
+        id: m.user_id,
+        role: m.role,
+        full_name: m.profiles?.full_name || 'Anonymous User',
+        profile_picture_url: m.profiles?.profile_picture_url || null,
+    }));
+    
+    return members;
+};
 
 /** Fetches all global public threads. Returns mock data for guests. */
 export const getPublicThreads = async (): Promise<ThreadWithDetails[]> => {
