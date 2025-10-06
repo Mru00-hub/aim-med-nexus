@@ -45,31 +45,32 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
 
   // Derive the ID of the special public space once the data is loaded
   const publicSpaceId = useMemo(() => {
+    // The public space is defined by its type in the database
     return spaces.find(s => s.space_type === 'PUBLIC')?.id || null;
   }, [spaces]);
   
   // --- Data Fetching Logic ---
   const fetchSpaces = async () => {
+    // 1. Handle unauthenticated user (show mock/empty state)
     if (!user) {
-        setSpaces(prev => prev.length === 0 ? [] : prev); // Don't wipe mock data if it exists
+        // Only set spaces if they were empty, otherwise keep mock data visible
+        setSpaces(prev => prev.length === 0 ? [] : prev); 
         setIsLoadingSpaces(false);
         return;
     }
     
     setIsLoadingSpaces(true);
     try {
-      const spacesData = await getUserSpaces();
-      setSpaces(spacesData);
+      const [spacesData, threadsData] = await Promise.all([
+          getUserSpaces(), // Fetch user's spaces (includes PUBLIC space via RLS)
+          getPublicThreads() // Fetch public threads (globally)
+      ]);
       
-      // Attempt to find the special Public Threads container and fetch its threads
-      const publicId = spacesData.find(s => s.space_type === 'PUBLIC')?.id;
-      if (publicId) {
-        const threadsData = await getPublicThreads(publicId); // Assuming getPublicThreads now takes a spaceId argument for consistency
-        setPublicThreads(threadsData || []);
-      }
+      setSpaces(spacesData);
+      setPublicThreads(threadsData || []);
       
     } catch (error) {
-      console.error("Failed to fetch user spaces and public threads:", error);
+      console.error("Failed to fetch user spaces or public threads:", error);
       toast({ variant: 'destructive', title: 'Error', description: 'Failed to load community data.' });
     } finally {
       setIsLoadingSpaces(false);
@@ -93,10 +94,11 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
     }
   };
   
-  // Placeholder: In a real app, this logic would check the `memberships` table directly 
-  // or rely on a user profile property. For now, we rely on the list of fetched spaces.
+  /** * Checks if the current user is a member of a space.
+   * This relies on RLS ensuring that `spaces` only contains spaces the user 
+   * is authorized/membered in (or is PUBLIC/OPEN).
+   */
   const isMemberOf = (spaceId: string): boolean => {
-      // If the user has the space in their list, they are a member (RLS guarantees this)
       return spaces.some(s => s.id === spaceId);
   }
 
