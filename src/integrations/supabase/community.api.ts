@@ -64,9 +64,37 @@ const MOCK_PUBLIC_THREADS: ThreadWithDetails[] = [
 ];
 
 const MOCK_MESSAGES: MessageWithDetails[] = [
-    // Mock messages are simplified here for brevity but require the MessageWithDetails structure
-    // Since we don't have the original Message structure, we assume required fields are present.
-    // NOTE: This mock section requires significant detail to match the real schema.
+    // Thread 1: AFib Guidelines
+    { 
+        id: 9901, user_id: 'user-123', thread_id: 'mock-pub-thread-1', parent_message_id: null,
+        body: 'Has anyone seen the new ESC update? The NOAC dosing recommendations are quite interesting for high-risk patients.', 
+        created_at: new Date(Date.now() - 100000).toISOString(), is_edited: false, updated_at: new Date(Date.now() - 100000).toISOString(),
+        author: { full_name: 'Dr. David Chen', profile_picture_url: 'https://placehold.co/40x40/0000FF/FFFFFF?text=DC' }, 
+        reactions: [], attachments: [] 
+    },
+    { 
+        id: 9902, user_id: 'user-456', thread_id: 'mock-pub-thread-1', parent_message_id: 9901, // REPLY
+        body: 'Yes, I was just reading it. Specifically, the guidelines around watchman devices are going to be debated heavily in the US market.', 
+        created_at: new Date(Date.now() - 80000).toISOString(), is_edited: false, updated_at: new Date(Date.now() - 80000).toISOString(),
+        author: { full_name: 'Dr. Neha Patel', profile_picture_url: 'https://placehold.co/40x40/FF0000/FFFFFF?text=NP' }, 
+        reactions: [], attachments: [] 
+    },
+    { 
+        id: 9903, user_id: 'user-789', thread_id: 'mock-pub-thread-1', parent_message_id: null, // NEW TOP-LEVEL MESSAGE
+        body: 'On a related note, has anyone used the new AI ECG reading software? My hospital is trialing it next month.', 
+        created_at: new Date(Date.now() - 60000).toISOString(), is_edited: true, updated_at: new Date(Date.now() - 50000).toISOString(),
+        author: { full_name: 'Dr. Lisa Brown', profile_picture_url: 'https://placehold.co/40x40/008000/FFFFFF?text=LB' }, 
+        reactions: [], attachments: [] 
+    },
+    
+    // Thread 2: EHR Vendor Comparison
+    { 
+        id: 9904, user_id: 'user-001', thread_id: 'mock-pub-thread-2', parent_message_id: null,
+        body: 'Our clinic is moving away from Epic. Can anyone recommend a solid alternative with better integration for specialized EMRs?', 
+        created_at: new Date(Date.now() - 200000).toISOString(), is_edited: false, updated_at: new Date(Date.now() - 200000).toISOString(),
+        author: { full_name: 'Dr. Ethan Singh', profile_picture_url: 'https://placehold.co/40x40/FFA500/000000?text=ES' }, 
+        reactions: [], attachments: [] 
+    },
 ];
 
 // =================================================================
