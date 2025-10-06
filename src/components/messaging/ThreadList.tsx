@@ -1,64 +1,99 @@
 // src/components/messaging/ThreadList.tsx
-import { useState, useEffect } from 'react';
-import { getThreadsForSpace } from '@/integrations/supabase/community.api';
-import { Database } from '@/integrations/supabase/types';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Skeleton } from '@/components/ui/skeleton';
-import type { Space } from './SpaceSidebar';
+import { Card, CardContent } from '@/components/ui/card';
+import { Hash } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
 
-// Define the Thread type 
-type Thread = {
-  id: string;
-  title: string;
-  message_count: number;
-};
+import { 
+  getThreadsForSpace,
+  ThreadWithDetails,
+  Space // Import the unified Space type
+} from '@/integrations/supabase/community.api';
+import { useCommunity } from '@/context/CommunityContext'; // Import context
+
+// This component is designed to be used inside SpaceDetailPage's parent component 
+// or render the list of threads for the currently selected space.
 
 interface ThreadListProps {
-  space: Space | null;
-  onSelectThread: (threadId: string) => void;
-  activeThreadId: string | null;
+  space: Space; // Now requires the unified Space object
+  // NOTE: onSelectThread and activeThreadId are usually managed by the parent/router now.
 }
 
-export const ThreadList = ({ space, onSelectThread, activeThreadId }: ThreadListProps) => {
-  const [threads, setThreads] = useState<Thread[]>([]);
-  const [loading, setLoading] = useState(false);
+export const ThreadList: React.FC<ThreadListProps> = ({ space }) => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [threads, setThreads] = useState<ThreadWithDetails[]>([]);
+  const [loading, setLoading] = useState(true);
+  
+  // Use the thread creation permission logic from the SpaceDetailPage concept
+  const canCreateThread = user && space.join_level !== 'INVITE_ONLY'; 
+
+  const fetchThreads = useCallback(async (spaceId: string) => {
+    setLoading(true);
+    try {
+        // Use the unified getThreadsForSpace API function
+        const data = await getThreadsForSpace(spaceId);
+        setThreads(data || []);
+    } catch (error) {
+        console.error("Failed to fetch threads:", error);
+        setThreads([]);
+    } finally {
+        setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    if (!space) return;
-
-    const fetchThreads = async () => {
-      setLoading(true);
-      const containerId = space.type === 'GLOBAL' ? null : space.id;
-      const containerType = space.type === 'GLOBAL' ? null : space.type;
-      const data = await getThreadsForSpace(containerId || '');
-      setThreads(data || []);
-      setLoading(false);
-    };
-
-    fetchThreads();
-  }, [space]);
-
-  if (!space) return null;
+    if (space?.id) {
+        fetchThreads(space.id);
+    }
+  }, [space, fetchThreads]); // Re-fetch whenever the space object changes
 
   if (loading) {
-    return <div className="p-2 space-y-2"><Skeleton className="h-8 w-full" /><Skeleton className="h-8 w-full" /></div>;
+    return (
+      <div className="p-4 space-y-4">
+        <Skeleton className="h-16 w-full" />
+        <Skeleton className="h-16 w-full" />
+      </div>
+    );
   }
 
   return (
-    <div className="p-2">
-      <h2 className="font-bold text-lg p-2">{space.name}</h2>
-      <div className="flex flex-col gap-1">
-        {threads.map((thread) => (
-          <button
-            key={thread.id}
-            onClick={() => onSelectThread(thread.id!)}
-            className={`p-2 rounded-md text-left hover:bg-muted ${activeThreadId === thread.id ? 'bg-muted' : ''}`}
-          >
-            <p className="font-semibold">{thread.title}</p>
-            <p className="text-xs text-muted-foreground">
-              {thread.message_count} messages
-            </p>
-          </button>
-        ))}
+    <div className="space-y-4">
+      <h2 className="text-2xl font-semibold flex items-center gap-2">
+        <Hash className="h-6 w-6" />
+        {space.name} Threads
+      </h2>
+      <div className="flex flex-col gap-3">
+        {threads.length > 0 ? (
+          threads.map((thread) => (
+            <Link to={user ? `/community/thread/${thread.id}` : '/login'} key={thread.id}>
+              <Card className="transition-all duration-300 hover:shadow-md cursor-pointer">
+                <CardContent className="p-4 flex justify-between items-center">
+                  <div>
+                    <p className="font-semibold text-base">{thread.title}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Started by {thread.creator_email}
+                    </p>
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    {thread.message_count} messages
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+          ))
+        ) : (
+          <Card className="p-6 text-center text-muted-foreground">
+            <p>No threads in this space yet.</p>
+            {canCreateThread && (
+                <Button variant="link" onClick={() => navigate('/community/create-thread')} className="mt-2">
+                    Start the first discussion!
+                </Button>
+            )}
+          </Card>
+        )}
       </div>
     </div>
   );
