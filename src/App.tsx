@@ -1,5 +1,4 @@
-// src/App.tsx
-
+//src/App.tsx
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -8,6 +7,10 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import AuthGuard from "@/components/AuthGuard";
 import OnboardingGuard from "@/components/OnboardingGuard";
+
+// --- NEW CRITICAL IMPORT ---
+import { CommunityProvider } from "./context/CommunityContext"; 
+
 // page imports
 import Index from "./pages/Index";
 import Jobs from "./pages/Jobs";
@@ -43,51 +46,53 @@ const App = () => {
           <AuthProvider>
             <Toaster />
             <Sonner />
-        
-            <Routes>
-              {/* --- Core App Routes --- */}
-              <Route path="/" element={<Index />} />
-              <Route path="/please-verify" element={<PleaseVerify />} />
-              <Route path="/simple-test" element={<SimpleRegisterTest />} />
-              <Route path="/jobs" element={<Jobs />} />
-              <Route path="/networking" element={<Networking />} />
-              <Route path="/partnerships" element={<Partnerships />} />
-              <Route path="/community" element={<Forums />} />
-
-              {/* --- Public Routes (AuthGuard redirects if logged in) --- */}
-              <Route element={<AuthGuard requireAuth={false} />}>
-                <Route path="/register" element={<Register />} />
-                <Route path="/login" element={<Login />} />
-              </Route>
-
-              {/* --- Protected Routes (AuthGuard redirects if NOT logged in) --- */}
-              <Route element={<AuthGuard />}>
-                <Route path="/complete-profile" element={<CompleteProfile />} />
-                <Route path="/profile/:userId" element={<ProfilePage />} />
-
-                {/* --- CORRECTED & SIMPLIFIED ROUTES --- */}
-                {/* These are already protected by the parent AuthGuard, so no inner wrapper is needed. */}
-                <Route path="/feedback" element={<Feedback />} />
-                <Route path="/social" element={<Social />} />
-                <Route path="/inbox" element={<Inbox />} />
-                <Route path="/notifications" element={<Notifications />} />
-                <Route path="/payment" element={<PaymentPage />} />
-
-                {/* Community Actions */}
-                <Route path="/community/create-thread" element={<CreateThread />} />
-                <Route path="/community/space/:spaceId" element={<SpaceDetailPage />} />
-                <Route path="/community/thread/:threadId" element={<ThreadDetailPage />} />
+            
+            {/* The CommunityProvider wraps routes that use useCommunity hook */}
+            <CommunityProvider>
+              <Routes>
+                {/* --- Core App Routes (Index and Public) --- */}
+                <Route path="/" element={<Index />} />
+                <Route path="/please-verify" element={<PleaseVerify />} />
+                <Route path="/simple-test" element={<SimpleRegisterTest />} />
+                <Route path="/jobs" element={<Jobs />} />
+                <Route path="/networking" element={<Networking />} />
+                <Route path="/partnerships" element={<Partnerships />} />
                 
-                {/* Routes that ALSO require the user to be fully onboarded */}
-                <Route element={<OnboardingGuard />}>
-                  <Route path="/profile" element={<ProfilePage />} />
-                  {/* You can add other routes here that need onboarding */}
+                {/* NOTE: Forums is the discovery page, it must be inside the provider */}
+                <Route path="/community" element={<Forums />} /> 
+
+                {/* --- Public Routes (AuthGuard redirects if logged in) --- */}
+                <Route element={<AuthGuard requireAuth={false} />}>
+                  <Route path="/register" element={<Register />} />
+                  <Route path="/login" element={<Login />} />
                 </Route>
-              </Route>
-              
-              {/* CATCH-ALL "*" ROUTE - MUST BE LAST */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+
+                {/* --- Protected Routes (AuthGuard redirects if NOT logged in) --- */}
+                <Route element={<AuthGuard />}>
+                  <Route path="/complete-profile" element={<CompleteProfile />} />
+                  <Route path="/profile/:userId" element={<ProfilePage />} />
+
+                  <Route path="/feedback" element={<Feedback />} />
+                  <Route path="/social" element={<Social />} />
+                  <Route path="/inbox" element={<Inbox />} />
+                  <Route path="/notifications" element={<Notifications />} />
+                  <Route path="/payment" element={<PaymentPage />} />
+
+                  {/* Community Protected Routes */}
+                  <Route path="/community/create-thread" element={<CreateThread />} />
+                  <Route path="/community/space/:spaceId" element={<SpaceDetailPage />} />
+                  <Route path="/community/thread/:threadId" element={<ThreadDetailPage />} />
+                  
+                  {/* Routes that ALSO require the user to be fully onboarded */}
+                  <Route element={<OnboardingGuard />}>
+                    <Route path="/profile" element={<ProfilePage />} />
+                  </Route>
+                </Route>
+                
+                {/* CATCH-ALL "*" ROUTE - MUST BE LAST */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </CommunityProvider>
           </AuthProvider>
         </BrowserRouter>
       </TooltipProvider>
