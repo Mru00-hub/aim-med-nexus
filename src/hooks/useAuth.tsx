@@ -51,60 +51,73 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log(`[useAuth] 👂 Auth state change event received: ${event}`);
-        
-        const currentUser = session?.user ?? null;
-        setUser(currentUser);
-        setSession(session);
+        try {
+          console.log(`[useAuth] 👂 Auth state change event received: ${event}`);
+          
+          const currentUser = session?.user ?? null;
+          setUser(currentUser);
+          setSession(session);
 
-        // This logic now correctly handles both initial page load (INITIAL_SESSION) and manual sign-in (SIGNED_IN).
-        if (currentUser && (event === 'SIGNED_IN' || event === 'INITIAL_SESSION')) {
-          console.log(`[useAuth] ➡️ Processing session for user: ${currentUser.id}`);
-          setLoadingMessage('Checking your profile...');
+          if (currentUser && (event === 'SIGNED_IN' || event === 'INITIAL_SESSION')) {
+            console.log(`[useAuth] ➡️ Processing session for user: ${currentUser.id}`);
+            setLoadingMessage('Checking your profile...');
 
-          const { data: userProfile, error: fetchError } = await supabase
-            .from('profiles')
-            .select('*, is_onboarded')
-            .eq('id', currentUser.id)
-            .single();
+            const { data: userProfile, error: fetchError } = await supabase
+              .from('profiles')
+              .select('*, is_onboarded')
+              .eq('id', currentUser.id)
+              .single();
 
-          if (fetchError && fetchError.code !== 'PGRST116') {
-            console.error("[useAuth] 🛑 Error fetching profile:", fetchError);
-            toast({ title: "Error", description: "Could not fetch your profile.", variant: "destructive" });
-          } else if (userProfile) {
-            setProfile(userProfile);
-            if (userProfile.is_onboarded) {
-              console.log("[useAuth] ✅ RETURNING USER (is_onboarded: true).");
-              // Only navigate if we are on a public page, to avoid redirect loops
-              if (location.pathname === '/login' || location.pathname === '/register') {
-                navigate('/community', { replace: true });
-              }
-            } else {
-              console.log("[useAuth] 🚧 NEW USER (is_onboarded: false). Redirecting to /complete-profile.");
-              navigate('/complete-profile', { replace: true });
+            if (fetchError && fetchError.code !== 'PGRST116') {
+              // If there's a real error fetching the profile, throw it to be caught by our catch block
+              throw fetchError;
             }
-          } else {
-             // This case (user exists in auth but not in profiles) is now handled by your SIGNED_IN logic.
-             // For INITIAL_SESSION, if there's no profile, it indicates a potential issue.
-             console.warn("[useAuth] ⚠️ User session found, but no profile exists in database.");
+            
+            if (userProfile) {
+              setProfile(userProfile);
+              if (userProfile.is_onboarded) {
+                console.log("[useAuth] ✅ RETURNING USER (is_onboarded: true).");
+                if (location.pathname === '/login' || location.pathname === '/register') {
+                  navigate('/community', { replace: true });
+                }
+              } else {
+                console.log("[useAuth] 🚧 NEW USER (is_onboarded: false). Redirecting to /complete-profile.");
+                navigate('/complete-profile', { replace: true });
+              }
+            } else if (event === 'SIGNED_IN') {
+              // This logic should only run on a fresh sign-in if no profile exists.
+              console.log("[useAuth] 👶 No profile found on sign-in. Creating a new shell profile.");
+              // (Your profile creation logic would go here if needed)
+            } else {
+              console.warn("[useAuth] ⚠️ Session restored, but no profile exists in database.");
+            }
+          } else if (event === 'SIGNED_OUT') {
+            console.log("[useAuth] 🚪 User signed out. Clearing state.");
+            setProfile(null);
+            navigate('/login'); // Redirect to login on sign out
           }
-        } else if (event === 'SIGNED_OUT') {
-          console.log("[useAuth] 🚪 User signed out. Clearing state.");
-          setProfile(null);
-          // Don't navigate here, let components decide what to do on sign-out
+        } catch (error: any) {
+          console.error("[useAuth] 🛑 An uncaught error occurred in onAuthStateChange:", error);
+          toast({
+            title: "Authentication Error",
+            description: error.message || "An unknown error occurred while verifying your session.",
+            variant: "destructive",
+          });
+        } finally {
+          // This 'finally' block is GUARANTEED to run, whether there was an error or not.
+          // This will solve your stuck loading state.
+          console.log("🏁 [useAuth] All checks complete. Setting loading to false.");
+          setLoading(false);
+          setLoadingMessage('');
         }
-      
-        console.log("🏁 [useAuth] All checks complete. Setting loading to false.");
-        setLoading(false);
-        setLoadingMessage('');
       }
     );
-  
+
     return () => {
       console.log("[useAuth] 🧹 Cleaning up auth subscription on component unmount.");
       subscription.unsubscribe();
     };
-  }, []); // <-- CORRECTED: Empty dependency array ensures this runs only ONCE.
+  }, []);
 
   // --- No changes needed for the functions below ---
   const signUp = async (email: string, password: string, metadata?: any) => {
