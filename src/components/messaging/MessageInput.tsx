@@ -1,3 +1,4 @@
+import { useAuth } from '@/hooks/useAuth';
 import React, { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -36,6 +37,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
     onCancelReply,
     refetchMessages
 }) => {
+  const { profile } = useAuth();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -164,7 +166,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
             
             <Button 
                 onClick={handleSend} 
-                disabled={isSending || (body.trim() === '' && attachedFiles.length === 0)}
+                disabled={!profile || isSending || (body.trim() === '' && attachedFiles.length === 0)}
                 className="self-end h-10 w-10 p-2"
                 size="icon"
             >
