@@ -33,7 +33,6 @@ export const Message: React.FC<MessageProps> = ({
     onReaction,
     replyTo
 }) => {
-    const { toast } = useToast();
     const [isEditing, setIsEditing] = useState(false);
     const [editedBody, setEditedBody] = useState(message.body);
     const [showPicker, setShowPicker] = useState(false);
