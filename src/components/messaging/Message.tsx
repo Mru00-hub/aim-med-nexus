@@ -44,7 +44,8 @@ interface MessageProps {
     currentUserId: string; // Passed down from ThreadView for faster comparison
     isReply?: boolean; // For styling nested replies
     refetchMessages: () => Promise<void>; // To refresh the parent view after CRUD operations
-    onReplyClick: (message: MessageWithDetails) => void; // To set the input field to reply mode
+    onReplyClick: (message: MessageWithDetails) => void;
+    onDelete: (messageId: number) => void;// To set the input field to reply mode
 }
 
 export const Message: React.FC<MessageProps> = ({ 
@@ -52,7 +53,8 @@ export const Message: React.FC<MessageProps> = ({
     currentUserId, 
     isReply = false, 
     refetchMessages, 
-    onReplyClick 
+    onReplyClick,
+    onDelete
 }) => {
     const { user } = useAuth();
     const { toast } = useToast();
@@ -65,6 +67,28 @@ export const Message: React.FC<MessageProps> = ({
     const avatarUrl = message.author?.profile_picture_url;
     // NOTE: This should come from CommunityContext, assuming user has 'ADMIN' or 'MODERATOR' role in the parent space.
     const canModerate = false; 
+
+    const handleDelete = () => {
+        if (!window.confirm("Are you sure you want to delete this message?")) return;
+        // Just call the parent's delete handler. The parent will handle the UI and API call.
+        onDelete(message.id);
+    };
+
+    const handleEditSave = async () => {
+        if (editedBody.trim() && editedBody !== message.body) {
+            try {
+                await editMessage(message.id, editedBody);
+                toast({ title: 'Updated', description: 'Message edited successfully.' });
+                await refetchMessages(); // Refetch after edit
+            } catch (error: any) {
+                toast({ variant: 'destructive', title: 'Edit Failed', description: error.message });
+            } finally {
+                setIsEditing(false);
+            }
+        } else {
+            setIsEditing(false); // Cancel if no changes were made
+        }
+    };
     
     // Group and count reactions
     const reactionCounts = useMemo(() => {
