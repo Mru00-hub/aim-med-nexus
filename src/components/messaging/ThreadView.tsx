@@ -9,6 +9,9 @@ import {
   postMessage, 
   getMessagesWithDetails,
   deleteMessage,
+  editMessage,
+  addReaction,
+  removeReaction,
   MessageWithDetails,
 } from '@/integrations/supabase/community.api'; 
 
@@ -51,6 +54,37 @@ const useThreadData = (threadId: string, currentUserId: string | undefined) => {
       }
     }, [threadId, toast]);
 
+    const handleSendMessage = useCallback(async (body: string, parentMessageId: number | null = null) => {
+        if (!currentUserId) return;
+        
+        // Create a temporary message to display instantly
+        const tempId = Date.now();
+        const optimisticMessage: MessageWithDetails = {
+            id: tempId,
+            thread_id: threadId,
+            user_id: currentUserId,
+            body,
+            parent_message_id: parentMessageId,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            is_edited: false,
+            author: null, // We'll fetch the real author later
+            reactions: [],
+            attachments: [],
+        };
+        setMessages(current => [...current, optimisticMessage]);
+        setReplyingTo(null);
+        
+        try {
+            await postMessage(threadId, body, parentMessageId);
+            // After success, refetch to get the real message from the DB
+            await fetchAndSyncMessages();
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: 'Send Failed', description: error.message });
+            setMessages(current => current.filter(m => m.id !== tempId)); // Revert on failure
+        }
+    }, [currentUserId, threadId, fetchAndSyncMessages, toast]);
+    
     const handleDeleteMessage = useCallback(async (messageId: number) => {
         const previousMessages = messages;
         setMessages(currentMessages => currentMessages.filter(m => m.id !== messageId));
@@ -62,6 +96,50 @@ const useThreadData = (threadId: string, currentUserId: string | undefined) => {
             setMessages(previousMessages); // Revert UI on failure
         }
     }, [messages, toast]);
+
+    const handleEditMessage = useCallback(async (messageId: number, newBody: string) => {
+        const previousMessages = messages;
+        setMessages(current => current.map(m => m.id === messageId ? { ...m, body: newBody, is_edited: true } : m));
+        try {
+            await editMessage(messageId, newBody);
+            toast({ title: 'Updated', description: 'Message edited successfully.' });
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: 'Edit Failed', description: error.message });
+            setMessages(previousMessages);
+        }
+    }, [messages, toast]);
+
+    const handleReaction = useCallback(async (messageId: number, emoji: string) => {
+        if (!currentUserId) return;
+        const previousMessages = messages;
+        
+        setMessages(current => current.map(msg => {
+            if (msg.id === messageId) {
+                const existingReactionIndex = msg.reactions.findIndex(r => r.user_id === currentUserId && r.reaction_emoji === emoji);
+                if (existingReactionIndex > -1) {
+                    // Remove reaction
+                    return { ...msg, reactions: msg.reactions.filter((_, i) => i !== existingReactionIndex) };
+                } else {
+                    // Add reaction
+                    const newReaction = { id: `temp-${Date.now()}`, message_id: messageId, user_id: currentUserId, reaction_emoji: emoji, created_at: new Date().toISOString() };
+                    return { ...msg, reactions: [...msg.reactions, newReaction] };
+                }
+            }
+            return msg;
+        }));
+
+        try {
+            const existing = previousMessages.find(m => m.id === messageId)?.reactions.find(r => r.user_id === currentUserId && r.reaction_emoji === emoji);
+            if (existing) {
+                await removeReaction(messageId, emoji);
+            } else {
+                await addReaction(messageId, emoji);
+            }
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: 'Reaction Failed', description: error.message });
+            setMessages(previousMessages); // Revert on failure
+        }
+    }, [messages, currentUserId, toast]);
   
     useEffect(() => { fetchAndSyncMessages(); }, [fetchAndSyncMessages]);
 
@@ -104,7 +182,9 @@ const useThreadData = (threadId: string, currentUserId: string | undefined) => {
         refetchMessages: fetchAndSyncMessages,
         replyingTo,
         setReplyingTo,
-        handleDeleteMessage 
+        handleDeleteMessage,
+        handleEditMessage,
+        handleReaction
     };
 };
 
@@ -121,7 +201,9 @@ export const ThreadView: React.FC<ThreadViewProps> = ({ threadId }) => {
     refetchMessages, 
     replyingTo, 
     setReplyingTo, 
-    handleDeleteMessage 
+    handleDeleteMessage,
+    handleEditMessage,
+    handleReaction
   } = useThreadData(threadId, user?.id);
   
   const scrollViewportRef = useRef<HTMLDivElement>(null);
