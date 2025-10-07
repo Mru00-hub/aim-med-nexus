@@ -45,79 +45,60 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
-    console.log("[useAuth] ✅ useEffect initialized. Setting up auth listener.");
-    setLoading(true);
-    setLoadingMessage('Initializing session...');
-    
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        try {
-          console.log(`[useAuth] 👂 Auth state change event received: ${event}`);
+    // 1. Define an async function to proactively fetch session and profile.
+    const initializeSession = async () => {
+      try {
+        setLoading(true);
+        
+        // Step A: Actively get the current session.
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError) throw sessionError;
+
+        if (session) {
+          // Step B: If a session exists, actively fetch the corresponding profile.
+          const { data: userProfile, error: profileError } = await supabase
+            .from('profiles')
+            .select('*, is_onboarded')
+            .eq('id', session.user.id)
+            .single();
           
-          const currentUser = session?.user ?? null;
-          setUser(currentUser);
+          if (profileError && profileError.code !== 'PGRST116') throw profileError;
+          
+          setUser(session.user);
           setSession(session);
+          setProfile(userProfile);
 
-          if (currentUser && (event === 'SIGNED_IN' || event === 'INITIAL_SESSION')) {
-            console.log(`[useAuth] ➡️ Processing session for user: ${currentUser.id}`);
-            setLoadingMessage('Checking your profile...');
-
-            const { data: userProfile, error: fetchError } = await supabase
-              .from('profiles')
-              .select('*, is_onboarded')
-              .eq('id', currentUser.id)
-              .single();
-
-            if (fetchError && fetchError.code !== 'PGRST116') {
-              // If there's a real error fetching the profile, throw it to be caught by our catch block
-              throw fetchError;
-            }
-            
-            if (userProfile) {
-              setProfile(userProfile);
-              if (userProfile.is_onboarded) {
-                console.log("[useAuth] ✅ RETURNING USER (is_onboarded: true).");
-                if (location.pathname === '/login' || location.pathname === '/register') {
-                  navigate('/community', { replace: true });
-                }
-              } else {
-                console.log("[useAuth] 🚧 NEW USER (is_onboarded: false). Redirecting to /complete-profile.");
-                navigate('/complete-profile', { replace: true });
-              }
-            } else if (event === 'SIGNED_IN') {
-              // This logic should only run on a fresh sign-in if no profile exists.
-              console.log("[useAuth] 👶 No profile found on sign-in. Creating a new shell profile.");
-              // (Your profile creation logic would go here if needed)
-            } else {
-              console.warn("[useAuth] ⚠️ Session restored, but no profile exists in database.");
-            }
-          } else if (event === 'SIGNED_OUT') {
-            console.log("[useAuth] 🚪 User signed out. Clearing state.");
-            setProfile(null);
-            navigate('/login'); // Redirect to login on sign out
-          }
-        } catch (error: any) {
-          console.error("[useAuth] 🛑 An uncaught error occurred in onAuthStateChange:", error);
-          toast({
-            title: "Authentication Error",
-            description: error.message || "An unknown error occurred while verifying your session.",
-            variant: "destructive",
-          });
-        } finally {
-          // This 'finally' block is GUARANTEED to run, whether there was an error or not.
-          // This will solve your stuck loading state.
-          console.log("🏁 [useAuth] All checks complete. Setting loading to false.");
-          setLoading(false);
-          setLoadingMessage('');
+        } else {
+          // No session found.
+          setUser(null);
+          setSession(null);
+          setProfile(null);
         }
+      } catch (error: any) {
+        console.error("Error during session initialization:", error);
+        toast({ title: "Error", description: "Could not restore your session.", variant: "destructive" });
+      } finally {
+        // Step C: GUARANTEE that loading is set to false.
+        setLoading(false);
+      }
+    };
+
+    // 2. Call the initialization function on first mount.
+    initializeSession();
+
+    // 3. Set up the listener for SUBSEQUENT auth changes (sign in, sign out).
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        // When user signs in or out, re-run the whole initialization process.
+        // This keeps the logic consistent.
+        initializeSession();
       }
     );
 
     return () => {
-      console.log("[useAuth] 🧹 Cleaning up auth subscription on component unmount.");
       subscription.unsubscribe();
     };
-  }, []);
+  }, []); // Empty array ensures this runs only once on mount.
 
   // --- No changes needed for the functions below ---
   const signUp = async (email: string, password: string, metadata?: any) => {
