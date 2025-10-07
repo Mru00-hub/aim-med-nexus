@@ -5,9 +5,10 @@ import { Loader2 } from 'lucide-react';
 
 interface AuthGuardProps {
   requireAuth?: boolean;
+  children?: React.ReactNode; // CHANGE #1: Added optional children prop
 }
 
-const AuthGuard: React.FC<AuthGuardProps> = ({ requireAuth = true }) => {
+const AuthGuard: React.FC<AuthGuardProps> = ({ requireAuth = true, children }) => {
   const { user, loading, loadingMessage } = useAuth();
   const location = useLocation();
 
@@ -41,9 +42,9 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ requireAuth = true }) => {
   }
 
   // 4. If none of the above conditions are met, access is granted.
-  //    The <Outlet /> component renders the appropriate nested child route
-  //    (e.g., <Register />, <Feedback />, etc.).
-  return <Outlet />;
+  //    Render children if they exist (wrapper mode), otherwise render Outlet (layout mode).
+  // CHANGE #2: The final return statement is updated
+  return children ? <>{children}</> : <Outlet />;
 };
 
 export default AuthGuard;
