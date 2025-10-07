@@ -70,7 +70,7 @@ const useThreadData = (threadId: string, currentUserId: string | undefined) => {
         const channel = supabase
             .channel(`thread_chat_${threadId}`)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'messages', filter: `thread_id=eq.${threadId}` }, handleRealtimeEvent)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'message_reactions', filter: `thread_id=eq.${threadId}` }, handleRealtimeEvent)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'message_reactions' }, handleRealtimeEvent)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'message_attachments', filter: `thread_id=eq.${threadId}` }, handleRealtimeEvent)
             .subscribe();
 
