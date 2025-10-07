@@ -172,49 +172,50 @@ export const ThreadView: React.FC<ThreadViewProps> = ({ threadId }) => {
       </CardHeader>
 
       <div className="flex-1 overflow-y-hidden">
-        <ScrollArea className="h-full">
-          <div className="p-4" ref={scrollViewportRef}>
-          {isLoading ? (
-            <div className="space-y-4">
-              <Skeleton className="h-16 w-3/4" />
-              <Skeleton className="h-16 w-2/3 ml-auto" />
-              <Skeleton className="h-16 w-3/4" />
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {threadedMessages.length === 0 ? (
-                <div className="text-center py-10 text-muted-foreground">No messages yet. Start the conversation!</div>
-              ) : (
-                threadedMessages.map((msg) => (
-                    <div key={msg.id} className="space-y-2">
-                        {/* Render the parent message */}
-                        <Message 
-                            message={msg} 
-                            currentUserId={user?.id || ''}
-                            refetchMessages={refetchMessages}
-                            onReplyClick={handleReplyClick} // Pass the reply handler
-                        />
-                        
-                        {/* Render replies, indented */}
-                        {msg.replies.length > 0 && (
-                            <div className="ml-6 sm:ml-10 border-l pl-4 space-y-2">
-                                {msg.replies.map(reply => (
-                                    <Message 
-                                        key={reply.id} 
-                                        message={reply} 
-                                        currentUserId={user?.id || ''}
-                                        isReply={true} 
-                                        refetchMessages={refetchMessages}
-                                        onReplyClick={handleReplyClick} // Pass the reply handler
-                                    />
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                ))
-              )}
-            </div>
-          )}
+        <ScrollArea className="h-full" viewportRef={scrollViewportRef}>
+          <div className="p-4">
+            {isLoading ? (
+              <div className="space-y-4">
+                <Skeleton className="h-16 w-3/4" />
+                <Skeleton className="h-16 w-2/3 ml-auto" />
+                <Skeleton className="h-16 w-3/4" />
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {threadedMessages.length === 0 ? (
+                  <div className="text-center py-10 text-muted-foreground">No messages yet. Start the conversation!</div>
+                ) : (
+                  threadedMessages.map((msg) => (
+                      <div key={msg.id} className="space-y-2">
+                          {/* Render the parent message */}
+                          <Message 
+                              message={msg} 
+                              currentUserId={user?.id || ''}
+                              refetchMessages={refetchMessages}
+                              onReplyClick={handleReplyClick} // Pass the reply handler
+                          />
+                          
+                          {/* Render replies, indented */}
+                          {msg.replies.length > 0 && (
+                              <div className="ml-6 sm:ml-10 border-l pl-4 space-y-2">
+                                  {msg.replies.map(reply => (
+                                      <Message 
+                                          key={reply.id} 
+                                          message={reply} 
+                                          currentUserId={user?.id || ''}
+                                          isReply={true} 
+                                          refetchMessages={refetchMessages}
+                                          onReplyClick={handleReplyClick} // Pass the reply handler
+                                      />
+                                  ))}
+                              </div>
+                          )}
+                      </div>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
         </ScrollArea>
       </div>
       
