@@ -207,13 +207,14 @@ export const createSpace = async (
 
 /** Creates a new thread. User must be logged in. */
 export const createThread = async (
-  payload: { title: string; body: string; spaceId: string | null }
+  payload: { title: string; body: string; spaceId: string | null; description?: string; }
 ): Promise<string> => {
     await getSessionOrThrow();
     const { data, error } = await supabase.rpc('create_thread', {
         p_title: payload.title,
         p_body: payload.body, 
         p_space_id: payload.spaceId,
+        p_description: payload.description,
     });
 
     if (error) throw error;
@@ -231,7 +232,15 @@ export const getThreadsForSpace = async (spaceId: string): Promise<ThreadWithDet
     if (error) throw error;
     return data;
 };
-
+export const getThreadDetails = async (threadId: string): Promise<(Thread & { spaces: { name: string } | null }) | null> => {
+    const { data, error } = await supabase
+      .from('threads')
+      .select('*, spaces (name)')
+      .eq('id', threadId)
+      .single();
+    if (error) throw error;
+    return data;
+};
 /** Fetches messages, including author profile, reactions, and attachments. */
 export const getMessagesWithDetails = async (threadId: string): Promise<MessageWithDetails[]> => {
     const { data: { session } } = await supabase.auth.getSession();
