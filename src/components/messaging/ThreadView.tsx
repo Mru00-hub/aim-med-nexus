@@ -13,6 +13,7 @@ import {
   addReaction,
   removeReaction,
   MessageWithDetails,
+  MessageReaction,
 } from '@/integrations/supabase/community.api'; 
 
 import { Message } from './Message'; 
@@ -111,33 +112,50 @@ const useThreadData = (threadId: string, currentUserId: string | undefined) => {
 
     const handleReaction = useCallback(async (messageId: number, emoji: string) => {
         if (!currentUserId) return;
+
         const previousMessages = messages;
-        
+        const targetMessage = previousMessages.find(m => m.id === messageId);
+        if (!targetMessage) return;
+
+        const existingReaction = targetMessage.reactions.find(r => r.user_id === currentUserId);
+
+        // Optimistically update the UI
         setMessages(current => current.map(msg => {
             if (msg.id === messageId) {
-                const existingReaction = msg.reactions.find(r => r.user_id === currentUserId && r.reaction_emoji === emoji);
+                let newReactions = [...msg.reactions];
                 if (existingReaction) {
-                    return { ...msg, reactions: msg.reactions.filter(r => r.id !== existingReaction.id && r.user_id !== currentUserId) };
+                    // User has an existing reaction, remove it first
+                    newReactions = newReactions.filter(r => r.user_id !== currentUserId);
+                    if (existingReaction.reaction_emoji !== emoji) {
+                        // If the new emoji is different, add it
+                        const newOptimisticReaction: MessageReaction = { id: `temp-${Date.now()}`, message_id: messageId, user_id: currentUserId, reaction_emoji: emoji, created_at: new Date().toISOString() };
+                        newReactions.push(newOptimisticReaction);
+                    }
                 } else {
-                    const newReaction: MessageReaction = { id: `temp-${Date.now()}`, message_id: messageId, user_id: currentUserId, reaction_emoji: emoji, created_at: new Date().toISOString() };
-                    return { ...msg, reactions: [...msg.reactions, newReaction] };
+                    // User has no reaction, just add the new one
+                    const newOptimisticReaction: MessageReaction = { id: `temp-${Date.now()}`, message_id: messageId, user_id: currentUserId, reaction_emoji: emoji, created_at: new Date().toISOString() };
+                    newReactions.push(newOptimisticReaction);
                 }
+                return { ...msg, reactions: newReactions };
             }
             return msg;
         }));
 
+        // Make the real API call(s) in the background
         try {
-            const existing = previousMessages.find(m => m.id === messageId)?.reactions.find(r => r.user_id === currentUserId && r.reaction_emoji === emoji);
-            if (existing) {
-                await removeReaction(messageId, emoji);
+            if (existingReaction) {
+                await removeReaction(messageId, existingReaction.reaction_emoji);
+                if (existingReaction.reaction_emoji !== emoji) {
+                    await addReaction(messageId, emoji);
+                }
             } else {
                 await addReaction(messageId, emoji);
             }
         } catch (error: any) {
             toast({ variant: 'destructive', title: 'Reaction Failed', description: error.message });
-            setMessages(previousMessages);
+            setMessages(previousMessages); // Revert UI on failure
         }
-    }, [messages, currentUserId, toast]);
+    }, [messages, currentUserId, toast]);;
   
     useEffect(() => { fetchAndSyncMessages(); }, [fetchAndSyncMessages]);
 
