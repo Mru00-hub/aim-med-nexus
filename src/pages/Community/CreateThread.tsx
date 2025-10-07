@@ -29,6 +29,7 @@ interface CreateThreadProps {
 
 export const CreateThreadForm: React.FC<CreateThreadProps> = ({ spaceId = null, onThreadCreated }) => {
   const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
   const [body, setBody] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -51,7 +52,8 @@ export const CreateThreadForm: React.FC<CreateThreadProps> = ({ spaceId = null, 
       const newThreadId = await createThread({
           title,
           body,
-          spaceId, // This is null if it's the public page, or the spaceId if it's the modal
+          spaceId,
+          description
       });
       
       toast({
@@ -102,11 +104,15 @@ export const CreateThreadForm: React.FC<CreateThreadProps> = ({ spaceId = null, 
         />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="message">Your Message</Label>
+        <Label htmlFor="description">Introduction (Optional)</Label>
+        <Textarea id="description" placeholder="Add a short intro or context for this thread." rows={3} value={description} onChange={(e) => setDescription(e.target.value)} disabled={isLoading} />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="message">Your First Message</Label>
         <Textarea
           id="message"
-          placeholder="Write your main post here."
-          rows={10}
+          placeholder="Write the opening post for the discussion."
+          rows={8}
           value={body}
           onChange={(e) => setBody(e.target.value)}
           disabled={isLoading}
