@@ -4,35 +4,37 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/use-toast';
 import { cn } from '@/lib/utils';
-import { MessageWithDetails, editMessage } from '@/integrations/supabase/community.api'; 
+import { 
+    MessageWithDetails, 
+    editMessage,
+    addReaction,
+    removeReaction,
+} from '@/integrations/supabase/community.api'; 
 import { Reply, Trash2, Pencil, Paperclip, SmilePlus } from 'lucide-react';
 
 const EmojiPicker: React.FC<{ onSelect: (emoji: string) => void }> = ({ onSelect }) => (
-    <div className="flex gap-1 p-1 bg-white border rounded-full shadow-lg">
+    <div className="flex gap-1 p-1 bg-background border rounded-full shadow-lg">
         {['👍', '❤️', '🔥', '🤔', '😂'].map(emoji => (
-            <span key={emoji} className="cursor-pointer hover:bg-gray-100 rounded-full p-1" onClick={() => onSelect(emoji)}>{emoji}</span>
+            <span key={emoji} className="cursor-pointer hover:bg-muted rounded-full p-1 transition-colors" onClick={() => onSelect(emoji)}>{emoji}</span>
         ))}
     </div>
 );
 
+// Simplified props to match what ThreadView provides
 interface MessageProps {
     message: MessageWithDetails;
     currentUserId: string;
-    onReplyClick: (message: MessageWithDetails) => void;
     onDelete: (messageId: number) => void;
-    onEdit: (messageId: number, newBody: string) => void;
+    onReplyClick: (message: MessageWithDetails) => void;
     onReaction: (messageId: number, emoji: string) => void;
-    replyTo?: { author: string; body: string; } | null;
 }
 
 export const Message: React.FC<MessageProps> = ({ 
     message, 
     currentUserId, 
-    onReplyClick,
     onDelete,
-    onEdit,
-    onReaction,
-    replyTo
+    onReplyClick,
+    onReaction 
 }) => {
     const { toast } = useToast();
     const [isEditing, setIsEditing] = useState(false);
@@ -42,6 +44,7 @@ export const Message: React.FC<MessageProps> = ({
     const isCurrentUser = message.user_id === currentUserId;
     const displayName = message.author?.full_name || 'User';
     const avatarUrl = message.author?.profile_picture_url;
+    const canModerate = false; // Placeholder for moderation logic
     
     const reactionCounts = useMemo(() => {
         return message.reactions.reduce((acc, reaction) => {
@@ -68,8 +71,8 @@ export const Message: React.FC<MessageProps> = ({
         }
         try {
             await editMessage(message.id, editedBody);
-            // The optimistic update will come from the parent via real-time subscription
             toast({ title: 'Message Updated' });
+            // The UI will update via the real-time subscription in the parent
         } catch (error: any) {
             toast({ variant: 'destructive', title: 'Edit Failed', description: error.message });
         } finally {
@@ -79,24 +82,27 @@ export const Message: React.FC<MessageProps> = ({
 
     const messageContent = isEditing ? (
         <div className="flex flex-col gap-2 w-full">
-            <Textarea value={editedBody} onChange={(e) => setEditedBody(e.g.value)} autoFocus rows={4} />
+            {/* FIX: Corrected e.g.value to e.target.value */}
+            <Textarea value={editedBody} onChange={(e) => setEditedBody(e.target.value)} autoFocus rows={4} />
             <div className="flex justify-end gap-2">
                 <Button variant="ghost" size="sm" onClick={() => setIsEditing(false)}>Cancel</Button>
                 <Button size="sm" onClick={handleEditSave}>Save</Button>
             </div>
         </div>
     ) : (
+        // FIX: Correctly closed the React Fragment
         <>
-        {message.parent_message && (
-            <div className="text-xs rounded-md p-2 border-l-2 border-current/50 bg-current/10 mb-2">
-                <p className="font-bold">{message.parent_message.author?.full_name}</p>
-                <p className="truncate opacity-80">{message.parent_message.body}</p>
-            </div>
-        )}
-        <p className="text-sm break-words whitespace-pre-wrap">{message.body} {message.is_edited && <span className="text-xs opacity-70">(edited)</span>}</p>
+            {message.parent_message && (
+                <div className="text-xs rounded-md p-2 border-l-2 border-current/50 bg-current/10 mb-2">
+                    <p className="font-bold">{message.parent_message.author?.full_name}</p>
+                    <p className="truncate opacity-80">{message.parent_message.body}</p>
+                </div>
+            )}
+            <p className="text-sm break-words whitespace-pre-wrap">{message.body} {message.is_edited && <span className="text-xs opacity-70">(edited)</span>}</p>
+        </>
     );
     
-    const messageStyle = cn("flex flex-col rounded-xl px-4 py-3 max-w-[85%] sm:max-w-lg shadow-sm", isCurrentUser ? "bg-primary text-primary-foreground" : "bg-card border");
+    const messageStyle = cn("flex flex-col rounded-xl px-4 py-3 max-w-[85%] sm:max-w-lg shadow-sm group relative", isCurrentUser ? "bg-primary text-primary-foreground" : "bg-card border");
 
     const ActionMenu = () => (
         <div className={cn(
@@ -116,7 +122,6 @@ export const Message: React.FC<MessageProps> = ({
     
     return (
         <div className={cn("flex w-full gap-3", isCurrentUser ? "justify-end" : "justify-start")}>
-            {/* Avatar for other users */}
             {!isCurrentUser && (
                 <Avatar className="h-10 w-10">
                     <AvatarImage src={avatarUrl ?? undefined} alt={displayName} />
@@ -125,15 +130,12 @@ export const Message: React.FC<MessageProps> = ({
             )}
             
             <div className={cn("flex flex-col w-full max-w-lg", isCurrentUser ? "items-end" : "items-start")}>
-                {/* Author & Timestamp */}
                 <div className="flex items-center gap-2 mb-1">
                     {!isCurrentUser && <span className="font-bold text-sm">{displayName}</span>}
                     <span className="text-xs text-muted-foreground">{new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                 </div>
 
-                {/* Main Message Bubble */}
                 <div className={messageStyle}>
-                    {/* The Action Menu (appears on hover) */}
                     <ActionMenu />
                     {showPicker && <div className="absolute top-0 z-10 -translate-y-full mb-1"><EmojiPicker onSelect={handleReaction} /></div>}
                     {messageContent}
@@ -159,7 +161,7 @@ export const Message: React.FC<MessageProps> = ({
                     </div>
                 )}
             </div>
-            {/* Avatar for the current user */}
+            
             {isCurrentUser && (
                 <Avatar className="h-10 w-10">
                     <AvatarImage src={avatarUrl ?? undefined} alt={displayName} />
@@ -168,3 +170,5 @@ export const Message: React.FC<MessageProps> = ({
             )}
         </div>
     );
+// FIX: Added the missing closing brace for the component
+};
