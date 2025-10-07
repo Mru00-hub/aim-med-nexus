@@ -140,17 +140,28 @@ export const getThreadsCountForSpace = async (spaceId: string): Promise<number> 
 export const getSpaceMemberList = async (spaceId: string): Promise<MemberProfile[]> => {
     const { data, error } = await supabase
         .from('memberships')
-        .select('role, user_id, profiles (full_name, profile_picture_url)')
+        // UPDATED: Using an explicit inner join for better performance and clarity.
+        // This tells Supabase exactly how to connect memberships to profiles.
+        .select(`
+            role,
+            user_id,
+            profiles!inner (
+                full_name,
+                profile_picture_url
+            )
+        `)
         .eq('space_id', spaceId)
         .eq('status', 'ACTIVE');
 
     if (error) throw error;
-    
+
+    // The data structure is slightly different with an explicit join, so we adjust the mapping.
     const members: MemberProfile[] = data.map(m => ({
         id: m.user_id,
         role: m.role,
-        full_name: (m.profiles as Profile | null)?.full_name || 'Anonymous User',
-        profile_picture_url: (m.profiles as Profile | null)?.profile_picture_url || null,
+        // The profile data is now nested inside a 'profiles' object.
+        full_name: m.profiles.full_name || 'Anonymous User',
+        profile_picture_url: m.profiles.profile_picture_url || null,
     }));
     
     return members;
