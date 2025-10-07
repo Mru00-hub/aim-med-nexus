@@ -124,6 +124,7 @@ export const CreateThreadForm: React.FC<CreateThreadProps> = ({ spaceId = null, 
 
 // The page component now just provides the layout and renders the form
 const CreateThreadPage = () => {
+    console.log('%c[CreateThread.tsx] Rendering...', 'color: red; font-weight: bold;');
     // Determine the header/description text based on the public space
     const isPublic = true; // This page is always for public threads
     
