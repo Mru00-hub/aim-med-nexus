@@ -237,16 +237,26 @@ export const getMessagesWithDetails = async (threadId: string): Promise<MessageW
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return MOCK_MESSAGES;
 
+    // UPDATED: This query now uses an explicit inner join and the correct alias for profiles.
     const { data, error } = await supabase
       .from('messages')
-      .select('*, author:profiles (full_name, profile_picture_url), reactions:message_reactions (*), attachments:message_attachments (*)')
+      .select(`
+        *,
+        author:profiles!inner (
+          full_name,
+          profile_picture_url
+        ),
+        reactions:message_reactions (*),
+        attachments:message_attachments (*)
+      `)
       .eq('thread_id', threadId)
       .order('created_at', { ascending: true });
 
     if (error) throw error;
+    
+    // The data mapping remains the same because we aliased profiles back to 'author'.
     return data as MessageWithDetails[];
 };
-
 
 // --- Chat Interaction ---
 
