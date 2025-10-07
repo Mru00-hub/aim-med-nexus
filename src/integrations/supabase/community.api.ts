@@ -349,11 +349,58 @@ export const removeReaction = async (messageId: number, emoji: string) => {
     return { success: true };
 };
 
-/** Placeholder: Uploads a file and links it to a message. */
-export const addAttachmentToMessage = async (messageId: number, file: File): Promise<MessageAttachment> => {
-    await getSessionOrThrow();
-    console.log(`Attachment upload placeholder: ${file.name} for message ${messageId}`);
-    return { created_at: new Date().toISOString(), file_name: file.name, file_url: '/mock/url', id: crypto.randomUUID(), message_id: messageId, uploaded_by: 'user-id', file_size_bytes: file.size, file_type: file.type || 'application/octet-stream' };
+export const uploadAttachment = async (
+  messageId: number,
+  file: File
+): Promise<MessageAttachment> => {
+  const session = await getSessionOrThrow();
+  const userId = session.user.id;
+
+  // 1. Create a unique path for the file to prevent name collisions.
+  // Example: public/user-id-abc/message-id-123/my-document.pdf
+  const filePath = `public/${userId}/${messageId}/${file.name}`;
+
+  // 2. Upload the file to the 'message_attachments' storage bucket.
+  const { error: uploadError } = await supabase.storage
+    .from('message_attachments')
+    .upload(filePath, file);
+
+  if (uploadError) {
+    console.error("Storage upload error:", uploadError);
+    throw new Error(`Failed to upload file: ${uploadError.message}`);
+  }
+
+  // 3. Get the public URL of the file you just uploaded.
+  const { data: { publicUrl } } = supabase.storage
+    .from('message_attachments')
+    .getPublicUrl(filePath);
+
+  if (!publicUrl) {
+    throw new Error("Could not get public URL for the uploaded file.");
+  }
+
+  // 4. Create a record in the 'message_attachments' database table.
+  const attachmentRecord = {
+    message_id: messageId,
+    uploaded_by: userId,
+    file_name: file.name,
+    file_url: publicUrl,
+    file_type: file.type,
+    file_size_bytes: file.size,
+  };
+
+  const { data: newAttachment, error: insertError } = await supabase
+    .from('message_attachments')
+    .insert(attachmentRecord)
+    .select()
+    .single();
+
+  if (insertError) {
+    console.error("Attachment insert error:", insertError);
+    throw new Error(`Failed to link attachment to message: ${insertError.message}`);
+  }
+
+  return newAttachment;
 };
 
 // --- Membership Management ---
