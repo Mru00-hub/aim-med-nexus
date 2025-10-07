@@ -9,7 +9,9 @@ import {
     MessageWithDetails, 
     MessageReaction, 
     addReaction, 
-    removeReaction 
+    removeReaction,
+    deleteMessage, 
+    editMessage
 } from '@/integrations/supabase/community.api'; 
 import { UserProfileCard } from '@/components/ui/UserProfileCard';
 import { Reply, Trash2, Pencil, Paperclip } from 'lucide-react';
