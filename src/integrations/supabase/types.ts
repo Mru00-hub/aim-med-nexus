@@ -7,53 +7,33 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "13.0.5"
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
   public: {
     Tables: {
-      spaces: {
-        Row: {
-          id: string // UUID
-          creator_id: string // Links to profiles(id)
-          name: string
-          space_type: Database["public"]["Enums"]["space_type"] // CRITICAL
-          join_level: Database["public"]["Enums"]["join_level"] // OPEN or INVITE_ONLY
-          created_at: string
-          // Add other relevant columns like 'description' if applicable
-        }
-        Insert: { /* ... */ }
-        Update: { /* ... */ }
-        Relationships: [
-          // Foreign Key to Profiles table for creator_id
-        ]
-      }
-      community_spaces: {
-        Row: {
-          created_at: string
-          creator_id: string | null
-          description: string | null
-          id: string
-          name: string
-        }
-        Insert: {
-          created_at?: string
-          creator_id?: string | null
-          description?: string | null
-          id?: string
-          name: string
-        }
-        Update: {
-          created_at?: string
-          creator_id?: string | null
-          description?: string | null
-          id?: string
-          name?: string
-        }
-        Relationships: []
-      }
       courses_programs: {
         Row: {
           created_at: string | null
@@ -108,33 +88,6 @@ export type Database = {
           title?: string
           type?: string
           user_id?: string | null
-        }
-        Relationships: []
-      }
-      forums: {
-        Row: {
-          created_at: string
-          creator_id: string | null
-          description: string | null
-          id: string
-          name: string
-          type: Database["public"]["Enums"]["forum_type"]
-        }
-        Insert: {
-          created_at?: string
-          creator_id?: string | null
-          description?: string | null
-          id?: string
-          name: string
-          type?: Database["public"]["Enums"]["forum_type"]
-        }
-        Update: {
-          created_at?: string
-          creator_id?: string | null
-          description?: string | null
-          id?: string
-          name?: string
-          type?: Database["public"]["Enums"]["forum_type"]
         }
         Relationships: []
       }
@@ -345,7 +298,6 @@ export type Database = {
           id: string
           role: Database["public"]["Enums"]["membership_role"]
           space_id: string
-          space_type: Database["public"]["Enums"]["space_type"]
           status: Database["public"]["Enums"]["membership_status"]
           updated_at: string
           user_id: string
@@ -355,7 +307,6 @@ export type Database = {
           id?: string
           role?: Database["public"]["Enums"]["membership_role"]
           space_id: string
-          space_type: Database["public"]["Enums"]["space_type"]
           status?: Database["public"]["Enums"]["membership_status"]
           updated_at?: string
           user_id: string
@@ -365,12 +316,19 @@ export type Database = {
           id?: string
           role?: Database["public"]["Enums"]["membership_role"]
           space_id?: string
-          space_type?: Database["public"]["Enums"]["space_type"]
           status?: Database["public"]["Enums"]["membership_status"]
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "memberships_space_id_fkey"
+            columns: ["space_id"]
+            isOneToOne: false
+            referencedRelation: "spaces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       message_attachments: {
         Row: {
@@ -382,6 +340,7 @@ export type Database = {
           id: string
           message_id: number
           uploaded_by: string | null
+          user_id: string | null
         }
         Insert: {
           created_at?: string
@@ -392,6 +351,7 @@ export type Database = {
           id?: string
           message_id: number
           uploaded_by?: string | null
+          user_id?: string | null
         }
         Update: {
           created_at?: string
@@ -402,6 +362,7 @@ export type Database = {
           id?: string
           message_id?: number
           uploaded_by?: string | null
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -409,6 +370,20 @@ export type Database = {
             columns: ["message_id"]
             isOneToOne: false
             referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_attachments_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_attachments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -451,30 +426,30 @@ export type Database = {
           created_at: string
           id: number
           is_edited: boolean
+          parent_message_id: number | null
           thread_id: string
           updated_at: string
           user_id: string
-          parent_message_id: number | null
         }
         Insert: {
           body: string
           created_at?: string
           id?: never
           is_edited?: boolean
+          parent_message_id?: number | null
           thread_id: string
           updated_at?: string
           user_id: string
-          parent_message_id?: number | null
         }
         Update: {
           body?: string
           created_at?: string
           id?: never
           is_edited?: boolean
+          parent_message_id?: number | null
           thread_id?: string
           updated_at?: string
           user_id?: string
-          parent_message_id?: number | null
         }
         Relationships: [
           {
@@ -674,53 +649,124 @@ export type Database = {
       profiles: {
         Row: {
           bio: string | null
+          course: string | null
           created_at: string | null
           current_location: string | null
+          current_position: string | null
           email: string
-          full_name: string
+          full_name: string | null
           id: string
+          institution: string | null
+          is_onboarded: boolean | null
           is_verified: boolean | null
+          medical_license: string | null
+          organization: string | null
           phone: string | null
           profile_picture_url: string | null
+          resume_url: string | null
+          skills: string[] | null
+          specialization: string | null
           updated_at: string | null
           user_role: Database["public"]["Enums"]["user_role"] | null
+          work_experience: Json | null
+          year_of_study: string | null
           years_experience:
             | Database["public"]["Enums"]["experience_level"]
             | null
         }
         Insert: {
           bio?: string | null
+          course?: string | null
           created_at?: string | null
           current_location?: string | null
+          current_position?: string | null
           email: string
-          full_name: string
+          full_name?: string | null
           id?: string
+          institution?: string | null
+          is_onboarded?: boolean | null
           is_verified?: boolean | null
+          medical_license?: string | null
+          organization?: string | null
           phone?: string | null
           profile_picture_url?: string | null
+          resume_url?: string | null
+          skills?: string[] | null
+          specialization?: string | null
           updated_at?: string | null
           user_role?: Database["public"]["Enums"]["user_role"] | null
+          work_experience?: Json | null
+          year_of_study?: string | null
           years_experience?:
             | Database["public"]["Enums"]["experience_level"]
             | null
         }
         Update: {
           bio?: string | null
+          course?: string | null
           created_at?: string | null
           current_location?: string | null
+          current_position?: string | null
           email?: string
-          full_name?: string
+          full_name?: string | null
           id?: string
+          institution?: string | null
+          is_onboarded?: boolean | null
           is_verified?: boolean | null
+          medical_license?: string | null
+          organization?: string | null
           phone?: string | null
           profile_picture_url?: string | null
+          resume_url?: string | null
+          skills?: string[] | null
+          specialization?: string | null
           updated_at?: string | null
           user_role?: Database["public"]["Enums"]["user_role"] | null
+          work_experience?: Json | null
+          year_of_study?: string | null
           years_experience?:
             | Database["public"]["Enums"]["experience_level"]
             | null
         }
         Relationships: []
+      }
+      spaces: {
+        Row: {
+          created_at: string
+          creator_id: string | null
+          description: string | null
+          id: string
+          join_level: Database["public"]["Enums"]["space_join_level"] | null
+          name: string
+          space_type: Database["public"]["Enums"]["space_type"]
+        }
+        Insert: {
+          created_at?: string
+          creator_id?: string | null
+          description?: string | null
+          id?: string
+          join_level?: Database["public"]["Enums"]["space_join_level"] | null
+          name: string
+          space_type: Database["public"]["Enums"]["space_type"]
+        }
+        Update: {
+          created_at?: string
+          creator_id?: string | null
+          description?: string | null
+          id?: string
+          join_level?: Database["public"]["Enums"]["space_join_level"] | null
+          name?: string
+          space_type?: Database["public"]["Enums"]["space_type"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "spaces_creator_id_fkey"
+            columns: ["creator_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       subscription_plans: {
         Row: {
@@ -757,8 +803,9 @@ export type Database = {
           created_at: string
           creator_id: string
           id: string
+          last_activity_at: string | null
+          message_count: number
           space_id: string | null
-          space_type: Database["public"]["Enums"]["space_type"] | null
           title: string
           updated_at: string
         }
@@ -766,8 +813,9 @@ export type Database = {
           created_at?: string
           creator_id: string
           id?: string
+          last_activity_at?: string | null
+          message_count?: number
           space_id?: string | null
-          space_type?: Database["public"]["Enums"]["space_type"] | null
           title: string
           updated_at?: string
         }
@@ -775,12 +823,21 @@ export type Database = {
           created_at?: string
           creator_id?: string
           id?: string
+          last_activity_at?: string | null
+          message_count?: number
           space_id?: string | null
-          space_type?: Database["public"]["Enums"]["space_type"] | null
           title?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "threads_space_id_fkey"
+            columns: ["space_id"]
+            isOneToOne: false
+            referencedRelation: "spaces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_connections: {
         Row: {
@@ -947,39 +1004,46 @@ export type Database = {
           id: string
           is_dismissed: boolean | null
           reason: string | null
-          recommended_user_id: string | null
+          recommendee_id: string | null
+          recommender_id: string | null
           score: number | null
-          user_id: string | null
         }
         Insert: {
           created_at?: string | null
           id?: string
           is_dismissed?: boolean | null
           reason?: string | null
-          recommended_user_id?: string | null
+          recommendee_id?: string | null
+          recommender_id?: string | null
           score?: number | null
-          user_id?: string | null
         }
         Update: {
           created_at?: string | null
           id?: string
           is_dismissed?: boolean | null
           reason?: string | null
-          recommended_user_id?: string | null
+          recommendee_id?: string | null
+          recommender_id?: string | null
           score?: number | null
-          user_id?: string | null
         }
         Relationships: [
           {
             foreignKeyName: "user_recommendations_recommended_user_id_fkey"
-            columns: ["recommended_user_id"]
+            columns: ["recommender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_recommendations_recommender_id_fkey"
+            columns: ["recommender_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "user_recommendations_user_id_fkey"
-            columns: ["user_id"]
+            columns: ["recommendee_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -1044,14 +1108,7 @@ export type Database = {
         Returns: boolean
       }
       create_thread: {
-        Args:
-          | { p_body: string; p_space_id?: string; p_title: string }
-          | {
-              p_initial_message_body: string
-              p_space_id?: string
-              p_space_type?: Database["public"]["Enums"]["space_type"]
-              p_title: string
-            }
+        Args: { p_body: string; p_space_id?: string; p_title: string }
         Returns: string
       }
       create_user_connection: {
@@ -1082,6 +1139,36 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_pending_requests: {
+        Args: { p_space_id: string }
+        Returns: {
+          full_name: string
+          membership_id: string
+          profile_picture_url: string
+          requested_at: string
+          user_id: string
+        }[]
+      }
+      get_public_space_id: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      get_space_id_for_thread: {
+        Args: { thread_id_to_check: string }
+        Returns: string
+      }
+      get_threads: {
+        Args: { p_space_id?: string }
+        Returns: {
+          created_at: string
+          creator_email: string
+          creator_id: string
+          id: string
+          last_activity_at: string
+          message_count: number
+          title: string
+        }[]
+      }
       get_user_recommendations: {
         Args: { target_user_id: string }
         Returns: {
@@ -1097,43 +1184,84 @@ export type Database = {
         Args: { counter_name_param: string }
         Returns: number
       }
-      is_approved_member: {
-        Args: {
-          p_space_id: string
-          p_space_type: Database["public"]["Enums"]["space_type"]
-          p_user_id: string
-        }
+      is_space_admin_or_creator: {
+        Args: { space_id_to_check: string }
         Returns: boolean
       }
-      join_public_forum: {
-        Args: { p_space_id: string }
-        Returns: string
+      is_space_member: {
+        Args: { space_id_to_check: string }
+        Returns: boolean
       }
-      post_message: {
-        Args: { p_body: string; p_thread_id: string }
+      is_space_moderator_or_admin: {
+        Args: { space_id_to_check: string }
+        Returns: boolean
+      }
+      is_thread_creator: {
+        Args: { thread_id_to_check: string }
+        Returns: boolean
+      }
+      join_space_as_member: {
+        Args: { p_space_id: string }
+        Returns: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["membership_role"]
+          space_id: string
+          status: Database["public"]["Enums"]["membership_status"]
+          updated_at: string
+          user_id: string
+        }[]
+      }
+      post_message_with_reply: {
+        Args: {
+          p_body: string
+          p_parent_message_id?: number
+          p_thread_id: string
+        }
         Returns: {
           body: string
           created_at: string
           id: number
           is_edited: boolean
+          parent_message_id: number | null
           thread_id: string
           updated_at: string
           user_id: string
-        }
+        }[]
       }
       request_to_join_space: {
         Args: { p_space_id: string; p_space_type: string }
         Returns: string
       }
+      update_membership_status: {
+        Args: {
+          p_membership_id: string
+          p_new_status: Database["public"]["Enums"]["membership_status"]
+        }
+        Returns: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["membership_role"]
+          space_id: string
+          status: Database["public"]["Enums"]["membership_status"]
+          updated_at: string
+          user_id: string
+        }[]
+      }
     }
     Enums: {
-      experience_level: "fresh" | "1-3" | "3-5" | "5-10" | "10+"
+      experience_level:
+        | "fresh"
+        | "one_to_three"
+        | "three_to_five"
+        | "five_to_ten"
+        | "ten_plus"
       forum_type: "PUBLIC" | "PRIVATE"
       job_type: "full_time" | "part_time" | "contract" | "internship" | "locum"
-      membership_role: "MEMBER" | "MODERATOR" | "ADMIN"
-      membership_status: "PENDING" | "APPROVED" | "DENIED" | "BANNED"
-      space_type: "FORUM" | "COMMUNITY_SPACE" | "PUBLIC"
-      join_level: "OPEN" | "INVITE_ONLY"
+      membership_role: "ADMIN" | "MODERATOR" | "MEMBER"
+      membership_status: "ACTIVE" | "PENDING" | "BANNED"
+      space_join_level: "OPEN" | "INVITE_ONLY"
+      space_type: "PUBLIC" | "COMMUNITY_SPACE" | "FORUM"
       specialization:
         | "general_medicine"
         | "cardiology"
@@ -1191,7 +1319,7 @@ export type Database = {
         | "sports_medicine"
         | "plastic_surgery"
         | "other"
-      user_role: "professional" | "premium" | "deluxe"
+      user_role: "professional" | "premium" | "deluxe" | "student"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1317,14 +1445,24 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
-      experience_level: ["fresh", "1-3", "3-5", "5-10", "10+"],
+      experience_level: [
+        "fresh",
+        "one_to_three",
+        "three_to_five",
+        "five_to_ten",
+        "ten_plus",
+      ],
       forum_type: ["PUBLIC", "PRIVATE"],
       job_type: ["full_time", "part_time", "contract", "internship", "locum"],
-      membership_role: ["MEMBER", "MODERATOR", "ADMIN"],
-      membership_status: ["PENDING", "APPROVED", "DENIED", "BANNED"],
-      space_type: ["FORUM", "COMMUNITY_SPACE", "PUBLIC"],
+      membership_role: ["ADMIN", "MODERATOR", "MEMBER"],
+      membership_status: ["ACTIVE", "PENDING", "BANNED"],
+      space_join_level: ["OPEN", "INVITE_ONLY"],
+      space_type: ["PUBLIC", "COMMUNITY_SPACE", "FORUM"],
       specialization: [
         "general_medicine",
         "cardiology",
@@ -1384,7 +1522,8 @@ export const Constants = {
         "plastic_surgery",
         "other",
       ],
-      user_role: ["professional", "premium", "deluxe"],
+      user_role: ["professional", "premium", "deluxe", "student"],
     },
   },
 } as const
+
