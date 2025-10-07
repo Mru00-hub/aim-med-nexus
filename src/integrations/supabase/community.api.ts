@@ -233,11 +233,32 @@ export const getThreadsForSpace = async (spaceId: string): Promise<ThreadWithDet
     return data;
 };
 export const getThreadDetails = async (threadId: string): Promise<(Thread & { spaces: { name: string } | null }) | null> => {
+    // The query is the same, but the 'threads' table now implicitly includes creator_id
     const { data, error } = await supabase
       .from('threads')
       .select('*, spaces (name)')
       .eq('id', threadId)
       .single();
+    if (error) throw error;
+    return data;
+}
+
+export const updateThreadDetails = async (
+  threadId: string,
+  payload: { title: string; description?: string | null }
+): Promise<Thread> => {
+    await getSessionOrThrow();
+    const { data, error } = await supabase
+      .from('threads')
+      .update({
+        title: payload.title,
+        description: payload.description,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', threadId)
+      .select()
+      .single();
+      
     if (error) throw error;
     return data;
 };
