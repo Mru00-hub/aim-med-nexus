@@ -16,18 +16,6 @@ import {
 import { UserProfileCard } from '@/components/ui/UserProfileCard';
 import { Reply, Trash2, Pencil, Paperclip, SmilePlus } from 'lucide-react';
 
-// --- PLACEHOLDER API FUNCTIONS (Assume these are in community.api.ts) ---
-const deleteMessage = async (messageId: number) => {
-    // NOTE: RLS must enforce that only the creator or an Admin/Mod can delete.
-    // await supabase.from('messages').delete().eq('id', messageId);
-    return { success: true }; 
-};
-const editMessage = async (messageId: number, newBody: string) => {
-    // NOTE: RLS must enforce that only the creator can edit.
-    // await supabase.from('messages').update({ body: newBody, is_edited: true, updated_at: new Date().toISOString() }).eq('id', messageId);
-    return { success: true }; 
-};
-
 // --- PLACEHOLDER COMPONENTS (Use shadcn Popover/Dropdown in production) ---
 const EmojiPicker: React.FC<{ onSelect: (emoji: string) => void }> = ({ onSelect }) => (
     <div className="flex gap-1 p-1 bg-white border rounded-full shadow-lg">
