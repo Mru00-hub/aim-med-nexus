@@ -99,11 +99,18 @@ export const Message: React.FC<MessageProps> = ({
     const messageStyle = cn("flex flex-col rounded-xl px-4 py-3 max-w-[85%] sm:max-w-lg shadow-sm", isCurrentUser ? "bg-primary text-primary-foreground" : "bg-card border");
 
     const ActionMenu = () => (
-        <div className={cn("absolute top-0 -mt-4 flex items-center bg-card border rounded-full shadow-md transition-opacity opacity-0 group-hover:opacity-100", isCurrentUser ? "right-0" : "left-0")}>
-             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onReplyClick(message)} title="Reply"><Reply className="h-4 w-4" /></Button>
-             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setShowPicker(!showPicker)} title="Add Reaction"><SmilePlus className="h-4 w-4" /></Button>
-            {isCurrentUser && <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setIsEditing(true)} title="Edit"><Pencil className="h-4 w-4" /></Button>}
-            {isCurrentUser && <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-destructive/10" onClick={() => onDelete(message.id)} title="Delete"><Trash2 className="h-4 w-4 text-destructive" /></Button>}
+        <div className={cn(
+            "absolute top-[-16px] flex items-center bg-card border rounded-full shadow-md transition-opacity opacity-0 group-hover:opacity-100",
+            isCurrentUser ? "right-0" : "left-0"
+        )}>
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onReplyClick(message)} title="Reply"><Reply className="h-4 w-4" /></Button>
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setShowPicker(p => !p)} title="Add Reaction"><SmilePlus className="h-4 w-4" /></Button>
+            {isCurrentUser && (
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setIsEditing(true)} title="Edit"><Pencil className="h-4 w-4" /></Button>
+            )}
+            {(isCurrentUser || canModerate) && (
+                <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-destructive/10" onClick={handleDelete} title="Delete"><Trash2 className="h-4 w-4 text-destructive" /></Button>
+            )}
         </div>
     );
     
@@ -127,25 +134,11 @@ export const Message: React.FC<MessageProps> = ({
                 {/* Main Message Bubble */}
                 <div className={messageStyle}>
                     {/* The Action Menu (appears on hover) */}
-                    <div className={cn("absolute top-[-16px] flex items-center bg-card border rounded-full shadow-md transition-opacity opacity-0 group-hover:opacity-100", isCurrentUser ? "right-0" : "left-0")}>
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onReplyClick(message)} title="Reply"><Reply className="h-4 w-4" /></Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setShowPicker(p => !p)} title="Add Reaction"><SmilePlus className="h-4 w-4" /></Button>
-                        {isCurrentUser && (
-                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setIsEditing(true)} title="Edit"><Pencil className="h-4 w-4" /></Button>
-                        )}
-                        {(isCurrentUser || canModerate) && (
-                            <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-destructive/10" onClick={handleDelete} title="Delete"><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                        )}
-                    </div>
-                    
-                    {/* Emoji Picker (appears when reaction button is clicked) */}
+                    <ActionMenu />
                     {showPicker && <div className="absolute top-0 z-10 -translate-y-full mb-1"><EmojiPicker onSelect={handleReaction} /></div>}
-
-                    {/* The actual message content (text or edit form) */}
                     {messageContent}
                 </div>
 
-                {/* Reactions Bar (appears below the bubble if reactions exist) */}
                 {Object.keys(reactionCounts).length > 0 && (
                     <div className="mt-1 flex gap-1">
                         {Object.entries(reactionCounts).map(([emoji, count]) => (
@@ -166,7 +159,6 @@ export const Message: React.FC<MessageProps> = ({
                     </div>
                 )}
             </div>
-            
             {/* Avatar for the current user */}
             {isCurrentUser && (
                 <Avatar className="h-10 w-10">
@@ -176,4 +168,3 @@ export const Message: React.FC<MessageProps> = ({
             )}
         </div>
     );
-);
