@@ -4,7 +4,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/components/ui/use-toast';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   postMessage, 
   getMessagesWithDetails,
@@ -12,31 +12,31 @@ import {
   MessageWithDetails,
 } from '@/integrations/supabase/community.api'; 
 
-// Import the actual child components
 import { Message } from './Message'; 
 import { MessageInput } from './MessageInput'; 
 
-// --- Type Definitions for the display layer ---
-type ThreadedMessage = MessageWithDetails & {
-    replies: MessageWithDetails[];
-}
+// NEW: Define the structure for a message in our flat list
+type FlatMessage = MessageWithDetails & {
+    // This will contain the details of the message being replied to
+    replyTo?: {
+        author: string;
+        body: string;
+    } | null;
+};
 
 interface ThreadViewProps {
   threadId: string;
 }
 
 // ======================================================================
-// CENTRALIZED HOOK: Handles all Data, Real-Time, and Threading Logic
+// CENTRALIZED HOOK: Handles all Data, Real-Time, and Logic
 // ======================================================================
-
 const useThreadData = (threadId: string, currentUserId: string | undefined) => {
     const { toast } = useToast();
     const [messages, setMessages] = useState<MessageWithDetails[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    // NEW STATE: For handling a reply target in the input field
     const [replyingTo, setReplyingTo] = useState<MessageWithDetails | null>(null);
     
-    // --- 1. Fetching & Refetching (The source of truth) ---
     const fetchAndSyncMessages = useCallback(async () => {
       if (!threadId) return;
       setIsLoading(true);
@@ -50,137 +50,110 @@ const useThreadData = (threadId: string, currentUserId: string | undefined) => {
         setIsLoading(false);
       }
     }, [threadId, toast]);
-  
-    // Initial load
-    useEffect(() => {
-        fetchAndSyncMessages();
-    }, [fetchAndSyncMessages]);
-
-    // --- 2. Real-Time Subscription ---
-    useEffect(() => {
-    if (!threadId || !currentUserId) return;
-
-    const handleRealtimeEvent = (payload: any) => {
-        const changedBySelf = payload.new?.user_id === currentUserId || payload.old?.user_id === currentUserId;
-            
-        if (!changedBySelf || payload.eventType === 'DELETE') {
-            fetchAndSyncMessages(); 
-        }
-    }, [threadId, fetchAndSyncMessages]);
 
     const handleDeleteMessage = useCallback(async (messageId: number) => {
-        // Keep a copy of the old messages in case we need to revert
         const previousMessages = messages;
-
-        // Optimistically update the UI by removing the message instantly
         setMessages(currentMessages => currentMessages.filter(m => m.id !== messageId));
-
-        // Make the API call in the background
         try {
             await deleteMessage(messageId);
             toast({ title: 'Deleted', description: 'Message removed successfully.' });
         } catch (error: any) {
-            // If the API call fails, revert the UI and show an error
             toast({ variant: 'destructive', title: 'Deletion Failed', description: error.message });
-            setMessages(previousMessages);
+            setMessages(previousMessages); // Revert UI on failure
         }
     }, [messages, toast]);
+  
+    useEffect(() => { fetchAndSyncMessages(); }, [fetchAndSyncMessages]);
 
-        const channel = supabase
-            .channel(`thread_chat_${threadId}`)
+    useEffect(() => {
+        if (!threadId) return;
+        const handleRealtimeEvent = () => { fetchAndSyncMessages(); };
+        const channel = supabase.channel(`thread_chat_${threadId}`)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'messages', filter: `thread_id=eq.${threadId}` }, handleRealtimeEvent)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'message_reactions' }, handleRealtimeEvent)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'message_attachments', filter: `thread_id=eq.${threadId}` }, handleRealtimeEvent)
             .subscribe();
-
-        return () => {
-            supabase.removeChannel(channel);
-        };
+        return () => { supabase.removeChannel(channel); };
     }, [threadId, currentUserId, fetchAndSyncMessages]);
     
-    // --- 3. Threaded Message Grouping ---
-    const threadedMessages = useMemo(() => {
-        const primaryMessages = messages.filter(m => m.parent_message_id === null);
-        const repliesMap = messages.filter(m => m.parent_message_id !== null).reduce((acc, reply) => {
-            const parentId = reply.parent_message_id as number;
-            if (!acc.has(parentId)) {
-                acc.set(parentId, []);
-            }
-            acc.get(parentId)!.push(reply);
-            return acc;
-        }, new Map<number, MessageWithDetails[]>());
-        
-        return primaryMessages.map(m => ({
-            ...m,
-            replies: repliesMap.get(m.id) || []
-        })) as ThreadedMessage[];
+    // --- NEW LOGIC: Create a flat, sorted list of messages for the chat view ---
+    const flatMessages = useMemo((): FlatMessage[] => {
+        // Create a quick lookup map for all messages by their ID
+        const messageMap = new Map(messages.map(m => [m.id, m]));
+
+        return messages
+            .map(message => {
+                const flatMessage: FlatMessage = { ...message, replyTo: null };
+                if (message.parent_message_id) {
+                    const parent = messageMap.get(message.parent_message_id);
+                    if (parent) {
+                        flatMessage.replyTo = {
+                            author: parent.author?.full_name || 'User',
+                            body: parent.body,
+                        };
+                    }
+                }
+                return flatMessage;
+            })
+            // Sort all messages chronologically
+            .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
     }, [messages]);
 
     return { 
-        threadedMessages, 
+        flatMessages, 
         isLoading, 
-        messages, // Expose raw messages for other functions
-        setMessages, // Expose setter for optimistic updates
         refetchMessages: fetchAndSyncMessages,
         replyingTo,
         setReplyingTo,
-        handleDeleteMessage
+        handleDeleteMessage 
     };
 };
 
 // ======================================================================
 // THREAD VIEW COMPONENT (Renderer)
 // ======================================================================
-
 export const ThreadView: React.FC<ThreadViewProps> = ({ threadId }) => {
   const { user } = useAuth();
   const { toast } = useToast();
   
-  // Use the centralized data hook
-  const { threadedMessages, isLoading, refetchMessages, replyingTo, setReplyingTo, handleDeleteMessage } = useThreadData(threadId, user?.id);
+  const { 
+    flatMessages, 
+    isLoading, 
+    refetchMessages, 
+    replyingTo, 
+    setReplyingTo, 
+    handleDeleteMessage 
+  } = useThreadData(threadId, user?.id);
   
   const scrollViewportRef = useRef<HTMLDivElement>(null);
 
-  // --- Utility for scrolling to bottom ---
   const scrollToBottom = useCallback(() => {
     if (scrollViewportRef.current) {
       scrollViewportRef.current.scrollTop = scrollViewportRef.current.scrollHeight;
     }
   }, []);
   
-  // Scroll to bottom whenever messages update
-  useEffect(() => {
-      scrollToBottom();
-  }, [threadedMessages]); 
+  useEffect(() => { scrollToBottom(); }, [flatMessages, scrollToBottom]); 
 
-  // --- Message Posting Handler (Accepts reply target) ---
   const handleSendMessage = async (body: string, parentMessageId: number | null = null) => {
     if (!user || !threadId) {
-      toast({ variant: 'destructive', title: 'Login Required', description: 'Please log in to post a message.' });
+      toast({ variant: 'destructive', title: 'Login Required' });
       return;
     }
     
     try {
-      await postMessage(threadId, body, parentMessageId);
-      
-      // Clear reply state after successful send
+      // We don't wait for the API call to finish before updating the UI locally
+      postMessage(threadId, body, parentMessageId);
       setReplyingTo(null);
-      
-      await refetchMessages(); 
-      setTimeout(scrollToBottom, 50);
-
+      // Refetch after a small delay to allow the database to update
+      setTimeout(() => {
+        refetchMessages().then(() => setTimeout(scrollToBottom, 50));
+      }, 500);
     } catch (error: any) {
-      const errorMessage = error.message.includes('permission denied') 
-                           ? 'Access Denied: You cannot post to this thread.' 
-                           : error.message || 'Failed to send message.';
-
-      toast({ variant: 'destructive', title: 'Error sending message', description: errorMessage });
+      toast({ variant: 'destructive', title: 'Error sending message', description: error.message });
     }
   };
   
-  const handleReplyClick = (message: MessageWithDetails) => {
-      setReplyingTo(message);
-  }
+  const handleReplyClick = (message: MessageWithDetails) => { setReplyingTo(message); };
 
   if (!threadId) {
     return <div className="flex-1 flex items-center justify-center text-muted-foreground">Select a thread to start chatting.</div>;
@@ -204,37 +177,21 @@ export const ThreadView: React.FC<ThreadViewProps> = ({ threadId }) => {
               </div>
             ) : (
               <div className="space-y-4">
-                {threadedMessages.length === 0 ? (
+                {flatMessages.length === 0 ? (
                   <div className="text-center py-10 text-muted-foreground">No messages yet. Start the conversation!</div>
                 ) : (
-                  threadedMessages.map((msg) => (
-                      <div key={msg.id} className="space-y-2">
-                          {/* Render the parent message */}
-                          <Message 
-                              message={msg} 
-                              currentUserId={user?.id || ''}
-                              onDelete={handleDeleteMessage}
-                              refetchMessages={refetchMessages}
-                              onReplyClick={handleReplyClick} // Pass the reply handler
-                          />
-                          
-                          {/* Render replies, indented */}
-                          {msg.replies.length > 0 && (
-                              <div className="ml-6 sm:ml-10 border-l pl-4 space-y-2">
-                                  {msg.replies.map(reply => (
-                                      <Message 
-                                          key={reply.id} 
-                                          message={reply} 
-                                          currentUserId={user?.id || ''}
-                                          isReply={true} 
-                                          onDelete={handleDeleteMessage}
-                                          refetchMessages={refetchMessages}
-                                          onReplyClick={handleReplyClick} // Pass the reply handler
-                                      />
-                                  ))}
-                              </div>
-                          )}
-                      </div>
+                  // --- NEW: Render a simple, flat list of messages ---
+                  flatMessages.map((msg) => (
+                    <Message 
+                        key={msg.id}
+                        message={msg}
+                        currentUserId={user?.id || ''}
+                        onDelete={handleDeleteMessage}
+                        onReplyClick={handleReplyClick}
+                        refetchMessages={refetchMessages}
+                        // Pass the new replyTo object to the Message component
+                        replyTo={msg.replyTo}
+                    />
                   ))
                 )}
               </div>
@@ -243,7 +200,6 @@ export const ThreadView: React.FC<ThreadViewProps> = ({ threadId }) => {
         </ScrollArea>
       </div>
       
-      {/* Input at the bottom */}
       <div className="mt-4 p-4 border-t bg-background">
         <MessageInput 
             threadId={threadId} 
