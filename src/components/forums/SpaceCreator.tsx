@@ -8,17 +8,17 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Loader2 } from 'lucide-react';
+import { Enums } from '@/integrations/supabase/types'; // Import Enums for type safety
 
 // Define the component's props
 interface SpaceCreatorProps {
   isOpen: boolean;
   onClose: () => void;
-  // This onSubmit now has a simpler, more direct data shape
   onSubmit: (data: {
     name: string;
-    description: string;
-    type: 'FORUM' | 'COMMUNITY_SPACE';
-    forumType: 'PUBLIC' | 'PRIVATE';
+    description?: string;
+    space_type: Enums<'space_type'>;
+    join_level: Enums<'join_level'>;
   }) => void;
 }
 
@@ -32,12 +32,22 @@ export const SpaceCreator: React.FC<SpaceCreatorProps> = ({ isOpen, onClose, onS
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    // The parent component (Forums.tsx) will handle the actual API call.
-    // This component just passes the data up.
-    await onSubmit({ type, name, description, forumType });
-    setIsSubmitting(false);
-  };
 
+    const dataToSubmit = {
+      name,
+      description,
+      space_type: type,
+      // Logic to determine the correct join_level based on the selected type
+      join_level: type === 'COMMUNITY_SPACE' ? 'INVITE_ONLY' : forumPrivacy,
+    };
+
+    // The parent (Forums.tsx) will handle the actual API call.
+    await onSubmit(dataToSubmit);
+    setIsSubmitting(false);
+    // Optional: Reset form and close on successful submission if desired
+    // onClose(); 
+  };
+  
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[500px]">
