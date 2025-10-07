@@ -3,7 +3,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
-import { MessageWithDetails } from '@/integrations/supabase/community.api'; 
+import { MessageWithDetails, editMessage } from '@/integrations/supabase/community.api'; 
 import { Reply, Trash2, Pencil, Paperclip, SmilePlus } from 'lucide-react';
 
 const EmojiPicker: React.FC<{ onSelect: (emoji: string) => void }> = ({ onSelect }) => (
@@ -33,6 +33,7 @@ export const Message: React.FC<MessageProps> = ({
     onReaction,
     replyTo
 }) => {
+    const { toast } = useToast();
     const [isEditing, setIsEditing] = useState(false);
     const [editedBody, setEditedBody] = useState(message.body);
     const [showPicker, setShowPicker] = useState(false);
@@ -47,6 +48,11 @@ export const Message: React.FC<MessageProps> = ({
             return acc;
         }, {} as Record<string, number>);
     }, [message.reactions]);
+
+    const handleReaction = (emoji: string) => {
+        onReaction(message.id, emoji);
+        setShowPicker(false);
+    };
     
     const handleEditSave = () => {
         if (editedBody.trim() && editedBody !== message.body) {
@@ -67,7 +73,7 @@ export const Message: React.FC<MessageProps> = ({
         <p className="text-sm break-words whitespace-pre-wrap">{message.body} {message.is_edited && <span className="text-xs opacity-70">(edited)</span>}</p>
     );
     
-    const messageStyle = cn("flex flex-col rounded-xl px-3 py-2 max-w-lg shadow-sm", isCurrentUser ? "bg-primary text-primary-foreground" : "bg-card border");
+    const messageStyle = cn("flex flex-col rounded-xl px-4 py-3 max-w-[85%] sm:max-w-lg shadow-sm", isCurrentUser ? "bg-primary text-primary-foreground" : "bg-card border");
 
     const ActionMenu = () => (
         <div className={cn("absolute top-0 -mt-4 flex items-center bg-card border rounded-full shadow-md transition-opacity opacity-0 group-hover:opacity-100", isCurrentUser ? "right-0" : "left-0")}>
@@ -79,19 +85,38 @@ export const Message: React.FC<MessageProps> = ({
     );
     
     return (
-        <div className={cn("flex w-full gap-3 group relative", isCurrentUser ? "justify-end" : "justify-start")}>
+        <div className={cn("flex w-full gap-3 group group", isCurrentUser ? "justify-end" : "justify-start")}>
             {!isCurrentUser && (<Avatar className="mt-auto h-8 w-8"><AvatarImage src={avatarUrl ?? undefined} /><AvatarFallback>{displayName?.split(' ').map(n => n[0]).join('')}</AvatarFallback></Avatar>)}
-            <div className="flex flex-col">
-                {!isCurrentUser && (<span className="font-bold text-xs text-muted-foreground mb-1">{displayName}</span>)}
-                <div className={messageStyle}>
-                    {replyTo && (<div className="border-l-2 border-current/50 pl-2 mb-2 opacity-80"><p className="text-xs font-bold">{replyTo.author}</p><p className="text-xs truncate">{replyTo.body}</p></div>)}
-                    {messageContent}
+            <div className="flex flex-col items-start w-full">
+                <div className={cn("flex items-center gap-2 mb-1 w-full", isCurrentUser ? "justify-end" : "justify-start")}>
+                    {!isCurrentUser && (<span className="font-bold text-xs text-muted-foreground mb-1">{displayName}</span>)}
+                    <span className="text-xs text-muted-foreground">{new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                </div>
+                <div className={cn("relative flex flex-col", isCurrentUser ? "items-end" : "items-start")}>
+                    <div className="relative flex items-center">
+                        {!isCurrentUser && <div className="order-2"><ActionMenu /></div>}
+                        <div className={messageStyle}>{messageContent}</div>
+                        {isCurrentUser && <div className="order-first"><ActionMenu /></div>}
+                        {showPicker && <div className="absolute top-0 z-10 -translate-y-full mb-1"><EmojiPicker onSelect={handleReaction} /></div>}
+                    </div>
+
+                    {/* --- NEW: Reactions Bar --- */}
                     {Object.keys(reactionCounts).length > 0 && (
-                        <div className="mt-2 flex gap-1 pt-1">
+                        <div className="mt-1 flex gap-1">
                             {Object.entries(reactionCounts).map(([emoji, count]) => (
-                                <span key={emoji} onClick={() => onReaction(message.id, emoji)} className={cn("flex items-center gap-1 px-1.5 py-0.5 rounded-full text-xs cursor-pointer", message.reactions.some(r => r.user_id === currentUserId && r.reaction_emoji === emoji) ? "bg-primary/20" : "bg-muted/50")}>
-                                    {emoji} <span className="font-medium">{count}</span>
-                                </span>
+                                <div 
+                                    key={emoji} 
+                                    className={cn(
+                                        "flex items-center gap-1 px-2 py-0.5 rounded-full text-xs cursor-pointer border",
+                                        message.reactions.some(r => r.reaction_emoji === emoji && r.user_id === currentUserId)
+                                            ? "bg-primary/20 border-primary" // Highlight if current user reacted
+                                            : "bg-muted border-muted-foreground/20 hover:bg-muted/80"
+                                    )}
+                                    onClick={() => handleReaction(emoji)}
+                                >
+                                    <span>{emoji}</span> 
+                                    <span className="font-medium text-foreground/80">{count}</span>
+                                </div>
                             ))}
                         </div>
                     )}
