@@ -40,6 +40,7 @@ export const Message: React.FC<MessageProps> = ({
     const [isEditing, setIsEditing] = useState(false);
     const [editedBody, setEditedBody] = useState(message.body);
     const [showPicker, setShowPicker] = useState(false);
+    const [showActions, setShowActions] = useState(false);
 
     const isCurrentUser = message.user_id === currentUserId;
     const displayName = message.author?.full_name || 'User';
