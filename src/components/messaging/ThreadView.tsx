@@ -172,7 +172,8 @@ export const ThreadView: React.FC<ThreadViewProps> = ({ threadId }) => {
       </CardHeader>
 
       <div className="flex-1 overflow-y-hidden">
-        <ScrollArea className="h-full p-4" viewportRef={scrollViewportRef}>
+        <ScrollArea className="h-full">
+          <div className="p-4" ref={scrollViewportRef}>
           {isLoading ? (
             <div className="space-y-4">
               <Skeleton className="h-16 w-3/4" />
