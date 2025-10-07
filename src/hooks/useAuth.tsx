@@ -53,92 +53,45 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       async (event, session) => {
         console.log(`[useAuth] 👂 Auth state change event received: ${event}`);
         
-        setSession(session);
         const currentUser = session?.user ?? null;
         setUser(currentUser);
+        setSession(session);
 
-        // --- CORE ONBOARDING LOGIC ---
+        // This logic now correctly handles both initial page load (INITIAL_SESSION) and manual sign-in (SIGNED_IN).
         if (currentUser && (event === 'SIGNED_IN' || event === 'INITIAL_SESSION')) {
-          console.log(`[useAuth] ➡️ Processing sign-in for user: ${currentUser.id}`);
+          console.log(`[useAuth] ➡️ Processing session for user: ${currentUser.id}`);
           setLoadingMessage('Checking your profile...');
 
-          // Step 1: Check for an existing profile.
-          let { data: userProfile, error: fetchError } = await supabase
+          const { data: userProfile, error: fetchError } = await supabase
             .from('profiles')
-            .select('*, is_onboarded') // IMPORTANT: select the is_onboarded flag
+            .select('*, is_onboarded')
             .eq('id', currentUser.id)
             .single();
 
-          if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116 means "No rows found"
-            console.error("[useAuth] 🛑 Real error fetching profile:", fetchError);
+          if (fetchError && fetchError.code !== 'PGRST116') {
+            console.error("[useAuth] 🛑 Error fetching profile:", fetchError);
             toast({ title: "Error", description: "Could not fetch your profile.", variant: "destructive" });
-            setLoading(false);
-            return;
-          }
-          
-          // Step 2: If no profile exists, create a shell profile. This is the user's first-ever interaction.
-          if (!userProfile) {
-            console.log("[useAuth] 👶 No profile found. Creating a new shell profile for the user.");
-            setLoadingMessage('Generating your profile...');
-
-            const profileData = {
-              id: currentUser.id,
-              email: currentUser.email,
-              is_onboarded: false,
-              full_name: currentUser.user_metadata.full_name,
-              phone: currentUser.user_metadata.phone,
-              user_role: currentUser.user_metadata.user_role,
-              current_location: currentUser.user_metadata.current_location,
-              institution: currentUser.user_metadata.institution,
-              course: currentUser.user_metadata.course,
-              year_of_study: currentUser.user_metadata.year_of_study,
-              current_position: currentUser.user_metadata.current_position,
-              organization: currentUser.user_metadata.organization,
-              specialization: currentUser.user_metadata.specialization,
-              years_experience: currentUser.user_metadata.years_experience,
-              medical_license: currentUser.user_metadata.medical_license,
-              bio: currentUser.user_metadata.bio,
-            };
-
-            const { data: newProfile, error: insertError } = await supabase
-              .from('profiles')
-              .insert(profileData) // Use the clean profileData object
-              .select('*, is_onboarded')
-              .single();
-            
-            if (insertError) {
-              console.error("[useAuth] 🛑 FATAL: Could not create shell profile.", insertError);
-              let description = "Please contact support.";
-              if (insertError.code === '42501') {
-                description = "Database permission denied. Please check RLS policies.";
+          } else if (userProfile) {
+            setProfile(userProfile);
+            if (userProfile.is_onboarded) {
+              console.log("[useAuth] ✅ RETURNING USER (is_onboarded: true).");
+              // Only navigate if we are on a public page, to avoid redirect loops
+              if (location.pathname === '/login' || location.pathname === '/register') {
+                navigate('/community', { replace: true });
               }
-              toast({ title: "Account Setup Failed", description: description, variant: "destructive" });
-              setLoading(false);
-              return;
+            } else {
+              console.log("[useAuth] 🚧 NEW USER (is_onboarded: false). Redirecting to /complete-profile.");
+              navigate('/complete-profile', { replace: true });
             }
-            console.log("[useAuth] ✨ Shell profile created successfully.");
-            userProfile = newProfile as Profile; // Use the newly created profile for the next step.
-          }
-
-          // Step 3: Now we are GUARANTEED to have a profile. Make the routing decision based on the flag.
-          setProfile(userProfile); // Set the profile in context
-          
-          if (userProfile.is_onboarded) {
-            // --- RETURNING USER PATH ---
-            console.log("[useAuth] ✅ RETURNING USER (is_onboarded: true). Redirecting to /community.");
-            const from = location.state?.from || '/community';
-            navigate(from, { replace: true });
           } else {
-            // --- NEW USER / INCOMPLETE PROFILE PATH ---
-            console.log("[useAuth] 🚧 NEW USER (is_onboarded: false). Redirecting to /complete-profile.");
-            navigate('/complete-profile', { replace: true });
+             // This case (user exists in auth but not in profiles) is now handled by your SIGNED_IN logic.
+             // For INITIAL_SESSION, if there's no profile, it indicates a potential issue.
+             console.warn("[useAuth] ⚠️ User session found, but no profile exists in database.");
           }
-
         } else if (event === 'SIGNED_OUT') {
-          console.log("[useAuth] 🚪 User signed out. Clearing profile.");
+          console.log("[useAuth] 🚪 User signed out. Clearing state.");
           setProfile(null);
-        } else {
-           console.log("[useAuth] ℹ️ Other auth event, no navigation action needed.");
+          // Don't navigate here, let components decide what to do on sign-out
         }
       
         console.log("🏁 [useAuth] All checks complete. Setting loading to false.");
@@ -146,16 +99,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setLoadingMessage('');
       }
     );
-
-    // Initial check to prevent screen flicker, but onAuthStateChange is the source of truth for loading state.
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log(`[useAuth] Initial getSession() call completed. Session ${session ? 'exists' : 'does not exist'}.`);
-      if (session) {
-        setSession(session);
-        setUser(session.user);
-      }
-      // REMOVED setLoading(false) from here to prevent race conditions.
-    });
   
     return () => {
       console.log("[useAuth] 🧹 Cleaning up auth subscription on component unmount.");
