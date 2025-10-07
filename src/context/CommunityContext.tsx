@@ -113,7 +113,7 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
     selectSpace,
     isMemberOf,
   }), [spaces, publicThreads, isLoadingSpaces, isInitialLoad, selectedSpace, publicSpaceId]);
-
+  console.log('[CommunityContext] Providing value:', contextValue);
   return (
     <CommunityContext.Provider value={contextValue}>
       {children}
