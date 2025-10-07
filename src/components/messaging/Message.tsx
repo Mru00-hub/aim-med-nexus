@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { useToast } from '@/components/ui/use-toast';
 import { cn } from '@/lib/utils';
 import { MessageWithDetails, editMessage } from '@/integrations/supabase/community.api'; 
 import { Reply, Trash2, Pencil, Paperclip, SmilePlus } from 'lucide-react';
@@ -33,6 +34,7 @@ export const Message: React.FC<MessageProps> = ({
     onReaction,
     replyTo
 }) => {
+    const { toast } = useToast();
     const [isEditing, setIsEditing] = useState(false);
     const [editedBody, setEditedBody] = useState(message.body);
     const [showPicker, setShowPicker] = useState(false);
@@ -53,11 +55,26 @@ export const Message: React.FC<MessageProps> = ({
         setShowPicker(false);
     };
     
-    const handleEditSave = () => {
-        if (editedBody.trim() && editedBody !== message.body) {
-            onEdit(message.id, editedBody);
+    const handleDelete = () => {
+        if (window.confirm("Are you sure you want to delete this message?")) {
+            onDelete(message.id);
         }
-        setIsEditing(false);
+    };
+    
+    const handleEditSave = async () => {
+        if (!editedBody.trim() || editedBody === message.body) {
+            setIsEditing(false);
+            return;
+        }
+        try {
+            await editMessage(message.id, editedBody);
+            // The optimistic update will come from the parent via real-time subscription
+            toast({ title: 'Message Updated' });
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: 'Edit Failed', description: error.message });
+        } finally {
+            setIsEditing(false);
+        }
     };
 
     const messageContent = isEditing ? (
@@ -69,6 +86,13 @@ export const Message: React.FC<MessageProps> = ({
             </div>
         </div>
     ) : (
+        <>
+        {message.parent_message && (
+            <div className="text-xs rounded-md p-2 border-l-2 border-current/50 bg-current/10 mb-2">
+                <p className="font-bold">{message.parent_message.author?.full_name}</p>
+                <p className="truncate opacity-80">{message.parent_message.body}</p>
+            </div>
+        )}
         <p className="text-sm break-words whitespace-pre-wrap">{message.body} {message.is_edited && <span className="text-xs opacity-70">(edited)</span>}</p>
     );
     
@@ -84,46 +108,72 @@ export const Message: React.FC<MessageProps> = ({
     );
     
     return (
-        <div className={cn("flex w-full gap-3 group group", isCurrentUser ? "justify-end" : "justify-start")}>
-            {!isCurrentUser && (<Avatar className="mt-auto h-8 w-8"><AvatarImage src={avatarUrl ?? undefined} /><AvatarFallback>{displayName?.split(' ').map(n => n[0]).join('')}</AvatarFallback></Avatar>)}
-            <div className="flex flex-col items-start w-full">
-                <div className={cn("flex items-center gap-2 mb-1 w-full", isCurrentUser ? "justify-end" : "justify-start")}>
-                    {!isCurrentUser && (<span className="font-bold text-xs text-muted-foreground mb-1">{displayName}</span>)}
+        <div className={cn("flex w-full gap-3", isCurrentUser ? "justify-end" : "justify-start")}>
+            {/* Avatar for other users */}
+            {!isCurrentUser && (
+                <Avatar className="h-10 w-10">
+                    <AvatarImage src={avatarUrl ?? undefined} alt={displayName} />
+                    <AvatarFallback>{displayName?.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                </Avatar>
+            )}
+            
+            <div className={cn("flex flex-col w-full max-w-lg", isCurrentUser ? "items-end" : "items-start")}>
+                {/* Author & Timestamp */}
+                <div className="flex items-center gap-2 mb-1">
+                    {!isCurrentUser && <span className="font-bold text-sm">{displayName}</span>}
                     <span className="text-xs text-muted-foreground">{new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                 </div>
-                <div className={cn("relative flex flex-col", isCurrentUser ? "items-end" : "items-start")}>
-                    <div className="relative flex items-center">
-                        {!isCurrentUser && <div className="order-2"><ActionMenu /></div>}
-                        <div className={messageStyle}>{messageContent}</div>
-                        {isCurrentUser && <div className="order-first"><ActionMenu /></div>}
-                        {showPicker && <div className="absolute top-0 z-10 -translate-y-full mb-1"><EmojiPicker onSelect={handleReaction} /></div>}
-                    </div>
 
-                    {/* --- NEW: Reactions Bar --- */}
-                    {Object.keys(reactionCounts).length > 0 && (
-                        <div className="mt-1 flex gap-1">
-                            {Object.entries(reactionCounts).map(([emoji, count]) => (
-                                <div 
-                                    key={emoji} 
-                                    className={cn(
-                                        "flex items-center gap-1 px-2 py-0.5 rounded-full text-xs cursor-pointer border",
-                                        message.reactions.some(r => r.reaction_emoji === emoji && r.user_id === currentUserId)
-                                            ? "bg-primary/20 border-primary" // Highlight if current user reacted
-                                            : "bg-muted border-muted-foreground/20 hover:bg-muted/80"
-                                    )}
-                                    onClick={() => handleReaction(emoji)}
-                                >
-                                    <span>{emoji}</span> 
-                                    <span className="font-medium text-foreground/80">{count}</span>
-                                </div>
-                            ))}
-                        </div>
-                    )}
+                {/* Main Message Bubble */}
+                <div className={messageStyle}>
+                    {/* The Action Menu (appears on hover) */}
+                    <div className={cn("absolute top-[-16px] flex items-center bg-card border rounded-full shadow-md transition-opacity opacity-0 group-hover:opacity-100", isCurrentUser ? "right-0" : "left-0")}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onReplyClick(message)} title="Reply"><Reply className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setShowPicker(p => !p)} title="Add Reaction"><SmilePlus className="h-4 w-4" /></Button>
+                        {isCurrentUser && (
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setIsEditing(true)} title="Edit"><Pencil className="h-4 w-4" /></Button>
+                        )}
+                        {(isCurrentUser || canModerate) && (
+                            <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-destructive/10" onClick={handleDelete} title="Delete"><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                        )}
+                    </div>
+                    
+                    {/* Emoji Picker (appears when reaction button is clicked) */}
+                    {showPicker && <div className="absolute top-0 z-10 -translate-y-full mb-1"><EmojiPicker onSelect={handleReaction} /></div>}
+
+                    {/* The actual message content (text or edit form) */}
+                    {messageContent}
                 </div>
+
+                {/* Reactions Bar (appears below the bubble if reactions exist) */}
+                {Object.keys(reactionCounts).length > 0 && (
+                    <div className="mt-1 flex gap-1">
+                        {Object.entries(reactionCounts).map(([emoji, count]) => (
+                            <div 
+                                key={emoji} 
+                                className={cn(
+                                    "flex items-center gap-1 px-2 py-0.5 rounded-full text-xs cursor-pointer border",
+                                    message.reactions.some(r => r.reaction_emoji === emoji && r.user_id === currentUserId) 
+                                        ? "bg-primary/20 border-primary" 
+                                        : "bg-muted border-muted-foreground/20 hover:bg-muted/80"
+                                )}
+                                onClick={() => handleReaction(emoji)}
+                            >
+                                <span>{emoji}</span> 
+                                <span className="font-medium text-foreground/80">{count}</span>
+                            </div>
+                        ))}
+                    </div>
+                )}
             </div>
-            {isCurrentUser && (<Avatar className="mt-auto h-8 w-8"><AvatarImage src={avatarUrl ?? undefined} /><AvatarFallback>{displayName?.split(' ').map(n => n[0]).join('')}</AvatarFallback></Avatar>)}
-            <ActionMenu />
-            {showPicker && (<div className="absolute top-0 z-10 -translate-y-full mb-1"><EmojiPicker onSelect={(emoji) => { onReaction(message.id, emoji); setShowPicker(false); }} /></div>)}
+            
+            {/* Avatar for the current user */}
+            {isCurrentUser && (
+                <Avatar className="h-10 w-10">
+                    <AvatarImage src={avatarUrl ?? undefined} alt={displayName} />
+                    <AvatarFallback>{displayName?.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                </Avatar>
+            )}
         </div>
     );
-};
+);
