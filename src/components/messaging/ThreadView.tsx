@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   postMessage, 
   getMessagesWithDetails,
+  deleteMessage,
   MessageWithDetails,
 } from '@/integrations/supabase/community.api'; 
 
@@ -44,28 +45,46 @@ const useThreadData = (threadId: string, currentUserId: string | undefined) => {
         setMessages(data);
       } catch (error) {
         console.error('Error fetching messages:', error);
+        toast({ variant: 'destructive', title: 'Error', description: 'Could not load messages.' });
       } finally {
-        if (messages.length === 0) setIsLoading(false);
-        if (isLoading) setIsLoading(false); 
+        setIsLoading(false);
       }
-    }, [threadId]);
-
+    }, [threadId, toast]);
+  
     // Initial load
     useEffect(() => {
         fetchAndSyncMessages();
-    }, [threadId, fetchAndSyncMessages]);
-    
+    }, [fetchAndSyncMessages]);
+
     // --- 2. Real-Time Subscription ---
     useEffect(() => {
-        if (!threadId || !currentUserId) return;
+    if (!threadId || !currentUserId) return;
 
-        const handleRealtimeEvent = (payload: any) => {
-            const changedBySelf = payload.new?.user_id === currentUserId || payload.old?.user_id === currentUserId;
+    const handleRealtimeEvent = (payload: any) => {
+        const changedBySelf = payload.new?.user_id === currentUserId || payload.old?.user_id === currentUserId;
             
-            if (!changedBySelf || payload.eventType === 'DELETE') {
-                fetchAndSyncMessages(); 
-            }
-        };
+        if (!changedBySelf || payload.eventType === 'DELETE') {
+            fetchAndSyncMessages(); 
+        }
+    }, [threadId, fetchAndSyncMessages]);
+
+    const handleDeleteMessage = useCallback(async (messageId: number) => {
+        // Keep a copy of the old messages in case we need to revert
+        const previousMessages = messages;
+
+        // Optimistically update the UI by removing the message instantly
+        setMessages(currentMessages => currentMessages.filter(m => m.id !== messageId));
+
+        // Make the API call in the background
+        try {
+            await deleteMessage(messageId);
+            toast({ title: 'Deleted', description: 'Message removed successfully.' });
+        } catch (error: any) {
+            // If the API call fails, revert the UI and show an error
+            toast({ variant: 'destructive', title: 'Deletion Failed', description: error.message });
+            setMessages(previousMessages);
+        }
+    }, [messages, toast]);
 
         const channel = supabase
             .channel(`thread_chat_${threadId}`)
@@ -100,9 +119,12 @@ const useThreadData = (threadId: string, currentUserId: string | undefined) => {
     return { 
         threadedMessages, 
         isLoading, 
+        messages, // Expose raw messages for other functions
+        setMessages, // Expose setter for optimistic updates
         refetchMessages: fetchAndSyncMessages,
         replyingTo,
-        setReplyingTo
+        setReplyingTo,
+        handleDeleteMessage
     };
 };
 
@@ -115,7 +137,7 @@ export const ThreadView: React.FC<ThreadViewProps> = ({ threadId }) => {
   const { toast } = useToast();
   
   // Use the centralized data hook
-  const { threadedMessages, isLoading, refetchMessages, replyingTo, setReplyingTo } = useThreadData(threadId, user?.id);
+  const { threadedMessages, isLoading, refetchMessages, replyingTo, setReplyingTo, handleDeleteMessage } = useThreadData(threadId, user?.id);
   
   const scrollViewportRef = useRef<HTMLDivElement>(null);
 
@@ -191,6 +213,7 @@ export const ThreadView: React.FC<ThreadViewProps> = ({ threadId }) => {
                           <Message 
                               message={msg} 
                               currentUserId={user?.id || ''}
+                              onDelete={handleDeleteMessage}
                               refetchMessages={refetchMessages}
                               onReplyClick={handleReplyClick} // Pass the reply handler
                           />
@@ -204,6 +227,7 @@ export const ThreadView: React.FC<ThreadViewProps> = ({ threadId }) => {
                                           message={reply} 
                                           currentUserId={user?.id || ''}
                                           isReply={true} 
+                                          onDelete={handleDeleteMessage}
                                           refetchMessages={refetchMessages}
                                           onReplyClick={handleReplyClick} // Pass the reply handler
                                       />
