@@ -22,18 +22,19 @@ const attachFileToMessagePlaceholder = async (file: File) => {
 interface MessageInputProps {
   threadId: string;
   // The handler from ThreadView: (body, parentMessageId) => Promise<void>
-  onSendMessage: (body: string, parentMessageId: number | null) => Promise<void>;
-  
-  // PROPS for Reply Functionality
+  onSendMessage: (body: string, parentMessageId: number | null) => Promise<MessageWithDetails>;
   replyingTo: MessageWithDetails | null;
   onCancelReply: () => void;
+  // Add a refetch prop to update the UI after attachments are uploaded
+  refetchMessages: () => void;
 }
 
 export const MessageInput: React.FC<MessageInputProps> = ({ 
     threadId, 
     onSendMessage, 
     replyingTo,
-    onCancelReply 
+    onCancelReply,
+    refetchMessages
 }) => {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -50,23 +51,30 @@ export const MessageInput: React.FC<MessageInputProps> = ({
     setIsSending(true);
 
     try {
-      // 1. Determine the parent message ID (if replying)
-      const parentMessageId = replyingTo?.id || null;
-
-      // 2. Send the message (Text/Body)
-      await onSendMessage(trimmedBody, parentMessageId);
+      // Step 1: Send the text message first. This happens optimistically.
+      // onSendMessage will return the real message object from the database.
+      const newMessage = await onSendMessage(trimmedBody, replyingTo?.id || null);
       
-      // 3. Clear UI state on success
+      // Step 2: If there are attachments, upload them now that we have a message ID.
+      if (attachedFiles.length > 0) {
+        toast({ title: "Uploading attachment(s)...", description: "Your message is sent. Files are now uploading." });
+        
+        // Upload all files in parallel
+        await Promise.all(
+          attachedFiles.map(file => uploadAttachment(newMessage.id, file))
+        );
+
+        // Step 3: Refetch all messages to show the new attachments on the message.
+        refetchMessages();
+      }
+      
+      // Step 4: Clear UI state on complete success.
       setBody(''); 
       setAttachedFiles([]);
       onCancelReply();
-      
-      // NOTE: File attachments are handled by a separate process post-message creation 
-      // (as is standard practice) but the UI state is cleared here.
 
     } catch (error: any) {
       toast({ variant: 'destructive', title: 'Error sending message', description: error.message });
-      // Keep input content on failure to allow user to retry
     } finally {
       setIsSending(false);
     }
@@ -82,9 +90,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
   // --- File Attachment Logic ---
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       if (e.target.files) {
-          // Add newly selected files to the list
-          setAttachedFiles(Array.from(e.target.files));
-          // Reset input to allow selecting the same file again if needed
+          setAttachedFiles(prev => [...prev, ...Array.from(e.target.files)]);
           e.target.value = ''; 
       }
   };
