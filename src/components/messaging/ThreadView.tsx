@@ -115,13 +115,11 @@ const useThreadData = (threadId: string, currentUserId: string | undefined) => {
         
         setMessages(current => current.map(msg => {
             if (msg.id === messageId) {
-                const existingReactionIndex = msg.reactions.findIndex(r => r.user_id === currentUserId && r.reaction_emoji === emoji);
-                if (existingReactionIndex > -1) {
-                    // Remove reaction
-                    return { ...msg, reactions: msg.reactions.filter((_, i) => i !== existingReactionIndex) };
+                const existingReaction = msg.reactions.find(r => r.user_id === currentUserId && r.reaction_emoji === emoji);
+                if (existingReaction) {
+                    return { ...msg, reactions: msg.reactions.filter(r => r.id !== existingReaction.id && r.user_id !== currentUserId) };
                 } else {
-                    // Add reaction
-                    const newReaction = { id: `temp-${Date.now()}`, message_id: messageId, user_id: currentUserId, reaction_emoji: emoji, created_at: new Date().toISOString() };
+                    const newReaction: MessageReaction = { id: `temp-${Date.now()}`, message_id: messageId, user_id: currentUserId, reaction_emoji: emoji, created_at: new Date().toISOString() };
                     return { ...msg, reactions: [...msg.reactions, newReaction] };
                 }
             }
@@ -137,7 +135,7 @@ const useThreadData = (threadId: string, currentUserId: string | undefined) => {
             }
         } catch (error: any) {
             toast({ variant: 'destructive', title: 'Reaction Failed', description: error.message });
-            setMessages(previousMessages); // Revert on failure
+            setMessages(previousMessages);
         }
     }, [messages, currentUserId, toast]);
   
@@ -154,31 +152,14 @@ const useThreadData = (threadId: string, currentUserId: string | undefined) => {
     }, [threadId, currentUserId, fetchAndSyncMessages]);
     
     // --- NEW LOGIC: Create a flat, sorted list of messages for the chat view ---
-    const flatMessages = useMemo((): FlatMessage[] => {
-        // Create a quick lookup map for all messages by their ID
-        const messageMap = new Map(messages.map(m => [m.id, m]));
-
-        return messages
-            .map(message => {
-                const flatMessage: FlatMessage = { ...message, replyTo: null };
-                if (message.parent_message_id) {
-                    const parent = messageMap.get(message.parent_message_id);
-                    if (parent) {
-                        flatMessage.replyTo = {
-                            author: parent.author?.full_name || 'User',
-                            body: parent.body,
-                        };
-                    }
-                }
-                return flatMessage;
-            })
-            // Sort all messages chronologically
-            .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+    const flatMessages = useMemo(() => {
+        return messages.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
     }, [messages]);
 
     return { 
         flatMessages, 
         isLoading, 
+        setMessages, 
         refetchMessages: fetchAndSyncMessages,
         replyingTo,
         setReplyingTo,
@@ -300,6 +281,7 @@ export const ThreadView: React.FC<ThreadViewProps> = ({ threadId }) => {
                         refetchMessages={refetchMessages}
                         // Pass the new replyTo object to the Message component
                         replyTo={msg.replyTo}
+                        onReaction={handleReaction}
                     />
                   ))
                 )}
