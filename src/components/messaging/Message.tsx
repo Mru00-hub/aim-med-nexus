@@ -14,7 +14,7 @@ import {
     editMessage
 } from '@/integrations/supabase/community.api'; 
 import { UserProfileCard } from '@/components/ui/UserProfileCard';
-import { Reply, Trash2, Pencil, Paperclip } from 'lucide-react';
+import { Reply, Trash2, Pencil, Paperclip, SmilePlus } from 'lucide-react';
 
 // --- PLACEHOLDER API FUNCTIONS (Assume these are in community.api.ts) ---
 const deleteMessage = async (messageId: number) => {
@@ -31,7 +31,7 @@ const editMessage = async (messageId: number, newBody: string) => {
 // --- PLACEHOLDER COMPONENTS (Use shadcn Popover/Dropdown in production) ---
 const EmojiPicker: React.FC<{ onSelect: (emoji: string) => void }> = ({ onSelect }) => (
     <div className="flex gap-1 p-1 bg-white border rounded-full shadow-lg">
-        {['👍', '❤️', '🔥', '🤔'].map(emoji => (
+        {['👍', '❤️', '🔥', '🤔', '😂'].map(emoji => (
             <span key={emoji} className="cursor-pointer hover:bg-gray-100 rounded-full p-1 transition-colors" onClick={() => onSelect(emoji)}>{emoji}</span>
         ))}
     </div>
@@ -70,10 +70,9 @@ export const Message: React.FC<MessageProps> = ({
 
     const handleDelete = () => {
         if (!window.confirm("Are you sure you want to delete this message?")) return;
-        // Just call the parent's delete handler. The parent will handle the UI and API call.
         onDelete(message.id);
     };
-
+    
     const handleEditSave = async () => {
         if (editedBody.trim() && editedBody !== message.body) {
             try {
@@ -122,33 +121,6 @@ export const Message: React.FC<MessageProps> = ({
         }
     };
     
-    const handleDelete = async () => {
-        // Use custom modal/dialog instead of browser confirm() in your final application!
-        if (!window.confirm("Are you sure you want to delete this message?")) return; 
-        try {
-            await deleteMessage(message.id);
-            toast({ title: 'Deleted', description: 'Message removed successfully.' });
-            refetchMessages(); 
-        } catch (error: any) {
-            toast({ variant: 'destructive', title: 'Deletion Failed', description: error.message });
-        }
-    };
-
-    const handleEditSave = async () => {
-        if (editedBody === message.body || !editedBody.trim()) {
-            setIsEditing(false);
-            return;
-        }
-        try {
-            await editMessage(message.id, editedBody);
-            toast({ title: 'Updated', description: 'Message edited successfully.' });
-            setIsEditing(false);
-            refetchMessages(); 
-        } catch (error: any) {
-            toast({ variant: 'destructive', title: 'Edit Failed', description: error.message });
-        }
-    };
-    
     const handleReply = () => {
         onReplyClick(message);
     }
@@ -158,6 +130,7 @@ export const Message: React.FC<MessageProps> = ({
             <Textarea 
                 value={editedBody} 
                 onChange={(e) => setEditedBody(e.target.value)} 
+                autoFocus
                 rows={isReply ? 2 : 4}
             />
             <div className="flex justify-end gap-2">
@@ -175,6 +148,21 @@ export const Message: React.FC<MessageProps> = ({
         isReply && "text-sm" // Smaller text for replies
     );
 
+    const ActionMenu = () => (
+        <div className={cn(
+            "absolute top-0 flex items-center bg-card border rounded-full shadow-md transition-opacity opacity-0 group-hover:opacity-100",
+            isCurrentUser ? "right-full mr-2" : "left-full ml-2"
+        )}>
+             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleReply} title="Reply"><Reply className="h-4 w-4" /></Button>
+             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setShowPicker(!showPicker)} title="Add Reaction"><SmilePlus className="h-4 w-4" /></Button>
+            {isCurrentUser && (
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setIsEditing(true)} title="Edit"><Pencil className="h-4 w-4" /></Button>
+            )}
+            {(isCurrentUser || canModerate) && (
+                <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-destructive/10" onClick={handleDelete} title="Delete"><Trash2 className="h-4 w-4 text-destructive" /></Button>
+            )}
+        </div>
+    );
 
     return (
         <div className={cn("flex w-full gap-3", isCurrentUser ? "justify-end" : "justify-start")}>
@@ -193,50 +181,14 @@ export const Message: React.FC<MessageProps> = ({
                     isCurrentUser ? "flex-row-reverse" : "flex-row"
                 )}>
                     {/* Display name only for others or if it's a main message */}
-                    {!isCurrentUser && !isReply && (
-                        <UserProfileCard userId={message.user_id}>
-                          <span className="font-bold text-sm cursor-pointer hover:underline text-foreground">
-                            {displayName}
-                          </span>
-                        </UserProfileCard>
-                    )}
-                    <span className={cn("text-xs", isCurrentUser ? "text-primary-foreground/70" : "text-muted-foreground")}>
-                        {new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </span>
+                    {!isCurrentUser && !isReply && ( <span className="font-bold text-sm">{displayName}</span> )}
+                    <span className={cn("text-xs", isCurrentUser ? "text-primary-foreground/70" : "text-muted-foreground")}>{new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                 </div>
 
                 {/* Message Bubble & Reactions */}
-                <div className="flex gap-1 items-start">
-                    {/* Action Menu (Reply and Reaction for others' messages) */}
-                    {!isCurrentUser && !isEditing && (
-                        <div className="relative mt-2 flex flex-col gap-1">
-                             <Button 
-                                variant="ghost" 
-                                size="xs" 
-                                className="p-1 h-6 hover:bg-muted/50" 
-                                onClick={handleReply}
-                                title="Reply to Message"
-                            >
-                                <Reply className="h-4 w-4" />
-                            </Button>
-                            <Button 
-                                variant="ghost" 
-                                size="xs" 
-                                className="p-1 h-6 hover:bg-muted/50" 
-                                onClick={() => setShowPicker(!showPicker)}
-                                title="Add Reaction"
-                            >
-                                {/* Using the pencil icon as a toggle for the picker */}
-                                <Pencil className="h-4 w-4 transform rotate-90" /> 
-                            </Button>
-                           
-                            {showPicker && (
-                                <div className="absolute top-0 right-0 z-10 -translate-y-full mb-1">
-                                    <EmojiPicker onSelect={handleReaction} />
-                                </div>
-                            )}
-                        </div>
-                    )}
+                <div className="relative flex items-center">
+                    {/* For others' messages, actions appear on the right */}
+                    {!isCurrentUser && <div className="order-2"><ActionMenu /></div>}
 
                     <div className={messageStyle}>
                         {messageContent}
@@ -275,45 +227,14 @@ export const Message: React.FC<MessageProps> = ({
                         )}
                     </div>
 
-                    {/* Action Menu (Edit/Delete for current user or Moderator/Admin) */}
-                    {!isEditing && (isCurrentUser || canModerate) && (
-                        <div className="relative mt-2 flex flex-col gap-1">
-                            {isCurrentUser && (
-                                <Button 
-                                    variant="ghost" 
-                                    size="xs" 
-                                    className="p-1 h-6 hover:bg-muted/50" 
-                                    onClick={() => setIsEditing(true)}
-                                    title="Edit Message"
-                                >
-                                    <Pencil className="h-4 w-4" />
-                                </Button>
-                            )}
-                            {(isCurrentUser || canModerate) && (
-                                <Button 
-                                    variant="ghost" 
-                                    size="xs" 
-                                    className="p-1 h-6 hover:bg-red-100" 
-                                    onClick={handleDelete}
-                                    title="Delete Message"
-                                >
-                                    <Trash2 className="h-4 w-4 text-red-500" />
-                                </Button>
-                            )}
-                             {!isCurrentUser && (
-                                <Button 
-                                    variant="ghost" 
-                                    size="xs" 
-                                    className="p-1 h-6 hover:bg-muted/50" 
-                                    onClick={handleReply}
-                                    title="Reply to Message"
-                                >
-                                    <Reply className="h-4 w-4" />
-                                </Button>
-                            )}
+                    {isCurrentUser && <div className="order-first"><ActionMenu /></div>}
+
+                    {/* Emoji picker appears above the action menu */}
+                    {showPicker && (
+                        <div className="absolute top-0 z-10 -translate-y-full mb-1">
+                           <EmojiPicker onSelect={handleReaction} />
                         </div>
                     )}
-
                 </div>
             </div>
             
