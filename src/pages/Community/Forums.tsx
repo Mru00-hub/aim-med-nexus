@@ -31,6 +31,7 @@ import { Enums } from '@/integrations/supabase/types';
 // This page no longer needs to fetch data, the context handles it.
 
 export default function Forums() {
+  console.log('%c[Forums.tsx] Rendering...', 'color: orange; font-weight: bold;');
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -46,7 +47,7 @@ export default function Forums() {
     isMemberOf,
     publicSpaceId // Use the ID from the context
   } = useCommunity();
-
+  console.log('[Forums.tsx] Data from context:', { spaces, publicThreads, loading });
   const [showSpaceCreator, setShowSpaceCreator] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [threadSearchQuery, setThreadSearchQuery] = useState('');
@@ -217,7 +218,7 @@ export default function Forums() {
       </Link>
     </Card>
   );
-
+  console.log('%c[Forums.tsx] About to return JSX.', 'color: green;');
   return (
     // Wrap the entire application or the main community section in the CommunityProvider 
     // for this hook to work correctly.
