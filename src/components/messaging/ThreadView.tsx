@@ -197,6 +197,7 @@ export const ThreadView: React.FC<ThreadViewProps> = ({ threadId }) => {
   
   const { 
     flatMessages, 
+    setMessages,
     isLoading, 
     refetchMessages, 
     replyingTo, 
@@ -216,22 +217,48 @@ export const ThreadView: React.FC<ThreadViewProps> = ({ threadId }) => {
   
   useEffect(() => { scrollToBottom(); }, [flatMessages, scrollToBottom]); 
 
-  const handleSendMessage = async (body: string, parentMessageId: number | null = null) => {
-    if (!user || !threadId) {
-      toast({ variant: 'destructive', title: 'Login Required' });
-      return;
+  const handleSendMessage = async (body: string, parentMessageId: number | null = null): Promise<MessageWithDetails> => {
+    if (!user) {
+      throw new Error('You must be logged in to post a message.');
     }
     
+    // Create a temporary message for optimistic UI
+    const tempId = Date.now(); // Temporary, non-numeric ID
+    const optimisticMessage: MessageWithDetails = {
+      id: tempId,
+      thread_id: threadId,
+      user_id: user.id,
+      body: body,
+      parent_message_id: parentMessageId,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      is_edited: false,
+      author: {
+        full_name: user.user_metadata.full_name || 'You',
+        profile_picture_url: user.user_metadata.avatar_url || null,
+      },
+      reactions: [],
+      attachments: [],
+    };
+
+    // Instantly update the UI
+    setMessages(currentMessages => [...currentMessages, optimisticMessage]);
+    setTimeout(scrollToBottom, 50);
+
     try {
-      // We don't wait for the API call to finish before updating the UI locally
-      postMessage(threadId, body, parentMessageId);
-      setReplyingTo(null);
-      // Refetch after a small delay to allow the database to update
-      setTimeout(() => {
-        refetchMessages().then(() => setTimeout(scrollToBottom, 50));
-      }, 500);
-    } catch (error: any) {
-      toast({ variant: 'destructive', title: 'Error sending message', description: error.message });
+      // Make the real API call
+      const newMessage = await postMessage(threadId, body, parentMessageId);
+      
+      // Replace the temporary message with the real one from the database
+      setMessages(currentMessages => 
+        currentMessages.map(m => (m.id === tempId ? { ...newMessage, author: optimisticMessage.author } : m))
+      );
+      
+      return { ...newMessage, author: optimisticMessage.author }; // Return the complete message object
+    } catch (error) {
+      // If it fails, remove the optimistic message and show an error
+      setMessages(currentMessages => currentMessages.filter(m => m.id !== tempId));
+      throw error; // Re-throw the error to be caught by MessageInput
     }
   };
   
