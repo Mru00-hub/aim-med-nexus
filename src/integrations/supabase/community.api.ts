@@ -278,6 +278,23 @@ export const postMessage = async (
     return data;
 };
 
+export const deleteMessage = async (messageId: number): Promise<void> => {
+    await getSessionOrThrow();
+    const { error } = await supabase.from('messages').delete().eq('id', messageId);
+    if (error) throw error;
+};
+
+export const editMessage = async (messageId: number, newBody: string): Promise<Message> => {
+    await getSessionOrThrow();
+    const { data, error } = await supabase
+      .from('messages')
+      .update({ body: newBody, is_edited: true, updated_at: new Date().toISOString() })
+      .eq('id', messageId)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+};
 /** Adds a reaction to a message. */
 export const addReaction = async (messageId: number, emoji: string): Promise<MessageReaction> => {
     const session = await getSessionOrThrow();
