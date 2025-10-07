@@ -212,7 +212,7 @@ export const createThread = async (
     await getSessionOrThrow();
     const { data, error } = await supabase.rpc('create_thread', {
         p_title: payload.title,
-        p_initial_message_body: payload.body,
+        p_body: payload.body, 
         p_space_id: payload.spaceId,
     });
 
