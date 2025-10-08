@@ -1,8 +1,8 @@
 import { useAuth } from '@/hooks/useAuth';
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Paperclip, Send, X } from 'lucide-react';
+import { Paperclip, Send, X, File as FileIcon, XCircle } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { Loader2 } from 'lucide-react';
 // Assuming MessageWithDetails is available via community.api
@@ -28,7 +28,23 @@ export const MessageInput: React.FC<MessageInputProps> = ({
   
   const [body, setBody] = useState('');
   const [isSending, setIsSending] = useState(false);
-  const [attachedFiles, setAttachedFiles] = useState<File[]>([]); // Handles file preview/state
+  const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
+  const [previewUrls, setPreviewUrls] = useState<string[]>([]);// Handles file preview/state
+
+  useEffect(() => {
+      if (!attachedFiles.length) {
+          setPreviewUrls([]);
+          return;
+      }
+      const newUrls = attachedFiles.map(file => URL.createObjectURL(file));
+      setPreviewUrls(newUrls);
+
+      // Cleanup function to revoke the object URLs when the component unmounts
+      // or when the attachedFiles dependency array changes.
+      return () => {
+          newUrls.forEach(url => URL.revokeObjectURL(url));
+      };
+  }, [attachedFiles]);
   
   const handleSend = async () => {
     const trimmedBody = body.trim();
@@ -92,15 +108,33 @@ export const MessageInput: React.FC<MessageInputProps> = ({
         
         {/* Attachments Preview */}
         {attachedFiles.length > 0 && (
-            <div className="flex flex-wrap gap-2 p-2 bg-card border rounded-lg">
-                <p className="text-xs font-medium w-full">Attachments:</p>
-                {attachedFiles.map((file, index) => (
-                    <div key={index} className="flex items-center gap-1 text-xs bg-secondary rounded-full px-2 py-0.5">
-                        <Paperclip className="h-3 w-3" />
-                        {file.name}
-                        <X className="h-3 w-3 cursor-pointer text-red-500 hover:text-red-700 ml-1" onClick={() => handleRemoveFile(file)} />
-                    </div>
-                ))}
+            <div className="flex flex-wrap gap-3 p-2 bg-card border rounded-lg">
+                {attachedFiles.map((file, index) => {
+                    const isImage = file.type.startsWith('image/');
+                    return (
+                        <div key={index} className="relative group w-20 h-20">
+                            {isImage ? (
+                                <img 
+                                    src={previewUrls[index]} 
+                                    alt={file.name} 
+                                    className="w-full h-full rounded-md object-cover border" 
+                                />
+                            ) : (
+                                <div className="w-full h-full rounded-md bg-muted flex flex-col items-center justify-center p-1 text-center">
+                                    <FileIcon className="h-8 w-8 text-muted-foreground" />
+                                    <p className="text-xs text-muted-foreground truncate w-full mt-1">{file.name}</p>
+                                </div>
+                            )}
+                            <button
+                                onClick={() => handleRemoveFile(file)}
+                                className="absolute -top-1 -right-1 bg-background rounded-full text-destructive opacity-0 group-hover:opacity-100 transition-opacity focus:opacity-100"
+                                title={`Remove ${file.name}`}
+                            >
+                                <XCircle className="h-5 w-5" />
+                            </button>
+                        </div>
+                    );
+                })}
             </div>
         )}
 
