@@ -151,7 +151,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
                 type="file" 
                 ref={fileInputRef} 
                 onChange={handleFileChange} 
-                className="hidden" 
+                className="sr-only"
                 multiple 
             />
 
