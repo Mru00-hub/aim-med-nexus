@@ -119,37 +119,26 @@ export const Message: React.FC<MessageProps> = ({
                 </Avatar>
             )}
             
-            <div className={cn("flex flex-col w-full max-w-lg", isCurrentUser ? "items-end" : "items-start")}>
-                {/* Author & Timestamp */}
+            <div className={cn("flex flex-col w-full max-w-lg relative", isCurrentUser ? "items-end" : "items-start")}>
                 <div className="flex items-center gap-2 mb-1">
-                    {!isCurrentUser && <span className="font-bold text-sm">{displayName}</span>}
+                    <span className="font-bold text-sm">{displayName}</span>
                     <span className="text-xs text-muted-foreground">{new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                 </div>
 
-                {/* Main Message Bubble */}
-                <div 
-                    className={messageStyle}
-                    // --- CHANGE: Added onClick to toggle the action menu ---
-                    onClick={() => setShowActions(prev => !prev)}
-                >
-                    {/* The actual message content (text or edit form) */}
+                <div className={messageStyle} onClick={() => setShowActions(p => !p)}>
                     {messageContent}
                 </div>
 
                 {showActions && (
-                    <div className={cn(
-                        "absolute top-[-16px] z-10 flex items-center bg-card border rounded-full shadow-md",
-                        isCurrentUser ? "right-0" : "left-0"
-                    )}>
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { onReplyClick(message); setShowActions(false); }} title="Reply"><Reply className="h-4 w-4" /></Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setShowPicker(p => !p)} title="Add Reaction"><SmilePlus className="h-4 w-4" /></Button>
-                        {isCurrentUser && <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setIsEditing(true); setShowActions(false); }} title="Edit"><Pencil className="h-4 w-4" /></Button>}
-                        {(isCurrentUser || canModerate) && <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleDelete} title="Delete"><Trash2 className="h-4 w-4 text-destructive" /></Button>}
+                    <div className={cn("absolute top-[8px] z-10 flex items-center bg-card border rounded-full shadow-md", isCurrentUser ? "right-[110%]" : "left-[110%]")}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); onReplyClick(message); setShowActions(false); }} title="Reply"><Reply className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); setShowPicker(p => !p); }} title="Add Reaction"><SmilePlus className="h-4 w-4" /></Button>
+                        {isCurrentUser && <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); setIsEditing(true); setShowActions(false); }} title="Edit"><Pencil className="h-4 w-4" /></Button>}
+                        {(isCurrentUser || canModerate) && <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); handleDelete(); }} title="Delete"><Trash2 className="h-4 w-4 text-destructive" /></Button>}
                     </div>
                 )}
-
                 {/* Emoji Picker */}
-                {showPicker && <div className="absolute top-0 z-10 -translate-y-full mb-1"><EmojiPicker onSelect={handleReaction} /></div>}
+                {showPicker && <div className="absolute top-0 z-20"><EmojiPicker onSelect={handleReaction} /></div>}
 
                 {Object.keys(reactionCounts).length > 0 && (
                     <div className="mt-1 flex gap-1">
