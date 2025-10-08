@@ -37,6 +37,9 @@ export const MessageInput: React.FC<MessageInputProps> = ({
           return;
       }
       const newUrls = attachedFiles.map(file => URL.createObjectURL(file));
+      if (newUrls.length > 0) {
+            alert(`✅ ALERT 1 of 4: Preview URL Created\n\nURL: ${newUrls[0]}`);
+      }
       setPreviewUrls(newUrls);
 
       // Cleanup function to revoke the object URLs when the component unmounts
