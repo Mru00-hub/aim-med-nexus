@@ -8,34 +8,19 @@ import { Loader2 } from 'lucide-react';
 // Assuming MessageWithDetails is available via community.api
 import { MessageWithDetails } from '@/integrations/supabase/community.api'; 
 
-// --- PLACEHOLDER API CALL FOR ATTACHMENTS (Must be implemented in community.api.ts) ---
-// This function needs to be replaced with your actual Supabase Storage logic.
-const attachFileToMessagePlaceholder = async (file: File) => {
-    return new Promise<{ fileName: string }>(resolve => {
-        console.log(`[Attachment] Initiating upload for: ${file.name}`);
-        setTimeout(() => {
-            resolve({ fileName: file.name });
-        }, 1000); // Simulate network delay
-    });
-};
-// --- END PLACEHOLDER ---
-
 interface MessageInputProps {
   threadId: string;
   // The handler from ThreadView: (body, parentMessageId) => Promise<void>
-  onSendMessage: (body: string, parentMessageId: number | null) => Promise<MessageWithDetails>;
+  onSendMessage: (body: string, parentMessageId: number | null, files: File[]) => Promise<void>;
   replyingTo: MessageWithDetails | null;
-  onCancelReply: () => void;
-  // Add a refetch prop to update the UI after attachments are uploaded
-  refetchMessages: () => void;
+  onCancelReply: () => void;  
 }
 
 export const MessageInput: React.FC<MessageInputProps> = ({ 
     threadId, 
     onSendMessage, 
     replyingTo,
-    onCancelReply,
-    refetchMessages
+    onCancelReply
 }) => {
   const { profile } = useAuth();
   const { toast } = useToast();
@@ -47,36 +32,25 @@ export const MessageInput: React.FC<MessageInputProps> = ({
   
   const handleSend = async () => {
     const trimmedBody = body.trim();
-
     if (trimmedBody === '' && attachedFiles.length === 0 || isSending) return;
     
     setIsSending(true);
 
     try {
-      // Step 1: Send the text message first. This happens optimistically.
-      // onSendMessage will return the real message object from the database.
-      const newMessage = await onSendMessage(trimmedBody, replyingTo?.id || null);
+      // UPDATE: Call the new onSendMessage prop with the files.
+      // The parent component now handles all optimistic logic and API calls.
+      await onSendMessage(trimmedBody, replyingTo?.id || null, attachedFiles);
       
-      // Step 2: If there are attachments, upload them now that we have a message ID.
-      if (attachedFiles.length > 0) {
-        toast({ title: "Uploading attachment(s)...", description: "Your message is sent. Files are now uploading." });
-        
-        // Upload all files in parallel
-        await Promise.all(
-          attachedFiles.map(file => uploadAttachment(newMessage.id, file))
-        );
-
-        // Step 3: Refetch all messages to show the new attachments on the message.
-        refetchMessages();
-      }
-      
-      // Step 4: Clear UI state on complete success.
+      // Clear the input fields on success
       setBody(''); 
       setAttachedFiles([]);
       onCancelReply();
 
     } catch (error: any) {
-      toast({ variant: 'destructive', title: 'Error sending message', description: error.message });
+      console.error("MessageInput failed to send:", error);
+      // The parent component (ThreadView) will show the primary error toast.
+      // We can keep this one as a fallback if needed.
+      toast({ variant: 'destructive', title: 'Error', description: 'Your message could not be sent.' });
     } finally {
       setIsSending(false);
     }
