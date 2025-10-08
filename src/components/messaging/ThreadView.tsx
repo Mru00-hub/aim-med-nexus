@@ -286,31 +286,32 @@ export const ThreadView: React.FC<ThreadViewProps> = ({ threadId }) => {
                 {flatMessages.length === 0 ? (
                   <div className="text-center py-10 text-muted-foreground">No messages yet. Start the conversation!</div>
                 ) : (
-                  // --- NEW: Render a simple, flat list of messages ---
                   flatMessages.map((msg) => (
                     <Message 
-                        key={msg.id}
-                        message={msg}
+                        key={msg.id} 
+                        message={msg} 
                         currentUserId={user?.id || ''}
                         onDelete={handleDeleteMessage}
                         onReplyClick={handleReplyClick}
-                        refetchMessages={refetchMessages}
-                        replyTo={msg.replyTo}
                         onReaction={handleReaction}
                     />
-                  ))}
+                  ))
+                )}
               </div>
             )}
           </div>
         </ScrollArea>
       </div>
+      
       <div className="mt-4 p-4 border-t bg-background">
         <MessageInput 
-          onSendMessage={handleSendMessage} 
-          replyingTo={replyingTo} 
-          onCancelReply={() => setReplyingTo(null)} 
-          refetchMessages={refetchMessages} />
+            threadId={threadId} 
+            onSendMessage={handleSendMessage} 
+            replyingTo={replyingTo}
+            onCancelReply={() => setReplyingTo(null)}
+            refetchMessages={refetchMessages}
+        />
       </div>
     </div>
   );
-};
+);
