@@ -14,6 +14,7 @@ import {
   removeReaction,
   MessageWithDetails,
   MessageReaction,
+  uploadAttachment,
 } from '@/integrations/supabase/community.api'; 
 
 import { Message } from './Message'; 
@@ -35,7 +36,7 @@ interface ThreadViewProps {
 // ======================================================================
 // CENTRALIZED HOOK: Handles all Data, Real-Time, and Logic
 // ======================================================================
-const useThreadData = (threadId: string, currentUserId: string | undefined) => {
+const useThreadData = (threadId: string, currentUserId: string | undefined, profile: Profile | null) => {
     const { toast } = useToast();
     const [messages, setMessages] = useState<MessageWithDetails[]>([]);
     const [isLoading, setIsLoading] = useState(true);
