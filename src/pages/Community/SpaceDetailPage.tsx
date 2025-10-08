@@ -247,12 +247,12 @@ export default function SpaceDetailPage() {
             <Card className="mb-8">
               <CardHeader>
                 <CardTitle className="text-3xl">{space.name}</CardTitle>
-                <CardDescription>
+                <div className="text-sm text-muted-foreground"> {/* This class mimics CardDescription's style */}
                     {space.description} 
                     <Badge variant={space.join_level === 'INVITE_ONLY' ? 'destructive' : 'secondary'} className="ml-2">
                         {space.join_level === 'INVITE_ONLY' ? 'Private' : 'Open Access'}
                     </Badge>
-                </CardDescription>
+                </div>
               </CardHeader>
               <CardContent>
                   <div className="flex items-center gap-4 pt-4 text-sm text-muted-foreground">
