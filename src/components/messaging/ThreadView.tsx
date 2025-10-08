@@ -314,4 +314,3 @@ export const ThreadView: React.FC<ThreadViewProps> = ({ threadId }) => {
       </div>
     </div>
   );
-);
