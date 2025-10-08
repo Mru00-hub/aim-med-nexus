@@ -87,6 +87,17 @@ const useThreadData = (threadId: string, currentUserId: string | undefined, prof
 
         console.log("1. Optimistic Message created:", optimisticMessage);
 
+        if (optimisticMessage.attachments.length > 0) {
+            const firstAttachment = optimisticMessage.attachments[0];
+            alert(
+                `✅ ALERT 2 of 4: Optimistic Message Ready\n\n` +
+                `File Name: ${firstAttachment.file_name}\n` +
+                `File Type: ${firstAttachment.file_type}\n` +
+                `Is Uploading: ${firstAttachment.isUploading}\n` +
+                `Local URL: ${firstAttachment.file_url}`
+            );
+        }
+
         setMessages(current => [...current, optimisticMessage]);
 
         try {
