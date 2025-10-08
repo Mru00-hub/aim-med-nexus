@@ -57,12 +57,27 @@ const useThreadData = (threadId: string, currentUserId: string | undefined, prof
     }, [threadId, toast]);
 
     const handleSendMessage = useCallback(async (body: string, parentMessageId: number | null = null) => {
-        if (!currentUserId) return;
-        
-        // Create a temporary message to display instantly
-        const tempId = Date.now();
+    const handleSendMessage = useCallback(async (body: string, parentMessageId: number | null, files: File[]) => {
+        if (!currentUserId || !profile) {
+            throw new Error('User is not authenticated or profile is not available.');
+        }
+
+        // Step 1: Create a temporary ID and optimistic version of the message.
+        const tempMsgId = `temp_${Date.now()}`;
+        const optimisticAttachments = files.map((file, index) => ({
+            id: `temp_att_${Date.now()}_${index}`,
+            message_id: -1,
+            file_name: file.name,
+            file_type: file.type,
+            file_url: URL.createObjectURL(file), // Local URL for instant preview
+            file_size_bytes: file.size,
+            created_at: new Date().toISOString(),
+            uploaded_by: currentUserId,
+            isUploading: true, // Custom flag for the UI
+        }));
+
         const optimisticMessage: MessageWithDetails = {
-            id: tempId,
+            id: tempMsgId as any,
             thread_id: threadId,
             user_id: currentUserId,
             body,
@@ -70,23 +85,69 @@ const useThreadData = (threadId: string, currentUserId: string | undefined, prof
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
             is_edited: false,
-            author: null, // We'll fetch the real author later
+            author: {
+                full_name: profile.full_name,
+                profile_picture_url: profile.profile_picture_url,
+            },
             reactions: [],
-            attachments: [],
+            attachments: optimisticAttachments as any,
+            parent_message: parentMessageId ? messages.find(m => m.id === parentMessageId) : null,
         };
+
+        // Step 2: Immediately update the UI with the optimistic message.
         setMessages(current => [...current, optimisticMessage]);
-        setReplyingTo(null);
-        
+
         try {
-            await postMessage(threadId, body, parentMessageId);
-            // After success, refetch to get the real message from the DB
-            await fetchAndSyncMessages();
+            // Step 3A: Post the text part of the message to get a real message ID.
+            const realMessage = await postMessage(threadId, body, parentMessageId);
+
+            // Step 3B: Upload attachments now that we have a real message ID.
+            if (files.length > 0) {
+                await Promise.all(
+                    files.map(async (file, index) => {
+                        try {
+                            const realAttachment = await uploadAttachment(realMessage.id, file);
+                            // Update the specific attachment in state from "uploading" to "complete"
+                            setMessages(current => current.map(msg => 
+                                msg.id === tempMsgId ? {
+                                    ...msg,
+                                    attachments: msg.attachments.map(att => 
+                                        att.id === optimisticAttachments[index].id 
+                                        ? { ...realAttachment, isUploading: false } 
+                                        : att
+                                    )
+                                } : msg
+                            ));
+                        } catch (uploadError) {
+                            console.error(`Upload failed for ${file.name}:`, uploadError);
+                            // Update the specific attachment to show an error state
+                            setMessages(current => current.map(msg => 
+                                msg.id === tempMsgId ? {
+                                    ...msg,
+                                    attachments: msg.attachments.map(att => 
+                                        att.id === optimisticAttachments[index].id 
+                                        ? { ...att, isUploading: false, file_url: 'upload-failed' } 
+                                        : att
+                                    )
+                                } : msg
+                            ));
+                        }
+                    })
+                );
+            }
+
+            // Step 4: Finalize the message state by replacing the temp ID with the real one.
+            setMessages(current => current.map(msg => 
+                msg.id === tempMsgId ? { ...optimisticMessage, ...realMessage, id: realMessage.id } : msg
+            ));
         } catch (error: any) {
-            toast({ variant: 'destructive', title: 'Send Failed', description: error.message });
-            setMessages(current => current.filter(m => m.id !== tempId)); // Revert on failure
+            // Step 5: On critical failure (e.g., text message fails), remove the optimistic message.
+            toast({ variant: 'destructive', title: 'Failed to Send Message', description: error.message });
+            setMessages(current => current.filter(m => m.id !== tempMsgId));
+            throw error;
         }
-    }, [currentUserId, threadId, fetchAndSyncMessages, toast]);
-    
+    }, [currentUserId, threadId, profile, messages, toast]);
+
     const handleDeleteMessage = useCallback(async (messageId: number) => {
         const previousMessages = messages;
         setMessages(currentMessages => currentMessages.filter(m => m.id !== messageId));
@@ -191,6 +252,7 @@ const useThreadData = (threadId: string, currentUserId: string | undefined, prof
         refetchMessages: fetchAndSyncMessages,
         replyingTo,
         setReplyingTo,
+        handleSendMessage,
         handleDeleteMessage,
         handleReaction 
     };
@@ -199,7 +261,7 @@ const useThreadData = (threadId: string, currentUserId: string | undefined, prof
 // THREAD VIEW COMPONENT (Renderer)
 // ======================================================================
 export const ThreadView: React.FC<ThreadViewProps> = ({ threadId }) => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth(); 
   const { toast } = useToast();
   
   const { 
@@ -208,11 +270,12 @@ export const ThreadView: React.FC<ThreadViewProps> = ({ threadId }) => {
     isLoading, 
     refetchMessages, 
     replyingTo, 
-    setReplyingTo, 
+    setReplyingTo,
+    handleSendMessage,
     handleDeleteMessage,
     handleEditMessage,
     handleReaction
-  } = useThreadData(threadId, user?.id);
+  } = useThreadData(threadId, user?.id, profile);
   
   const scrollViewportRef = useRef<HTMLDivElement>(null);
 
@@ -223,43 +286,7 @@ export const ThreadView: React.FC<ThreadViewProps> = ({ threadId }) => {
   }, []);
   
   useEffect(() => { scrollToBottom(); }, [flatMessages, scrollToBottom]); 
-
-  const handleSendMessage = async (body: string, parentMessageId: number | null = null): Promise<MessageWithDetails> => {
-    if (!user || !profile) { throw new Error('You must be logged in and have a profile to post.'); }
     
-    const tempId = Date.now();
-    const optimisticMessage: MessageWithDetails = {
-      id: tempId,
-      thread_id: threadId,
-      user_id: user.id,
-      body,
-      parent_message_id: parentMessageId,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      is_edited: false,
-      author: {
-        full_name: profile.full_name,
-        profile_picture_url: profile.profile_picture_url,
-      },
-      reactions: [],
-      attachments: [],
-      // Add the parent message for instant UI update
-      parent_message: parentMessageId ? flatMessages.find(m => m.id === parentMessageId) : null,
-    };
-
-    setMessages(current => [...current, optimisticMessage]);
-    setTimeout(scrollToBottom, 50);
-
-    try {
-      const newMessage = await postMessage(threadId, body, parentMessageId);
-      setMessages(current => current.map(m => (m.id === tempId ? { ...newMessage, author: optimisticMessage.author, parent_message: optimisticMessage.parent_message } : m)));
-      return { ...newMessage, author: optimisticMessage.author };
-    } catch (error) {
-      setMessages(current => current.filter(m => m.id !== tempId));
-      throw error;
-    }
-  };
-  
   const handleReplyClick = (message: MessageWithDetails) => { setReplyingTo(message); };
 
   if (!threadId) {
@@ -310,7 +337,6 @@ export const ThreadView: React.FC<ThreadViewProps> = ({ threadId }) => {
             onSendMessage={handleSendMessage} 
             replyingTo={replyingTo}
             onCancelReply={() => setReplyingTo(null)}
-            refetchMessages={refetchMessages}
         />
       </div>
     </div>
