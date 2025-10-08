@@ -161,32 +161,39 @@ const useThreadData = (threadId: string, currentUserId: string | undefined) => {
 
     useEffect(() => {
         if (!threadId) return;
-        const handleRealtimeEvent = () => { fetchAndSyncMessages(); };
+        const handleRealtimeEvent = (payload: any) => {
+            console.log('Realtime event received, refetching messages:', payload);
+            fetchAndSyncMessages(); 
+        };
         const channel = supabase.channel(`thread_chat_${threadId}`)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'messages', filter: `thread_id=eq.${threadId}` }, handleRealtimeEvent)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'message_reactions' }, handleRealtimeEvent)
             .subscribe();
         return () => { supabase.removeChannel(channel); };
-    }, [threadId, currentUserId, fetchAndSyncMessages]);
+    }, [threadId, fetchAndSyncMessages]);
     
-    // --- NEW LOGIC: Create a flat, sorted list of messages for the chat view ---
     const flatMessages = useMemo(() => {
-        return messages.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+        const messageMap = new Map(messages.map(m => [m.id, m]));
+        return messages
+            .map(message => ({
+                ...message,
+                // If this is a reply, find the parent and attach it.
+                parent_message: message.parent_message_id ? messageMap.get(message.parent_message_id) : null,
+            }))
+            .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
     }, [messages]);
 
     return { 
         flatMessages, 
         isLoading, 
-        setMessages, 
+        setMessages,
         refetchMessages: fetchAndSyncMessages,
         replyingTo,
         setReplyingTo,
         handleDeleteMessage,
-        handleEditMessage,
-        handleReaction
+        handleReaction 
     };
 };
-
 // ======================================================================
 // THREAD VIEW COMPONENT (Renderer)
 // ======================================================================
@@ -217,47 +224,38 @@ export const ThreadView: React.FC<ThreadViewProps> = ({ threadId }) => {
   useEffect(() => { scrollToBottom(); }, [flatMessages, scrollToBottom]); 
 
   const handleSendMessage = async (body: string, parentMessageId: number | null = null): Promise<MessageWithDetails> => {
-    if (!user) {
-      throw new Error('You must be logged in to post a message.');
-    }
+    if (!user || !profile) { throw new Error('You must be logged in and have a profile to post.'); }
     
-    // Create a temporary message for optimistic UI
-    const tempId = Date.now(); // Temporary, non-numeric ID
+    const tempId = Date.now();
     const optimisticMessage: MessageWithDetails = {
       id: tempId,
       thread_id: threadId,
       user_id: user.id,
-      body: body,
+      body,
       parent_message_id: parentMessageId,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
       is_edited: false,
       author: {
-        full_name: user.user_metadata.full_name || 'You',
-        profile_picture_url: user.user_metadata.avatar_url || null,
+        full_name: profile.full_name,
+        profile_picture_url: profile.profile_picture_url,
       },
       reactions: [],
       attachments: [],
+      // Add the parent message for instant UI update
+      parent_message: parentMessageId ? flatMessages.find(m => m.id === parentMessageId) : null,
     };
 
-    // Instantly update the UI
-    setMessages(currentMessages => [...currentMessages, optimisticMessage]);
+    setMessages(current => [...current, optimisticMessage]);
     setTimeout(scrollToBottom, 50);
 
     try {
-      // Make the real API call
       const newMessage = await postMessage(threadId, body, parentMessageId);
-      
-      // Replace the temporary message with the real one from the database
-      setMessages(currentMessages => 
-        currentMessages.map(m => (m.id === tempId ? { ...newMessage, author: optimisticMessage.author } : m))
-      );
-      
-      return { ...newMessage, author: optimisticMessage.author }; // Return the complete message object
+      setMessages(current => current.map(m => (m.id === tempId ? { ...newMessage, author: optimisticMessage.author, parent_message: optimisticMessage.parent_message } : m)));
+      return { ...newMessage, author: optimisticMessage.author };
     } catch (error) {
-      // If it fails, remove the optimistic message and show an error
-      setMessages(currentMessages => currentMessages.filter(m => m.id !== tempId));
-      throw error; // Re-throw the error to be caught by MessageInput
+      setMessages(current => current.filter(m => m.id !== tempId));
+      throw error;
     }
   };
   
@@ -297,25 +295,21 @@ export const ThreadView: React.FC<ThreadViewProps> = ({ threadId }) => {
                         onDelete={handleDeleteMessage}
                         onReplyClick={handleReplyClick}
                         refetchMessages={refetchMessages}
-                        // Pass the new replyTo object to the Message component
                         replyTo={msg.replyTo}
                         onReaction={handleReaction}
                     />
-                  ))
-                )}
+                  ))}
               </div>
             )}
           </div>
         </ScrollArea>
       </div>
-      
       <div className="mt-4 p-4 border-t bg-background">
         <MessageInput 
-            threadId={threadId} 
-            onSendMessage={handleSendMessage} 
-            replyingTo={replyingTo}
-            onCancelReply={() => setReplyingTo(null)}
-        />
+          onSendMessage={handleSendMessage} 
+          replyingTo={replyingTo} 
+          onCancelReply={() => setReplyingTo(null)} 
+          refetchMessages={refetchMessages} />
       </div>
     </div>
   );
