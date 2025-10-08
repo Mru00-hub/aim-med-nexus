@@ -4,8 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/use-toast';
 import { cn } from '@/lib/utils';
+import { Loader2, Image as ImageIcon, File as FileIcon, AlertCircle } from 'lucide-react';
 import { 
     MessageWithDetails, 
+    MessageAttachment,
     editMessage,
     addReaction,
     removeReaction,
@@ -28,6 +30,50 @@ interface MessageProps {
     onReplyClick: (message: MessageWithDetails) => void;
     onReaction: (messageId: number, emoji: string) => void;
 }
+
+const Attachment: React.FC<{ attachment: MessageAttachment & { isUploading?: boolean } }> = ({ attachment }) => {
+    const isImage = attachment.file_type?.startsWith('image/');
+    
+    if (attachment.isUploading) {
+        return (
+            <div className="flex items-center gap-2 p-2 mt-2 rounded-lg bg-muted border animate-pulse">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span className="text-xs font-medium truncate">{attachment.file_name}</span>
+            </div>
+        );
+    }
+    
+    if (attachment.file_url === 'upload-failed') {
+        return (
+             <div className="flex items-center gap-2 p-2 mt-2 rounded-lg bg-destructive/20 border-destructive text-destructive">
+                <AlertCircle className="h-4 w-4" />
+                <span className="text-xs font-medium truncate">Upload Failed: {attachment.file_name}</span>
+            </div>
+        )
+    }
+
+    if (isImage) {
+        return (
+            <a href={attachment.file_url} target="_blank" rel="noopener noreferrer" className="mt-2 block">
+                <img 
+                    src={attachment.file_url} 
+                    alt={attachment.file_name} 
+                    className="max-w-xs max-h-64 rounded-lg object-cover border"
+                />
+            </a>
+        );
+    }
+
+    return (
+        <a href={attachment.file_url} target="_blank" rel="noopener noreferrer" download className="flex items-center gap-2 p-2 mt-2 rounded-lg bg-muted border hover:bg-muted/80 transition-colors">
+            <FileIcon className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+            <div className="flex flex-col overflow-hidden">
+                <span className="text-sm font-medium truncate">{attachment.file_name}</span>
+                {attachment.file_size_bytes && <span className="text-xs text-muted-foreground">{(attachment.file_size_bytes / 1024).toFixed(1)} KB</span>}
+            </div>
+        </a>
+    );
+};
 
 export const Message: React.FC<MessageProps> = ({ 
     message, 
@@ -100,6 +146,13 @@ export const Message: React.FC<MessageProps> = ({
                 </div>
             )}
             <p className="text-sm break-words whitespace-pre-wrap">{message.body} {message.is_edited && <span className="text-xs opacity-70">(edited)</span>}</p>
+            {message.attachments && message.attachments.length > 0 && (
+                <div className="mt-2">
+                    {message.attachments.map(att => (
+                        <Attachment key={att.id} attachment={att as MessageAttachment & { isUploading?: boolean }} />
+                    ))}
+                </div>
+          )}
         </>
     );
     
