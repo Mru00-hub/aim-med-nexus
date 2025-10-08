@@ -103,24 +103,13 @@ export const Message: React.FC<MessageProps> = ({
         </>
     );
     
-    const messageStyle = cn("flex flex-col rounded-xl px-4 py-3 max-w-[85%] sm:max-w-lg shadow-sm group relative", isCurrentUser ? "bg-primary text-primary-foreground" : "bg-card border");
-
-    const ActionMenu = () => (
-        <div className={cn(
-            "absolute top-[-16px] flex items-center bg-card border rounded-full shadow-md transition-opacity opacity-0 group-hover:opacity-100",
-            isCurrentUser ? "right-0" : "left-0"
-        )}>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onReplyClick(message)} title="Reply"><Reply className="h-4 w-4" /></Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setShowPicker(p => !p)} title="Add Reaction"><SmilePlus className="h-4 w-4" /></Button>
-            {isCurrentUser && (
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setIsEditing(true)} title="Edit"><Pencil className="h-4 w-4" /></Button>
-            )}
-            {(isCurrentUser || canModerate) && (
-                <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-destructive/10" onClick={handleDelete} title="Delete"><Trash2 className="h-4 w-4 text-destructive" /></Button>
-            )}
-        </div>
+    const messageStyle = cn(
+        "flex flex-col rounded-xl px-4 py-3 max-w-[85%] sm:max-w-lg shadow-sm cursor-pointer group relative",
+        isCurrentUser 
+            ? "bg-blue-100 dark:bg-blue-900/50 text-blue-900 dark:text-blue-100" 
+            : "bg-card border"
     );
-    
+
     return (
         <div className={cn("flex w-full gap-3", isCurrentUser ? "justify-end" : "justify-start")}>
             {!isCurrentUser && (
@@ -137,21 +126,27 @@ export const Message: React.FC<MessageProps> = ({
                     <span className="text-xs text-muted-foreground">{new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                 </div>
 
-                {/* Message Bubble */}
-                <div className={cn("flex flex-col rounded-xl px-4 py-3 shadow-sm", isCurrentUser ? "bg-primary text-primary-foreground" : "bg-card border")}>
+                {/* Main Message Bubble */}
+                <div 
+                    className={messageStyle}
+                    // --- CHANGE: Added onClick to toggle the action menu ---
+                    onClick={() => setShowActions(prev => !prev)}
+                >
+                    {/* The actual message content (text or edit form) */}
                     {messageContent}
                 </div>
 
-                {/* Action Menu - Now positioned relative to the parent 'group' */}
-                <div className={cn(
-                    "absolute top-[-16px] flex items-center bg-card border rounded-full shadow-md transition-opacity opacity-0 group-hover:opacity-100",
-                    isCurrentUser ? "right-0" : "left-0"
-                )}>
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onReplyClick(message)} title="Reply"><Reply className="h-4 w-4" /></Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setShowPicker(p => !p)} title="Add Reaction"><SmilePlus className="h-4 w-4" /></Button>
-                    {isCurrentUser && <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setIsEditing(true)} title="Edit"><Pencil className="h-4 w-4" /></Button>}
-                    {(isCurrentUser || canModerate) && <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleDelete} title="Delete"><Trash2 className="h-4 w-4 text-destructive" /></Button>}
-                </div>
+                {showActions && (
+                    <div className={cn(
+                        "absolute top-[-16px] z-10 flex items-center bg-card border rounded-full shadow-md",
+                        isCurrentUser ? "right-0" : "left-0"
+                    )}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { onReplyClick(message); setShowActions(false); }} title="Reply"><Reply className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setShowPicker(p => !p)} title="Add Reaction"><SmilePlus className="h-4 w-4" /></Button>
+                        {isCurrentUser && <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setIsEditing(true); setShowActions(false); }} title="Edit"><Pencil className="h-4 w-4" /></Button>}
+                        {(isCurrentUser || canModerate) && <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleDelete} title="Delete"><Trash2 className="h-4 w-4 text-destructive" /></Button>}
+                    </div>
+                )}
 
                 {/* Emoji Picker */}
                 {showPicker && <div className="absolute top-0 z-10 -translate-y-full mb-1"><EmojiPicker onSelect={handleReaction} /></div>}
