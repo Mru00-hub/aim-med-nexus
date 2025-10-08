@@ -85,6 +85,8 @@ const useThreadData = (threadId: string, currentUserId: string | undefined, prof
             parent_message: parentMessageId ? messages.find(m => m.id === parentMessageId) : null,
         };
 
+        console.log("1. Optimistic Message created:", optimisticMessage);
+
         setMessages(current => [...current, optimisticMessage]);
 
         try {
