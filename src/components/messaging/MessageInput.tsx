@@ -145,28 +145,34 @@ export const MessageInput: React.FC<MessageInputProps> = ({
 
         {/* Input Area */}
         <div className="relative flex items-end gap-2">
-            
-            {/* Hidden File Input (Used to trigger native file dialog) */}
+            {/* 1. The input is still hidden, but now has an ID */}
             <input 
                 type="file" 
                 ref={fileInputRef} 
                 onChange={handleFileChange} 
-                className="sr-only"
+                className="sr-only" 
+                id="file-attachment-input" // <-- We've added an ID
                 multiple 
             />
 
-            {/* Attachment Button */}
-            <Button 
-                variant="outline" 
-                size="icon" 
-                onClick={() => fileInputRef.current?.click()}
-                disabled={isSending}
-                className="self-end"
-                title="Attach Files"
-            >
-                <Paperclip className="h-5 w-5" />
-            </Button>
-            
+            {/* 2. The Button is now wrapped in a Label linked to the input's ID */}
+            <label htmlFor="file-attachment-input">
+                <Button 
+                    variant="outline" 
+                    size="icon" 
+                    className="self-end"
+                    title="Attach Files"
+                    asChild // This prop allows the Button to act as a container for the label
+                >
+                    {/* The pointer-events-none is important to ensure the label receives the click */}
+                    <span className="cursor-pointer pointer-events-none"> 
+                        <Paperclip className="h-5 w-5" />
+                    </span>
+                </Button>
+            </label>
+    
+            {/* --- END OF REPLACEMENT --- */}
+
             <Textarea
                 placeholder="Type your message..."
                 value={body}
@@ -176,7 +182,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
                 disabled={isSending}
                 rows={1}
             />
-            
+    
             <Button 
                 onClick={handleSend} 
                 disabled={!profile || isSending || (body.trim() === '' && attachedFiles.length === 0)}
