@@ -15,19 +15,11 @@ import {
   MessageWithDetails,
   MessageReaction,
   uploadAttachment,
+  Profile, // Assuming Profile type is exported from community.api
 } from '@/integrations/supabase/community.api'; 
 
 import { Message } from './Message'; 
 import { MessageInput } from './MessageInput'; 
-
-// NEW: Define the structure for a message in our flat list
-type FlatMessage = MessageWithDetails & {
-    // This will contain the details of the message being replied to
-    replyTo?: {
-        author: string;
-        body: string;
-    } | null;
-};
 
 interface ThreadViewProps {
   threadId: string;
@@ -56,24 +48,23 @@ const useThreadData = (threadId: string, currentUserId: string | undefined, prof
       }
     }, [threadId, toast]);
 
-    const handleSendMessage = useCallback(async (body: string, parentMessageId: number | null = null) => {
+    // FIX 1: Removed the duplicate function declaration that was here.
     const handleSendMessage = useCallback(async (body: string, parentMessageId: number | null, files: File[]) => {
         if (!currentUserId || !profile) {
             throw new Error('User is not authenticated or profile is not available.');
         }
 
-        // Step 1: Create a temporary ID and optimistic version of the message.
         const tempMsgId = `temp_${Date.now()}`;
         const optimisticAttachments = files.map((file, index) => ({
             id: `temp_att_${Date.now()}_${index}`,
             message_id: -1,
             file_name: file.name,
             file_type: file.type,
-            file_url: URL.createObjectURL(file), // Local URL for instant preview
+            file_url: URL.createObjectURL(file),
             file_size_bytes: file.size,
             created_at: new Date().toISOString(),
             uploaded_by: currentUserId,
-            isUploading: true, // Custom flag for the UI
+            isUploading: true,
         }));
 
         const optimisticMessage: MessageWithDetails = {
@@ -94,20 +85,16 @@ const useThreadData = (threadId: string, currentUserId: string | undefined, prof
             parent_message: parentMessageId ? messages.find(m => m.id === parentMessageId) : null,
         };
 
-        // Step 2: Immediately update the UI with the optimistic message.
         setMessages(current => [...current, optimisticMessage]);
 
         try {
-            // Step 3A: Post the text part of the message to get a real message ID.
             const realMessage = await postMessage(threadId, body, parentMessageId);
 
-            // Step 3B: Upload attachments now that we have a real message ID.
             if (files.length > 0) {
                 await Promise.all(
                     files.map(async (file, index) => {
                         try {
                             const realAttachment = await uploadAttachment(realMessage.id, file);
-                            // Update the specific attachment in state from "uploading" to "complete"
                             setMessages(current => current.map(msg => 
                                 msg.id === tempMsgId ? {
                                     ...msg,
@@ -120,7 +107,6 @@ const useThreadData = (threadId: string, currentUserId: string | undefined, prof
                             ));
                         } catch (uploadError) {
                             console.error(`Upload failed for ${file.name}:`, uploadError);
-                            // Update the specific attachment to show an error state
                             setMessages(current => current.map(msg => 
                                 msg.id === tempMsgId ? {
                                     ...msg,
@@ -136,12 +122,10 @@ const useThreadData = (threadId: string, currentUserId: string | undefined, prof
                 );
             }
 
-            // Step 4: Finalize the message state by replacing the temp ID with the real one.
             setMessages(current => current.map(msg => 
                 msg.id === tempMsgId ? { ...optimisticMessage, ...realMessage, id: realMessage.id } : msg
             ));
         } catch (error: any) {
-            // Step 5: On critical failure (e.g., text message fails), remove the optimistic message.
             toast({ variant: 'destructive', title: 'Failed to Send Message', description: error.message });
             setMessages(current => current.filter(m => m.id !== tempMsgId));
             throw error;
@@ -156,7 +140,7 @@ const useThreadData = (threadId: string, currentUserId: string | undefined, prof
             toast({ title: 'Deleted', description: 'Message removed successfully.' });
         } catch (error: any) {
             toast({ variant: 'destructive', title: 'Deletion Failed', description: error.message });
-            setMessages(previousMessages); // Revert UI on failure
+            setMessages(previousMessages);
         }
     }, [messages, toast]);
 
@@ -181,20 +165,16 @@ const useThreadData = (threadId: string, currentUserId: string | undefined, prof
 
         const existingReaction = targetMessage.reactions.find(r => r.user_id === currentUserId);
 
-        // Optimistically update the UI
         setMessages(current => current.map(msg => {
             if (msg.id === messageId) {
                 let newReactions = [...msg.reactions];
                 if (existingReaction) {
-                    // User has an existing reaction, remove it first
                     newReactions = newReactions.filter(r => r.user_id !== currentUserId);
                     if (existingReaction.reaction_emoji !== emoji) {
-                        // If the new emoji is different, add it
                         const newOptimisticReaction: MessageReaction = { id: `temp-${Date.now()}`, message_id: messageId, user_id: currentUserId, reaction_emoji: emoji, created_at: new Date().toISOString() };
                         newReactions.push(newOptimisticReaction);
                     }
                 } else {
-                    // User has no reaction, just add the new one
                     const newOptimisticReaction: MessageReaction = { id: `temp-${Date.now()}`, message_id: messageId, user_id: currentUserId, reaction_emoji: emoji, created_at: new Date().toISOString() };
                     newReactions.push(newOptimisticReaction);
                 }
@@ -203,7 +183,6 @@ const useThreadData = (threadId: string, currentUserId: string | undefined, prof
             return msg;
         }));
 
-        // Make the real API call(s) in the background
         try {
             if (existingReaction) {
                 await removeReaction(messageId, existingReaction.reaction_emoji);
@@ -215,9 +194,9 @@ const useThreadData = (threadId: string, currentUserId: string | undefined, prof
             }
         } catch (error: any) {
             toast({ variant: 'destructive', title: 'Reaction Failed', description: error.message });
-            setMessages(previousMessages); // Revert UI on failure
+            setMessages(previousMessages);
         }
-    }, [messages, currentUserId, toast]);;
+    }, [messages, currentUserId, toast]);
   
     useEffect(() => { fetchAndSyncMessages(); }, [fetchAndSyncMessages]);
 
@@ -239,7 +218,6 @@ const useThreadData = (threadId: string, currentUserId: string | undefined, prof
         return messages
             .map(message => ({
                 ...message,
-                // If this is a reply, find the parent and attach it.
                 parent_message: message.parent_message_id ? messageMap.get(message.parent_message_id) : null,
             }))
             .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
@@ -249,14 +227,15 @@ const useThreadData = (threadId: string, currentUserId: string | undefined, prof
         flatMessages, 
         isLoading, 
         setMessages,
-        refetchMessages: fetchAndSyncMessages,
         replyingTo,
         setReplyingTo,
         handleSendMessage,
         handleDeleteMessage,
+        handleEditMessage,
         handleReaction 
     };
-},
+}; // <-- FIX 2: Removed the stray comma that was here.
+
 // ======================================================================
 // THREAD VIEW COMPONENT (Renderer)
 // ======================================================================
@@ -266,9 +245,7 @@ export const ThreadView: React.FC<ThreadViewProps> = ({ threadId }) => {
   
   const { 
     flatMessages, 
-    setMessages,
     isLoading, 
-    refetchMessages, 
     replyingTo, 
     setReplyingTo,
     handleSendMessage,
