@@ -256,7 +256,7 @@ const useThreadData = (threadId: string, currentUserId: string | undefined, prof
         handleDeleteMessage,
         handleReaction 
     };
-};
+},
 // ======================================================================
 // THREAD VIEW COMPONENT (Renderer)
 // ======================================================================
