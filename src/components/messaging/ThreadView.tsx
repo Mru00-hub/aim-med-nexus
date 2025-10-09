@@ -33,6 +33,14 @@ const useThreadData = (threadId: string, currentUserId: string | undefined, prof
     const [messages, setMessages] = useState<MessageWithDetails[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [replyingTo, setReplyingTo] = useState<MessageWithDetails | null>(null);
+
+    const messagesRef = useRef(messages);
+    const profileRef = useRef(profile);
+
+    useEffect(() => {
+        messagesRef.current = messages;
+        profileRef.current = profile;
+    });
     
     const fetchAndSyncMessages = useCallback(async () => {
       if (!threadId) return;
@@ -50,6 +58,9 @@ const useThreadData = (threadId: string, currentUserId: string | undefined, prof
 
     // FIX 1: Removed the duplicate function declaration that was here.
     const handleSendMessage = useCallback(async (body: string, parentMessageId: number | null, files: File[]) => {
+        const currentProfile = profileRef.current;
+        const currentMessages = messagesRef.current;
+      
         if (!currentUserId || !profile) {
             throw new Error('User is not authenticated or profile is not available.');
         }
