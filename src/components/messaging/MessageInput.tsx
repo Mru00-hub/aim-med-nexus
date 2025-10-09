@@ -83,6 +83,7 @@ const MessageInputComponent: React.FC<MessageInputProps> = ({
   
   // --- File Attachment Logic ---
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      debugger; 
       alert("File input 'onChange' event fired!");
       if (e.target.files && e.target.files.length > 0) {
             setAttachedFiles(prev => [...prev, ...Array.from(e.target.files!)]);
