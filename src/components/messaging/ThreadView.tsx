@@ -290,6 +290,10 @@ export const ThreadView: React.FC<ThreadViewProps> = ({ threadId }) => {
     
   const handleReplyClick = (message: MessageWithDetails) => { setReplyingTo(message); };
 
+  const onCancelReply = useCallback(() => {
+    setReplyingTo(null);
+  }, [setReplyingTo]); // setReplyingTo is stable and won't cause this to be recreated.
+
   if (!threadId) {
     return <div className="flex-1 flex items-center justify-center text-muted-foreground">Select a thread to start chatting.</div>;
   }
