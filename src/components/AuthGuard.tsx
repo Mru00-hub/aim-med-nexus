@@ -12,8 +12,7 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ requireAuth = true, children }) =
   const { user, loading, loadingMessage } = useAuth();
   const location = useLocation();
 
-  // 1. Render a loading state while the authentication status is being checked.
-  if (loading) {
+  if (loading && !user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
@@ -26,24 +25,18 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ requireAuth = true, children }) =
     );
   }
 
-  // 2. Handle protected routes: If auth is required and there's no user,
-  //    redirect to the login page. We save the user's intended location
-  //    so we can redirect them back after they log in.
+  // After loading, if auth is required and there's still no user, then redirect.
   if (requireAuth && !user) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // 3. Handle public routes (like /login, /register): If auth is NOT required
-  //    but a user IS logged in, redirect them away from the login/register page
-  //    and into the main application.
+  // Handle public routes for already logged-in users.
   if (!requireAuth && user) {
     const from = location.state?.from?.pathname || '/community';
     return <Navigate to={from} replace />;
   }
-
-  // 4. If none of the above conditions are met, access is granted.
-  //    Render children if they exist (wrapper mode), otherwise render Outlet (layout mode).
-  // CHANGE #2: The final return statement is updated
+  
+  // If all checks pass, render the content.
   return children ? <>{children}</> : <Outlet />;
 };
 
