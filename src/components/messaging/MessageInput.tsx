@@ -194,3 +194,4 @@ const MessageInputComponent: React.FC<MessageInputProps> = ({
     </div>
   );
 };
+export const MessageInput = memo(MessageInputComponent);
