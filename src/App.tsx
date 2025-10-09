@@ -35,6 +35,8 @@ import SpaceDetailPage from "./pages/Community/SpaceDetailPage";
 import ThreadDetailPage from "./pages/Community/ThreadDetailPage";
 import CreateThread from "./pages/Community/CreateThread";
 
+import AttachmentTestPage from './pages/AttachmentTestPage';
+
 const queryClient = new QueryClient();
 
 const App = () => {
@@ -60,6 +62,7 @@ const App = () => {
                 
                 {/* NOTE: Forums is the discovery page, it must be inside the provider */}
                 <Route path="/community" element={<Forums />} /> 
+                <Route path="/test-attachment" element={<AttachmentTestPage />} />
 
                 {/* --- Public Routes (AuthGuard redirects if logged in) --- */}
                 <Route element={<AuthGuard requireAuth={false} />}>
