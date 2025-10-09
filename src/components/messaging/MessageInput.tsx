@@ -1,5 +1,5 @@
 import { useAuth } from '@/hooks/useAuth';
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, memo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Paperclip, Send, X, File as FileIcon, XCircle } from 'lucide-react';
@@ -16,7 +16,7 @@ interface MessageInputProps {
   onCancelReply: () => void;  
 }
 
-export const MessageInput: React.FC<MessageInputProps> = ({ 
+const MessageInputComponent: React.FC<MessageInputProps> = ({ 
     threadId, 
     onSendMessage, 
     replyingTo,
@@ -29,7 +29,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
   const [body, setBody] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
-  const [previewUrls, setPreviewUrls] = useState<string[]>([]);// Handles file preview/state
+  const [previewUrls, setPreviewUrls] = useState<string[]>([]);
 
   useEffect(() => {
       if (!attachedFiles.length) {
@@ -37,13 +37,12 @@ export const MessageInput: React.FC<MessageInputProps> = ({
           return;
       }
       const newUrls = attachedFiles.map(file => URL.createObjectURL(file));
+      // You can remove this alert now if you wish
       if (newUrls.length > 0) {
             alert(`✅ ALERT 1 of 4: Preview URL Created\n\nURL: ${newUrls[0]}`);
       }
       setPreviewUrls(newUrls);
 
-      // Cleanup function to revoke the object URLs when the component unmounts
-      // or when the attachedFiles dependency array changes.
       return () => {
           newUrls.forEach(url => URL.revokeObjectURL(url));
       };
