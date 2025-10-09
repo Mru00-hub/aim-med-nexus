@@ -83,23 +83,10 @@ const MessageInputComponent: React.FC<MessageInputProps> = ({
   
   // --- File Attachment Logic ---
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // This is the alert you are seeing, which is great!
-    alert("DEBUG 1: 'handleFileChange' was called.");
-    
-    // Now let's check what's inside the event
-    if (e.target.files) {
-        alert(`DEBUG 2: The 'files' object exists. It contains ${e.target.files.length} file(s).`);
-
-        if (e.target.files.length > 0) {
-            alert(`DEBUG 3: The first file is named "${e.target.files[0].name}". Now updating the component's state.`);
-            setAttachedFiles(prev => [...prev, ...Array.from(e.target.files!)]);
-            // Clearing the value allows selecting the same file again
-            e.target.value = '';
-        } else {
-            alert("DEBUG 3b: The 'files' list was empty. Did you cancel the selection?");
-        }
-    } else {
-        alert("DEBUG 2b: The 'files' object does NOT exist on the event target.");
+    // We've removed all the "DEBUG" alerts from this function.
+    if (e.target.files && e.target.files.length > 0) {
+        setAttachedFiles(prev => [...prev, ...Array.from(e.target.files!)]);
+        e.target.value = '';
     }
   };
 
