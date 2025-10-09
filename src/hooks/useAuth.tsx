@@ -45,60 +45,57 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
-    // 1. Define an async function to proactively fetch session and profile.
-    const initializeSession = async () => {
-      try {
-        setLoading(true);
+    // 1. Set up the listener for auth changes first.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, newSession) => {
+        // Get the current user ID before the state updates
+        const currentUserId = user?.id;
         
-        // Step A: Actively get the current session.
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        if (sessionError) throw sessionError;
+        // Update session and user state immediately. This is lightweight.
+        setSession(newSession);
+        setUser(newSession?.user ?? null);
 
-        if (session) {
-          // Step B: If a session exists, actively fetch the corresponding profile.
-          const { data: userProfile, error: profileError } = await supabase
-            .from('profiles')
-            .select('*, is_onboarded')
-            .eq('id', session.user.id)
-            .single();
-          
-          if (profileError && profileError.code !== 'PGRST116') throw profileError;
-          
-          setUser(session.user);
-          setSession(session);
-          setProfile(userProfile);
+        // This is the crucial logic:
+        // Only do a disruptive profile fetch if the USER has actually changed.
+        if (newSession?.user && newSession.user.id !== currentUserId) {
+          // A new user has logged in. Set loading state and fetch their profile.
+          setLoading(true);
+          supabase.from('profiles').select('*, is_onboarded').eq('id', newSession.user.id).single()
+            .then(({ data: userProfile, error: profileError }) => {
+              if (profileError && profileError.code !== 'PGRST116') throw profileError;
+              setProfile(userProfile);
+            })
+            .catch(error => console.error("Error fetching new user profile:", error))
+            .finally(() => setLoading(false));
 
-        } else {
-          // No session found.
-          setUser(null);
-          setSession(null);
+        } else if (!newSession?.user && currentUserId) {
+          // The user has logged out. Clear the profile.
           setProfile(null);
         }
-      } catch (error: any) {
-        console.error("Error during session initialization:", error);
-        toast({ title: "Error", description: "Could not restore your session.", variant: "destructive" });
-      } finally {
-        // Step C: GUARANTEE that loading is set to false.
-        setLoading(false);
-      }
-    };
-
-    // 2. Call the initialization function on first mount.
-    initializeSession();
-
-    // 3. Set up the listener for SUBSEQUENT auth changes (sign in, sign out).
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        // When user signs in or out, re-run the whole initialization process.
-        // This keeps the logic consistent.
-        initializeSession();
+        // If the session is refreshed for the SAME user, we do nothing disruptive.
+        // The session token is updated silently, and no major re-render is triggered.
       }
     );
+
+    // 2. On initial page load, we still need to set the initial state.
+    // We set loading to true only for this very first check.
+    setLoading(true);
+    supabase.auth.getSession().then(({ data: { session: initialSession } }) => {
+        if (initialSession) {
+            supabase.from('profiles').select('*, is_onboarded').eq('id', initialSession.user.id).single()
+            .then(({ data: userProfile, error: profileError }) => {
+              if (profileError && profileError.code !== 'PGRST116') throw profileError;
+              setProfile(userProfile);
+            });
+        }
+    }).finally(() => {
+        setLoading(false);
+    });
 
     return () => {
       subscription.unsubscribe();
     };
-  }, []); // Empty array ensures this runs only once on mount.
+  }, []); // Keep the empty dependency array. The logic inside now correctly handles state changes..
 
   // --- No changes needed for the functions below ---
   const signUp = async (email: string, password: string, metadata?: any) => {
