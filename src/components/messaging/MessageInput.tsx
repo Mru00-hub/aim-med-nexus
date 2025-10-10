@@ -39,10 +39,6 @@ const MessageInputComponent: React.FC<MessageInputProps> = ({
           return;
       }
       const newUrls = attachedFiles.map(file => URL.createObjectURL(file));
-      // You can remove this alert now if you wish
-      if (newUrls.length > 0) {
-            alert(`✅ ALERT 1 of 4: Preview URL Created\n\nURL: ${newUrls[0]}`);
-      }
       setPreviewUrls(newUrls);
 
       return () => {
@@ -66,6 +62,7 @@ const MessageInputComponent: React.FC<MessageInputProps> = ({
     try {
       // UPDATE: Call the new onSendMessage prop with the files.
       // The parent component now handles all optimistic logic and API calls.
+      const messageBody = trimmedBody || (attachedFiles.length > 0 ? '📎 Attachment' : '');
       await onSendMessage(trimmedBody, replyingTo?.id || null, attachedFiles);
       
       // Clear the input fields on success
@@ -141,7 +138,7 @@ const MessageInputComponent: React.FC<MessageInputProps> = ({
         {attachedFiles.length > 0 && (
             <div className="flex flex-wrap gap-3 p-2 bg-card border rounded-lg">
                 <div className="w-full text-xs text-muted-foreground mb-1">
-                    Files: {attachedFiles.length} | Renders: {renderTrigger}
+                    Files: {attachedFiles.length}
                 </div>
                 {attachedFiles.map((file, index) => {
                     const isImage = file.type.startsWith('image/');
@@ -161,7 +158,7 @@ const MessageInputComponent: React.FC<MessageInputProps> = ({
                             )}
                             <button
                                 onClick={() => handleRemoveFile(file)}
-                                className="absolute -top-1 -right-1 bg-background rounded-full text-destructive opacity-0 group-hover:opacity-100 transition-opacity focus:opacity-100"
+                                className="absolute -top-1 -right-1 bg-background rounded-full text-destructive opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity focus:opacity-100"
                                 title={`Remove ${file.name}`}
                             >
                                 <XCircle className="h-5 w-5" />
