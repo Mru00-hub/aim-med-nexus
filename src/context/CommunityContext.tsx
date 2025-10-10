@@ -119,18 +119,6 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
     }
   }, [toast]);
 
-  const fetchSpaceMembers = async (spaceId: string) => {
-    setIsLoadingMembers(true);
-    try {
-      const members = await getSpaceMemberList(spaceId); // Function from community.api.ts
-      setSpaceMembers(members);
-    } catch (error) {
-      // Handle error with a toast...
-    } finally {
-      setIsLoadingMembers(false);
-    }
-  };
-
   const refreshSelectedSpace = useCallback(async () => {
     if (selectedSpace?.id) {
       // It simply re-runs the selectSpace logic for the current space
