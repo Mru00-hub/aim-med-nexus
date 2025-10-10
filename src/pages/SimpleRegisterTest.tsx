@@ -33,9 +33,8 @@ const SimpleRegisterTest = () => {
       console.log('Auth user created successfully:', authData.user);
 
       // Step 2: Basic Profile Insert (only required fields)
-      // IMPORTANT: Using the 'user_profiles' table name we decided on.
       const { error: profileError } = await supabase
-        .from('user_profiles')
+        .from('profiles')
         .insert({
           id: authData.user.id,
           email: authData.user.email,
