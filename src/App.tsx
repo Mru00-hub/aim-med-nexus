@@ -25,7 +25,6 @@ import Login from "./pages/Login";
 import PleaseVerify from "./pages/PleaseVerify";
 import PaymentPage from "./pages/PaymentPage";
 import NotFound from "./pages/NotFound";
-import SimpleRegisterTest from "./pages/SimpleRegisterTest";
 import ProfilePage from './pages/ProfilePage';
 import CompleteProfile from "./pages/CompleteProfile";
 
@@ -34,8 +33,6 @@ import Forums from "./pages/Community/Forums";
 import SpaceDetailPage from "./pages/Community/SpaceDetailPage";
 import ThreadDetailPage from "./pages/Community/ThreadDetailPage";
 import CreateThread from "./pages/Community/CreateThread";
-
-import AttachmentTestPage from './pages/AttachmentTestPage';
 
 const queryClient = new QueryClient();
 
@@ -55,14 +52,12 @@ const App = () => {
                 {/* --- Core App Routes (Index and Public) --- */}
                 <Route path="/" element={<Index />} />
                 <Route path="/please-verify" element={<PleaseVerify />} />
-                <Route path="/simple-test" element={<SimpleRegisterTest />} />
                 <Route path="/jobs" element={<Jobs />} />
                 <Route path="/networking" element={<Networking />} />
                 <Route path="/partnerships" element={<Partnerships />} />
                 
                 {/* NOTE: Forums is the discovery page, it must be inside the provider */}
                 <Route path="/community" element={<Forums />} /> 
-                <Route path="/test-attachment" element={<AttachmentTestPage />} />
 
                 {/* --- Public Routes (AuthGuard redirects if logged in) --- */}
                 <Route element={<AuthGuard requireAuth={false} />}>
