@@ -6,8 +6,10 @@ import { useToast } from '@/components/ui/use-toast';
 import { 
     getUserSpaces, 
     getPublicThreads, 
+    getUserMemberships,
     Space,
-    ThreadWithDetails 
+    ThreadWithDetails,
+    Membership
 } from '@/integrations/supabase/community.api';
 
 interface CommunityContextType {
@@ -19,6 +21,7 @@ interface CommunityContextType {
   publicSpaceId: string | null;
   fetchSpaces: () => Promise<void>; // Kept for manual refreshing if needed
   selectSpace: (spaceId: string | null) => void;
+  memberships: Membership[];
   isMemberOf: (spaceId: string) => boolean; 
 }
 
@@ -29,6 +32,7 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
   const { toast } = useToast();
   
   const [spaces, setSpaces] = useState<Space[]>([]);
+  const [memberships, setMemberships] = useState<Membership[]>([]);
   const [publicThreads, setPublicThreads] = useState<ThreadWithDetails[]>([]);
   const [isLoadingSpaces, setIsLoadingSpaces] = useState(true);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
@@ -52,10 +56,12 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
     try {
       const [spacesData, threadsData] = await Promise.all([
           getUserSpaces(),
-          getPublicThreads()
+          getPublicThreads(),
+          getUserMemberships()
       ]);
       setSpaces(spacesData || []);
       setPublicThreads(threadsData || []);
+      setMemberships(membershipsData || []);
     } catch (error: any) {
       console.error("Failed to fetch user spaces or public threads:", error);
       toast({ variant: 'destructive', title: 'Error', description: 'Failed to load community data.' });
@@ -83,7 +89,8 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
   };
   
   const isMemberOf = (spaceId: string): boolean => {
-      return spaces.some(s => s.id === spaceId);
+      // Check for an ACTIVE membership in the new memberships state
+      return memberships.some(m => m.space_id === spaceId && m.status === 'ACTIVE');
   }
 
   const contextValue = useMemo(() => ({
@@ -95,8 +102,9 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
     publicSpaceId,
     fetchSpaces,
     selectSpace,
+    memberships,
     isMemberOf,
-  }), [spaces, publicThreads, isLoadingSpaces, isInitialLoad, selectedSpace, publicSpaceId]);
+  }), [spaces, publicThreads, isLoadingSpaces, isInitialLoad, selectedSpace, publicSpaceId, memberships]);
 
   console.log('[CommunityContext] Providing value:', contextValue);
   return (
