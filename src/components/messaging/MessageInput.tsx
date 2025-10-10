@@ -60,10 +60,9 @@ const MessageInputComponent: React.FC<MessageInputProps> = ({
     setIsSending(true);
 
     try {
-      // UPDATE: Call the new onSendMessage prop with the files.
-      // The parent component now handles all optimistic logic and API calls.
+      // If only files (no text), send a placeholder message
       const messageBody = trimmedBody || (attachedFiles.length > 0 ? '📎 Attachment' : '');
-      await onSendMessage(trimmedBody, replyingTo?.id || null, attachedFiles);
+      await onSendMessage(messageBody, replyingTo?.id || null, attachedFiles);
       
       // Clear the input fields on success
       setBody(''); 
