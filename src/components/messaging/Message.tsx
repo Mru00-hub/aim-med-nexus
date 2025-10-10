@@ -32,9 +32,7 @@ interface MessageProps {
 }
 
 const Attachment: React.FC<{ attachment: MessageAttachment & { isUploading?: boolean } }> = ({ attachment }) => {
-    console.log("2. Attachment component received:", attachment);
     const isImage = attachment.file_type?.startsWith('image/');
-    console.log("3. Is it an image?", isImage);
     
     if (attachment.isUploading) {
         return (
@@ -56,13 +54,26 @@ const Attachment: React.FC<{ attachment: MessageAttachment & { isUploading?: boo
 
     if (isImage) {
         return (
-            <a href={attachment.file_url} target="_blank" rel="noopener noreferrer" className="mt-2 block">
-                <img 
-                    src={attachment.file_url} 
-                    alt={attachment.file_name} 
-                    className="max-w-xs max-h-64 rounded-lg object-cover border"
-                />
-            </a>
+            <div className="relative mt-2 inline-block">
+                {attachment.isUploading && (
+                    <div className="absolute inset-0 bg-black/30 rounded-lg flex items-center justify-center z-10">
+                        <Loader2 className="h-8 w-8 text-white animate-spin" />
+                    </div>
+                )}
+                <a 
+                    href={attachment.file_url} 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="block"
+                    onClick={(e) => attachment.isUploading && e.preventDefault()}
+                >
+                    <img 
+                        src={attachment.file_url} 
+                        alt={attachment.file_name} 
+                        className="max-w-xs max-h-64 rounded-lg object-cover border"
+                    />
+                </a>
+            </div>
         );
     }
 
