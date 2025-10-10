@@ -156,24 +156,28 @@ export default function SpaceDetailPage() {
         )}
       </main>
       <Footer />
-      <Dialog open={showCreateThread} onOpenChange={setShowCreateThread}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Create New Thread in {space?.name}</DialogTitle>
-            <DialogDescription>
-                {space?.join_level === 'INVITE_ONLY' ? 'This thread will only be visible to members of this private space.' : 'This thread will be visible to all members.'}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="pt-4">
-            <CreateThreadForm spaceId={spaceId!} onThreadCreated={(newThreadId) => {
-                setShowCreateThread(false);
-                refreshThreads();
-                navigate(`/community/thread/${newThreadId}`);
-              }}
-            />
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* FIX: Conditionally render the Dialog only when 'space' exists */}
+      {space && (
+        <Dialog open={showCreateThread} onOpenChange={setShowCreateThread}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Create New Thread in {space.name}</DialogTitle>
+              <DialogDescription>
+                  {space.join_level === 'INVITE_ONLY' ? 'This thread will only be visible to members of this private space.' : 'This thread will be visible to all members.'}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="pt-4">
+              {/* FIX: Pass the guaranteed 'space.id' instead of the unsafe 'spaceId!' */}
+              <CreateThreadForm spaceId={space.id} onThreadCreated={(newThreadId) => {
+                  setShowCreateThread(false);
+                  refreshThreads();
+                  navigate(`/community/thread/${newThreadId}`);
+                }}
+              />
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
