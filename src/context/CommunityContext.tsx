@@ -33,6 +33,8 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
   
   const [spaces, setSpaces] = useState<Space[]>([]);
   const [memberships, setMemberships] = useState<Membership[]>([]);
+  const [spaceMembers, setSpaceMembers] = useState<MemberProfile[]>([]);
+  const [isLoadingMembers, setIsLoadingMembers] = useState(false);
   const [publicThreads, setPublicThreads] = useState<ThreadWithDetails[]>([]);
   const [isLoadingSpaces, setIsLoadingSpaces] = useState(true);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
@@ -87,6 +89,18 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
       setSelectedSpace(space);
     }
   };
+
+  const fetchSpaceMembers = async (spaceId: string) => {
+    setIsLoadingMembers(true);
+    try {
+      const members = await getSpaceMemberList(spaceId); // Function from community.api.ts
+      setSpaceMembers(members);
+    } catch (error) {
+      // Handle error with a toast...
+    } finally {
+      setIsLoadingMembers(false);
+    }
+  };
   
   const isMemberOf = (spaceId: string): boolean => {
       // Check for an ACTIVE membership in the new memberships state
@@ -101,8 +115,10 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
     selectedSpace,
     publicSpaceId,
     fetchSpaces,
+    spaceMembers,
     selectSpace,
     memberships,
+    isLoadingMembers,
     isMemberOf,
   }), [spaces, publicThreads, isLoadingSpaces, isInitialLoad, selectedSpace, publicSpaceId, memberships]);
 
