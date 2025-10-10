@@ -58,7 +58,7 @@ const useThreadData = (threadId: string, currentUserId: string | undefined, prof
             return;
         }
 
-        const tempMsgId = `temp_${Date.now()}`;
+        const tempMsgId = -Date.now();
         const optimisticAttachments = files.map((file, index) => ({
             id: `temp_att_${Date.now()}_${index}`,
             message_id: -1,
