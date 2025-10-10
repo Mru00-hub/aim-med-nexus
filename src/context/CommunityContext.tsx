@@ -1,39 +1,25 @@
 // src/context/CommunityContext.tsx
 
-// src/context/CommunityContext.tsx
-
 import React, { createContext, useState, useContext, useEffect, useMemo, ReactNode, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/components/ui/use-toast';
 import { 
     getUserSpaces, 
     getUserMemberships,
-    getSpaceDetails,
-    getThreadsForSpace,
-    getSpaceMemberList,
-    getSpaceMemberCount,
-    getThreadsCountForSpace,
+    getPublicThreads, // This is the important new one
     Space,
     ThreadWithDetails,
     Membership,
-    MemberProfile 
 } from '@/integrations/supabase/community.api';
 
+// --- NEW, SIMPLIFIED INTERFACE ---
+// This now only defines the truly GLOBAL state.
 interface CommunityContextType {
   spaces: Space[];
   memberships: Membership[];
+  publicThreads: ThreadWithDetails[];
   isLoadingSpaces: boolean;
-  
-  selectedSpace: Space | null;
-  selectedSpaceThreads: ThreadWithDetails[];
-  selectedSpaceMembers: MemberProfile[];
-  selectedSpaceMemberCount: number | null;
-  selectedSpaceThreadCount: number | null;
-  isLoadingSelectedSpace: boolean;
-
   fetchSpaces: () => Promise<void>;
-  selectSpace: (spaceId: string | null) => Promise<void>;
-  refreshSelectedSpace: () => Promise<void>;
   isMemberOf: (spaceId: string) => boolean;
 }
 
@@ -43,28 +29,25 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
   const { user } = useAuth();
   const { toast } = useToast();
   
+  // --- GLOBAL STATE VARIABLES ---
   const [spaces, setSpaces] = useState<Space[]>([]);
   const [memberships, setMemberships] = useState<Membership[]>([]);
+  const [publicThreads, setPublicThreads] = useState<ThreadWithDetails[]>([]); 
   const [isLoadingSpaces, setIsLoadingSpaces] = useState(true);
 
-  const [selectedSpace, setSelectedSpace] = useState<Space | null>(null);
-  const [selectedSpaceThreads, setSelectedSpaceThreads] = useState<ThreadWithDetails[]>([]);
-  const [selectedSpaceMembers, setSelectedSpaceMembers] = useState<MemberProfile[]>([]);
-  const [selectedSpaceMemberCount, setSelectedSpaceMemberCount] = useState<number | null>(null);
-  const [selectedSpaceThreadCount, setSelectedSpaceThreadCount] = useState<number | null>(null);
-  const [isLoadingSelectedSpace, setIsLoadingSelectedSpace] = useState(false);
-  const [publicThreads, setPublicThreads] = useState<ThreadWithDetails[]>([]); 
-
+  // This function now correctly fetches all necessary GLOBAL data.
   const fetchSpaces = useCallback(async () => {
     if (!user) {
       setSpaces([]);
       setMemberships([]);
+      setPublicThreads([]);
       setIsLoadingSpaces(false);
       return;
     }
     setIsLoadingSpaces(true);
     try {
-      const [spacesData, membershipsData] = await Promise.all([
+      // Fetch all three global data sets at once.
+      const [spacesData, membershipsData, publicThreadsData] = await Promise.all([
           getUserSpaces(),
           getUserMemberships(),
           getPublicThreads()
@@ -73,80 +56,34 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
       setMemberships(membershipsData || []);
       setPublicThreads(publicThreadsData || []);
     } catch (error: any) {
-      console.error("Failed to fetch user spaces or public threads:", error);
+      console.error("Failed to fetch global community data:", error);
       toast({ variant: 'destructive', title: 'Error', description: 'Failed to load community data.' });
     } finally {
       setIsLoadingSpaces(false);
     }
   }, [user, toast]);
 
+  // Initial data fetch on component mount.
   useEffect(() => {
     fetchSpaces();
   }, [fetchSpaces]);
 
-  const selectSpace = useCallback(async (spaceId: string | null) => {
-    if (!spaceId) {
-      setSelectedSpace(null);
-      setSelectedSpaceThreads([]);
-      setSelectedSpaceMembers([]);
-      setSelectedSpaceMemberCount(null);
-      setSelectedSpaceThreadCount(null);
-      return;
-    }
-    setIsLoadingSelectedSpace(true);
-    try {
-      const [spaceDetails, threads, members, memberCount, threadCount] = await Promise.all([
-        getSpaceDetails(spaceId),
-        getThreadsForSpace(spaceId),
-        getSpaceMemberList(spaceId),
-        getSpaceMemberCount(spaceId),
-        getThreadsCountForSpace(spaceId)
-      ]);
-
-      if (!spaceDetails) throw new Error("Space not found.");
-
-      setSelectedSpace(spaceDetails);
-      setSelectedSpaceThreads(threads);
-      setSelectedSpaceMembers(members);
-      setSelectedSpaceMemberCount(memberCount);
-      setSelectedSpaceThreadCount(threadCount);
-
-    } catch (error: any) {
-      toast({ variant: 'destructive', title: 'Error', description: `Failed to load space: ${error.message}` });
-      setSelectedSpace(null);
-    } finally {
-      setIsLoadingSelectedSpace(false);
-    }
-  }, [toast]);
-
-  const refreshSelectedSpace = useCallback(async () => {
-    if (selectedSpace?.id) {
-      await selectSpace(selectedSpace.id);
-    }
-  }, [selectedSpace, selectSpace]);
-    
+  // This is a useful utility function that depends on global state.
   const isMemberOf = useCallback((spaceId: string): boolean => {
       return memberships.some(m => m.space_id === spaceId && m.status === 'ACTIVE');
-  }, [memberships]); // <-- THIS IS THE FIX
+  }, [memberships]);
 
+  // --- FINAL, SIMPLIFIED VALUE ---
+  // The context now only provides the global state and related functions.
   const contextValue = useMemo(() => ({
     spaces,
     memberships,
     publicThreads, 
     isLoadingSpaces,
-    selectedSpace,
-    selectedSpaceThreads,
-    selectedSpaceMembers,
-    selectedSpaceMemberCount,
-    selectedSpaceThreadCount,
-    isLoadingSelectedSpace,
     fetchSpaces,
-    selectSpace,
-    refreshSelectedSpace,
     isMemberOf,
-  }), [spaces, memberships, isLoadingSpaces, selectedSpace, selectedSpaceThreads, selectedSpaceMembers, selectedSpaceMemberCount, selectedSpaceThreadCount, isLoadingSelectedSpace, fetchSpaces, selectSpace, refreshSelectedSpace, isMemberOf]);
+  }), [spaces, memberships, publicThreads, isLoadingSpaces, fetchSpaces, isMemberOf]);
 
-  console.log('[CommunityContext] Providing value:', contextValue);
   return (
     <CommunityContext.Provider value={contextValue}>
       {children}
@@ -154,6 +91,7 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
   );
 };
 
+// This hook remains the same for easy consumption of the context.
 export const useCommunity = () => {
   const context = useContext(CommunityContext);
   if (context === undefined) {
