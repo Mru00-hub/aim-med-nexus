@@ -61,7 +61,7 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
     } finally {
       setIsLoadingSpaces(false);
     }
-  }, [user, toast]);
+  }, [user]);
 
   // Initial data fetch on component mount.
   useEffect(() => {
