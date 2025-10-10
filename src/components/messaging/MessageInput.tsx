@@ -156,11 +156,12 @@ const MessageInputComponent: React.FC<MessageInputProps> = ({
                                 </div>
                             )}
                             <button
-                                onClick={() => handleRemoveFile(file)}
-                                className="absolute -top-1 -right-1 bg-background rounded-full text-destructive opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity focus:opacity-100"
-                                title={`Remove ${file.name}`}
+                              onClick={() => handleRemoveFile(file)}
+                              className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 shadow-lg"
+                              title={`Remove ${file.name}`}
+                              aria-label="Remove file"
                             >
-                                <XCircle className="h-5 w-5" />
+                              <XCircle className="h-5 w-5 fill-current" />
                             </button>
                         </div>
                     );
