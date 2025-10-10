@@ -32,16 +32,9 @@ interface MessageProps {
 }
 
 const Attachment: React.FC<{ attachment: MessageAttachment & { isUploading?: boolean } }> = ({ attachment }) => {
-    alert(
-        `✅ ALERT 3 of 4: Attachment Component Received Data\n\n` +
-        `File Name: ${attachment.file_name}\n` +
-        `File Type: ${attachment.file_type}\n` +
-        `File URL: ${attachment.file_url}`
-    );
     console.log("2. Attachment component received:", attachment);
     const isImage = attachment.file_type?.startsWith('image/');
     console.log("3. Is it an image?", isImage);
-    alert(`✅ ALERT 4 of 4: Is it an image? -> ${isImage}`);
     
     if (attachment.isUploading) {
         return (
