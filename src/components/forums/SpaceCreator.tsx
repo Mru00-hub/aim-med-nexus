@@ -8,44 +8,66 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Loader2 } from 'lucide-react';
-import { Enums } from '@/integrations/supabase/types'; // Import Enums for type safety
+import { Enums } from '@/integrations/supabase/types';
 
 // Define the component's props
 interface SpaceCreatorProps {
   isOpen: boolean;
   onClose: () => void;
+  // IMPROVEMENT: onSubmit now returns a Promise, so the child can await it.
   onSubmit: (data: {
     name: string;
     description?: string;
     space_type: Enums<'space_type'>;
     join_level: Enums<'space_join_level'>;
-  }) => void;
+  }) => Promise<void>; // Changed to return a Promise
 }
 
 export const SpaceCreator: React.FC<SpaceCreatorProps> = ({ isOpen, onClose, onSubmit }) => {
-  const [type, setType] = useState<'FORUM' | 'COMMUNITY_SPACE'>('FORUM');
+  const [type, setType] = useState<Enums<'space_type'>>('FORUM');
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [forumType, setForumType] = useState<'PUBLIC' | 'PRIVATE'>('PUBLIC');
+  const [forumPrivacy, setForumPrivacy] = useState<'PUBLIC' | 'PRIVATE'>('PUBLIC');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const resetForm = () => {
+    setType('FORUM');
+    setName('');
+    setDescription('');
+    setForumPrivacy('PUBLIC');
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    const dataToSubmit = {
-      name,
-      description,
-      space_type: type,
-      // Logic to determine the correct join_level based on the selected type
-      join_level: type === 'COMMUNITY_SPACE' ? 'INVITE_ONLY' : (forumType === 'PUBLIC' ? 'OPEN' : 'REQUEST_TO_JOIN')) as Enums<'space_join_level'>,
-    };
+    // --- THIS IS THE MAIN LOGIC FIX ---
+    // Correctly determine the join_level based on valid ENUM values.
+    const joinLevel: Enums<'space_join_level'> = 
+      type === 'COMMUNITY_SPACE' 
+        ? 'INVITE_ONLY' 
+        : (forumPrivacy === 'PUBLIC' ? 'OPEN' : 'INVITE_ONLY');
 
-    // The parent (Forums.tsx) will handle the actual API call.
-    await onSubmit(dataToSubmit);
-    setIsSubmitting(false);
-    // Optional: Reset form and close on successful submission if desired
-    // onClose(); 
+    try {
+      // The parent (Forums.tsx) will handle the actual API call. We await it.
+      await onSubmit({
+        name,
+        description,
+        space_type: type,
+        join_level: joinLevel, // Use the safe, calculated variable
+      });
+
+      // On success, close the dialog and reset the form for the next use.
+      onClose();
+      resetForm();
+
+    } catch (error) {
+      // The parent component is responsible for showing toast errors.
+      // This child component just needs to stop its loading state.
+      console.error("Failed to create space:", error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
   
   return (
@@ -59,8 +81,8 @@ export const SpaceCreator: React.FC<SpaceCreatorProps> = ({ isOpen, onClose, onS
         <form onSubmit={handleSubmit} className="space-y-4 pt-4">
           <div className="space-y-2">
             <Label>Space Type</Label>
-            <Select value={type} onValueChange={(v) => setType(v as 'FORUM' | 'COMMUNITY_SPACE')}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+            <Select value={type} onValueChange={(v) => setType(v as Enums<'space_type'>)}>
+              <SelectTrigger><SelectValue /></SelectValue>
               <SelectContent>
                 <SelectItem value="FORUM">Forum (Topic-based discussions)</SelectItem>
                 <SelectItem value="COMMUNITY_SPACE">Community Space (Private, group-focused)</SelectItem>
@@ -78,15 +100,14 @@ export const SpaceCreator: React.FC<SpaceCreatorProps> = ({ isOpen, onClose, onS
             <Textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What is the purpose of this space?" required />
           </div>
           
-          {/* This section now ONLY shows if the selected type is a Forum */}
           {type === 'FORUM' && (
             <div className="space-y-2">
               <Label>Forum Privacy</Label>
-              <Select value={forumType} onValueChange={(v) => setForumType(v as 'PUBLIC' | 'PRIVATE')}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+              <Select value={forumPrivacy} onValueChange={(v) => setForumPrivacy(v as 'PUBLIC' | 'PRIVATE')}>
+                <SelectTrigger><SelectValue /></SelectValue>
                 <SelectContent>
                   <SelectItem value="PUBLIC">Public (Anyone can join)</SelectItem>
-                  <SelectItem value="PRIVATE">Private (Requires approval to join)</SelectItem>
+                  <SelectItem value="PRIVATE">Private (Approval required)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -94,7 +115,7 @@ export const SpaceCreator: React.FC<SpaceCreatorProps> = ({ isOpen, onClose, onS
 
           <div className="flex justify-end gap-2 pt-4">
             <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>Cancel</Button>
-            <Button type="submit" disabled={isSubmitting}>
+            <Button type="submit" disabled={!name || !description || isSubmitting}>
               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Create Space
             </Button>
