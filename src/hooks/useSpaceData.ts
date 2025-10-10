@@ -12,7 +12,7 @@ import {
 } from '@/integrations/supabase/community.api';
 
 // Hook for fetching Threads
-export const useSpaceThreads = (spaceId: string) => {
+export const useSpaceThreads = (spaceId?: string) => {
     const { toast } = useToast();
     const [threads, setThreads] = useState<ThreadWithDetails[]>([]);
     const [isLoadingThreads, setIsLoadingThreads] = useState(true);
