@@ -86,6 +86,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             .then(({ data: userProfile, error: profileError }) => {
               if (profileError && profileError.code !== 'PGRST116') throw profileError;
               setProfile(userProfile);
+            })
+            .catch(error => {
+                console.error("Error fetching initial profile:", error);
+                // Optionally, show a toast to the user
+                toast({
+                    title: "Could not load profile",
+                    description: "There was an issue fetching your profile data.",
+                    variant: "destructive"
+                });
             });
         }
     }).finally(() => {
