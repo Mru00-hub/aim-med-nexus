@@ -142,7 +142,7 @@ const MessageInputComponent: React.FC<MessageInputProps> = ({
                 {attachedFiles.map((file, index) => {
                     const isImage = file.type.startsWith('image/');
                     return (
-                        <div key={index} className="relative group w-20 h-20">
+                        <div key={index} className="relative group w-20 h-20 touch-manipulation">
                             {isImage ? (
                                 <img 
                                     src={previewUrls[index]} 
@@ -156,10 +156,14 @@ const MessageInputComponent: React.FC<MessageInputProps> = ({
                                 </div>
                             )}
                             <button
-                              onClick={() => handleRemoveFile(file)}
-                              className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 shadow-lg"
-                              title={`Remove ${file.name}`}
-                              aria-label="Remove file"
+                                type="button"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleRemoveFile(file);
+                                }}
+                                className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-lg z-10 hover:bg-red-600 active:scale-95 transition-all"
+                                title={`Remove ${file.name}`}
+                                aria-label="Remove file"
                             >
                               <XCircle className="h-5 w-5 fill-current" />
                             </button>
