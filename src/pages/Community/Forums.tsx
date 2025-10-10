@@ -81,7 +81,7 @@ export default function Forums() {
       return (
         thread.title.toLowerCase().includes(searchLower) ||
         // FIX: Using creator_email as the guaranteed available search field.
-        thread.creator_email.toLowerCase().includes(searchLower) 
+        thread.creator_full_name.toLowerCase().includes(searchLower) 
       );
     });
   }, [publicThreads, threadSearchQuery]);
@@ -211,7 +211,7 @@ export default function Forums() {
         <CardContent className="p-6">
           <h3 className="font-semibold text-lg mb-2">{thread.title}</h3>
           <div className="flex items-center gap-4 text-xs text-muted-foreground">
-            <span className="font-medium text-foreground">{thread.creator_email}</span>
+            <span className="font-medium text-foreground">{thread.creator_full_name}</span>
             <div className="flex items-center gap-1"><MessageSquare className="h-3 w-3" /><span>{thread.message_count} messages</span></div>
             <span>Last activity: {new Date(thread.last_activity_at).toLocaleDateString()}</span>
           </div>
