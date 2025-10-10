@@ -5,13 +5,16 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/components/ui/use-toast';
 import { 
     getUserSpaces, 
-    getPublicThreads, 
     getUserMemberships,
+    getSpaceDetails,
+    getThreadsForSpace,
     getSpaceMemberList,
+    getSpaceMemberCount,    // <-- ADDED IMPORT
+    getThreadsCountForSpace, // <-- ADDED IMPORT
     Space,
     ThreadWithDetails,
-    MemberProfile,
-    Membership
+    Membership,
+    MemberProfile 
 } from '@/integrations/supabase/community.api';
 
 interface CommunityContextType {
@@ -23,11 +26,14 @@ interface CommunityContextType {
   selectedSpace: Space | null;
   selectedSpaceThreads: ThreadWithDetails[];
   selectedSpaceMembers: MemberProfile[];
+  selectedSpaceMemberCount: number | null; // <-- ADDED
+  selectedSpaceThreadCount: number | null; // <-- ADDED
   isLoadingSelectedSpace: boolean;
 
   // Actions
   fetchSpaces: () => Promise<void>;
   selectSpace: (spaceId: string | null) => Promise<void>; // Now async!
+  refreshSelectedSpace: () => Promise<void>;
   isMemberOf: (spaceId: string) => boolean;
 }
 
@@ -46,6 +52,8 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
   const [selectedSpace, setSelectedSpace] = useState<Space | null>(null);
   const [selectedSpaceThreads, setSelectedSpaceThreads] = useState<ThreadWithDetails[]>([]);
   const [selectedSpaceMembers, setSelectedSpaceMembers] = useState<MemberProfile[]>([]);
+  const [selectedSpaceMemberCount, setSelectedSpaceMemberCount] = useState<number | null>(null); // <-- ADDED
+  const [selectedSpaceThreadCount, setSelectedSpaceThreadCount] = useState<number | null>(null); // <-- ADDED
   const [isLoadingSelectedSpace, setIsLoadingSelectedSpace] = useState(false);
 
   // Fetch the master lists (this part is largely the same)
@@ -90,7 +98,9 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
       const [spaceDetails, threads, members] = await Promise.all([
         getSpaceDetails(spaceId),
         getThreadsForSpace(spaceId),
-        getSpaceMemberList(spaceId)
+        getSpaceMemberList(spaceId),
+        getSpaceMemberCount(spaceId),    // <-- ADDED API CALL
+        getThreadsCountForSpace(spaceId) // <-- ADDED API CALL
       ]);
 
       if (!spaceDetails) throw new Error("Space not found.");
@@ -98,6 +108,8 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
       setSelectedSpace(spaceDetails);
       setSelectedSpaceThreads(threads);
       setSelectedSpaceMembers(members);
+      setSelectedSpaceMemberCount(memberCount); // <-- SET STATE
+      setSelectedSpaceThreadCount(threadCount); // <-- SET STATE
 
     } catch (error: any) {
       toast({ variant: 'destructive', title: 'Error', description: `Failed to load space: ${error.message}` });
@@ -118,7 +130,14 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
       setIsLoadingMembers(false);
     }
   };
-  
+
+  const refreshSelectedSpace = useCallback(async () => {
+    if (selectedSpace?.id) {
+      // It simply re-runs the selectSpace logic for the current space
+      await selectSpace(selectedSpace.id);
+    }
+  }, [selectedSpace, selectSpace]);
+    
   const isMemberOf = (spaceId: string): boolean => {
       return memberships.some(m => m.space_id === spaceId && m.status === 'ACTIVE');
   }
@@ -133,8 +152,9 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
     isLoadingSelectedSpace,
     fetchSpaces,
     selectSpace,
+    refreshSelectedSpace,
     isMemberOf,
-  }), [spaces, publicThreads, isLoadingSpaces, isInitialLoad, selectedSpace, publicSpaceId, memberships]);
+  }), [spaces, memberships, isLoadingSpaces, selectedSpace, selectedSpaceThreads, selectedSpaceMembers, selectedSpaceMemberCount, selectedSpaceThreadCount, isLoadingSelectedSpace, fetchSpaces, selectSpace, refreshSelectedSpace, isMemberOf]);
 
   console.log('[CommunityContext] Providing value:', contextValue);
   return (
