@@ -341,7 +341,7 @@ export const ThreadView: React.FC<ThreadViewProps> = ({ threadId }) => {
             threadId={threadId} 
             onSendMessage={handleSendMessage} 
             replyingTo={replyingTo}
-            onCancelReply={() => setReplyingTo(null)}
+            onCancelReply={onCancelReply} 
         />
       </div>
     </div>
