@@ -304,6 +304,9 @@ export const postMessage = async (
     }).returns<Message>().single();
 
     if (error) throw error;
+    if (!data) {
+        throw new Error("Failed to post message: No data returned.");
+    }
     return data;
 };
 
@@ -322,6 +325,9 @@ export const editMessage = async (messageId: number, newBody: string): Promise<M
       .select()
       .single();
     if (error) throw error;
+    if (!data) {
+        throw new Error("Failed to post message: No data returned.");
+    }
     return data;
 };
 /** Adds a reaction to a message. */
@@ -333,6 +339,9 @@ export const addReaction = async (messageId: number, emoji: string): Promise<Mes
       user_id: session.user.id
     }).select().single();
     if (error) throw error;
+    if (!data) {
+        throw new Error("Failed to post message: No data returned.");
+    }
     return data;
 };
 
@@ -399,6 +408,10 @@ export const uploadAttachment = async (
     throw new Error(`Failed to link attachment to message: ${insertError.message}`);
   }
 
+  if (!data) {
+      throw new Error("Failed to post message: No data returned.");
+  }
+
   return newAttachment;
 };
 
@@ -409,6 +422,9 @@ export const joinSpaceAsMember = async (spaceId: string): Promise<Membership> =>
     await getSessionOrThrow();
     const { data, error } = await supabase.rpc('join_space_as_member', { p_space_id: spaceId });
     if (error) throw error;
+    if (!data) {
+        throw new Error("Failed to post message: No data returned.");
+    }
     return data;
 }
 
@@ -421,6 +437,9 @@ export const requestToJoinSpace = async (spaceId: string, spaceType: 'FORUM' | '
         p_space_type: spaceType,
     });
     if (error) throw error;
+    if (!data) {
+        throw new Error("Failed to post message: No data returned.");
+    }
     return data;
 }
 
@@ -444,5 +463,8 @@ export const updateMembershipStatus = async (membershipId: string, newStatus: En
         p_new_status: newStatus,
     });
     if (error) throw error;
+    if (!data) {
+        throw new Error("Failed to post message: No data returned.");
+    }
     return data;
 };
