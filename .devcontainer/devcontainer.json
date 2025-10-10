@@ -6,13 +6,12 @@
     "ghcr.io/devcontainers/features/docker-from-docker:1": {
       "version": "latest"
     },
-    "ghcr.io/devcontainers/features/git-lfs:1": {},
-    "ghcr.io/devcontainers/features/bun:1": {}
+    "ghcr.io/devcontainers/features/git-lfs:1": {}
   },
 
   "forwardPorts": [8080],
 
-  "postCreateCommand": "bun install",
+  "postCreateCommand": "npm install",
 
   "customizations": {
     "vscode": {
