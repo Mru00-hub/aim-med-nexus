@@ -53,6 +53,7 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
   const [selectedSpaceMemberCount, setSelectedSpaceMemberCount] = useState<number | null>(null);
   const [selectedSpaceThreadCount, setSelectedSpaceThreadCount] = useState<number | null>(null);
   const [isLoadingSelectedSpace, setIsLoadingSelectedSpace] = useState(false);
+  const [publicThreads, setPublicThreads] = useState<ThreadWithDetails[]>([]); 
 
   const fetchSpaces = useCallback(async () => {
     if (!user) {
@@ -65,10 +66,12 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
     try {
       const [spacesData, membershipsData] = await Promise.all([
           getUserSpaces(),
-          getUserMemberships()
+          getUserMemberships(),
+          getPublicThreads()
       ]);
       setSpaces(spacesData || []);
       setMemberships(membershipsData || []);
+      setPublicThreads(publicThreadsData || []);
     } catch (error: any) {
       console.error("Failed to fetch user spaces or public threads:", error);
       toast({ variant: 'destructive', title: 'Error', description: 'Failed to load community data.' });
@@ -129,6 +132,7 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
   const contextValue = useMemo(() => ({
     spaces,
     memberships,
+    publicThreads, 
     isLoadingSpaces,
     selectedSpace,
     selectedSpaceThreads,
