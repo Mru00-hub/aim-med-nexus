@@ -1,13 +1,13 @@
 // src/pages/community/SpaceDetailPage.tsx (Final Version)
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { Plus, Hash } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useCommunity } from '@/context/CommunityContext';
 import { CreateThreadForm } from './CreateThread';
@@ -25,13 +25,16 @@ export default function SpaceDetailPage() {
   const {
     selectedSpace,
     selectedSpaceThreads,
-    selectedSpaceMembers,
+    selectedSpaceMemberCount,
+    selectedSpaceThreadCount,
     isLoadingSelectedSpace,
-    selectSpace, // The async function to fetch all data
-    isMemberOf    // The corrected membership check
+    selectSpace,
+    refreshSelectedSpace,
+    isMemberOf
   } = useCommunity();
 
   const [showCreateThread, setShowCreateThread] = useState(false);
+  const stableSelectSpace = useCallback(selectSpace, []);
 
   // Step 2: Fetch all data for this space when the component mounts or ID changes
   useEffect(() => {
@@ -40,9 +43,9 @@ export default function SpaceDetailPage() {
     }
     // Cleanup when the user navigates away
     return () => {
-      selectSpace(null);
+      stableSelectSpace(null);
     };
-  }, [spaceId, selectSpace]);
+  }, [spaceId, stableSelectSpace]);
 
   // Step 3: This permission logic is now simpler and more reliable
   const canCreateThread = useMemo(() => {
@@ -53,7 +56,7 @@ export default function SpaceDetailPage() {
 
 
   // Step 4: Main loading state for the entire page
-  if (isLoadingSelectedSpace) {
+  if (isLoadingSelectedSpace && !selectedSpace) {
     return (
         <div className="min-h-screen bg-background flex flex-col">
           <Header />
@@ -106,8 +109,8 @@ export default function SpaceDetailPage() {
         
         <Tabs defaultValue="threads" className="w-full">
             <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="threads">Threads ({selectedSpaceThreads.length})</TabsTrigger>
-                <TabsTrigger value="members">Members ({selectedSpaceMembers.length})</TabsTrigger>
+                <TabsTrigger value="threads">Threads ({selectedSpaceThreadCount ?? 0})</TabsTrigger>
+                <TabsTrigger value="members">Members ({selectedSpaceMemberCount ?? 0})</TabsTrigger>
             </TabsList>
             <TabsContent value="threads" className="pt-4">
               {selectedSpaceThreads.length > 0 ? (
@@ -151,7 +154,6 @@ export default function SpaceDetailPage() {
                 spaceId={spaceId!}
                 onThreadCreated={(newThreadId) => {
                     setShowCreateThread(false);
-                    refreshSelectedSpace();
                     selectSpace(spaceId); // Re-fetching the space data will refresh the threads
                     navigate(`/community/thread/${newThreadId}`);
                 }}
