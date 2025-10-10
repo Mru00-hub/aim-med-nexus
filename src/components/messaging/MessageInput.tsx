@@ -48,6 +48,9 @@ const MessageInputComponent: React.FC<MessageInputProps> = ({
       return () => {
           newUrls.forEach(url => URL.revokeObjectURL(url));
       };
+  }, [attachedFiles]);
+
+  useEffect(() => {
       console.log('🔍 attachedFiles changed:', attachedFiles.length, 'files');
       attachedFiles.forEach((file, i) => console.log(`  File ${i}:`, file.name));
       // Force a re-render by updating a separate state
