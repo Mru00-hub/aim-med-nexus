@@ -100,13 +100,6 @@ const useThreadData = (threadId: string, currentUserId: string | undefined, prof
 
         if (optimisticMessage.attachments.length > 0) {
             const firstAttachment = optimisticMessage.attachments[0];
-            alert(
-                `✅ ALERT 2 of 4: Optimistic Message Ready\n\n` +
-                `File Name: ${firstAttachment.file_name}\n` +
-                `File Type: ${firstAttachment.file_type}\n` +
-                `Is Uploading: ${firstAttachment.isUploading}\n` +
-                `Local URL: ${firstAttachment.file_url}`
-            );
         }
 
         setMessages(current => [...current, optimisticMessage]);
@@ -151,10 +144,6 @@ const useThreadData = (threadId: string, currentUserId: string | undefined, prof
                     })
                 );
             }
-
-            setMessages(current => current.map(msg => 
-                msg.id === tempMsgId ? { ...optimisticMessage, ...realMessage, id: realMessage.id } : msg
-            ));
         } catch (error: any) {
             toast({ variant: 'destructive', title: 'Failed to Send Message', description: error.message });
             setMessages(current => current.filter(m => m.id !== tempMsgId));
