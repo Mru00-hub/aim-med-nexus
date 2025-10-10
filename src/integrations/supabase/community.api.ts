@@ -56,10 +56,10 @@ export type PendingRequest = {
 // Rich Mock Data for Logged-Out Users
 // =================================================================
 const MOCK_SPACES: Space[] = [
-  { id: 'mock-pub-1', name: 'Public Discussions', description: '', space_type: 'PUBLIC', join_level:'OPEN', creator_id: 'sys-user', created_at: new Date().toISOString() },
-  { id: 'mock-forum-1', name: 'AI in Healthcare (Example)', description: 'Exploring AI in medical imaging...', space_type: 'FORUM', join_level:'OPEN', creator_id: 'user-abc', created_at: new Date().toISOString() },
-  { id: 'mock-forum-2', name: 'USMLE 2026 Prep (Example)', description: 'Preparing for USMLE exams...', space_type: 'FORUM', join_level: 'INVITE_ONLY', creator_id: 'user-def', created_at: new Date().toISOString() },
-  { id: 'mock-comm-1', name: 'Global Cardiology (Example)', description: 'Connect with cardiologists worldwide...', space_type: 'COMMUNITY_SPACE', join_level: 'INVITE_ONLY', creator_id: 'user-ghi', created_at: new Date().toISOString() },
+  { id: 'mock-pub-1', name: 'Public Discussions', space_type: 'PUBLIC', join_level:'OPEN', creator_id: 'sys-user', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+  { id: 'mock-forum-1', name: 'AI in Healthcare (Example)', description: 'Exploring AI in medical imaging...', space_type: 'FORUM', join_level:'OPEN', creator_id: 'user-abc', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+  { id: 'mock-forum-2', name: 'USMLE 2026 Prep (Example)', description: 'Preparing for USMLE exams...', space_type: 'FORUM', join_level: 'INVITE_ONLY', creator_id: 'user-def', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+  { id: 'mock-comm-1', name: 'Global Cardiology (Example)', description: 'Connect with cardiologists worldwide...', space_type: 'COMMUNITY_SPACE', join_level: 'INVITE_ONLY', creator_id: 'user-ghi', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
 ];
 
 const MOCK_PUBLIC_THREADS: ThreadWithDetails[] = [
@@ -156,12 +156,12 @@ export const getSpaceMemberList = async (spaceId: string): Promise<MemberProfile
     if (error) throw error;
 
     // The data structure is slightly different with an explicit join, so we adjust the mapping.
-    const members: MemberProfile[] = (data || []).map((m: any) => ({
+    const members: MemberProfile[] = data.map(m => ({
         id: m.user_id,
         role: m.role,
         // The profile data is now nested inside a 'profiles' object.
-        full_name: m.profiles?.full_name || 'Anonymous User',
-        profile_picture_url: m.profiles?.profile_picture_url || null,
+        full_name: m.profiles.full_name || 'Anonymous User',
+        profile_picture_url: m.profiles.profile_picture_url || null,
     }));
     
     return members;
@@ -181,7 +181,7 @@ export const getPublicThreads = async (): Promise<ThreadWithDetails[]> => {
 
 /** Creates a new Space and assigns the appropriate creator role. */
 export const createSpace = async (
-  payload: { name: string; description?: string; space_type: 'FORUM' | 'COMMUNITY_SPACE'; join_level: Enums<'space_join_level'>; }
+  payload: { name: string; description?: string; space_type: 'FORUM' | 'COMMUNITY_SPACE'; join_level: Enums<'join_level'>; }
 ): Promise<Space> => {
     const session = await getSessionOrThrow();
     
@@ -207,13 +207,14 @@ export const createSpace = async (
 
 /** Creates a new thread. User must be logged in. */
 export const createThread = async (
-  payload: { title: string; body: string; spaceId: string | null; }
+  payload: { title: string; body: string; spaceId: string | null; description?: string; }
 ): Promise<string> => {
     await getSessionOrThrow();
     const { data, error } = await supabase.rpc('create_thread', {
         p_title: payload.title,
         p_body: payload.body, 
         p_space_id: payload.spaceId,
+        p_description: payload.description,
     });
 
     if (error) throw error;
@@ -284,10 +285,7 @@ export const getMessagesWithDetails = async (threadId: string): Promise<MessageW
     if (error) throw error;
     
     // The data mapping remains the same because we aliased profiles back to 'author'.
-    return (data || []).map(msg => ({
-        ...msg,
-        author: Array.isArray(msg.author) && msg.author[0] ? msg.author[0] : msg.author
-    })) as MessageWithDetails[];
+    return data as MessageWithDetails[];
 };
 
 // --- Chat Interaction ---
@@ -412,11 +410,11 @@ export const joinSpaceAsMember = async (spaceId: string): Promise<Membership> =>
     await getSessionOrThrow();
     const { data, error } = await supabase.rpc('join_space_as_member', { p_space_id: spaceId });
     if (error) throw error;
-    return (Array.isArray(data) ? data[0] : data) as Membership;
+    return data;
 }
 
 /** Requests to join a private space. */
-export const requestToJoinSpace = async (spaceId: string, spaceType: 'FORUM' | 'COMMUNITY_SPACE'): Promise<any> => {
+export const requestToJoinSpace = async (spaceId: string, spaceType: 'FORUM' | 'COMMUNITY_SPACE'): Promise<Membership> => {
     await getSessionOrThrow();
     // FINAL CORRECTION: The p_space_type parameter is required by the original DB function and has been restored here.
     const { data, error } = await supabase.rpc('request_to_join_space', {
@@ -447,5 +445,5 @@ export const updateMembershipStatus = async (membershipId: string, newStatus: En
         p_new_status: newStatus,
     });
     if (error) throw error;
-    return (Array.isArray(data) ? data[0] : data) as Membership;
+    return data;
 };

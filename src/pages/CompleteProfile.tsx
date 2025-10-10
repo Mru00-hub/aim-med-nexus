@@ -178,8 +178,9 @@ const CompleteProfile = () => {
 
       const { data: upsertedData, error: upsertError } = await supabase
         .from('profiles')
-        .upsert([profileData])
-        .select();
+        .upsert(profileData, {
+          returning: 'representation', // This option tells Supabase to return the saved data
+        });
       if (upsertError) {
         console.error("[CompleteProfile] Upsert failed");
         console.error("[CompleteProfile] Error code", upsertError.code);

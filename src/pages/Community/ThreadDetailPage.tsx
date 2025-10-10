@@ -41,7 +41,7 @@ export default function ThreadDetailPage() {
       if (data) {
         const details = {
           title: data.title,
-          description: null,
+          description: data.description,
           spaceName: data.spaces?.name || 'Public Thread',
           creator_id: data.creator_id,
         };

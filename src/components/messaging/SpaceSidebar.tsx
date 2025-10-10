@@ -93,7 +93,7 @@ export const SpaceSidebar: React.FC<SpaceSidebarProps> = () => {
             <span className="truncate">{space.name}</span>
             {/* Display an icon for private spaces */}
             {space.join_level === 'INVITE_ONLY' && (
-                <Hash className="h-3 w-3 ml-auto opacity-70" />
+                <Hash className="h-3 w-3 ml-auto opacity-70" title="Private" />
             )}
           </button>
         ))}

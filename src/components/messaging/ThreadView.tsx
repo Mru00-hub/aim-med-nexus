@@ -58,7 +58,7 @@ const useThreadData = (threadId: string, currentUserId: string | undefined, prof
             return;
         }
 
-        const tempMsgId = -Date.now(); // Use negative number for temp ID
+        const tempMsgId = `temp_${Date.now()}`;
         const optimisticAttachments = files.map((file, index) => ({
             id: `temp_att_${Date.now()}_${index}`,
             message_id: -1,
@@ -86,6 +86,7 @@ const useThreadData = (threadId: string, currentUserId: string | undefined, prof
             },
             reactions: [],
             attachments: optimisticAttachments as any,
+            parent_message: parentMessageId ? messages.find(m => m.id === parentMessageId) : null,
         };
 
         setMessages(current => [...current, optimisticMessage]);
@@ -120,6 +121,101 @@ const useThreadData = (threadId: string, currentUserId: string | undefined, prof
                             console.error(`Upload failed for ${file.name}:`, uploadError);
                             setMessages(current => current.map(msg => 
                                 msg.id === realMessage.id ? { // Also use the permanent ID for error states
+                                    ...msg,
+                                    attachments: msg.attachments.map(att => 
+                                        att.id === optimisticAttachments[index].id 
+                                        ? { ...att, isUploading: false, file_url: 'upload-failed' } 
+                                        : att
+                                    )
+                                } : msg
+                            ));
+                        }
+                    })
+                );
+            }
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: 'Failed to Send Message', description: error.message });
+            setMessages(current => current.filter(m => m.id !== tempMsgId));
+            throw error;
+        }
+    }, [currentUserId, threadId, profile, messages, toast]);
+  
+    // FIX 1: Removed the duplicate function declaration that was here.
+    const handleSendMessage = useCallback(async (body: string, parentMessageId: number | null, files: File[]) => {
+        const currentProfile = profileRef.current;
+        const currentMessages = messagesRef.current;
+      
+        if (!currentUserId || !profile) {
+            throw new Error('User is not authenticated or profile is not available.');
+        }
+
+        const tempMsgId = `temp_${Date.now()}`;
+        const optimisticAttachments = files.map((file, index) => ({
+            id: `temp_att_${Date.now()}_${index}`,
+            message_id: -1,
+            file_name: file.name,
+            file_type: file.type,
+            file_url: URL.createObjectURL(file),
+            file_size_bytes: file.size,
+            created_at: new Date().toISOString(),
+            uploaded_by: currentUserId,
+            isUploading: true,
+        }));
+
+        const optimisticMessage: MessageWithDetails = {
+            id: tempMsgId as any,
+            thread_id: threadId,
+            user_id: currentUserId,
+            body,
+            parent_message_id: parentMessageId,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            is_edited: false,
+            author: {
+                full_name: profile.full_name,
+                profile_picture_url: profile.profile_picture_url,
+            },
+            reactions: [],
+            attachments: optimisticAttachments as any,
+            parent_message: parentMessageId ? messages.find(m => m.id === parentMessageId) : null,
+        };
+
+        console.log("1. Optimistic Message created:", optimisticMessage);
+
+        if (optimisticMessage.attachments.length > 0) {
+            const firstAttachment = optimisticMessage.attachments[0];
+        }
+
+        setMessages(current => [...current, optimisticMessage]);
+
+        try {
+            const realMessage = await postMessage(threadId, body, parentMessageId);
+
+            setMessages(current => current.map(msg => 
+                msg.id === tempMsgId 
+                    ? { ...msg, ...realMessage, id: realMessage.id, attachments: optimisticAttachments }
+                    : msg
+            ));
+
+            if (files.length > 0) {
+                await Promise.all(
+                    files.map(async (file, index) => {
+                        try {
+                            const realAttachment = await uploadAttachment(realMessage.id, file);
+                            setMessages(current => current.map(msg => 
+                                msg.id === tempMsgId ? {
+                                    ...msg,
+                                    attachments: msg.attachments.map(att => 
+                                        att.id === optimisticAttachments[index].id 
+                                        ? { ...realAttachment, isUploading: false } 
+                                        : att
+                                    )
+                                } : msg
+                            ));
+                        } catch (uploadError) {
+                            console.error(`Upload failed for ${file.name}:`, uploadError);
+                            setMessages(current => current.map(msg => 
+                                msg.id === tempMsgId ? {
                                     ...msg,
                                     attachments: msg.attachments.map(att => 
                                         att.id === optimisticAttachments[index].id 
