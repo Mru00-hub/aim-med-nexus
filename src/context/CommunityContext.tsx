@@ -1,6 +1,6 @@
 // src/context/CommunityContext.tsx
 
-import React, { createContext, useState, useContext, useEffect, useMemo, ReactNode } from 'react';
+import React, { createContext, useState, useContext, useEffect, useMemo, ReactNode, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/components/ui/use-toast';
 import { 
@@ -77,30 +77,30 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
       toast({ variant: 'destructive', title: 'Error', description: 'Failed to load community data.' });
     } finally {
       setIsLoadingSpaces(false);
-      setIsInitialLoad(false);
     }
-  };
+  }, [user, toast]);
 
   useEffect(() => {
-    // The effect now directly calls fetchSpaces when the user's status changes.
-    // This is a more stable and predictable pattern.
     fetchSpaces();
-  }, [user]); // This effect correctly re-runs when the user logs in or out.
+  }, [fetchSpaces]);
 
-  const selectSpace = async (spaceId: string | null) => {
+  const selectSpace = useCallback(async (spaceId: string | null) => {
     if (!spaceId) {
       setSelectedSpace(null);
+      setSelectedSpaceThreads([]);
+      setSelectedSpaceMembers([]);
+      setSelectedSpaceMemberCount(null);
+      setSelectedSpaceThreadCount(null);
       return;
     }
     setIsLoadingSelectedSpace(true);
     try {
-      // Fetch everything for the selected space in parallel
-      const [spaceDetails, threads, members] = await Promise.all([
+      const [spaceDetails, threads, members, memberCount, threadCount] = await Promise.all([
         getSpaceDetails(spaceId),
         getThreadsForSpace(spaceId),
         getSpaceMemberList(spaceId),
-        getSpaceMemberCount(spaceId),    // <-- ADDED API CALL
-        getThreadsCountForSpace(spaceId) // <-- ADDED API CALL
+        getSpaceMemberCount(spaceId),
+        getThreadsCountForSpace(spaceId)
       ]);
 
       if (!spaceDetails) throw new Error("Space not found.");
@@ -117,7 +117,7 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
     } finally {
       setIsLoadingSelectedSpace(false);
     }
-  };
+  }, [toast]);
 
   const fetchSpaceMembers = async (spaceId: string) => {
     setIsLoadingMembers(true);
@@ -149,6 +149,8 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
     selectedSpace,
     selectedSpaceThreads,
     selectedSpaceMembers,
+    selectedSpaceMemberCount, // <-- EXPOSED
+    selectedSpaceThreadCount, // <-- EXPOSED
     isLoadingSelectedSpace,
     fetchSpaces,
     selectSpace,
