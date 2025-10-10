@@ -82,7 +82,7 @@ export const SpaceCreator: React.FC<SpaceCreatorProps> = ({ isOpen, onClose, onS
           <div className="space-y-2">
             <Label>Space Type</Label>
             <Select value={type} onValueChange={(v) => setType(v as Enums<'space_type'>)}>
-              <SelectTrigger><SelectValue /></SelectValue>
+              <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="FORUM">Forum (Topic-based discussions)</SelectItem>
                 <SelectItem value="COMMUNITY_SPACE">Community Space (Private, group-focused)</SelectItem>
@@ -104,7 +104,7 @@ export const SpaceCreator: React.FC<SpaceCreatorProps> = ({ isOpen, onClose, onS
             <div className="space-y-2">
               <Label>Forum Privacy</Label>
               <Select value={forumPrivacy} onValueChange={(v) => setForumPrivacy(v as 'PUBLIC' | 'PRIVATE')}>
-                <SelectTrigger><SelectValue /></SelectValue>
+                <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="PUBLIC">Public (Anyone can join)</SelectItem>
                   <SelectItem value="PRIVATE">Private (Approval required)</SelectItem>
