@@ -20,7 +20,7 @@ import { useToast } from '@/components/ui/use-toast';
 import {
   Space,             // Unified Space Type
   createSpace,       // Unified Creation Function
-  joinPublicForum,
+  ThreadWithDetails,
   requestToJoinSpace,
 } from '@/integrations/supabase/community.api';
 import { useCommunity } from '@/context/CommunityContext'; // NEW: Import the Community Context
@@ -46,8 +46,7 @@ export default function Forums() {
     fetchSpaces, 
     joinSpaceAsMember,
     isMemberOf,
-    publicSpaceId,
-    ThreadWithDetails// Use the ID from the context
+    publicSpaceId// Use the ID from the context
   } = useCommunity();
   console.log('[Forums.tsx] Data from context:', { spaces, publicThreads, loading });
   const [showSpaceCreator, setShowSpaceCreator] = useState(false);
