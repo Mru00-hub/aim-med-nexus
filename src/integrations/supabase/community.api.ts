@@ -56,7 +56,7 @@ export type PendingRequest = {
 // Rich Mock Data for Logged-Out Users
 // =================================================================
 const MOCK_SPACES: Space[] = [
-  { id: 'mock-pub-1', name: 'Public Discussions', space_type: 'PUBLIC', join_level:'OPEN', creator_id: 'sys-user', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+  { id: 'mock-pub-1', name: 'Public Discussions', description: '', space_type: 'PUBLIC', join_level:'OPEN', creator_id: 'sys-user', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
   { id: 'mock-forum-1', name: 'AI in Healthcare (Example)', description: 'Exploring AI in medical imaging...', space_type: 'FORUM', join_level:'OPEN', creator_id: 'user-abc', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
   { id: 'mock-forum-2', name: 'USMLE 2026 Prep (Example)', description: 'Preparing for USMLE exams...', space_type: 'FORUM', join_level: 'INVITE_ONLY', creator_id: 'user-def', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
   { id: 'mock-comm-1', name: 'Global Cardiology (Example)', description: 'Connect with cardiologists worldwide...', space_type: 'COMMUNITY_SPACE', join_level: 'INVITE_ONLY', creator_id: 'user-ghi', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
@@ -68,7 +68,6 @@ const MOCK_PUBLIC_THREADS: ThreadWithDetails[] = [
 ];
 
 const MOCK_MESSAGES: MessageWithDetails[] = [];
-
 
 // =================================================================
 // API Implementation
