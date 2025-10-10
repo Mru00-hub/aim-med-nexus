@@ -14,114 +14,93 @@ import { Search, Plus, MessageSquare } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from '@/components/ui/use-toast';
 
-// ----------------------------------------------------------------------
-// REVISED IMPORTS - Use the unified API and the new Context
-// ----------------------------------------------------------------------
+// --- FIX #1: IMPORT API FUNCTIONS DIRECTLY ---
 import {
-  Space,             // Unified Space Type
-  createSpace,       // Unified Creation Function
+  Space,
+  createSpace,
   ThreadWithDetails,
   requestToJoinSpace,
+  joinSpaceAsMember // <-- Import the function directly
 } from '@/integrations/supabase/community.api';
-import { useCommunity } from '@/context/CommunityContext'; // NEW: Import the Community Context
-
-// We'll also import the Enums for clarity in the createSpace function
+import { useCommunity } from '@/context/CommunityContext';
 import { Enums } from '@/integrations/supabase/types';
 
-// This page no longer needs to fetch data, the context handles it.
 
 export default function Forums() {
-  console.log('%c[Forums.tsx] Rendering...', 'color: orange; font-weight: bold;');
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // ----------------------------------------------------------------------
-  // REVISED STATE MANAGEMENT - Use the global context
-  // ----------------------------------------------------------------------
+  // --- FIX #2: UPDATE CONTEXT CONSUMPTION ---
+  // We no longer ask for joinSpaceAsMember or publicSpaceId from the context.
   const { 
     spaces, 
     publicThreads, 
     isLoadingSpaces: loading, 
     fetchSpaces, 
-    joinSpaceAsMember,
     isMemberOf,
-    publicSpaceId// Use the ID from the context
   } = useCommunity();
-  console.log('[Forums.tsx] Data from context:', { spaces, publicThreads, loading });
+
   const [showSpaceCreator, setShowSpaceCreator] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [threadSearchQuery, setThreadSearchQuery] = useState('');
-  const [selectedFilter, setSelectedFilter] = useState<string>('ALL'); // ALL, FORUM, COMMUNITY_SPACE
+  const [selectedFilter, setSelectedFilter] = useState<string>('ALL');
 
-  // ----------------------------------------------------------------------
-  // REFACTORED FILTERING LOGIC
-  // ----------------------------------------------------------------------
   const filteredSpaces = useMemo(() => {
-    // Only display non-PUBLIC spaces here (Public threads are separate)
+    if (!spaces) return []; // Safety check
     return spaces
       .filter(space => space.space_type !== 'PUBLIC')
       .filter(space => {
         if (selectedFilter === 'ALL') return true;
-        // Check against the unified space_type
         return space.space_type === selectedFilter;
       })
       .filter(space => {
         const searchLower = searchQuery.toLowerCase();
         return (
           space.name.toLowerCase().includes(searchLower) ||
-          space.description?.toLowerCase().includes(searchLower)
+          (space.description && space.description.toLowerCase().includes(searchLower))
         );
       });
   }, [spaces, searchQuery, selectedFilter]);
 
   const filteredPublicThreads = useMemo(() => {
+    if (!publicThreads) return []; // Safety check
     return publicThreads.filter(thread => {
       const searchLower = threadSearchQuery.toLowerCase();
       return (
         thread.title.toLowerCase().includes(searchLower) ||
-        // FIX: Using creator_email as the guaranteed available search field.
-        thread.creator_full_name.toLowerCase().includes(searchLower) 
+        thread.creator_full_name.toLowerCase().includes(searchLower)
       );
     });
   }, [publicThreads, threadSearchQuery]);
 
 
-  // ----------------------------------------------------------------------
-  // REFACTORED USER ACTIONS
-  // ----------------------------------------------------------------------
-
   const handleCreateSpace = async (data: {
     name: string;
     description?: string;
     space_type: 'FORUM' | 'COMMUNITY_SPACE';
-    join_level: Enums<'join_level'>;
+    join_level: Enums<'space_join_level'>;
   }) => {
-    if (!user) {
-      toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in to create a space.' });
-      return;
-    }
-
+    if (!user) return;
     toast({ title: 'Creating space...' });
     try {
-      // Call the API function you've already imported
       await createSpace({
         name: data.name,
         description: data.description,
         space_type: data.space_type,
         join_level: data.join_level,
-        // The creator_id is handled by the API/database
       });
-
       toast({ title: 'Success!', description: `The space "${data.name}" has been created.` });
-      setShowSpaceCreator(false); // Close the creation modal
-      await fetchSpaces();       // IMPORTANT: Refresh the spaces list from the context
-
+      await fetchSpaces();
     } catch (error: any) {
       toast({ variant: 'destructive', title: 'Creation Failed', description: error.message });
+    } finally {
+      setShowSpaceCreator(false);
     }
   };
 
+  // --- FIX #3: UPDATE THE handleJoin FUNCTION ---
+  // It now correctly uses the directly imported API functions for all cases.
   const handleJoin = async (e: React.MouseEvent, space: Space) => {
       e.preventDefault();
       e.stopPropagation();
@@ -130,21 +109,17 @@ export default function Forums() {
           return;
       }
 
-      toast({ title: 'Joining...', description: `Attempting to join ${space.name}.` });
+      toast({ title: 'Processing...', description: `Requesting to join ${space.name}.` });
       try {
-          // A Forum is public if space_type is FORUM and join_level is OPEN
           const isPublicForum = space.space_type === 'FORUM' && space.join_level === 'OPEN';
           
           if (isPublicForum) {
-              // CORRECTED API FUNCTION CALL
-              await joinSpaceAsMember(space.id); 
+              await joinSpaceAsMember(space.id); // Using the imported function
               toast({ title: 'Success!', description: `You have joined ${space.name}.` });
           } else { 
-              // This handles Private Forums and all Community Spaces (which are INVITE_ONLY)
               await requestToJoinSpace(space.id, space.space_type);
               toast({ title: 'Request Sent', description: `Your request to join ${space.name} is pending approval.` });
           }
-          // Crucial: Re-fetch spaces to update the 'isMemberOf' status in the context
           await fetchSpaces();
       } catch (error: any) {
           toast({ variant: 'destructive', title: 'Error', description: error.message });
@@ -153,7 +128,7 @@ export default function Forums() {
 
   const renderSpaceCard = (space: Space) => {
     const isPrivate = space.join_level === 'INVITE_ONLY';
-    const hasJoined = isMemberOf(space.id); // Check context for membership
+    const hasJoined = isMemberOf(space.id);
 
     const cardContent = (
       <Card className="h-full transition-all duration-300 hover:border-primary/50 hover:shadow-lg">
@@ -170,10 +145,8 @@ export default function Forums() {
           </div>
           <div className="mt-4 pt-4 border-t flex justify-end">
             {hasJoined ? (
-                // If already a member, navigate directly
                 <Button variant="outline" size="sm">Go to Space</Button>
             ) : (
-                // If not a member, allow joining/requesting
                 <Button variant="default" size="sm" onClick={(e) => handleJoin(e, space)}>
                     {isPrivate ? 'Request to Join' : 'Join'}
                 </Button>
@@ -183,19 +156,14 @@ export default function Forums() {
       </Card>
     );
 
-    // If already joined, click action links to the space page
-    // Otherwise, the click action defaults to the button action or login
-    const clickHandler = hasJoined ? 
-        () => navigate(`/community/space/${space.id}`) : 
-        (e: React.MouseEvent) => {
-            if (user) {
-                // If the user is logged in but hasn't joined, the button handles the action.
-                // We prevent default navigation on the card click to let the button handle it.
-                e.preventDefault(); 
-            } else {
-                navigate('/login');
-            }
-        };
+    const clickHandler = () => {
+        if (isMemberOf(space.id)) {
+            navigate(`/community/space/${space.id}`);
+        } else if (!user) {
+            navigate('/login');
+        }
+        // If logged in but not a member, clicking the card does nothing; the button must be used.
+    };
 
     return (
         <div key={space.id} className="cursor-pointer" onClick={clickHandler}>
@@ -204,7 +172,6 @@ export default function Forums() {
     );
   };
   
-  // renderPublicThreadCard logic remains largely the same, but should link to the ThreadDetailPage
   const renderPublicThreadCard = (thread: ThreadWithDetails) => (
     <Card key={thread.id} className="transition-all duration-300 hover:border-primary/50 hover:shadow-lg">
        <Link to={user ? `/community/thread/${thread.id}` : '/login'}>
@@ -219,11 +186,8 @@ export default function Forums() {
       </Link>
     </Card>
   );
-  console.log('%c[Forums.tsx] About to return JSX.', 'color: green;');
-  return (
-    // Wrap the entire application or the main community section in the CommunityProvider 
-    // for this hook to work correctly.
 
+  return (
     <div className="min-h-screen bg-background">
       <Header />
       <main className="container mx-auto py-8 px-4">
@@ -259,9 +223,7 @@ export default function Forums() {
                 <Plus className="h-4 w-4 mr-2" /> Create Space
             </Button>
           </div>
-          {loading ? ( 
-            <p>Loading spaces...</p> 
-          ) : (
+          {loading ? ( <p>Loading spaces...</p> ) : (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredSpaces.map(renderSpaceCard)}
             </div>
@@ -271,17 +233,17 @@ export default function Forums() {
         <section>
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-2xl font-semibold">Public Threads</h2>
-            <Button size="sm" onClick={() => user ? navigate('/community/create-thread') : navigate('/login')}>
-                <Plus className="h-4 w-4 mr-2" /> Start a Thread
-            </Button>
+            {publicThreads && publicThreads.length > 0 && (
+                <Button size="sm" onClick={() => user ? navigate(`/community/space/${publicThreads[0].space_id}/create-thread`) : navigate('/login')}>
+                    <Plus className="h-4 w-4 mr-2" /> Start a Thread
+                </Button>
+            )}
           </div>
           <div className="relative mb-4">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input placeholder="Search public threads..." value={threadSearchQuery} onChange={(e) => setThreadSearchQuery(e.target.value)} className="pl-10" />
           </div>
-          {loading ? ( 
-            <p>Loading threads...</p> 
-          ) : (
+          {loading ? ( <p>Loading threads...</p> ) : (
             <div className="space-y-4">
               {filteredPublicThreads.map(renderPublicThreadCard)}
             </div>
