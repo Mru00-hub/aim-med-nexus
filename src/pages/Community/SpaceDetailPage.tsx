@@ -34,7 +34,6 @@ export default function SpaceDetailPage() {
   } = useCommunity();
 
   const [showCreateThread, setShowCreateThread] = useState(false);
-  const stableSelectSpace = useCallback(selectSpace, []);
 
   // Step 2: Fetch all data for this space when the component mounts or ID changes
   useEffect(() => {
@@ -43,9 +42,9 @@ export default function SpaceDetailPage() {
     }
     // Cleanup when the user navigates away
     return () => {
-      stableSelectSpace(null);
+      selectSpace(null);
     };
-  }, [spaceId, stableSelectSpace]);
+  }, [spaceId, selectSpace]);
 
   // Step 3: This permission logic is now simpler and more reliable
   const canCreateThread = useMemo(() => {
