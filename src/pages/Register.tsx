@@ -138,10 +138,18 @@ const Register = () => {
     if (signUpError) {
       setError(signUpError.message);
     } else if (data.user) {
-      // SUCCESS: On successful sign-up, navigate to the verification page.
-      console.log("Registration successful, navigating to /please-verify");
-      navigate('/please-verify', { replace: true, state: { email: formData.email } });
+      // SUCCESS: On successful sign-up, check the registration type
+      if (registrationType === 'premium') {
+        // For premium users, navigate to the payment page
+        console.log("Premium registration successful, navigating to payment page.");
+        navigate('/payment', { replace: true }); // Or whatever your payment page route is
+      } else {
+        // For all other users, navigate to the verification page
+        console.log("Registration successful, navigating to /please-verify");
+        navigate('/please-verify', { replace: true, state: { email: formData.email } });
+      }
     }
+
   };
 
   return (
