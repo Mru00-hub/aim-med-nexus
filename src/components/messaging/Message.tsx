@@ -139,14 +139,7 @@ export const Message: React.FC<MessageProps> = ({
             </div>
         </div>
     ) : (
-        // FIX: Correctly closed the React Fragment
         <>
-            {message.parent_message && (
-                <div className="text-xs rounded-md p-2 border-l-2 border-current/50 bg-current/10 mb-2">
-                    <p className="font-bold">{message.parent_message.author?.full_name}</p>
-                    <p className="truncate opacity-80">{message.parent_message.body}</p>
-                </div>
-            )}
             <p className="text-sm break-words whitespace-pre-wrap">{message.body} {message.is_edited && <span className="text-xs opacity-70">(edited)</span>}</p>
             {message.attachments && message.attachments.length > 0 && (
                 <div className="mt-2">

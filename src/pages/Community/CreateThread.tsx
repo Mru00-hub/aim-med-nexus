@@ -53,7 +53,6 @@ export const CreateThreadForm: React.FC<CreateThreadProps> = ({ spaceId = null, 
           title,
           body,
           spaceId,
-          description
       });
       
       toast({

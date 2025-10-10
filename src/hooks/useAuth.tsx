@@ -60,13 +60,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (newSession?.user && newSession.user.id !== currentUserId) {
           // A new user has logged in. Set loading state and fetch their profile.
           setLoading(true);
-          supabase.from('profiles').select('*, is_onboarded').eq('id', newSession.user.id).single()
-            .then(({ data: userProfile, error: profileError }) => {
+          (async () => {
+            try {
+              const { data: userProfile, error: profileError } = await supabase
+                .from('profiles')
+                .select('*, is_onboarded')
+                .eq('id', newSession.user.id)
+                .single();
               if (profileError && profileError.code !== 'PGRST116') throw profileError;
               setProfile(userProfile);
-            })
-            .catch(error => console.error("Error fetching new user profile:", error))
-            .finally(() => setLoading(false));
+            } catch (error) {
+              console.error("Error fetching new user profile:", error);
+            } finally {
+              setLoading(false);
+            }
+          })();
 
         } else if (!newSession?.user && currentUserId) {
           // The user has logged out. Clear the profile.

@@ -20,8 +20,9 @@ import { useToast } from '@/components/ui/use-toast';
 import {
   Space,             // Unified Space Type
   createSpace,       // Unified Creation Function
-  joinPublicForum,
+  joinSpaceAsMember,
   requestToJoinSpace,
+  ThreadWithDetails,
 } from '@/integrations/supabase/community.api';
 import { useCommunity } from '@/context/CommunityContext'; // NEW: Import the Community Context
 
@@ -93,8 +94,8 @@ export default function Forums() {
   const handleCreateSpace = async (data: {
     name: string;
     description?: string;
-    space_type: Enums<'space_type'>;
-    join_level: Enums<'join_level'>;
+    space_type: 'FORUM' | 'COMMUNITY_SPACE';
+    join_level: Enums<'space_join_level'>;
   }) => {
     if (!user) {
       toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in to create a space.' });
@@ -132,7 +133,7 @@ export default function Forums() {
       toast({ title: 'Joining...', description: `Attempting to join ${space.name}.` });
       try {
           // A Forum is public if space_type is FORUM and join_level is OPEN
-          const isPublicForum = space.space_type === 'FORUM' && space.join_level === 'OPEN';
+      const isPublicForum = space.space_type === 'FORUM' && space.join_level === 'OPEN';
           
           if (isPublicForum) {
               // CORRECTED API FUNCTION CALL
@@ -140,8 +141,11 @@ export default function Forums() {
               toast({ title: 'Success!', description: `You have joined ${space.name}.` });
           } else { 
               // This handles Private Forums and all Community Spaces (which are INVITE_ONLY)
-              await requestToJoinSpace(space.id, space.space_type);
-              toast({ title: 'Request Sent', description: `Your request to join ${space.name} is pending approval.` });
+              // Only pass space_type if it's FORUM or COMMUNITY_SPACE
+              if (space.space_type !== 'PUBLIC') {
+                await requestToJoinSpace(space.id, space.space_type);
+                toast({ title: 'Request Sent', description: `Your request to join ${space.name} is pending approval.` });
+              }
           }
           // Crucial: Re-fetch spaces to update the 'isMemberOf' status in the context
           await fetchSpaces();

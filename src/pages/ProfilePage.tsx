@@ -4,7 +4,9 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { Profile } from '@/integrations/supabase/types';
+import { Tables } from '@/integrations/supabase/types';
+
+type Profile = Tables<'profiles'>;
 
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
@@ -62,7 +64,7 @@ const ProfilePage = () => {
             // If Supabase returns an error (e.g., user not found), throw it to the catch block
             throw fetchError;
           }
-          setProfileData(data);
+          setProfileData(data as Profile);
         }
       } catch (e: any) {
         // --- THIS CATCH BLOCK BRINGS BACK YOUR ERROR LOGGING ---
