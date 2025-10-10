@@ -1,30 +1,18 @@
 // src/pages/community/SpaceDetailPage.tsx
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Plus, Users, Hash } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { useToast } from '@/components/ui/use-toast';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/badge';
-
-// ----------------------------------------------------------------------
-// REVISED IMPORTS - ADDED MISSING METRIC/MEMBER IMPORTS
-// ----------------------------------------------------------------------
-import {
-  getThreadsForSpace,
-  getSpaceMemberCount, 
-  getThreadsCountForSpace,
-  getSpaceMemberList,
-  ThreadWithDetails,
-  MemberProfile // Added for useSpaceMemberList hook
-} from '@/integrations/supabase/community.api';
 import { useCommunity } from '@/context/CommunityContext'; 
 import { CreateThreadForm } from './CreateThread'; 
+import { MemberList } from '@/components/forums/MemberList'; // <-- Import the component we planned
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"; // For better layout
 
 // ======================================================================
 // NEW: Custom Hook for fetching Threads within a Space
