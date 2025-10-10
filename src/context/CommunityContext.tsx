@@ -1,5 +1,7 @@
 // src/context/CommunityContext.tsx
 
+// src/context/CommunityContext.tsx
+
 import React, { createContext, useState, useContext, useEffect, useMemo, ReactNode, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/components/ui/use-toast';
@@ -9,8 +11,8 @@ import {
     getSpaceDetails,
     getThreadsForSpace,
     getSpaceMemberList,
-    getSpaceMemberCount,    // <-- ADDED IMPORT
-    getThreadsCountForSpace, // <-- ADDED IMPORT
+    getSpaceMemberCount,
+    getThreadsCountForSpace,
     Space,
     ThreadWithDetails,
     Membership,
@@ -18,21 +20,19 @@ import {
 } from '@/integrations/supabase/community.api';
 
 interface CommunityContextType {
-  spaces: Space[]; // The master list of discoverable spaces
-  memberships: Membership[]; // The user's actual memberships
+  spaces: Space[];
+  memberships: Membership[];
   isLoadingSpaces: boolean;
   
-  // New state for the currently viewed space
   selectedSpace: Space | null;
   selectedSpaceThreads: ThreadWithDetails[];
   selectedSpaceMembers: MemberProfile[];
-  selectedSpaceMemberCount: number | null; // <-- ADDED
-  selectedSpaceThreadCount: number | null; // <-- ADDED
+  selectedSpaceMemberCount: number | null;
+  selectedSpaceThreadCount: number | null;
   isLoadingSelectedSpace: boolean;
 
-  // Actions
   fetchSpaces: () => Promise<void>;
-  selectSpace: (spaceId: string | null) => Promise<void>; // Now async!
+  selectSpace: (spaceId: string | null) => Promise<void>;
   refreshSelectedSpace: () => Promise<void>;
   isMemberOf: (spaceId: string) => boolean;
 }
@@ -43,20 +43,17 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
   const { user } = useAuth();
   const { toast } = useToast();
   
-  // Master lists
   const [spaces, setSpaces] = useState<Space[]>([]);
   const [memberships, setMemberships] = useState<Membership[]>([]);
   const [isLoadingSpaces, setIsLoadingSpaces] = useState(true);
 
-  // State for the single space being viewed
   const [selectedSpace, setSelectedSpace] = useState<Space | null>(null);
   const [selectedSpaceThreads, setSelectedSpaceThreads] = useState<ThreadWithDetails[]>([]);
   const [selectedSpaceMembers, setSelectedSpaceMembers] = useState<MemberProfile[]>([]);
-  const [selectedSpaceMemberCount, setSelectedSpaceMemberCount] = useState<number | null>(null); // <-- ADDED
-  const [selectedSpaceThreadCount, setSelectedSpaceThreadCount] = useState<number | null>(null); // <-- ADDED
+  const [selectedSpaceMemberCount, setSelectedSpaceMemberCount] = useState<number | null>(null);
+  const [selectedSpaceThreadCount, setSelectedSpaceThreadCount] = useState<number | null>(null);
   const [isLoadingSelectedSpace, setIsLoadingSelectedSpace] = useState(false);
 
-  // Fetch the master lists (this part is largely the same)
   const fetchSpaces = useCallback(async () => {
     if (!user) {
       setSpaces([]);
@@ -108,12 +105,12 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
       setSelectedSpace(spaceDetails);
       setSelectedSpaceThreads(threads);
       setSelectedSpaceMembers(members);
-      setSelectedSpaceMemberCount(memberCount); // <-- SET STATE
-      setSelectedSpaceThreadCount(threadCount); // <-- SET STATE
+      setSelectedSpaceMemberCount(memberCount);
+      setSelectedSpaceThreadCount(threadCount);
 
     } catch (error: any) {
       toast({ variant: 'destructive', title: 'Error', description: `Failed to load space: ${error.message}` });
-      setSelectedSpace(null); // Clear on error
+      setSelectedSpace(null);
     } finally {
       setIsLoadingSelectedSpace(false);
     }
@@ -121,14 +118,13 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
 
   const refreshSelectedSpace = useCallback(async () => {
     if (selectedSpace?.id) {
-      // It simply re-runs the selectSpace logic for the current space
       await selectSpace(selectedSpace.id);
     }
   }, [selectedSpace, selectSpace]);
     
   const isMemberOf = useCallback((spaceId: string): boolean => {
       return memberships.some(m => m.space_id === spaceId && m.status === 'ACTIVE');
-  }
+  }, [memberships]); // <-- THIS IS THE FIX
 
   const contextValue = useMemo(() => ({
     spaces,
@@ -137,8 +133,8 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
     selectedSpace,
     selectedSpaceThreads,
     selectedSpaceMembers,
-    selectedSpaceMemberCount, // <-- EXPOSED
-    selectedSpaceThreadCount, // <-- EXPOSED
+    selectedSpaceMemberCount,
+    selectedSpaceThreadCount,
     isLoadingSelectedSpace,
     fetchSpaces,
     selectSpace,
