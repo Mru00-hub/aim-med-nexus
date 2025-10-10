@@ -29,9 +29,9 @@ export default function SpaceDetailPage() {
   // 1. Get GLOBAL data from the context
   const { spaces, isLoadingSpaces, isMemberOf } = useCommunity();
   // 2. Get LOCAL data for this page using our dedicated hooks
-  const { threads, isLoadingThreads, refreshThreads } = useSpaceThreads(spaceId!);
-  const { memberCount, threadCount, isLoadingMetrics } = useSpaceMetrics(spaceId!);
-  const { memberList, isLoadingList } = useSpaceMemberList(spaceId!);
+  const { threads, isLoadingThreads, refreshThreads } = useSpaceThreads(spaceId);
+  const { memberCount, threadCount, isLoadingMetrics } = useSpaceMetrics(spaceId);
+  const { memberList, isLoadingList } = useSpaceMemberList(spaceId);
 
   // Find the specific space details from the global list
   const space = useMemo(() => spaces.find(s => s.id === spaceId), [spaces, spaceId]);
