@@ -44,8 +44,10 @@ export default function Forums() {
     publicThreads, 
     isLoadingSpaces: loading, 
     fetchSpaces, 
+    joinSpaceAsMember,
     isMemberOf,
-    publicSpaceId // Use the ID from the context
+    publicSpaceId,
+    ThreadWithDetails// Use the ID from the context
   } = useCommunity();
   console.log('[Forums.tsx] Data from context:', { spaces, publicThreads, loading });
   const [showSpaceCreator, setShowSpaceCreator] = useState(false);
@@ -93,7 +95,7 @@ export default function Forums() {
   const handleCreateSpace = async (data: {
     name: string;
     description?: string;
-    space_type: Enums<'space_type'>;
+    space_type: 'FORUM' | 'COMMUNITY_SPACE';
     join_level: Enums<'join_level'>;
   }) => {
     if (!user) {
