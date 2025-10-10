@@ -161,11 +161,12 @@ const MessageInputComponent: React.FC<MessageInputProps> = ({
                                     e.stopPropagation();
                                     handleRemoveFile(file);
                                 }}
-                                className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-lg z-10 hover:bg-red-600 active:scale-95 transition-all"
+                                // These new classes create a softer look
+                                className="absolute -top-1 -right-1 flex items-center justify-center bg-gray-700/70 text-white rounded-full h-5 w-5 hover:bg-red-500 transition-colors"
                                 title={`Remove ${file.name}`}
                                 aria-label="Remove file"
                             >
-                              <XCircle className="h-5 w-5 fill-current" />
+                              <X className="h-3 w-3" />
                             </button>
                         </div>
                     );
