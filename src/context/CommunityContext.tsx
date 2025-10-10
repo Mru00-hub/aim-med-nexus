@@ -7,22 +7,28 @@ import {
     getUserSpaces, 
     getPublicThreads, 
     getUserMemberships,
+    getSpaceMemberList,
     Space,
     ThreadWithDetails,
+    MemberProfile,
     Membership
 } from '@/integrations/supabase/community.api';
 
 interface CommunityContextType {
-  spaces: Space[];
-  publicThreads: ThreadWithDetails[];
+  spaces: Space[]; // The master list of discoverable spaces
+  memberships: Membership[]; // The user's actual memberships
   isLoadingSpaces: boolean;
-  isInitialLoad: boolean;
+  
+  // New state for the currently viewed space
   selectedSpace: Space | null;
-  publicSpaceId: string | null;
-  fetchSpaces: () => Promise<void>; // Kept for manual refreshing if needed
-  selectSpace: (spaceId: string | null) => void;
-  memberships: Membership[];
-  isMemberOf: (spaceId: string) => boolean; 
+  selectedSpaceThreads: ThreadWithDetails[];
+  selectedSpaceMembers: MemberProfile[];
+  isLoadingSelectedSpace: boolean;
+
+  // Actions
+  fetchSpaces: () => Promise<void>;
+  selectSpace: (spaceId: string | null) => Promise<void>; // Now async!
+  isMemberOf: (spaceId: string) => boolean;
 }
 
 const CommunityContext = createContext<CommunityContextType | undefined>(undefined);
@@ -31,38 +37,32 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
   const { user } = useAuth();
   const { toast } = useToast();
   
+  // Master lists
   const [spaces, setSpaces] = useState<Space[]>([]);
   const [memberships, setMemberships] = useState<Membership[]>([]);
-  const [spaceMembers, setSpaceMembers] = useState<MemberProfile[]>([]);
-  const [isLoadingMembers, setIsLoadingMembers] = useState(false);
-  const [publicThreads, setPublicThreads] = useState<ThreadWithDetails[]>([]);
   const [isLoadingSpaces, setIsLoadingSpaces] = useState(true);
-  const [isInitialLoad, setIsInitialLoad] = useState(true);
-  const [selectedSpace, setSelectedSpace] = useState<Space | null>(null);
 
-  const publicSpaceId = useMemo(() => {
-    return spaces.find(s => s.space_type === 'PUBLIC')?.id || null;
-  }, [spaces]);
-  
-  // --- REVISED AND ROBUST DATA FETCHING LOGIC ---
+  // State for the single space being viewed
+  const [selectedSpace, setSelectedSpace] = useState<Space | null>(null);
+  const [selectedSpaceThreads, setSelectedSpaceThreads] = useState<ThreadWithDetails[]>([]);
+  const [selectedSpaceMembers, setSelectedSpaceMembers] = useState<MemberProfile[]>([]);
+  const [isLoadingSelectedSpace, setIsLoadingSelectedSpace] = useState(false);
+
+  // Fetch the master lists (this part is largely the same)
   const fetchSpaces = async () => {
-    // This function is now wrapped to ensure loading state is always handled.
     if (!user) {
       setSpaces([]);
-      setPublicThreads([]);
+      setMemberships([]);
       setIsLoadingSpaces(false);
       return;
     }
-
     setIsLoadingSpaces(true);
     try {
-      const [spacesData, threadsData] = await Promise.all([
+      const [spacesData, membershipsData] = await Promise.all([
           getUserSpaces(),
-          getPublicThreads(),
           getUserMemberships()
       ]);
       setSpaces(spacesData || []);
-      setPublicThreads(threadsData || []);
       setMemberships(membershipsData || []);
     } catch (error: any) {
       console.error("Failed to fetch user spaces or public threads:", error);
@@ -79,14 +79,31 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
     fetchSpaces();
   }, [user]); // This effect correctly re-runs when the user logs in or out.
 
-  const selectSpace = (spaceId: string | null) => {
+  const selectSpace = async (spaceId: string | null) => {
     if (!spaceId) {
-        setSelectedSpace(null);
-        return;
+      setSelectedSpace(null);
+      return;
     }
-    const space = spaces.find(s => s.id === spaceId);
-    if (space) {
-      setSelectedSpace(space);
+    setIsLoadingSelectedSpace(true);
+    try {
+      // Fetch everything for the selected space in parallel
+      const [spaceDetails, threads, members] = await Promise.all([
+        getSpaceDetails(spaceId),
+        getThreadsForSpace(spaceId),
+        getSpaceMemberList(spaceId)
+      ]);
+
+      if (!spaceDetails) throw new Error("Space not found.");
+
+      setSelectedSpace(spaceDetails);
+      setSelectedSpaceThreads(threads);
+      setSelectedSpaceMembers(members);
+
+    } catch (error: any) {
+      toast({ variant: 'destructive', title: 'Error', description: `Failed to load space: ${error.message}` });
+      setSelectedSpace(null); // Clear on error
+    } finally {
+      setIsLoadingSelectedSpace(false);
     }
   };
 
@@ -103,22 +120,19 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
   };
   
   const isMemberOf = (spaceId: string): boolean => {
-      // Check for an ACTIVE membership in the new memberships state
       return memberships.some(m => m.space_id === spaceId && m.status === 'ACTIVE');
   }
 
   const contextValue = useMemo(() => ({
     spaces,
-    publicThreads,
-    isLoadingSpaces,
-    isInitialLoad,
-    selectedSpace,
-    publicSpaceId,
-    fetchSpaces,
-    spaceMembers,
-    selectSpace,
     memberships,
-    isLoadingMembers,
+    isLoadingSpaces,
+    selectedSpace,
+    selectedSpaceThreads,
+    selectedSpaceMembers,
+    isLoadingSelectedSpace,
+    fetchSpaces,
+    selectSpace,
     isMemberOf,
   }), [spaces, publicThreads, isLoadingSpaces, isInitialLoad, selectedSpace, publicSpaceId, memberships]);
 
