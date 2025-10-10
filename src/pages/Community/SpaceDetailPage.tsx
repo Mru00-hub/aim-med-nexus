@@ -147,7 +147,7 @@ export default function SpaceDetailPage() {
               <h2 className="text-2xl font-semibold flex items-center gap-2"><Hash className="h-6 w-6" />Threads</h2>
               <Button onClick={() => user ? setShowCreateThread(true) : navigate('/login')} disabled={!canCreateThread} title={!canCreateThread ? "You must be a member to start a thread here." : "Start a new discussion."}>
                 <Plus className="h-4 w-4 mr-2" />Start New Thread
-              </AButton>
+              </Button>
             </div>
             <ThreadList />
           </>
