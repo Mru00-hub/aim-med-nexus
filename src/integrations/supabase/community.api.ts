@@ -56,10 +56,10 @@ export type PendingRequest = {
 // Rich Mock Data for Logged-Out Users
 // =================================================================
 const MOCK_SPACES: Space[] = [
-  { id: 'mock-pub-1', name: 'Public Discussions', description: '', space_type: 'PUBLIC', join_level:'OPEN', creator_id: 'sys-user', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-  { id: 'mock-forum-1', name: 'AI in Healthcare (Example)', description: 'Exploring AI in medical imaging...', space_type: 'FORUM', join_level:'OPEN', creator_id: 'user-abc', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-  { id: 'mock-forum-2', name: 'USMLE 2026 Prep (Example)', description: 'Preparing for USMLE exams...', space_type: 'FORUM', join_level: 'INVITE_ONLY', creator_id: 'user-def', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-  { id: 'mock-comm-1', name: 'Global Cardiology (Example)', description: 'Connect with cardiologists worldwide...', space_type: 'COMMUNITY_SPACE', join_level: 'INVITE_ONLY', creator_id: 'user-ghi', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+  { id: 'mock-pub-1', name: 'Public Discussions', description: '', space_type: 'PUBLIC', join_level:'OPEN', creator_id: 'sys-user', created_at: new Date().toISOString()},
+  { id: 'mock-forum-1', name: 'AI in Healthcare (Example)', description: 'Exploring AI in medical imaging...', space_type: 'FORUM', join_level:'OPEN', creator_id: 'user-abc', created_at: new Date().toISOString() },
+  { id: 'mock-forum-2', name: 'USMLE 2026 Prep (Example)', description: 'Preparing for USMLE exams...', space_type: 'FORUM', join_level: 'INVITE_ONLY', creator_id: 'user-def', created_at: new Date().toISOString() },
+  { id: 'mock-comm-1', name: 'Global Cardiology (Example)', description: 'Connect with cardiologists worldwide...', space_type: 'COMMUNITY_SPACE', join_level: 'INVITE_ONLY', creator_id: 'user-ghi', created_at: new Date().toISOString() },
 ];
 
 const MOCK_PUBLIC_THREADS: ThreadWithDetails[] = [
@@ -180,7 +180,7 @@ export const getPublicThreads = async (): Promise<ThreadWithDetails[]> => {
 
 /** Creates a new Space and assigns the appropriate creator role. */
 export const createSpace = async (
-  payload: { name: string; description?: string; space_type: 'FORUM' | 'COMMUNITY_SPACE'; join_level: Enums<'join_level'>; }
+  payload: { name: string; description?: string; space_type: 'FORUM' | 'COMMUNITY_SPACE'; join_level: Enums<'space_join_level'>; }
 ): Promise<Space> => {
     const session = await getSessionOrThrow();
     
@@ -408,8 +408,8 @@ export const uploadAttachment = async (
     throw new Error(`Failed to link attachment to message: ${insertError.message}`);
   }
 
-  if (!data) {
-      throw new Error("Failed to post message: No data returned.");
+  if (!newAttachment) {
+      throw new Error("Failed to create attachment record in database.");
   }
 
   return newAttachment;
@@ -429,18 +429,17 @@ export const joinSpaceAsMember = async (spaceId: string): Promise<Membership> =>
 }
 
 /** Requests to join a private space. */
-export const requestToJoinSpace = async (spaceId: string, spaceType: 'FORUM' | 'COMMUNITY_SPACE'): Promise<Membership> => {
+export const requestToJoinSpace = async (spaceId: string, spaceType: Enums<'space_type'>): Promise<string> => {
     await getSessionOrThrow();
-    // FINAL CORRECTION: The p_space_type parameter is required by the original DB function and has been restored here.
     const { data, error } = await supabase.rpc('request_to_join_space', {
         p_space_id: spaceId,
         p_space_type: spaceType,
     });
     if (error) throw error;
     if (!data) {
-        throw new Error("Failed to post message: No data returned.");
+        throw new Error("Failed to send join request: No membership ID was returned.");
     }
-    return data;
+    return data; // Returns the UUID of the new/existing membership
 }
 
 /** Fetches pending join requests for a space. Must be an admin/mod. */
