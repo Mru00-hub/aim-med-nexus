@@ -97,6 +97,17 @@ export const getUserSpaces = async (): Promise<Space[]> => {
     return data;
 }
 
+export const getUserMemberships = async (): Promise<Membership[]> => {
+    const session = await getSessionOrThrow();
+    const { data, error } = await supabase
+        .from('memberships')
+        .select('*')
+        .eq('user_id', session.user.id);
+        
+    if (error) throw error;
+    return data || [];
+}
+
 /** Fetches details for a single space. RLS will prevent unauthorized access. */
 export const getSpaceDetails = async(spaceId: string): Promise<Space | undefined> => {
     const { data: { session } } = await supabase.auth.getSession();
