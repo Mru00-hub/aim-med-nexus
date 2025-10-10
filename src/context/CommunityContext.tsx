@@ -57,7 +57,7 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
   const [isLoadingSelectedSpace, setIsLoadingSelectedSpace] = useState(false);
 
   // Fetch the master lists (this part is largely the same)
-  const fetchSpaces = async () => {
+  const fetchSpaces = useCallback(async () => {
     if (!user) {
       setSpaces([]);
       setMemberships([]);
@@ -126,7 +126,7 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
     }
   }, [selectedSpace, selectSpace]);
     
-  const isMemberOf = (spaceId: string): boolean => {
+  const isMemberOf = useCallback((spaceId: string): boolean => {
       return memberships.some(m => m.space_id === spaceId && m.status === 'ACTIVE');
   }
 
