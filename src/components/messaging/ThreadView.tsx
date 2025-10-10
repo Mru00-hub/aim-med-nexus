@@ -114,6 +114,12 @@ const useThreadData = (threadId: string, currentUserId: string | undefined, prof
         try {
             const realMessage = await postMessage(threadId, body, parentMessageId);
 
+            setMessages(current => current.map(msg => 
+                msg.id === tempMsgId 
+                    ? { ...msg, ...realMessage, id: realMessage.id, attachments: optimisticAttachments }
+                    : msg
+            ));
+
             if (files.length > 0) {
                 await Promise.all(
                     files.map(async (file, index) => {
