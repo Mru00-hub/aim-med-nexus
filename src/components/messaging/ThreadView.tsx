@@ -38,18 +38,40 @@ const useThreadData = (threadId: string, currentUserId: string | undefined, prof
     const profileRef = useRef(profile);
 
     useEffect(() => {
+        messagesRef.current = messages;
+        profileRef.current = profile;
+    });
+    
+    // --- FIX 1: ADD THIS FUNCTION BACK ---
+    const fetchAndSyncMessages = useCallback(async () => {
+      if (!threadId) return;
+      setIsLoading(true);
+      try {
+        const data = await getMessagesWithDetails(threadId);
+        setMessages(data);
+      } catch (error) {
+        console.error('Error fetching messages:', error);
+        toast({ variant: 'destructive', title: 'Error', description: 'Could not load messages.' });
+      } finally {
+        setIsLoading(false);
+      }
+    }, [threadId, toast]);
+    // --- END OF FIX 1 ---
+
+    // Initial data fetch
+    useEffect(() => {
+        fetchAndSyncMessages();
+    }, [fetchAndSyncMessages]);
+
+    // Real-time subscription
+    useEffect(() => {
         if (!threadId) return;
 
         const handleRealtimeEvent = (payload: any) => {
-            // --- THIS IS THE FIX ---
-            // Check if the event is a new message (INSERT) and if the author is the current user.
-            // If so, we ignore it because our optimistic UI has already added it to the screen.
             if (payload.eventType === 'INSERT' && payload.new.user_id === currentUserId) {
                 console.log('Ignoring self-initiated realtime event.');
-                return; // Do nothing
+                return;
             }
-
-            // For all other events (messages from others, updates, deletes), we perform the refetch.
             console.log('Realtime event from another source received, refetching messages:', payload);
             fetchAndSyncMessages(); 
         };
@@ -61,7 +83,6 @@ const useThreadData = (threadId: string, currentUserId: string | undefined, prof
 
         return () => { supabase.removeChannel(channel); };
         
-    // Add `currentUserId` to the dependency array
     }, [threadId, fetchAndSyncMessages, currentUserId]);
 
     // FIX 1: Removed the duplicate function declaration that was here.
@@ -226,19 +247,6 @@ const useThreadData = (threadId: string, currentUserId: string | undefined, prof
     }, [messages, currentUserId, toast]);
   
     useEffect(() => { fetchAndSyncMessages(); }, [fetchAndSyncMessages]);
-
-    useEffect(() => {
-        if (!threadId) return;
-        const handleRealtimeEvent = (payload: any) => {
-            console.log('Realtime event received, refetching messages:', payload);
-            fetchAndSyncMessages(); 
-        };
-        const channel = supabase.channel(`thread_chat_${threadId}`)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'messages', filter: `thread_id=eq.${threadId}` }, handleRealtimeEvent)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'message_reactions' }, handleRealtimeEvent)
-            .subscribe();
-        return () => { supabase.removeChannel(channel); };
-    }, [threadId, fetchAndSyncMessages]);
     
     const flatMessages = useMemo(() => {
         const messageMap = new Map(messages.map(m => [m.id, m]));
