@@ -38,7 +38,7 @@ export const SpaceCreator: React.FC<SpaceCreatorProps> = ({ isOpen, onClose, onS
       description,
       space_type: type,
       // Logic to determine the correct join_level based on the selected type
-      join_level: type === 'COMMUNITY_SPACE' ? 'INVITE_ONLY' : forumPrivacy,
+      join_level: type === 'COMMUNITY_SPACE' ? 'INVITE_ONLY' : (forumType === 'PUBLIC' ? 'OPEN' : 'REQUEST_TO_JOIN')) as Enums<'join_level'>,
     };
 
     // The parent (Forums.tsx) will handle the actual API call.
