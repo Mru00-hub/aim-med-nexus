@@ -25,6 +25,9 @@ interface ThreadViewProps {
   threadId: string;
 }
 
+export type MessageWithParent = MessageWithDetails & {
+  parent_message?: MessageWithDetails | null;
+};
 // ======================================================================
 // CENTRALIZED HOOK: Handles all Data, Real-Time, and Logic
 // ======================================================================
@@ -72,7 +75,7 @@ const useThreadData = (threadId: string, currentUserId: string | undefined, prof
         }));
 
         const optimisticMessage: MessageWithDetails = {
-            id: tempMsgId as any,
+            id: tempMsgId,
             thread_id: threadId,
             user_id: currentUserId,
             body,
@@ -86,7 +89,6 @@ const useThreadData = (threadId: string, currentUserId: string | undefined, prof
             },
             reactions: [],
             attachments: optimisticAttachments as any,
-            parent_message: parentMessageId ? messages.find(m => m.id === parentMessageId) : null,
         };
 
         setMessages(current => [...current, optimisticMessage]);
@@ -208,7 +210,7 @@ const useThreadData = (threadId: string, currentUserId: string | undefined, prof
   
     useEffect(() => { fetchAndSyncMessages(); }, [fetchAndSyncMessages]);
     
-    const flatMessages = useMemo(() => {
+    const flatMessages = useMemo((): MessageWithParent[] => { // <-- Explicit return type
         const messageMap = new Map(messages.map(m => [m.id, m]));
         return messages
             .map(message => ({
