@@ -30,6 +30,8 @@ const MessageInputComponent: React.FC<MessageInputProps> = ({
   const [isSending, setIsSending] = useState(false);
   const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
+  const [fileInputKey, setFileInputKey] = useState(0);
+  const [renderTrigger, setRenderTrigger] = useState(0);
 
   useEffect(() => {
       if (!attachedFiles.length) {
@@ -46,6 +48,10 @@ const MessageInputComponent: React.FC<MessageInputProps> = ({
       return () => {
           newUrls.forEach(url => URL.revokeObjectURL(url));
       };
+      console.log('🔍 attachedFiles changed:', attachedFiles.length, 'files');
+      attachedFiles.forEach((file, i) => console.log(`  File ${i}:`, file.name));
+      // Force a re-render by updating a separate state
+      setRenderTrigger(prev => prev + 1);
   }, [attachedFiles]);
   
   const handleSend = async () => {
@@ -83,17 +89,36 @@ const MessageInputComponent: React.FC<MessageInputProps> = ({
   
   // --- File Attachment Logic ---
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // We've removed all the "DEBUG" alerts from this function.
+    console.log('📎 handleFileChange triggered');
     if (e.target.files && e.target.files.length > 0) {
-        setAttachedFiles(prev => [...prev, ...Array.from(e.target.files!)]);
+        const newFiles = Array.from(e.target.files);
+        console.log('📎 New files:', newFiles.length);
+        
+        // Use functional update to ensure fresh state
+        setAttachedFiles(prev => {
+            const updated = [...prev, ...newFiles];
+            console.log('📎 Updated attachedFiles:', updated.length);
+            return updated;
+        });
+        
+        // Force input to reset and re-render
         e.target.value = '';
+        setFileInputKey(prev => prev + 1);
+        
+        // Force component re-render
+        setTimeout(() => setRenderTrigger(prev => prev + 1), 0);
     }
   };
-
+  
   const handleRemoveFile = (fileToRemove: File) => {
-      setAttachedFiles(prev => prev.filter(file => file !== fileToRemove));
+      setAttachedFiles(prev => {
+          const updated = prev.filter(file => file !== fileToRemove);
+          console.log('🗑️ Removed file, remaining:', updated.length);
+          return updated;
+      });
+      setFileInputKey(prev => prev + 1);
   }
-
+  
   return (
     <div className="flex flex-col gap-2 p-4 pt-0">
         
@@ -112,6 +137,9 @@ const MessageInputComponent: React.FC<MessageInputProps> = ({
         {/* Attachments Preview */}
         {attachedFiles.length > 0 && (
             <div className="flex flex-wrap gap-3 p-2 bg-card border rounded-lg">
+                <div className="w-full text-xs text-muted-foreground mb-1">
+                    Files: {attachedFiles.length} | Renders: {renderTrigger}
+                </div>
                 {attachedFiles.map((file, index) => {
                     const isImage = file.type.startsWith('image/');
                     return (
@@ -145,6 +173,7 @@ const MessageInputComponent: React.FC<MessageInputProps> = ({
         <div className="relative flex items-end gap-2">
             {/* 1. The input is still hidden, but now has an ID */}
             <input 
+                key={fileInputKey}
                 type="file" 
                 ref={fileInputRef} 
                 onChange={handleFileChange} 
