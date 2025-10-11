@@ -126,52 +126,68 @@ export default function Forums() {
       }
   };
 
-  const renderSpaceCard = (space: Space) => {
-    const isPrivate = space.join_level === 'INVITE_ONLY';
-    const hasJoined = isMemberOf(space.id);
+  const renderSpaceCard = (space: SpaceWithDetails) => {
+      const isPrivate = space.join_level === 'INVITE_ONLY';
+      const hasJoined = isMemberOf(space.id);
 
-    const cardContent = (
-      <Card className="h-full transition-all duration-300 hover:border-primary/50 hover:shadow-lg">
-        <CardContent className="p-6 flex flex-col h-full">
-          <div className="flex-grow">
-            <div className="flex justify-between items-start mb-2">
-                <Badge variant={space.space_type === 'FORUM' ? 'secondary' : 'outline'}>
-                    {space.space_type === 'FORUM' ? 'Forum' : 'Community Space'}
-                </Badge>
-                {isPrivate && <Badge variant="destructive">Private</Badge>}
-            </div>
-            <h3 className="text-xl font-semibold">{space.name}</h3>
-            <p className="text-muted-foreground mt-1 text-sm">{space.description}</p>
+      const cardContent = (
+        <Card className="h-full transition-all duration-300 hover:border-primary/50 hover:shadow-lg flex flex-col">
+            <CardHeader>
+                <div className="flex justify-between items-start mb-2">
+                    <Badge variant={space.space_type === 'FORUM' ? 'secondary' : 'outline'}>
+                        {space.space_type === 'FORUM' ? 'Forum' : 'Community Space'}
+                    </Badge>
+                    {isPrivate && <Badge variant="destructive">Private</Badge>}
+                </div>
+                <CardTitle className="text-xl">{space.name}</CardTitle>
+                <CardDescription className="text-sm">{space.description}</CardDescription>
+            </CardHeader>
+            <CardContent className="p-6 pt-0 flex-grow flex flex-col justify-between">
+              <div className="text-xs text-muted-foreground space-y-2">
+                  {space.creator_full_name && (
+                      <p>Created by: <span className="font-semibold text-foreground">{space.creator_full_name}</span></p>
+                  )}
+                  {space.moderators && space.moderators.length > 0 && (
+                      <div>
+                          <p>Admin/Mods:</p>
+                          <div className="flex flex-wrap gap-1 mt-1">
+                              {space.moderators.slice(0, 3).map(mod => (
+                                  <Badge key={mod.full_name} variant="outline">{mod.full_name}</Badge>
+                              ))}
+                              {space.moderators.length > 3 && (
+                                  <Badge variant="outline">+{space.moderators.length - 3} more</Badge>
+                              )}
+                          </div>
+                      </div>
+                  )}
+              </div>
+              <div className="mt-4 pt-4 border-t flex justify-end">
+                {hasJoined ? (
+                    <Button variant="outline" size="sm">Go to Space</Button>
+                ) : (
+                    <Button variant="default" size="sm" onClick={(e) => handleJoin(e, space)}>
+                        {isPrivate ? 'Request to Join' : 'Join'}
+                    </Button>
+                )}
+              </div>
+            </CardContent>
+        </Card>
+      );
+
+      const clickHandler = () => {
+          if (isMemberOf(space.id)) {
+              navigate(`/community/space/${space.id}`);
+          } else if (!user) {
+              navigate('/login');
+          }
+      };
+
+      return (
+          <div key={space.id} className="cursor-pointer" onClick={clickHandler}>
+              {cardContent}
           </div>
-          <div className="mt-4 pt-4 border-t flex justify-end">
-            {hasJoined ? (
-                <Button variant="outline" size="sm">Go to Space</Button>
-            ) : (
-                <Button variant="default" size="sm" onClick={(e) => handleJoin(e, space)}>
-                    {isPrivate ? 'Request to Join' : 'Join'}
-                </Button>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-    );
-
-    const clickHandler = () => {
-        if (isMemberOf(space.id)) {
-            navigate(`/community/space/${space.id}`);
-        } else if (!user) {
-            navigate('/login');
-        }
-        // If logged in but not a member, clicking the card does nothing; the button must be used.
-    };
-
-    return (
-        <div key={space.id} className="cursor-pointer" onClick={clickHandler}>
-            {cardContent}
-        </div>
-    );
+      );
   };
-  
   const renderPublicThreadCard = (thread: ThreadWithDetails) => (
     <Card key={thread.id} className="transition-all duration-300 hover:border-primary/50 hover:shadow-lg">
        <Link to={user ? `/community/thread/${thread.id}` : '/login'}>
