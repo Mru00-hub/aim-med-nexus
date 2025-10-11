@@ -185,7 +185,14 @@ export const Message: React.FC<MessageProps> = ({
                 </div>
 
                 {showActions && (
-                    <div className={cn("absolute top-[8px] z-10 flex items-center bg-card border rounded-full shadow-md", isCurrentUser ? "right-[110%]" : "left-[110%]")}>
+                    <div className={cn(
+                        "absolute z-10 flex items-center bg-card border rounded-full shadow-md",
+                        "bottom-full mb-1",
+                        "md:top-[8px] md:bottom-auto",
+                        isCurrentUser
+                          ? "right-0 md:right-full md:mr-2"
+                          : "left-0 md:left-full md:ml-2"
+                    )}>
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); onReplyClick(message); setShowActions(false); }} title="Reply"><Reply className="h-4 w-4" /></Button>
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); setShowPicker(p => !p); }} title="Add Reaction"><SmilePlus className="h-4 w-4" /></Button>
                         {isCurrentUser && <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); setIsEditing(true); setShowActions(false); }} title="Edit"><Pencil className="h-4 w-4" /></Button>}
