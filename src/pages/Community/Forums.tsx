@@ -16,7 +16,7 @@ import { useToast } from '@/components/ui/use-toast';
 
 // --- FIX #1: IMPORT API FUNCTIONS DIRECTLY ---
 import {
-  Space,
+  SpaceWithDetails, 
   createSpace,
   ThreadWithDetails,
   requestToJoinSpace,
@@ -101,7 +101,7 @@ export default function Forums() {
 
   // --- FIX #3: UPDATE THE handleJoin FUNCTION ---
   // It now correctly uses the directly imported API functions for all cases.
-  const handleJoin = async (e: React.MouseEvent, space: Space) => {
+  const handleJoin = async (e: React.MouseEvent, space: SpaceWithDetails) => {
       e.preventDefault();
       e.stopPropagation();
       if (!user) {
