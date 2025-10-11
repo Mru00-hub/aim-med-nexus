@@ -6,8 +6,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Check, X, ShieldX } from 'lucide-react';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Check, X, ShieldX, UserCog, UserCheck, UserX } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { MoreHorizontal } from 'lucide-react';
 import { Enums } from '@/integrations/supabase/types';
 
@@ -105,7 +105,7 @@ export const MemberCard: React.FC<MemberCardProps> = ({ member, isCurrentUserAdm
                                     <UserX className="mr-2 h-4 w-4" /> Make Member
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem className="text-red-600" onClick={() => onRoleChange(member.membership_id!, 'BANNED')}>
+                                <DropdownMenuItem className="text-red-600" onClick={() => onBan && onBan(member.membership_id!)}>
                                     <ShieldX className="mr-2 h-4 w-4" /> Ban User
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
