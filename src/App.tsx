@@ -33,6 +33,7 @@ import Forums from "./pages/Community/Forums";
 import SpaceDetailPage from "./pages/Community/SpaceDetailPage";
 import ThreadDetailPage from "./pages/Community/ThreadDetailPage";
 import CreateThread from "./pages/Community/CreateThread";
+import MembersPage from './pages/Community/MembersPage';
 
 const queryClient = new QueryClient();
 
@@ -79,6 +80,7 @@ const App = () => {
                   {/* Community Protected Routes */}
                   <Route path="/community/create-thread" element={<CreateThread />} />
                   <Route path="/community/space/:spaceId" element={<SpaceDetailPage />} />
+                  <Route path="/community/space/:spaceId/members" element={<MembersPage />} />
                   <Route path="/community/thread/:threadId" element={<ThreadDetailPage />} />
                   
                   {/* Routes that ALSO require the user to be fully onboarded */}
