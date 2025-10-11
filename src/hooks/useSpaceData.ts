@@ -8,7 +8,9 @@ import {
   getThreadsCountForSpace,
   getSpaceMemberList,
   ThreadWithDetails,
-  MemberProfile
+  MemberProfile,
+  getPendingRequests,
+  PendingRequest
 } from '@/integrations/supabase/community.api';
 
 // Hook for fetching Threads
@@ -106,4 +108,37 @@ export const useSpaceMemberList = (spaceId: string) => {
     }, [spaceId]);
 
     return { memberList, isLoadingList };
+};
+
+export const usePendingRequests = (spaceId?: string, isUserAdminOrMod?: boolean) => {
+    const [pendingRequests, setPendingRequests] = useState<PendingRequest[]>([]);
+    const [isLoadingRequests, setIsLoadingRequests] = useState(true);
+    const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+    const fetchRequests = useCallback(async () => {
+        // Only fetch if the user is an admin/mod and we have a spaceId
+        if (!spaceId || !isUserAdminOrMod) {
+            setPendingRequests([]);
+            setIsLoadingRequests(false);
+            return;
+        }
+        setIsLoadingRequests(true);
+        try {
+            const requests = await getPendingRequests(spaceId);
+            setPendingRequests(requests || []);
+        } catch (e) {
+            console.warn(`Could not fetch pending requests for space ${spaceId}.`, e);
+            setPendingRequests([]);
+        } finally {
+            setIsLoadingRequests(false);
+        }
+    }, [spaceId, isUserAdminOrMod]);
+
+    useEffect(() => {
+        fetchRequests();
+    }, [spaceId, isUserAdminOrMod, refreshTrigger, fetchRequests]);
+    
+    const refreshPendingRequests = () => setRefreshTrigger(prev => prev + 1);
+
+    return { pendingRequests, isLoadingRequests, refreshPendingRequests };
 };
