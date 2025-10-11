@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { Heart, Bell, MessageSquare, Users, MessageCircle, Menu, X, Handshake, LogIn, UserPlus, LogOut, Settings, CreditCard } from 'lucide-react';
+import { Heart, Bell, MessageSquare, Users, MessageCircle, Menu, X, Handshake, LogIn, UserPlus,UserIcon, LogOut, Settings, CreditCard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { getLoveCount, incrementLoveCount } from '@/integrations/supabase/engagement';
