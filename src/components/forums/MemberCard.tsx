@@ -7,6 +7,9 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Check, X, ShieldX } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { MoreHorizontal } from 'lucide-react';
+import { Enums } from '@/integrations/supabase/types';
 
 // A unified type to handle members from different sources
 export type DisplayMember = {
@@ -19,7 +22,8 @@ export type DisplayMember = {
 
 interface MemberCardProps {
   member: DisplayMember;
-  isAdminView?: boolean;
+  isCurrentUserAdmin: boolean; 
+  onRoleChange?: (membershipId: string, newRole: Enums<'membership_role'>) => void;
   onApprove?: (membershipId: string) => void;
   onReject?: (membershipId: string) => void;
   onBan?: (membershipId: string) => void;
@@ -41,7 +45,7 @@ const getBadgeVariant = (role: DisplayMember['role']) => {
     }
 };
 
-export const MemberCard: React.FC<MemberCardProps> = ({ member, isAdminView, onApprove, onReject, onBan }) => {
+export const MemberCard: React.FC<MemberCardProps> = ({ member, isCurrentUserAdmin, onRoleChange, onApprove, onReject, onBan }) => {
     const handleAction = (e: React.MouseEvent, action?: (id: string) => void) => {
         e.stopPropagation(); // Prevents navigating to profile when clicking a button
         e.preventDefault();
@@ -70,7 +74,7 @@ export const MemberCard: React.FC<MemberCardProps> = ({ member, isAdminView, onA
                     </div>
 
                     {/* Conditional Admin Buttons */}
-                    {isAdminView && (
+                    {isCurrentUserAdmin && (
                         <div className="flex items-center gap-2">
                             {onApprove && (
                                 <Button size="icon" variant="outline" onClick={(e) => handleAction(e, onApprove)} title="Approve">
