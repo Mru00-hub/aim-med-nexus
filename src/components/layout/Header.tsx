@@ -3,26 +3,17 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { 
-  Heart, 
-  Bell, 
-  MessageSquare, 
-  Users, 
-  MessageCircle,
-  Menu,
-  X,
-  Handshake,
-  LogIn,
-  UserPlus
-} from 'lucide-react';
+import { Heart, Bell, MessageSquare, Users, MessageCircle, Menu, X, Handshake, LogIn, UserPlus, LogOut, User as UserIcon, Settings, CreditCard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { getLoveCount, incrementLoveCount } from '@/integrations/supabase/engagement';
 import { ProfileAvatar } from './ProfileAvatar';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Separator } from '@/components/ui/separator';
 
 export const Header = () => {
   const { user, loading } = useAuth();
+  const navigate = useNavigate();
   const [lovingItCount, setLovingItCount] = useState(0);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -41,6 +32,11 @@ export const Header = () => {
     { icon: Users, label: 'Social', href: '/social', showBadge: true, badge: socialRequestCount, color: 'text-primary hover:text-primary/80' },
     { icon: MessageCircle, label: 'Inbox', href: '/inbox', showBadge: true, badge: inboxCount, color: 'text-premium hover:text-premium/80' }
   ];
+
+  const handleMobileNav = (path: string) => {
+    navigate(path);
+    setMobileMenuOpen(false);
+  };
 
   useEffect(() => {
     getLoveCount().then(setLovingItCount);
