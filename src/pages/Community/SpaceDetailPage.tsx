@@ -36,7 +36,7 @@ export default function SpaceDetailPage() {
   const { memberList, isLoadingList } = useSpaceMemberList(spaceId);
 
   // Find the specific space details from the global list.
-  const space = useMemo(() => spaces.find(s => s.id === Number(spaceId)), [spaces, spaceId]);
+  const space = useMemo(() => spaces.find(s => s.id === spaceId), [spaces, spaceId]);
 
   // --- UI STATE ---
   const [showCreateThread, setShowCreateThread] = useState(false);
@@ -57,7 +57,7 @@ export default function SpaceDetailPage() {
   // Memoized check to find the current user's role in this space.
   const currentUserMembership = useMemo(() => {
     if (!user || !memberList) return null;
-    return memberList.find(member => member.user_id === user.id);
+    return memberList.find(member => member.id === user.id);
   }, [user, memberList]);
   
   // Memoized permission check for administrative actions.
@@ -97,7 +97,7 @@ export default function SpaceDetailPage() {
       }
   };
 
-  const handleDeleteThread = async (threadId: number) => {
+  const handleDeleteThread = async (threadId: string) => {
       try {
           const { error } = await supabase
               .from('threads')
