@@ -97,6 +97,40 @@ export const Header = () => {
     );
   };
 
+  const renderMobileMenuContent = () => {
+    if (loading) {
+      return <div className="p-4"><Skeleton className="h-8 w-full" /><Skeleton className="h-8 w-full mt-2" /></div>;
+    }
+
+    if (user) {
+      return (
+        <div className="flex flex-col gap-2 p-4">
+          <Button variant="ghost" className="justify-start" onClick={() => handleMobileNav('/profile')}>
+            <UserIcon className="mr-2 h-4 w-4" /> My Profile
+          </Button>
+          <Separator />
+          {headerIcons.map((item) => (
+             <Button variant="ghost" className="justify-start" key={item.label} onClick={() => handleMobileNav(item.href || '#')}>
+                <item.icon className="mr-2 h-4 w-4" /> {item.label}
+                {item.showBadge && item.badge > 0 && <Badge variant="destructive" className="ml-auto">{item.badge}</Badge>}
+             </Button>
+          ))}
+          <Separator />
+          <Button variant="ghost" className="justify-start text-destructive hover:text-destructive" onClick={signOut}>
+              <LogOut className="mr-2 h-4 w-4" /> Log Out
+          </Button>
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex flex-col gap-2 p-4">
+        <Button onClick={() => handleMobileNav('/login')} variant="outline">Sign In</Button>
+        <Button onClick={() => handleMobileNav('/register')}>Join Now</Button>
+      </div>
+    );
+  };
+
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur">
       <div className="container mx-auto">
@@ -132,7 +166,7 @@ export const Header = () => {
 
         {mobileMenuOpen && (
           <div className="md:hidden border-t bg-background pb-4">
-            {/* You may want to add loading skeletons to the mobile menu as well in the future */}
+            {renderMobileMenuContent()}
           </div>
         )}
       </div>
