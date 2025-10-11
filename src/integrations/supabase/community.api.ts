@@ -15,8 +15,17 @@ export type MessageReaction = Tables<'message_reactions'>;
 export type MessageAttachment = Tables<'message_attachments'>;
 export type Profile = Tables<'profiles'>;
 
+export type SpaceWithDetails = Space & {
+  creator_full_name: string | null;
+  moderators: {
+    full_name: string;
+    role: Enums<'membership_role'>;
+  }[] | null;
+};
+
 export type MemberProfile = {
-    id: string;
+    id: string; // This is the user's ID (from profiles table)
+    membership_id: string; // This is the ID of the membership row itself
     full_name: string;
     profile_picture_url: string | null;
     role: Enums<'membership_role'>;
@@ -31,6 +40,7 @@ export type ThreadWithDetails = {
   created_at: string;
   last_activity_at: string;
   message_count: number;
+  space_id: string;
 };
 
 export type MessageWithDetails = Message & {
@@ -63,8 +73,8 @@ const MOCK_SPACES: Space[] = [
 ];
 
 const MOCK_PUBLIC_THREADS: ThreadWithDetails[] = [
-  { id: 'mock-pub-thread-1', title: 'Best guidelines for AFib in 2025? (Example)', creator_id: 'user-123', creator_email: 'dr.chen@example.com', created_at: new Date().toISOString(), last_activity_at: new Date().toISOString(), message_count: 23 },
-  { id: 'mock-pub-thread-2', title: 'Hospital EHR vendor comparison (Example)', creator_id: 'user-456', creator_email: 'dr.patel@example.com', created_at: new Date().toISOString(), last_activity_at: new Date().toISOString(), message_count: 18 },
+  { id: 'mock-pub-thread-1', title: 'Best guidelines for AFib in 2025? (Example)', creator_id: 'user-123', creator_full_name: 'Dr. Chen (Example)', created_at: new Date().toISOString(), last_activity_at: new Date().toISOString(), message_count: 23 },
+  { id: 'mock-pub-thread-2', title: 'Hospital EHR vendor comparison (Example)', creator_id: 'user-456', creator_full_name: 'Dr. Patel (Example)', created_at: new Date().toISOString(), last_activity_at: new Date().toISOString(), message_count: 18 },
 ];
 
 const MOCK_MESSAGES: MessageWithDetails[] = [];
@@ -95,6 +105,19 @@ export const getUserSpaces = async (): Promise<Space[]> => {
 
     if (error) throw error;
     return data;
+}
+
+export const getSpacesWithDetails = async (): Promise<SpaceWithDetails[]> => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return [];
+
+    const { data, error } = await supabase.rpc('get_spaces_with_details');
+
+    if (error) {
+      console.error("Error fetching spaces with details:", error);
+      throw error;
+    }
+    return data || [];
 }
 
 export const getUserMemberships = async (): Promise<Membership[]> => {
@@ -150,9 +173,8 @@ export const getThreadsCountForSpace = async (spaceId: string): Promise<number> 
 export const getSpaceMemberList = async (spaceId: string): Promise<MemberProfile[]> => {
     const { data, error } = await supabase
         .from('memberships')
-        // UPDATED: Using an explicit inner join for better performance and clarity.
-        // This tells Supabase exactly how to connect memberships to profiles.
         .select(`
+            id, 
             role,
             user_id,
             profiles!inner (
@@ -165,11 +187,10 @@ export const getSpaceMemberList = async (spaceId: string): Promise<MemberProfile
 
     if (error) throw error;
 
-    // The data structure is slightly different with an explicit join, so we adjust the mapping.
     const members: MemberProfile[] = data.map(m => ({
         id: m.user_id,
+        membership_id: m.id, // <-- Add the membership_id
         role: m.role,
-        // The profile data is now nested inside a 'profiles' object.
         full_name: m.profiles.full_name || 'Anonymous User',
         profile_picture_url: m.profiles.profile_picture_url || null,
     }));
@@ -434,7 +455,7 @@ export const joinSpaceAsMember = async (spaceId: string): Promise<Membership> =>
     const { data, error } = await supabase.rpc('join_space_as_member', { p_space_id: spaceId });
     if (error) throw error;
     if (!data) {
-        throw new Error("Failed to post message: No data returned.");
+        throw new Error("Failed to join space: No data returned.");
     }
     return data;
 }
@@ -474,7 +495,7 @@ export const updateMembershipStatus = async (membershipId: string, newStatus: En
     });
     if (error) throw error;
     if (!data) {
-        throw new Error("Failed to post message: No data returned.");
+        throw new Error("Failed to update membership: No data returned.");
     }
     return data;
 };
