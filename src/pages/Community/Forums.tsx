@@ -24,9 +24,6 @@ import {
   requestToJoinSpace,
   joinSpaceAsMember // <-- Import the function directly
 } from '@/integrations/supabase/community.api';
-import { useCommunity } from '@/context/CommunityContext';
-import { Enums } from '@/integrations/supabase/types';
-
 
 export default function Forums() {
   const { user } = useAuth();
