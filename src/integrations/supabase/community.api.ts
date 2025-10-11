@@ -198,6 +198,15 @@ export const getSpaceMemberList = async (spaceId: string): Promise<MemberProfile
     return members;
 };
 
+export const updateMemberRole = async (membershipId: string, newRole: Enums<'membership_role'>) => {
+    await getSessionOrThrow();
+    const { error } = await supabase.rpc('update_member_role', {
+        p_membership_id: membershipId,
+        p_new_role: newRole,
+    });
+    if (error) throw error;
+};
+
 /** Fetches all global public threads using the new DB function. */
 export const getPublicThreads = async (): Promise<ThreadWithDetails[]> => {
     const { data: { session } } = await supabase.auth.getSession();
