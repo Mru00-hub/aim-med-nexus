@@ -1,7 +1,7 @@
 // src/components/layout/Header.tsx
 
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Heart, Bell, MessageSquare, Users, MessageCircle, Menu, X, Handshake, LogIn, UserPlus, LogOut, Settings, CreditCard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,14 @@ import { getLoveCount, incrementLoveCount } from '@/integrations/supabase/engage
 import { ProfileAvatar } from './ProfileAvatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
+import { 
+    DropdownMenu, 
+    DropdownMenuContent, 
+    DropdownMenuItem, 
+    DropdownMenuLabel, 
+    DropdownMenuSeparator, 
+    DropdownMenuTrigger 
+} from '@/components/ui/dropdown-menu';
 
 export const Header = () => {
   const { user, loading, signOut } = useAuth();
@@ -78,7 +86,35 @@ export const Header = () => {
             </Link>
           ))}
           <div className="ml-4">
-            <ProfileAvatar />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+                  <ProfileAvatar />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56" align="end" forceMount>
+                <DropdownMenuLabel className="font-normal">
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-sm font-medium leading-none">{user.user_metadata?.full_name || 'User'}</p>
+                    <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => navigate(`/profile/${user.id}`)}>
+                  <UserIcon className="mr-2 h-4 w-4" />
+                  <span>Profile</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate('/settings')}>
+                  <Settings className="mr-2 h-4 w-4" />
+                  <span>Settings</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={signOut} className="text-destructive">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Log out</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </>
       );
@@ -116,6 +152,9 @@ export const Header = () => {
              </Button>
           ))}
           <Separator />
+          <Button variant="ghost" className="justify-start" onClick={() => handleMobileNav('/settings')}>
+            <Settings className="mr-2 h-4 w-4" /> Settings
+          </Button>
           <Button variant="ghost" className="justify-start text-destructive hover:text-destructive" onClick={signOut}>
               <LogOut className="mr-2 h-4 w-4" /> Log Out
           </Button>
@@ -173,4 +212,3 @@ export const Header = () => {
     </header>
   );
 };
-
