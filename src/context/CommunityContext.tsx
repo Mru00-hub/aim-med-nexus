@@ -5,9 +5,11 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/components/ui/use-toast';
 import { 
     getSpacesWithDetails, 
+    getUserSpaces,
     getUserMemberships,
     getPublicThreads, // This is the important new one
     SpaceWithDetails,
+    Space, 
     ThreadWithDetails,
     Membership,
     Enums,
@@ -41,51 +43,51 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
   const fetchSpaces = useCallback(async () => {
     setIsLoadingSpaces(true);
     try {
-      // This logic now works for both logged-in and logged-out users.
-      // Your API functions will return mock data if the user is logged out.
-      const [spacesData, membershipsData, publicThreadsData] = await Promise.all([
-          getSpacesWithDetails(),
-          getUserMemberships(), // This will throw an error if not logged in, which we'll handle.
-          getPublicThreads()
-      ]);
-    
-      setSpaces(spacesData || []);
-      setMemberships(membershipsData || []);
-      setPublicThreads(publicThreadsData || []);
+      if (user) {
+        // --- LOGGED-IN USER LOGIC ---
+        const [spacesData, membershipsData, publicThreadsData] = await Promise.all([
+            getSpacesWithDetails(),
+            getUserMemberships(),
+            getPublicThreads()
+        ]);
+        setSpaces(spacesData || []);
+        setMemberships(membershipsData || []);
+        setPublicThreads(publicThreadsData || []);
+      } else {
+        // --- LOGGED-OUT USER LOGIC ---
+        // Fetch data using functions that return mocks
+        const [mockSpacesData, mockThreadsData] = await Promise.all([
+            getUserSpaces(), // This correctly returns MOCK_SPACES
+            getPublicThreads() // This correctly returns MOCK_PUBLIC_THREADS
+        ]);
 
-    } catch (error: any) {
-      // If the user is logged out, getUserMemberships() will throw an error.
-      // We catch it and set memberships to empty, which is correct for a logged-out user.
-      console.log("Fetching data as a logged-out user or an error occurred:", error.message);
-      setMemberships([]); // Ensure memberships are empty on error/logout.
-    
-      // We can still try to set mock data for spaces and threads on error
-      if (!user) {
-          // Your community.api.ts returns [] for getSpacesWithDetails on logout, let's use the other mock instead
-          const [mockSpaces, mockThreads] = await Promise.all([
-              getUserSpaces(), // This one has the MOCK_SPACES
-              getPublicThreads()
-          ]);
-          setSpaces(mockSpaces || []);
-          setPublicThreads(mockThreads || []);
+        // IMPORTANT: Your mock data is of type `Space[]`, but your state is `SpaceWithDetails[]`.
+        // We must map the mock data to match the expected type.
+        const mappedMockSpaces: SpaceWithDetails[] = mockSpacesData.map(space => ({
+          ...space,
+          creator_full_name: 'Community Member', // Add placeholder data
+          moderators: [], // Add placeholder data
+        }));
+
+        setSpaces(mappedMockSpaces);
+        setPublicThreads(mockThreadsData || []);
+        setMemberships([]); // Logged-out users have no memberships
       }
-
-    } finally {
-      setIsLoadingSpaces(false);
-    }
-  }, [user, toast]);
-
-  // Initial data fetch on component mount.
-  useEffect(() => {
-    if (user) { // Only fetch if user is logged in
-      fetchSpaces();
-    } else {
-      // Clear data on logout
+    } catch (error: any) {
+      console.error("Failed to fetch community data:", error.message);
+      // On any failure, clear the state to prevent showing stale data
       setSpaces([]);
       setMemberships([]);
       setPublicThreads([]);
+    } finally {
       setIsLoadingSpaces(false);
     }
+  }, [user]); // The function's logic depends on the user state
+
+  // === CHANGE 2: THE MAIN useEffect TO TRIGGER FETCHING ===
+  // This now correctly calls fetchSpaces on ANY change to the user object (login/logout)
+  useEffect(() => {
+    fetchSpaces();
   }, [user, fetchSpaces]);
     
   // This is a useful utility function that depends on global state.
