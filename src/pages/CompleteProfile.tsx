@@ -14,6 +14,40 @@ import { Save, AlertCircle } from 'lucide-react';
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
+const generateUniqueColor = (id: string): string => {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) {
+    hash = id.charCodeAt(i) + ((hash << 5) - hash);
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  // Generate a vibrant, non-grayish color
+  const hue = hash % 360;
+  // Using HSL for better color variety. Saturation 70-90, Lightness 40-60
+  const saturation = 70 + (hash % 21);
+  const lightness = 40 + (hash % 21);
+
+  // Convert HSL to HEX. We can do this with a simple formula.
+  const s = saturation / 100;
+  const l = lightness / 100;
+  const c = (1 - Math.abs(2 * l - 1)) * s;
+  const x = c * (1 - Math.abs(((hue / 60) % 2) - 1));
+  const m = l - c / 2;
+  let r = 0, g = 0, b = 0;
+
+  if (0 <= hue && hue < 60) { [r, g, b] = [c, x, 0]; }
+  else if (60 <= hue && hue < 120) { [r, g, b] = [x, c, 0]; }
+  else if (120 <= hue && hue < 180) { [r, g, b] = [0, c, x]; }
+  else if (180 <= hue && hue < 240) { [r, g, b] = [0, x, c]; }
+  else if (240 <= hue && hue < 300) { [r, g, b] = [x, 0, c]; }
+  else if (300 <= hue && hue < 360) { [r, g, b] = [c, 0, x]; }
+
+  const toHex = (cVal: number) => {
+    const hex = Math.round((cVal + m) * 255).toString(16);
+    return hex.length === 1 ? '0' + hex : hex;
+  };
+  return `${toHex(r)}${toHex(g)}${toHex(b)}`;
+};
+
 const CompleteProfile = () => {
   console.log("[CompleteProfile] Component mounted");
   
@@ -63,14 +97,16 @@ const CompleteProfile = () => {
           resume_url: '',
           skills: metadata.specialization ? metadata.specialization : '',
         };
-        
+
         console.log("[CompleteProfile] Mapped form data:", JSON.stringify(mappedData, null, 2));
         setFormData(mappedData);
 
-        // Generate avatar from metadata name
         if (metadata.full_name) {
-          const generatedUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(metadata.full_name)}&background=0D8ABC&color=fff&size=256`;
-          console.log("[CompleteProfile] Generated avatar URL:", generatedUrl);
+          const uniqueColor = generateUniqueColor(user.id); // Use the new function
+          const generatedUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(
+            metadata.full_name
+          )}&background=${uniqueColor}&color=fff&size=256`; // Use the unique color
+          console.log("[CompleteProfile] Generated unique avatar URL:", generatedUrl);
           setAvatarUrl(generatedUrl);
         }
       }
@@ -142,10 +178,12 @@ const CompleteProfile = () => {
         .filter(Boolean);
       console.log("[CompleteProfile] Processed skills array:", skillsArray);
 
+      const uniqueColor = generateUniqueColor(user.id);
+
       const finalAvatarUrl = avatarUrl || 
         `https://ui-avatars.com/api/?name=${encodeURIComponent(
           formData.full_name
-        )}&background=0D8ABC&color=fff&size=256`;
+        )}&background=${uniqueColor}&color=fff&size=256`;
       console.log("[CompleteProfile] Final avatar URL:", finalAvatarUrl);
 
       // Complete profile data with metadata fallbacks
@@ -178,10 +216,9 @@ const CompleteProfile = () => {
 
       const { data: upsertedData, error: upsertError } = await supabase
         .from('profiles')
-        .select()
-        .upsert(profileData, {
-          returning: 'representation', // This option tells Supabase to return the saved data
-        });
+        .upsert(profileData) // 1. Perform the upsert operation first
+        .select()           // 2. Then, select the data that was just upserted
+        .single();
       if (upsertError) {
         console.error("[CompleteProfile] Upsert failed");
         console.error("[CompleteProfile] Error code", upsertError.code);
