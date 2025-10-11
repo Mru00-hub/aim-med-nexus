@@ -185,44 +185,44 @@ export default function SpaceDetailPage() {
             <Card className="mb-8">
               <CardHeader>
                 <CardTitle className="text-3xl">{space.name}</CardTitle>
-                <div className="text-sm text-muted-foreground">
-                    {space.description} 
-                    <Badge variant={space.join_level === 'INVITE_ONLY' ? 'destructive' : 'secondary'} className="ml-2">
-                        {space.join_level === 'INVITE_ONLY' ? 'Private' : 'Open Access'}
-                    </Badge>
-                    {isUserAdminOrMod && (
-                        <div className="flex items-center gap-2">
-                            <Link to={`/community/space/${space.id}/members`}> 
-                                <Button size="sm" variant="outline">Manage Members</Button>
-                            </Link>
-                            <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                    <Button size="sm" variant="destructive">
-                                        <Trash2 className="h-4 w-4 mr-2" />
-                                        Delete Space
-                                    </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                                        <AlertDialogDescription>
-                                            This action cannot be undone. This will permanently delete the
-                                            <strong>{` ${space.name} `}</strong> space and all of its threads and messages.
-                                        </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                        <AlertDialogAction onClick={handleDeleteSpace}>
-                                            Continue
-                                        </AlertDialogAction>
-                                    </AlertDialogFooter>
-                                </AlertDialogContent>
-                            </AlertDialog>
-                        </div>
-                     )}
+                <div className="text-sm text-muted-foreground flex items-center gap-2 flex-wrap">
+                  <span>{space.description}</span>
+                  <Badge variant={space.join_level === 'INVITE_ONLY' ? 'destructive' : 'secondary'}>
+                    {space.join_level === 'INVITE_ONLY' ? 'Private' : 'Open Access'}
+                  </Badge>
                 </div>
-              </CardHeader>
-              <CardContent>
+                {isUserAdminOrMod && (
+                  <div className="flex items-center gap-2">
+                    <Link to={`/community/space/${space.id}/members`}> 
+                      <Button size="sm" variant="outline">Manage Members</Button>
+                    </Link>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button size="sm" variant="destructive">
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Delete Space
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This action cannot be undone. This will permanently delete the
+                            <strong>{` ${space.name} `}</strong> space and all of its threads and messages.
+                          </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleDeleteSpace}>
+                              Continue
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
+                  )}
+                </CardHeader>
+                <CardContent>
                   <div className="flex items-center gap-4 pt-4 text-sm text-muted-foreground">
                     <div className="flex items-center gap-1"><Users className="h-4 w-4 text-primary" />
                         <Link to={`/community/space/${space.id}/members`} className="hover:underline">
@@ -232,24 +232,27 @@ export default function SpaceDetailPage() {
                     <div className="flex items-center gap-1"><Hash className="h-4 w-4 text-primary" />
                         <span>{isLoadingMetrics ? <Skeleton className="h-4 w-12 inline-block" /> : <>{threadCount} Discussion Threads</>}</span>
                     </div>
-                </div>
-                {memberList.length > 0 && (
+                  </div>
+                  {memberList.length > 0 && (
                     <div className="mt-6 pt-4 border-t">
-                        <h4 className="font-semibold text-base mb-3">Space Members ({memberList.length})</h4>
-                        {isLoadingList ? (<Skeleton className="h-10 w-full" />) : (
-                            <div className="flex flex-wrap gap-2 max-h-24 overflow-y-auto">
-                                {memberList.slice(0, 10).map(member => (
-                                    <Link to={`/profile/${member.id}`} key={member.id}>
-                                        <Badge variant={/*...*/} className="hover:bg-opacity-80 transition-opacity">
-                                            {member.full_name} ({member.role.slice(0, 1)})
-                                        </Badge>
-                                    </Link>
-                                ))}
-                            </div>
-                          )}
-                      </div>
+                      <h4 className="font-semibold text-base mb-3">Space Members ({memberList.length})</h4>
+                      {isLoadingList ? (<Skeleton className="h-10 w-full" />) : (
+                        <div className="flex flex-wrap gap-2 max-h-24 overflow-y-auto">
+                          {memberList.slice(0, 10).map(member => (
+                            <Link to={`/profile/${member.id}`} key={member.id}>
+                              <Badge 
+                                variant={member.role === 'ADMIN' ? 'default' : member.role === 'MODERATOR' ? 'secondary' : 'outline'}
+                                className="hover:bg-opacity-80 transition-opacity"
+                              >
+                                {member.full_name} ({member.role.slice(0, 1)})
+                              </Badge>
+                            </Link>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   )}
-              </CardContent>
+                </CardContent>
             </Card>
 
             <div className="flex justify-between items-center mb-6">
