@@ -19,7 +19,7 @@ import { supabase } from '@/integrations/supabase/client';
 // Use centralized context and dedicated hooks for clean data management.
 import { useCommunity } from '@/context/CommunityContext';
 import { useSpaceThreads, useSpaceMetrics, useSpaceMemberList } from '@/hooks/useSpaceData';
-import { CreateThreadForm } from './CreateThreadForm'; // Assuming the form component is in a separate file
+import { CreateThreadForm } from './CreateThread'; 
 
 export default function SpaceDetailPage() {
   const { user } = useAuth();
