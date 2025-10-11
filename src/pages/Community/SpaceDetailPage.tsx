@@ -29,7 +29,7 @@ export default function SpaceDetailPage() {
 
   // --- DATA FETCHING ---
   // 1. Get GLOBAL data from the context for efficiency.
-  const { spaces, isLoadingSpaces, isMemberOf } = useCommunity();
+  const { spaces, isLoadingSpaces, getMembershipStatus } = useCommunity();
   // 2. Get LOCAL data for this page using dedicated hooks.
   const { threads, isLoadingThreads, refreshThreads } = useSpaceThreads(spaceId);
   const { memberCount, threadCount, isLoadingMetrics } = useSpaceMetrics(spaceId);
@@ -51,8 +51,8 @@ export default function SpaceDetailPage() {
     // Allow anyone to post in an open forum.
     if (space.space_type === 'FORUM' && space.join_level === 'OPEN') return true;
     // Otherwise, user must be a member of the space.
-    return isMemberOf(space.id);
-  }, [user, space, isMemberOf]);
+    return getMembershipStatus(space.id) === 'ACTIVE';
+  }, [user, space, getMembershipStatus]);
 
   // Memoized check to find the current user's role in this space.
   const currentUserMembership = useMemo(() => {
