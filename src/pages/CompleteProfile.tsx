@@ -20,32 +20,12 @@ const generateUniqueColor = (id: string): string => {
     hash = id.charCodeAt(i) + ((hash << 5) - hash);
     hash = hash & hash; // Convert to 32bit integer
   }
-  // Generate a vibrant, non-grayish color
+  // Generate a vibrant, non-grayish color using HSL
   const hue = hash % 360;
-  // Using HSL for better color variety. Saturation 70-90, Lightness 40-60
-  const saturation = 70 + (hash % 21);
-  const lightness = 40 + (hash % 21);
+  const saturation = 70 + (hash % 21); // 70% to 90%
+  const lightness = 40 + (hash % 21);  // 40% to 60%
 
-  // Convert HSL to HEX. We can do this with a simple formula.
-  const s = saturation / 100;
-  const l = lightness / 100;
-  const c = (1 - Math.abs(2 * l - 1)) * s;
-  const x = c * (1 - Math.abs(((hue / 60) % 2) - 1));
-  const m = l - c / 2;
-  let r = 0, g = 0, b = 0;
-
-  if (0 <= hue && hue < 60) { [r, g, b] = [c, x, 0]; }
-  else if (60 <= hue && hue < 120) { [r, g, b] = [x, c, 0]; }
-  else if (120 <= hue && hue < 180) { [r, g, b] = [0, c, x]; }
-  else if (180 <= hue && hue < 240) { [r, g, b] = [0, x, c]; }
-  else if (240 <= hue && hue < 300) { [r, g, b] = [x, 0, c]; }
-  else if (300 <= hue && hue < 360) { [r, g, b] = [c, 0, x]; }
-
-  const toHex = (cVal: number) => {
-    const hex = Math.round((cVal + m) * 255).toString(16);
-    return hex.length === 1 ? '0' + hex : hex;
-  };
-  return `${toHex(r)}${toHex(g)}${toHex(b)}`;
+  return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
 };
 
 const CompleteProfile = () => {
@@ -183,7 +163,7 @@ const CompleteProfile = () => {
       const finalAvatarUrl = avatarUrl || 
         `https://ui-avatars.com/api/?name=${encodeURIComponent(
           formData.full_name
-        )}&background=${uniqueColor}&color=fff&size=256`;
+        )}&background=${encodedColor.replace('%20', '')}&color=fff&size=256&bold=true`;
       console.log("[CompleteProfile] Final avatar URL:", finalAvatarUrl);
 
       // Complete profile data with metadata fallbacks
