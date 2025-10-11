@@ -14,6 +14,20 @@ import { Save, AlertCircle } from 'lucide-react';
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
+const DB_EXPERIENCE_MAP: { [key: string]: string } = {
+  // Map correct values to themselves
+  'fresh': 'fresh',
+  'one_to_three': 'one_to_three',
+  'three_to_five': 'three_to_five',
+  'five_to_ten': 'five_to_ten',
+  'ten_plus': 'ten_plus',
+  // Map common incorrect UI values to the correct DB enum
+  '1-3': 'one_to_three',
+  '3-5': 'three_to_five',
+  '5-10': 'five_to_ten',
+  '10+': 'ten_plus',
+};
+
 const generateUniqueColor = (id: string): string => {
   let hash = 0;
   for (let i = 0; i < id.length; i++) {
@@ -166,6 +180,9 @@ const CompleteProfile = () => {
         )}&background=${encodedColor.replace('%20', '')}&color=fff&size=256&bold=true`;
       console.log("[CompleteProfile] Final avatar URL:", finalAvatarUrl);
 
+      const rawExperienceValue = metadata.years_experience || null;
+      const mappedExperienceValue = rawExperienceValue ? DB_EXPERIENCE_MAP[rawExperienceValue] || null : null;
+
       // Complete profile data with metadata fallbacks
       const profileData = {
         id: user.id,
@@ -176,7 +193,7 @@ const CompleteProfile = () => {
         current_location: formData.current_location,
         profile_picture_url: finalAvatarUrl,
         bio: formData.bio,
-        years_experience: metadata.years_experience || null,
+        years_experience: mappedExperienceValue,
         is_verified: metadata.email_verified || false,
         institution: metadata.institution || null,
         course: metadata.course || null,
