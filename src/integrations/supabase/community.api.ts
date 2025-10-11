@@ -440,17 +440,17 @@ export const joinSpaceAsMember = async (spaceId: string): Promise<Membership> =>
 }
 
 /** Requests to join a private space. */
-export const requestToJoinSpace = async (spaceId: string, spaceType: Enums<'space_type'>): Promise<string> => {
+export const requestToJoinSpace = async (spaceId: string): Promise<string> => {
     await getSessionOrThrow();
+    // And it now calls the database with only the one required argument
     const { data, error } = await supabase.rpc('request_to_join_space', {
-        p_space_id: spaceId,
-        p_space_type: spaceType,
+        p_space_id: spaceId
     });
     if (error) throw error;
     if (!data) {
         throw new Error("Failed to send join request: No membership ID was returned.");
     }
-    return data; // Returns the UUID of the new/existing membership
+    return data;
 }
 
 /** Fetches pending join requests for a space. Must be an admin/mod. */
