@@ -8,7 +8,7 @@ interface MemberListProps {
     members: DisplayMember[];
     isLoading: boolean;
     emptyStateMessage?: string;
-    isCurrentUserAdmin={isAdminView};
+    isCurrentUserAdmin?: boolean;
     onApprove?: (membershipId: string) => void;
     onReject?: (membershipId: string) => void;
     onBan?: (membershipId: string) => void;
