@@ -39,31 +39,41 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
 
   // This function now correctly fetches all necessary GLOBAL data.
   const fetchSpaces = useCallback(async () => {
-    if (!user) {
-      setSpaces([]);
-      setMemberships([]);
-      setPublicThreads([]);
-      setIsLoadingSpaces(false);
-      return;
-    }
     setIsLoadingSpaces(true);
     try {
-      // Fetch all three global data sets at once.
+      // This logic now works for both logged-in and logged-out users.
+      // Your API functions will return mock data if the user is logged out.
       const [spacesData, membershipsData, publicThreadsData] = await Promise.all([
           getSpacesWithDetails(),
-          getUserMemberships(),
+          getUserMemberships(), // This will throw an error if not logged in, which we'll handle.
           getPublicThreads()
       ]);
+    
       setSpaces(spacesData || []);
       setMemberships(membershipsData || []);
       setPublicThreads(publicThreadsData || []);
+
     } catch (error: any) {
-      console.error("Failed to fetch global community data:", error);
-      toast({ variant: 'destructive', title: 'Error', description: 'Failed to load community data.' });
+      // If the user is logged out, getUserMemberships() will throw an error.
+      // We catch it and set memberships to empty, which is correct for a logged-out user.
+      console.log("Fetching data as a logged-out user or an error occurred:", error.message);
+      setMemberships([]); // Ensure memberships are empty on error/logout.
+    
+      // We can still try to set mock data for spaces and threads on error
+      if (!user) {
+          // Your community.api.ts returns [] for getSpacesWithDetails on logout, let's use the other mock instead
+          const [mockSpaces, mockThreads] = await Promise.all([
+              getUserSpaces(), // This one has the MOCK_SPACES
+              getPublicThreads()
+          ]);
+          setSpaces(mockSpaces || []);
+          setPublicThreads(mockThreads || []);
+      }
+
     } finally {
       setIsLoadingSpaces(false);
     }
-  }, [user]);
+  }, [user, toast]);
 
   // Initial data fetch on component mount.
   useEffect(() => {
