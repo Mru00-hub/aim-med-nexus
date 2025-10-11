@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { Heart, Bell, MessageSquare, Users, MessageCircle, Menu, X, Handshake, LogIn, UserPlus, LogOut, User as UserIcon, Settings, CreditCard } from 'lucide-react';
+import { Heart, Bell, MessageSquare, Users, MessageCircle, Menu, X, Handshake, LogIn, UserPlus, LogOut, Settings, CreditCard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { getLoveCount, incrementLoveCount } from '@/integrations/supabase/engagement';
@@ -12,7 +12,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
 
 export const Header = () => {
-  const { user, loading } = useAuth();
+  const { user, loading, signOut } = useAuth();
   const navigate = useNavigate();
   const [lovingItCount, setLovingItCount] = useState(0);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -101,8 +101,12 @@ export const Header = () => {
     if (user) {
       return (
         <div className="flex flex-col gap-2 p-4">
-          <Button variant="ghost" className="justify-start" onClick={() => handleMobileNav('/profile')}>
-            <UserIcon className="mr-2 h-4 w-4" /> My Profile
+          <Button variant="ghost" className="justify-start h-auto" onClick={() => handleMobileNav(`/profile/${user.id}`)}>
+            <ProfileAvatar className="h-8 w-8 mr-3" />
+            <div className="flex flex-col items-start">
+                <span className="font-semibold">My Profile</span>
+                <span className="text-xs text-muted-foreground">{user.email}</span>
+            </div>
           </Button>
           <Separator />
           {headerIcons.map((item) => (
