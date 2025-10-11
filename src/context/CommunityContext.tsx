@@ -10,6 +10,7 @@ import {
     SpaceWithDetails,
     ThreadWithDetails,
     Membership,
+    Enums,
 } from '@/integrations/supabase/community.api';
 
 // --- NEW, SIMPLIFIED INTERFACE ---
@@ -20,7 +21,8 @@ interface CommunityContextType {
   publicThreads: ThreadWithDetails[];
   isLoadingSpaces: boolean;
   fetchSpaces: () => Promise<void>;
-  isMemberOf: (spaceId: string) => boolean;
+  getMembershipStatus: (spaceId: string) => Enums<'membership_status'> | null;
+  setMemberships: React.Dispatch<React.SetStateAction<Membership[]>>;
 }
 
 const CommunityContext = createContext<CommunityContextType | undefined>(undefined);
@@ -65,12 +67,21 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
 
   // Initial data fetch on component mount.
   useEffect(() => {
-    fetchSpaces();
-  }, [fetchSpaces]);
-
+    if (user) { // Only fetch if user is logged in
+      fetchSpaces();
+    } else {
+      // Clear data on logout
+      setSpaces([]);
+      setMemberships([]);
+      setPublicThreads([]);
+      setIsLoadingSpaces(false);
+    }
+  }, [user, fetchSpaces]);
+    
   // This is a useful utility function that depends on global state.
-  const isMemberOf = useCallback((spaceId: string): boolean => {
-      return memberships.some(m => m.space_id === spaceId && m.status === 'ACTIVE');
+  const getMembershipStatus = useCallback((spaceId: string): Enums<'membership_status'> | null => {
+      const membership = memberships.find(m => m.space_id === spaceId);
+      return membership ? membership.status : null;
   }, [memberships]);
 
   // --- FINAL, SIMPLIFIED VALUE ---
@@ -81,8 +92,9 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
     publicThreads, 
     isLoadingSpaces,
     fetchSpaces,
-    isMemberOf,
-  }), [spaces, memberships, publicThreads, isLoadingSpaces, fetchSpaces, isMemberOf]);
+    getMembershipStatus,
+    setMemberships, 
+  }), [spaces, memberships, publicThreads, isLoadingSpaces, fetchSpaces, getMembershipStatus]);
 
   return (
     <CommunityContext.Provider value={contextValue}>
