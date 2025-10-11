@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { useCommunity } from '@/context/CommunityContext';
 import { useSpaceMemberList, usePendingRequests } from '@/hooks/useSpaceData';
-import { updateMembershipStatus } from '@/integrations/supabase/community.api';
+import { updateMembershipStatus, updateMemberRole } from '@/integrations/supabase/community.api';
 import { MemberList } from '@/components/forums/MemberList';
 import { useToast } from '@/components/ui/use-toast';
 import { ArrowLeft } from 'lucide-react';
@@ -44,6 +44,16 @@ export default function MembersPage() {
             toast({ variant: 'destructive', title: 'Error', description: error.message });
         }
     }, [refreshPendingRequests, refreshMemberList, toast]);
+
+    const handleRoleChange = useCallback(async (membershipId: string, newRole: Enums<'membership_role'>) => {
+        try {
+            await updateMemberRole(membershipId, newRole);
+            toast({ title: 'Success', description: `Member role has been updated.` });
+            refreshMemberList(); // Refresh the list to show the new role
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: 'Error', description: error.message });
+        }
+    }, [refreshMemberList, toast]);
 
     if (!space) {
         return (
@@ -88,7 +98,8 @@ export default function MembersPage() {
                         <MemberList 
                             members={memberList.map(m => ({ user_id: m.id, membership_id: m.membership_id, full_name: m.full_name, profile_picture_url: m.profile_picture_url, role: m.role }))} // FIX #2 HERE
                             isLoading={isLoadingList}
-                            isAdminView={isUserAdminOrMod}
+                            isCurrentUserAdmin={isUserAdminOrMod}
+                            onRoleChange={handleRoleChange}
                             onBan={space.space_type !== 'PUBLIC' ? (membershipId) => handleMembershipUpdate(membershipId, 'BANNED') : undefined}
                         />
                     </CardContent>
