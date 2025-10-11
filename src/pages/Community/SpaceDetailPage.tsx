@@ -65,6 +65,14 @@ export default function SpaceDetailPage() {
     return currentUserMembership?.role === 'ADMIN' || currentUserMembership?.role === 'MODERATOR';
   }, [currentUserMembership]);
 
+  const getRoleBadgeVariant = (role: 'ADMIN' | 'MODERATOR' | 'MEMBER') => {
+      switch (role) {
+          case 'ADMIN': return 'destructive';
+          case 'MODERATOR': return 'default';
+          default: return 'secondary';
+      }
+  };
+
   // Effect to redirect if the space doesn't exist after loading is complete.
   useEffect(() => {
       if (!isLoadingSpaces && !space) {
@@ -245,21 +253,27 @@ export default function SpaceDetailPage() {
                     </div>
                   </div>
                   {memberList.length > 0 && (
-                    <div className="mt-4">
-                      <h4 className="font-semibold text-sm text-muted-foreground mb-2">Members include:</h4>
-                      {isLoadingList ? (<Skeleton className="h-10 w-full" />) : (
-                        <div className="flex flex-wrap gap-2">
-                          {memberList.slice(0, 10).map(member => (
-                            <Link to={`/profile/${member.user_id}`} key={member.user_id}>
-                              <Badge 
-                                variant={member.role === 'ADMIN' ? 'default' : member.role === 'MODERATOR' ? 'secondary' : 'outline'}
-                                className="hover:opacity-80 transition-opacity"
-                              >
-                                {member.full_name}
-                              </Badge>
-                            </Link>
+                      <div className="mt-4 pt-4 border-t">
+                        <h4 className="font-semibold text-base mb-3">Key Members</h4>
+                        {isLoadingList ? (
+                          <Skeleton className="h-6 w-full" />
+                        ) : (
+                          <div className="flex flex-wrap gap-2">
+                            {/* 1. Filter to show only Admins and Mods */}
+                            {memberList
+                              .filter(member => member.role === 'ADMIN' || member.role === 'MODERATOR')
+                              .slice(0, 5) 
+                              .map(member => (
+                                <Link to={`/profile/${member.id}`} key={member.id}>
+                                  <Badge
+                                    variant={getRoleBadgeVariant(member.role)}
+                                    className="hover:opacity-80 transition-opacity"
+                                  >
+                                    {member.full_name}
+                                    <span className="ml-1.5 opacity-75">({member.role.slice(0, 1)})</span>
+                                  </Badge>
+                                </Link>
                           ))}
-                           {memberList.length > 10 && <Badge variant="outline">...and more</Badge>}
                         </div>
                       )}
                     </div>
