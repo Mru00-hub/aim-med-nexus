@@ -45,56 +45,74 @@ const getBadgeVariant = (role: DisplayMember['role']) => {
     }
 };
 
-export const MemberCard: React.FC<MemberCardProps> = ({ member, isCurrentUserAdmin, onRoleChange, onApprove, onReject, onBan }) => {
+export const MemberCard: React.FC<MemberCardProps> = ({ member, isCurrentUserAdmin, onRoleChange, onApprove, onReject }) => {
+    // This handler now only handles Approve/Reject for pending requests.
     const handleAction = (e: React.MouseEvent, action?: (id: string) => void) => {
-        e.stopPropagation(); // Prevents navigating to profile when clicking a button
+        e.stopPropagation();
         e.preventDefault();
-        // The membership_id is needed to approve/reject/ban
         if (action && member.membership_id) {
             action(member.membership_id);
         }
     };
     
-    // The main card is now a link to the user's profile page
     return (
-        <Link to={`/profile/${member.user_id}`} className="block group">
-            <Card className="transition-all group-hover:shadow-md group-hover:border-primary/50">
-                <CardContent className="p-4 flex items-center justify-between space-x-4">
-                    <div className="flex items-center space-x-4">
-                        <Avatar className="h-12 w-12">
-                            <AvatarImage src={member.profile_picture_url || ''} alt={member.full_name} />
-                            <AvatarFallback>{getInitials(member.full_name)}</AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1">
-                            <p className="font-semibold text-lg">{member.full_name}</p>
-                        </div>
-                        <Badge variant={getBadgeVariant(member.role)} className="capitalize">
-                            {member.role.toLowerCase()}
-                        </Badge>
+        <Card className="transition-all hover:shadow-md group">
+            <CardContent className="p-4 flex items-center justify-between space-x-4">
+                {/* The main user info is wrapped in a Link for navigation */}
+                <Link to={`/profile/${member.user_id}`} className="flex items-center space-x-4 flex-grow">
+                    <Avatar className="h-12 w-12">
+                        <AvatarImage src={member.profile_picture_url || ''} alt={member.full_name} />
+                        <AvatarFallback>{getInitials(member.full_name)}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1">
+                        <p className="font-semibold text-lg group-hover:text-primary">{member.full_name}</p>
                     </div>
+                    <Badge variant={getBadgeVariant(member.role)} className="capitalize">
+                        {member.role.toLowerCase()}
+                    </Badge>
+                </Link>
 
-                    {/* Conditional Admin Buttons */}
-                    {isCurrentUserAdmin && (
-                        <div className="flex items-center gap-2">
-                            {onApprove && (
-                                <Button size="icon" variant="outline" onClick={(e) => handleAction(e, onApprove)} title="Approve">
-                                    <Check className="h-4 w-4 text-green-500" />
-                                </Button>
-                            )}
-                            {onReject && (
-                                <Button size="icon" variant="outline" onClick={(e) => handleAction(e, onReject)} title="Reject">
-                                    <X className="h-4 w-4 text-red-500" />
-                                </Button>
-                            )}
-                            {onBan && (
-                                <Button size="icon" variant="destructive" onClick={(e) => handleAction(e, onBan)} title="Ban User">
-                                    <ShieldX className="h-4 w-4" />
-                                </Button>
-                            )}
-                        </div>
+                {/* --- UPDATED ADMIN CONTROLS SECTION --- */}
+                <div className="flex items-center gap-2">
+                    {/* A) Buttons for Pending Requests (Approve/Reject) */}
+                    {isCurrentUserAdmin && onApprove && onReject && (
+                        <>
+                            <Button size="icon" variant="outline" onClick={(e) => handleAction(e, onApprove)} title="Approve">
+                                <Check className="h-4 w-4 text-green-500" />
+                            </Button>
+                            <Button size="icon" variant="outline" onClick={(e) => handleAction(e, onReject)} title="Reject">
+                                <X className="h-4 w-4 text-red-500" />
+                            </Button>
+                        </>
                     )}
-                </CardContent>
-            </Card>
-        </Link>
+
+                    {/* B) Dropdown Menu for Active Members (Role Change/Ban) */}
+                    {isCurrentUserAdmin && onRoleChange && member.membership_id && (
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button size="icon" variant="ghost" onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
+                                    <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent onClick={(e) => e.preventDefault()}>
+                                <DropdownMenuItem onClick={() => onRoleChange(member.membership_id!, 'ADMIN')}>
+                                    <UserCog className="mr-2 h-4 w-4" /> Make Admin
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => onRoleChange(member.membership_id!, 'MODERATOR')}>
+                                    <UserCheck className="mr-2 h-4 w-4" /> Make Moderator
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => onRoleChange(member.membership_id!, 'MEMBER')}>
+                                    <UserX className="mr-2 h-4 w-4" /> Make Member
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem className="text-red-600" onClick={() => onRoleChange(member.membership_id!, 'BANNED')}>
+                                    <ShieldX className="mr-2 h-4 w-4" /> Ban User
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    )}
+                </div>
+            </CardContent>
+        </Card>
     );
 };
