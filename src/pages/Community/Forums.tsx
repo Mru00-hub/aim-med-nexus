@@ -117,7 +117,7 @@ export default function Forums() {
               await joinSpaceAsMember(space.id); // Using the imported function
               toast({ title: 'Success!', description: `You have joined ${space.name}.` });
           } else { 
-              await requestToJoinSpace(space.id, space.space_type);
+              await requestToJoinSpace(space.id);
               toast({ title: 'Request Sent', description: `Your request to join ${space.name} is pending approval.` });
           }
           await fetchSpaces();
