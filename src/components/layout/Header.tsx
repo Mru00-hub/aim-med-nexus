@@ -174,37 +174,48 @@ export const Header = () => {
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur">
       <div className="container mx-auto">
         <div className="flex h-16 items-center justify-between">
+          
+          {/* 1. Logo (remains on the far left) */}
           <Link to="/" className="flex items-center space-x-3 hover:opacity-80 transition-opacity">
             <div className="w-10 h-10 bg-gradient-primary rounded-lg flex items-center justify-center shadow-medical relative">
-              <div className="w-6 h-6 relative">
-                <div className="absolute inset-0 flex items-center justify-center"><div className="w-4 h-1 bg-primary-foreground rounded-sm"></div></div>
-                <div className="absolute inset-0 flex items-center justify-center"><div className="w-1 h-4 bg-primary-foreground rounded-sm"></div></div>
-                <div className="absolute top-0 right-0 w-1.5 h-1.5 bg-accent rounded-full"></div>
-                <div className="absolute bottom-0 left-0 w-1.5 h-1.5 bg-success rounded-full"></div>
-              </div>
+                <div className="w-6 h-6 relative"><div className="absolute inset-0 flex items-center justify-center"><div className="w-4 h-1 bg-primary-foreground rounded-sm"></div></div><div className="absolute inset-0 flex items-center justify-center"><div className="w-1 h-4 bg-primary-foreground rounded-sm"></div></div><div className="absolute top-0 right-0 w-1.5 h-1.5 bg-accent rounded-full"></div><div className="absolute bottom-0 left-0 w-1.5 h-1.5 bg-success rounded-full"></div></div>
             </div>
             <div className="flex flex-col">
               <span className="text-xl font-bold text-primary">AIMedNet</span>
               <span className="text-xs text-muted-foreground hidden sm:block">Healthcare Professionals</span>
             </div>
           </Link>
-          <div className="hidden md:flex items-center space-x-2 lg:space-x-4">
-            <Button variant="ghost" size="sm" onClick={handleLovingItClick} className="relative p-3 text-destructive hover:text-destructive/80" title="Loving it">
-              <Heart className="h-5 w-5" />
-              {lovingItCount > 0 && <Badge variant="destructive" className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs">{lovingItCount > 99 ? '99+' : lovingItCount}</Badge>}
-            </Button>
-            <Link to="/partnerships"><Button variant="ghost" size="sm" className="p-3 text-accent"><Handshake className="h-5 w-5" /></Button></Link>
 
-            {renderAuthContent()}
+          {/* 2. Right-Side Container (new wrapper) */}
+          <div className="flex items-center gap-1 sm:gap-2">
+            
+            {/* These buttons are now outside the hidden div, so they are ALWAYS visible */}
+            <Button variant="ghost" size="sm" onClick={handleLovingItClick} className="relative p-2 sm:p-3 text-destructive hover:text-destructive/80" title="Loving it">
+              <Heart className="h-5 w-5" />
+              {lovingItCount > 0 && <Badge variant="destructive" className="absolute -top-1 -right-1 h-4 w-4 sm:h-5 sm:w-5 rounded-full p-0 flex items-center justify-center text-xs">{lovingItCount > 99 ? '99+' : lovingItCount}</Badge>}
+            </Button>
+            
+            <Link to="/partnerships">
+                <Button variant="ghost" size="sm" className="p-2 sm:p-3 text-accent">
+                    <Handshake className="h-5 w-5" />
+                </Button>
+            </Link>
+
+            {/* This is the section that ONLY appears on desktop */}
+            <div className="hidden md:flex items-center">
+              {renderAuthContent()}
+            </div>
+            
+            {/* This is the mobile menu button that ONLY appears on mobile */}
+            <Button variant="ghost" size="sm" className="md:hidden p-2 sm:p-3" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+              {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </Button>
           </div>
 
-          <Button variant="ghost" size="sm" className="md:hidden" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
-            {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </Button>
         </div>
 
         {mobileMenuOpen && (
-          <div className="md:hidden border-t bg-background pb-4">
+          <div className="md:hidden border-t bg-background">
             {renderMobileMenuContent()}
           </div>
         )}
