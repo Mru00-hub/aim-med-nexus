@@ -4,10 +4,10 @@ import React, { createContext, useState, useContext, useEffect, useMemo, ReactNo
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/components/ui/use-toast';
 import { 
-    getUserSpaces, 
+    getSpacesWithDetails, 
     getUserMemberships,
     getPublicThreads, // This is the important new one
-    Space,
+    SpaceWithDetails,
     ThreadWithDetails,
     Membership,
 } from '@/integrations/supabase/community.api';
@@ -15,7 +15,7 @@ import {
 // --- NEW, SIMPLIFIED INTERFACE ---
 // This now only defines the truly GLOBAL state.
 interface CommunityContextType {
-  spaces: Space[];
+  spaces: SpaceWithDetails[];
   memberships: Membership[];
   publicThreads: ThreadWithDetails[];
   isLoadingSpaces: boolean;
@@ -30,7 +30,7 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
   const { toast } = useToast();
   
   // --- GLOBAL STATE VARIABLES ---
-  const [spaces, setSpaces] = useState<Space[]>([]);
+  const [spaces, setSpaces] = useState<SpaceWithDetails[]>([]); 
   const [memberships, setMemberships] = useState<Membership[]>([]);
   const [publicThreads, setPublicThreads] = useState<ThreadWithDetails[]>([]); 
   const [isLoadingSpaces, setIsLoadingSpaces] = useState(true);
@@ -48,7 +48,7 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
     try {
       // Fetch all three global data sets at once.
       const [spacesData, membershipsData, publicThreadsData] = await Promise.all([
-          getUserSpaces(),
+          getSpacesWithDetails(),
           getUserMemberships(),
           getPublicThreads()
       ]);
