@@ -73,8 +73,8 @@ const MOCK_SPACES: Space[] = [
 ];
 
 const MOCK_PUBLIC_THREADS: ThreadWithDetails[] = [
-  { id: 'mock-pub-thread-1', title: 'Best guidelines for AFib in 2025? (Example)', creator_id: 'user-123', creator_full_name: 'Dr. Chen (Example)', created_at: new Date().toISOString(), last_activity_at: new Date().toISOString(), message_count: 23 },
-  { id: 'mock-pub-thread-2', title: 'Hospital EHR vendor comparison (Example)', creator_id: 'user-456', creator_full_name: 'Dr. Patel (Example)', created_at: new Date().toISOString(), last_activity_at: new Date().toISOString(), message_count: 18 },
+  { id: 'mock-pub-thread-1', title: 'Best guidelines for AFib in 2025? (Example)', creator_id: 'user-123', creator_full_name: 'Dr. Chen (Example)', created_at: new Date().toISOString(), last_activity_at: new Date().toISOString(), message_count: 23, space_id: 'mock-pub-1' },
+  { id: 'mock-pub-thread-2', title: 'Hospital EHR vendor comparison (Example)', creator_id: 'user-456', creator_full_name: 'Dr. Patel (Example)', created_at: new Date().toISOString(), last_activity_at: new Date().toISOString(), message_count: 18, space_id: 'mock-pub-1' },
 ];
 
 const MOCK_MESSAGES: MessageWithDetails[] = [];
