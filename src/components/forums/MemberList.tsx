@@ -8,7 +8,7 @@ interface MemberListProps {
     members: DisplayMember[];
     isLoading: boolean;
     emptyStateMessage?: string;
-    isCurrentUserAdmin={isAdminView}
+    isCurrentUserAdmin={isAdminView};
     onApprove?: (membershipId: string) => void;
     onReject?: (membershipId: string) => void;
     onBan?: (membershipId: string) => void;
@@ -18,7 +18,7 @@ export const MemberList: React.FC<MemberListProps> = ({
     members, 
     isLoading, 
     emptyStateMessage = "There are no members to display.",
-    isAdminView,
+    isCurrentUserAdmin,
     onApprove,
     onReject,
     onBan
@@ -55,7 +55,7 @@ export const MemberList: React.FC<MemberListProps> = ({
         <MemberCard 
             key={member.user_id} 
             member={member} 
-            isAdminView={isAdminView}
+            isCurrentUserAdmin={isCurrentUserAdmin} 
             onApprove={onApprove}
             onReject={onReject}
             onBan={onBan}
