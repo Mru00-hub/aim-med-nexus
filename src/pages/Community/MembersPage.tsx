@@ -75,34 +75,31 @@ export default function MembersPage() {
                 {/* --- CONDITIONAL ADMIN UI --- */}
                 {isUserAdminOrMod && (
                     <Card className="mb-8">
-                        <CardHeader><CardTitle>Pending Requests ({isLoadingRequests ? '...' : pendingRequests.length})</CardTitle></CardHeader>
+                        <CardHeader><CardTitle>Pending Requests ({pendingRequests.length})</CardTitle></CardHeader>
                         <CardContent>
-                            {isLoadingRequests ? <Skeleton className="h-20 w-full" /> : 
-                                pendingRequests.length > 0 ? (
-                                    <MemberList 
-                                        members={pendingRequests} 
-                                        isAdminView={true} 
-                                        onApprove={(membershipId) => handleMembershipUpdate(membershipId, 'ACTIVE')}
-                                        onReject={(membershipId) => handleMembershipUpdate(membershipId, 'BANNED')}
-                                    />
-                                ) : (
-                                    <p className="text-sm text-muted-foreground">No pending requests.</p>
-                                )
-                            }
+                            <MemberList 
+                                members={pendingRequests} 
+                                isLoading={isLoadingRequests}
+                                emptyStateMessage="No pending requests."
+                                isAdminView={true} 
+                                onApprove={(membershipId) => handleMembershipUpdate(membershipId, 'ACTIVE')}
+                                onReject={(membershipId) => handleMembershipUpdate(membershipId, 'BANNED')}
+                            />
                         </CardContent>
                     </Card>
                 )}
-
+                
                 {/* --- PUBLIC MEMBER LIST --- */}
                 <Card>
-                    <CardHeader><CardTitle>Active Members ({isLoadingList ? '...' : memberList.length})</CardTitle></CardHeader>
+                    <CardHeader><CardTitle>Active Members ({memberList.length})</CardTitle></CardHeader>
                     <CardContent>
-                         {isLoadingList ? <Skeleton className="h-20 w-full" /> : 
-                            <MemberList 
-                                members={memberList} 
-                                isAdminView={false} 
-                            />
-                        }
+                        <MemberList 
+                            members={memberList.map(m => ({ user_id: m.id, membership_id: m.id, full_name: m.full_name, profile_picture_url: m.profile_picture_url, role: m.role }))} 
+                            isLoading={isLoadingList}
+                            isAdminView={isUserAdminOrMod}
+                            // Only allow banning in non-public spaces
+                            onBan={space.space_type !== 'PUBLIC' ? (membershipId) => handleMembershipUpdate(membershipId, 'BANNED') : undefined}
+                        />
                     </CardContent>
                 </Card>
 
