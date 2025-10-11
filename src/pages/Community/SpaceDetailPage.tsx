@@ -114,12 +114,19 @@ export default function SpaceDetailPage() {
                     <Badge variant={space.join_level === 'INVITE_ONLY' ? 'destructive' : 'secondary'} className="ml-2">
                         {space.join_level === 'INVITE_ONLY' ? 'Private' : 'Open Access'}
                     </Badge>
+                    {isUserAdminOrMod && (
+                        <Link to={`/community/space/${space.id}/members`}> {/* <-- UPDATE THIS LINK */}
+                            <Button size="sm">Manage Members</Button>
+                        </Link>
+                     )}
                 </div>
               </CardHeader>
               <CardContent>
                   <div className="flex items-center gap-4 pt-4 text-sm text-muted-foreground">
                     <div className="flex items-center gap-1"><Users className="h-4 w-4 text-primary" />
-                        <span>{isLoadingMetrics ? <Skeleton className="h-4 w-16 inline-block" /> : <>{memberCount} Active Members</>}</span>
+                        <Link to={`/community/space/${space.id}/members`} className="hover:underline">
+                            <span>{isLoadingMetrics ? <Skeleton className="h-4 w-16 inline-block" /> : <>{memberCount} Active Members</>}</span>
+                        </Link>
                     </div>
                     <div className="flex items-center gap-1"><Hash className="h-4 w-4 text-primary" />
                         <span>{isLoadingMetrics ? <Skeleton className="h-4 w-12 inline-block" /> : <>{threadCount} Discussion Threads</>}</span>
