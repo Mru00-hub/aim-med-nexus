@@ -16,48 +16,64 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { supabase } from '@/integrations/supabase/client';
 
 // --- NEW IMPORTS ---
-import { useCommunity } from '@/context/CommunityContext'; 
+// Use centralized context and dedicated hooks for clean data management.
+import { useCommunity } from '@/context/CommunityContext';
 import { useSpaceThreads, useSpaceMetrics, useSpaceMemberList } from '@/hooks/useSpaceData';
-import { CreateThreadForm } from './CreateThread'; 
-
+import { CreateThreadForm } from './CreateThreadForm'; // Assuming the form component is in a separate file
 
 export default function SpaceDetailPage() {
   const { user } = useAuth();
   const { spaceId } = useParams<{ spaceId: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
-  
+
   // --- DATA FETCHING ---
-  // 1. Get GLOBAL data from the context
+  // 1. Get GLOBAL data from the context for efficiency.
   const { spaces, isLoadingSpaces, isMemberOf } = useCommunity();
-  // 2. Get LOCAL data for this page using our dedicated hooks
+  // 2. Get LOCAL data for this page using dedicated hooks.
   const { threads, isLoadingThreads, refreshThreads } = useSpaceThreads(spaceId);
   const { memberCount, threadCount, isLoadingMetrics } = useSpaceMetrics(spaceId);
   const { memberList, isLoadingList } = useSpaceMemberList(spaceId);
 
-  // Find the specific space details from the global list
-  const space = useMemo(() => spaces.find(s => s.id === spaceId), [spaces, spaceId]);
+  // Find the specific space details from the global list.
+  const space = useMemo(() => spaces.find(s => s.id === Number(spaceId)), [spaces, spaceId]);
 
   // --- UI STATE ---
   const [showCreateThread, setShowCreateThread] = useState(false);
 
   // --- LOGIC & EFFECTS ---
-  const loading = isLoadingSpaces || !spaceId; // Initial loading is for the master list
+  // The initial page load is dependent on fetching the list of all spaces.
+  const loading = isLoadingSpaces || !spaceId;
 
+  // Memoized permission check for creating threads.
   const canCreateThread = useMemo(() => {
     if (!user || !space) return false;
+    // Allow anyone to post in an open forum.
     if (space.space_type === 'FORUM' && space.join_level === 'OPEN') return true;
+    // Otherwise, user must be a member of the space.
     return isMemberOf(space.id);
   }, [user, space, isMemberOf]);
 
+  // Memoized check to find the current user's role in this space.
   const currentUserMembership = useMemo(() => {
     if (!user || !memberList) return null;
-    return memberList.find(member => member.id === user.id);
+    return memberList.find(member => member.user_id === user.id);
   }, [user, memberList]);
   
+  // Memoized permission check for administrative actions.
   const isUserAdminOrMod = useMemo(() => {
     return currentUserMembership?.role === 'ADMIN' || currentUserMembership?.role === 'MODERATOR';
   }, [currentUserMembership]);
+
+  // Effect to redirect if the space doesn't exist after loading is complete.
+  useEffect(() => {
+      if (!isLoadingSpaces && !space) {
+          toast({ variant: 'destructive', title: 'Not Found', description: 'This space does not exist or you may not have permission to view it.' });
+          navigate('/community');
+      }
+  }, [isLoadingSpaces, space, navigate, toast]);
+
+  // --- ASYNCHRONOUS ACTIONS ---
 
   const handleDeleteSpace = async () => {
       if (!space) return;
@@ -71,17 +87,17 @@ export default function SpaceDetailPage() {
           if (error) throw error;
 
           toast({ title: "Success", description: "Space has been deleted." });
-          navigate('/community'); // Navigate away from the now-deleted page
+          navigate('/community'); // Navigate away from the now-deleted page.
       } catch (error: any) {
           toast({
               variant: "destructive",
               title: "Deletion Failed",
-              description: error.message || "You may not have permission to perform this action.",
+              description: error.message || "An unexpected error occurred.",
           });
       }
   };
 
-  const handleDeleteThread = async (threadId: string) => {
+  const handleDeleteThread = async (threadId: number) => {
       try {
           const { error } = await supabase
               .from('threads')
@@ -91,36 +107,28 @@ export default function SpaceDetailPage() {
           if (error) throw error;
 
           toast({ title: "Success", description: "Thread has been deleted." });
-          refreshThreads(); // Refresh the list of threads after deletion!
+          refreshThreads(); // Refresh the list of threads after deletion.
       } catch (error: any) {
            toast({
               variant: "destructive",
               title: "Deletion Failed",
-              description: error.message || "You may not have permission to perform this action.",
+              description: error.message || "An unexpected error occurred.",
           });
       }
   };
   
-  useEffect(() => {
-      if (!isLoadingSpaces && !space) {
-          toast({ variant: 'destructive', title: 'Not Found', description: 'This space does not exist or you may not have permission to view it.' });
-          navigate('/community');
-      }
-  }, [isLoadingSpaces, space, navigate, toast]);
-
   // --- RENDER LOGIC ---
-  // This is the same as your original file, just using the hooks cleanly.
-  // ... (All your render logic like ThreadList, skeletons, etc. is preserved below)
 
   const ThreadList = () => (
     <div className="space-y-4">
       {isLoadingThreads ? (
         <>
-            <Skeleton className="h-20 w-full" /><Skeleton className="h-20 w-full" />
+            <Skeleton className="h-20 w-full" />
+            <Skeleton className="h-20 w-full" />
         </>
       ) : threads.length > 0 ? (
         threads.map(thread => (
-          <Card key={thread.id} className="transition-all hover:border-primary/50 group">
+          <Card key={thread.id} className="transition-all hover:shadow-md group">
             <CardContent className="p-4 flex items-center justify-between">
               <Link to={`/community/thread/${thread.id}`} className="flex-grow">
                   <h3 className="font-semibold text-lg group-hover:text-primary">{thread.title}</h3>
@@ -131,7 +139,7 @@ export default function SpaceDetailPage() {
               {isUserAdminOrMod && (
                 <AlertDialog>
                     <AlertDialogTrigger asChild>
-                        <Button size="icon" variant="ghost" className="h-8 w-8 ml-4" onClick={(e) => e.stopPropagation()}>
+                        <Button size="icon" variant="ghost" className="h-8 w-8 ml-4 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
                            <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
                         </Button>
                     </AlertDialogTrigger>
@@ -160,10 +168,10 @@ export default function SpaceDetailPage() {
                 <p>No threads have been started in this space yet.</p>
                 <Button 
                     variant="link" 
-                    onClick={() => user && canCreateThread ? setShowCreateThread(true) : navigate('/login')} 
+                    onClick={() => canCreateThread ? setShowCreateThread(true) : navigate('/login')} 
                     className="mt-2"
                 >
-                    Be the first to start one!
+                    {user ? "Be the first to start one!" : "Log in to start a discussion!"}
                 </Button>
             </CardContent>
         </Card>
@@ -177,77 +185,81 @@ export default function SpaceDetailPage() {
       <main className="container mx-auto py-8 px-4 flex-grow">
         {loading ? (
           <>
-            <Skeleton className="h-12 w-3/4 mb-4" /><Skeleton className="h-8 w-1/2 mb-8" />
-            <div className="space-y-4"><Skeleton className="h-24 w-full" /><Skeleton className="h-24 w-full" /></div>
+            <Skeleton className="h-12 w-3/4 mb-4" />
+            <Skeleton className="h-8 w-1/2 mb-8" />
+            <div className="space-y-4">
+                <Skeleton className="h-24 w-full" />
+                <Skeleton className="h-24 w-full" />
+            </div>
           </>
         ) : space ? (
           <>
             <Card className="mb-8">
               <CardHeader>
-                <CardTitle className="text-3xl">{space.name}</CardTitle>
-                <div className="text-sm text-muted-foreground flex items-center gap-2 flex-wrap">
-                  <span>{space.description}</span>
-                  <Badge variant={space.join_level === 'INVITE_ONLY' ? 'destructive' : 'secondary'}>
-                    {space.join_level === 'INVITE_ONLY' ? 'Private' : 'Open Access'}
-                  </Badge>
-                </div>
-                {isUserAdminOrMod && (
-                  <div className="flex items-center gap-2">
-                    <Link to={`/community/space/${space.id}/members`}> 
-                      <Button size="sm" variant="outline">Manage Members</Button>
-                    </Link>
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button size="sm" variant="destructive">
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Delete Space
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            This action cannot be undone. This will permanently delete the
-                            <strong>{` ${space.name} `}</strong> space and all of its threads and messages.
-                          </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={handleDeleteSpace}>
-                              Continue
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
+                <div className="flex justify-between items-start">
+                    <div>
+                        <CardTitle className="text-3xl">{space.name}</CardTitle>
+                        <div className="text-sm text-muted-foreground flex items-center gap-2 flex-wrap mt-2">
+                          <span>{space.description}</span>
+                          <Badge variant={space.join_level === 'INVITE_ONLY' ? 'secondary' : 'default'}>
+                            {space.join_level.replace('_', ' ')}
+                          </Badge>
+                        </div>
                     </div>
-                  )}
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center gap-4 pt-4 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-1"><Users className="h-4 w-4 text-primary" />
+                    {isUserAdminOrMod && (
+                      <div className="flex items-center gap-2 flex-shrink-0 ml-4">
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button size="sm" variant="destructive">
+                              <Trash2 className="h-4 w-4 mr-2" /> Delete Space
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This action cannot be undone. This will permanently delete the <strong>{` ${space.name} `}</strong> space and all of its threads and messages.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={handleDeleteSpace}>Continue</AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                    )}
+                </div>
+              </CardHeader>
+              <CardContent>
+                  <div className="flex items-center gap-6 pt-4 text-sm text-muted-foreground border-t">
+                    <div className="flex items-center gap-1.5">
+                        <Users className="h-4 w-4 text-primary" />
                         <Link to={`/community/space/${space.id}/members`} className="hover:underline">
-                            <span>{isLoadingMetrics ? <Skeleton className="h-4 w-16 inline-block" /> : <>{memberCount} Active Members</>}</span>
+                            {isLoadingMetrics ? <Skeleton className="h-4 w-24 inline-block" /> : <span>{memberCount} Members</span>}
                         </Link>
                     </div>
-                    <div className="flex items-center gap-1"><Hash className="h-4 w-4 text-primary" />
-                        <span>{isLoadingMetrics ? <Skeleton className="h-4 w-12 inline-block" /> : <>{threadCount} Discussion Threads</>}</span>
+                    <div className="flex items-center gap-1.5">
+                        <Hash className="h-4 w-4 text-primary" />
+                        {isLoadingMetrics ? <Skeleton className="h-4 w-24 inline-block" /> : <span>{threadCount} Threads</span>}
                     </div>
                   </div>
                   {memberList.length > 0 && (
-                    <div className="mt-6 pt-4 border-t">
-                      <h4 className="font-semibold text-base mb-3">Space Members ({memberList.length})</h4>
+                    <div className="mt-4">
+                      <h4 className="font-semibold text-sm text-muted-foreground mb-2">Members include:</h4>
                       {isLoadingList ? (<Skeleton className="h-10 w-full" />) : (
-                        <div className="flex flex-wrap gap-2 max-h-24 overflow-y-auto">
+                        <div className="flex flex-wrap gap-2">
                           {memberList.slice(0, 10).map(member => (
-                            <Link to={`/profile/${member.id}`} key={member.id}>
+                            <Link to={`/profile/${member.user_id}`} key={member.user_id}>
                               <Badge 
                                 variant={member.role === 'ADMIN' ? 'default' : member.role === 'MODERATOR' ? 'secondary' : 'outline'}
-                                className="hover:bg-opacity-80 transition-opacity"
+                                className="hover:opacity-80 transition-opacity"
                               >
-                                {member.full_name} ({member.role.slice(0, 1)})
+                                {member.full_name}
                               </Badge>
                             </Link>
                           ))}
+                           {memberList.length > 10 && <Badge variant="outline">...and more</Badge>}
                         </div>
                       )}
                     </div>
@@ -257,30 +269,34 @@ export default function SpaceDetailPage() {
 
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-semibold flex items-center gap-2"><Hash className="h-6 w-6" />Threads</h2>
-              <Button onClick={() => user ? setShowCreateThread(true) : navigate('/login')} disabled={!canCreateThread} title={!canCreateThread ? "You must be a member to start a thread here." : "Start a new discussion."}>
+              <Button onClick={() => user ? setShowCreateThread(true) : navigate('/login')} disabled={!canCreateThread} title={!canCreateThread && user ? "You must be a member to start a thread here." : "Start a new discussion."}>
                 <Plus className="h-4 w-4 mr-2" />Start New Thread
               </Button>
             </div>
+            
             <ThreadList />
           </>
         ) : (
-            <div className="text-center"><p className="text-lg text-muted-foreground">Space not found.</p></div>
+            <div className="text-center py-16"><p className="text-lg text-muted-foreground">Space not found.</p></div>
         )}
       </main>
       <Footer />
-      {/* FIX: Conditionally render the Dialog only when 'space' exists */}
+
+      {/* FIX: Conditionally render the Dialog only when 'space' exists to prevent runtime errors. */}
       {space && (
         <Dialog open={showCreateThread} onOpenChange={setShowCreateThread}>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Create New Thread in {space.name}</DialogTitle>
               <DialogDescription>
-                  {space.join_level === 'INVITE_ONLY' ? 'This thread will only be visible to members of this private space.' : 'This thread will be visible to all members.'}
+                  {space.join_level === 'INVITE_ONLY' ? 'This thread will only be visible to members of this private space.' : 'This thread will be visible to all community members.'}
               </DialogDescription>
             </DialogHeader>
             <div className="pt-4">
-              {/* FIX: Pass the guaranteed 'space.id' instead of the unsafe 'spaceId!' */}
-              <CreateThreadForm spaceId={space.id} onThreadCreated={(newThreadId) => {
+              {/* FIX: Pass the guaranteed 'space.id' instead of the potentially unsafe 'spaceId'. */}
+              <CreateThreadForm 
+                spaceId={space.id} 
+                onThreadCreated={(newThreadId) => {
                   setShowCreateThread(false);
                   refreshThreads();
                   navigate(`/community/thread/${newThreadId}`);
