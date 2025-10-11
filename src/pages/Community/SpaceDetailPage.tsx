@@ -48,6 +48,15 @@ export default function SpaceDetailPage() {
     return isMemberOf(space.id);
   }, [user, space, isMemberOf]);
 
+  const currentUserMembership = useMemo(() => {
+    if (!user || !memberList) return null;
+    return memberList.find(member => member.id === user.id);
+  }, [user, memberList]);
+  
+  const isUserAdminOrMod = useMemo(() => {
+    return currentUserMembership?.role === 'ADMIN' || currentUserMembership?.role === 'MODERATOR';
+  }, [currentUserMembership]);
+  
   useEffect(() => {
       if (!isLoadingSpaces && !space) {
           toast({ variant: 'destructive', title: 'Not Found', description: 'This space does not exist or you may not have permission to view it.' });
@@ -138,11 +147,12 @@ export default function SpaceDetailPage() {
                         {isLoadingList ? (<Skeleton className="h-10 w-full" />) : (
                             <div className="flex flex-wrap gap-2 max-h-24 overflow-y-auto">
                                 {memberList.slice(0, 10).map(member => (
-                                    <Badge key={member.id} variant={member.role === 'ADMIN' ? 'destructive' : member.role === 'MODERATOR' ? 'secondary' : 'default'}>
-                                        {member.full_name} ({member.role.slice(0, 1)})
-                                    </Badge>
+                                    <Link to={`/profile/${member.id}`} key={member.id}>
+                                        <Badge variant={/*...*/} className="hover:bg-opacity-80 transition-opacity">
+                                            {member.full_name} ({member.role.slice(0, 1)})
+                                        </Badge>
+                                    </Link>
                                 ))}
-                                {memberList.length > 10 && <span className="text-xs text-muted-foreground self-center ml-1">+{memberList.length - 10} more</span>}
                             </div>
                           )}
                       </div>
