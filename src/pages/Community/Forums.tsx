@@ -13,6 +13,8 @@ import { Badge } from '@/components/ui/badge';
 import { Search, Plus, MessageSquare } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from '@/components/ui/use-toast';
+import { useCommunity } from '@/context/CommunityContext';
+import { Enums } from '@/integrations/supabase/types';
 
 // --- FIX #1: IMPORT API FUNCTIONS DIRECTLY ---
 import {
@@ -38,7 +40,8 @@ export default function Forums() {
     publicThreads, 
     isLoadingSpaces: loading, 
     fetchSpaces, 
-    isMemberOf,
+    getMembershipStatus,
+    setMemberships, 
   } = useCommunity();
 
   const [showSpaceCreator, setShowSpaceCreator] = useState(false);
@@ -111,16 +114,32 @@ export default function Forums() {
 
       toast({ title: 'Processing...', description: `Requesting to join ${space.name}.` });
       try {
-          const isPublicForum = space.space_type === 'FORUM' && space.join_level === 'OPEN';
+          const isOpenJoin = space.join_level === 'OPEN';
           
-          if (isPublicForum) {
-              await joinSpaceAsMember(space.id); // Using the imported function
+          if (isOpenJoin) {
+              await joinSpaceAsMember(space.id);
               toast({ title: 'Success!', description: `You have joined ${space.name}.` });
+              await fetchSpaces(); // Refetch everything for a full update
           } else { 
               await requestToJoinSpace(space.id);
               toast({ title: 'Request Sent', description: `Your request to join ${space.name} is pending approval.` });
+              
+              // --- OPTIMISTIC UI UPDATE ---
+              // Manually add a 'PENDING' membership to the local state for instant feedback
+              setMemberships(prevMemberships => [
+                  ...prevMemberships,
+                  {
+                      space_id: space.id,
+                      user_id: user.id,
+                      status: 'PENDING',
+                      // Add other required fields from your Membership type with dummy/default values
+                      id: crypto.randomUUID(), // A temporary client-side ID
+                      created_at: new Date().toISOString(),
+                      updated_at: new Date().toISOString(),
+                      role: 'MEMBER',
+                  }
+              ]);
           }
-          await fetchSpaces();
       } catch (error: any) {
           toast({ variant: 'destructive', title: 'Error', description: error.message });
       }
@@ -128,7 +147,7 @@ export default function Forums() {
 
   const renderSpaceCard = (space: SpaceWithDetails) => {
       const isPrivate = space.join_level === 'INVITE_ONLY';
-      const hasJoined = isMemberOf(space.id);
+      const membershipStatus = getMembershipStatus(space.id);
 
       const cardContent = (
         <Card className="h-full transition-all duration-300 hover:border-primary/50 hover:shadow-lg flex flex-col">
@@ -162,8 +181,14 @@ export default function Forums() {
                   )}
               </div>
               <div className="mt-4 pt-4 border-t flex justify-end">
-                {hasJoined ? (
-                    <Button variant="outline" size="sm">Go to Space</Button>
+                {membershipStatus === 'ACTIVE' ? (
+                    <Button asChild variant="outline" size="sm">
+                      <Link to={`/community/space/${space.id}`}>Go to Space</Link>
+                    </Button>
+                ) : membershipStatus === 'PENDING' ? (
+                    <Button variant="secondary" size="sm" disabled>
+                        Requested
+                    </Button>
                 ) : (
                     <Button variant="default" size="sm" onClick={(e) => handleJoin(e, space)}>
                         {isPrivate ? 'Request to Join' : 'Join'}
@@ -175,11 +200,12 @@ export default function Forums() {
       );
 
       const clickHandler = () => {
-          if (isMemberOf(space.id)) {
+          if (getMembershipStatus(space.id) === 'ACTIVE') {
               navigate(`/community/space/${space.id}`);
           } else if (!user) {
               navigate('/login');
           }
+          // If status is PENDING or null, clicking the card body does nothing
       };
 
       return (
@@ -188,6 +214,7 @@ export default function Forums() {
           </div>
       );
   };
+  
   const renderPublicThreadCard = (thread: ThreadWithDetails) => (
     <Card key={thread.id} className="transition-all duration-300 hover:border-primary/50 hover:shadow-lg">
        <Link to={user ? `/community/thread/${thread.id}` : '/login'}>
