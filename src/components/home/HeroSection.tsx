@@ -1,4 +1,6 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, Users, MessageSquare, Briefcase } from 'lucide-react';
 import heroImage from '@/assets/hero-image.jpg';
@@ -9,6 +11,8 @@ import heroImage from '@/assets/hero-image.jpg';
  * Responsive design with professional medical theming
  */
 export const HeroSection = () => {
+  const navigate = useNavigate();
+  const { user } = useAuth();
   return (
     <section className="section-medical bg-gradient-hero relative overflow-hidden">
       {/* Background Image Overlay */}
@@ -36,19 +40,24 @@ export const HeroSection = () => {
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row gap-4">
               <Button 
-                size="lg" 
-                className="btn-medical text-lg px-8 py-6 group"
-                onClick={() => window.location.href = '/register'}
-              >
-                Join AIMedNet Today
-                <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
-              </Button>
+              {!user && (
+                <Button 
+                  size="lg" 
+                  className="btn-medical text-lg px-8 py-6 group"
+                  // CHANGE 4: Use navigate function for SPA-friendly routing
+                  onClick={() => navigate('/register')}
+                >
+                  Join AIMedNet Today
+                  <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                </Button>
+              )}
               
               <Button 
                 variant="outline" 
                 size="lg"
                 className="text-lg px-8 py-6 border-primary text-primary hover:bg-primary/5"
-                onClick={() => window.location.href = '/forums'}
+                // CHANGE 5: Use navigate function and update to the correct path
+                onClick={() => navigate('/community/forums')}
               >
                 Explore Platform
               </Button>
