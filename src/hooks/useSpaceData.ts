@@ -86,28 +86,36 @@ export const useSpaceMetrics = (spaceId: string) => {
 export const useSpaceMemberList = (spaceId: string) => {
     const [memberList, setMemberList] = useState<MemberProfile[]>([]);
     const [isLoadingList, setIsLoadingList] = useState(true);
+    // --- 1. ADD REFRESH TRIGGER STATE ---
+    const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+    // --- 2. WRAP FETCH LOGIC IN useCallback ---
+    const fetchList = useCallback(async () => {
+        if (!spaceId) {
+            setIsLoadingList(false);
+            return;
+        }
+        setIsLoadingList(true);
+        try {
+            const list = await getSpaceMemberList(spaceId); 
+            setMemberList(list);
+        } catch (e) {
+            console.warn(`Access check: Failed to fetch full member list for ${spaceId}.`, e);
+            setMemberList([]); 
+        } finally {
+            setIsLoadingList(false);
+        }
+    }, [spaceId]); // Depends only on spaceId
 
     useEffect(() => {
-        const fetchList = async () => {
-             if (!spaceId) {
-                setIsLoadingList(false);
-                return;
-            }
-            setIsLoadingList(true);
-            try {
-                const list = await getSpaceMemberList(spaceId); 
-                setMemberList(list);
-            } catch (e) {
-                console.warn(`Access check: Failed to fetch full member list for ${spaceId}.`, e);
-                setMemberList([]); 
-            } finally {
-                setIsLoadingList(false);
-            }
-        };
         fetchList();
-    }, [spaceId]);
+        // --- 3. ADD refreshTrigger TO DEPENDENCY ARRAY ---
+    }, [fetchList, refreshTrigger]);
 
-    return { memberList, isLoadingList };
+    // --- 4. CREATE AND RETURN THE REFRESH FUNCTION ---
+    const refreshMemberList = () => setRefreshTrigger(prev => prev + 1);
+
+    return { memberList, isLoadingList, refreshMemberList };
 };
 
 export const usePendingRequests = (spaceId?: string, isUserAdminOrMod?: boolean) => {
