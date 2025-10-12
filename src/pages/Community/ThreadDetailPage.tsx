@@ -86,7 +86,7 @@ export default function ThreadDetailPage() {
     <AuthGuard>
       <div className="flex flex-col h-screen bg-background">
         <Header />
-        <main className="flex-grow w-full max-w-7xl mx-auto flex flex-col py-4 px-4">
+        <main className="flex-grow w-full flex flex-col py-4 px-4">
           <header>
             {isLoading ? (
               <div className="space-y-2">
