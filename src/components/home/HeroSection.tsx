@@ -39,7 +39,6 @@ export const HeroSection = () => {
 
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row gap-4">
-              <Button 
               {!user && (
                 <Button 
                   size="lg" 
