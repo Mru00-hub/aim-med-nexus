@@ -45,46 +45,61 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setLoading(true);
-      setSession(session);
-      setUser(session?.user ?? null);
+    // 1. Define an async function to get the initial session and profile.
+    const initializeSession = async () => {
+      // Get the initial session data
+      const { data: { session: initialSession }, error: sessionError } = await supabase.auth.getSession();
 
-      if (session?.user) {
-        // This is the logic from your initializeSession function
+      if (sessionError) {
+        console.error("Error getting session:", sessionError);
+        toast({ title: "Error", description: "Could not initialize session.", variant: "destructive" });
+        setLoading(false);
+        return;
+      }
+
+      if (initialSession) {
+        // If a session exists, fetch the corresponding profile
         const { data: userProfile, error: profileError } = await supabase
           .from('profiles')
           .select('*')
-          .eq('id', session.user.id)
+          .eq('id', initialSession.user.id)
           .single();
-
+        
         if (profileError && profileError.code !== 'PGRST116') {
-          console.error("Error fetching profile:", profileError);
+          console.error("Error fetching initial profile:", profileError);
           toast({ title: "Could not load profile", description: profileError.message, variant: "destructive" });
         } else {
           setProfile(userProfile);
-          
-          // This is the new redirection logic
-          if (userProfile && userProfile.is_onboarded) {
-            if (location.pathname === '/login' || location.pathname === '/register') {
-              navigate('/community', { replace: true });
-            }
-          } else {
-            if (location.pathname !== '/complete-profile') {
-              navigate('/complete-profile', { replace: true });
-            }
-          }
         }
-      } else {
-        setProfile(null);
+        
+        // Set user and session state
+        setUser(initialSession.user);
+        setSession(initialSession);
       }
+      
+      // We are done with the initial load
       setLoading(false);
+    };
+
+    // 2. Call the initialization function.
+    initializeSession();
+
+    // 3. Set up the listener for ANY SUBSEQUENT auth changes.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      // This listener now only worries about *changes* after the initial load.
+      setSession(newSession);
+      setUser(newSession?.user ?? null);
+      // We call the async function here to re-fetch the profile when the user changes.
+      // This also handles the case where the user logs out (newSession becomes null).
+      initializeSession(); 
     });
 
+    // 4. Unsubscribe from the listener when the component unmounts.
     return () => {
       subscription.unsubscribe();
     };
-  }, [navigate, location.pathname, toast]);
+  }, []);
+
   // --- No changes needed for the functions below ---
   const signUp = async (email: string, password: string, metadata?: any) => {
     setLoading(true);
