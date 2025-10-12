@@ -187,11 +187,11 @@ export const Message: React.FC<MessageProps> = ({
                 {showActions && (
                     <div className={cn(
                         "absolute z-10 flex items-center bg-card border rounded-full shadow-md",
-                        "bottom-full mb-1",
-                        "md:top-[8px] md:bottom-auto",
+                        // Consistent positioning for all screen sizes:
+                        "top-[-16px]", // Position it slightly above the message bubble
                         isCurrentUser
-                          ? "right-0 md:right-full md:mr-2"
-                          : "left-0 md:left-full md:ml-2"
+                          ? "right-2" // Place it on the right for the current user
+                          : "left-2"  // Place it on the left for other users
                     )}>
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); onReplyClick(message); setShowActions(false); }} title="Reply"><Reply className="h-4 w-4" /></Button>
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); setShowPicker(p => !p); }} title="Add Reaction"><SmilePlus className="h-4 w-4" /></Button>
