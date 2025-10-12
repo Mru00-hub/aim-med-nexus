@@ -15,6 +15,8 @@ import { MemberList } from '@/components/forums/MemberList';
 import { useToast } from '@/components/ui/use-toast';
 import { ArrowLeft } from 'lucide-react';
 import { Enums } from '@/integrations/supabase/types';
+import { DisplayMember } from '@/components/forums/MemberCard';
+
 
 export default function MembersPage() {
     const { spaceId } = useParams<{ spaceId: string }>();
@@ -33,6 +35,16 @@ export default function MembersPage() {
     }, [user, memberList]);
 
     const { pendingRequests, isLoadingRequests, refreshPendingRequests } = usePendingRequests(spaceId, isUserAdminOrMod);
+
+    const mapPendingRequestToMember = (requests: PendingRequest[]): DisplayMember[] => {
+        return requests.map(r => ({
+            user_id: r.user_id, // The DisplayMember type needs user_id
+            membership_id: r.membership_id,
+            full_name: r.full_name,
+            profile_picture_url: r.profile_picture_url,
+            role: 'MEMBER', // Pending requests are always for the 'MEMBER' role
+        }));
+    };
 
     const handleMembershipUpdate = useCallback(async (membershipId: string, newStatus: Enums<'membership_status'>) => {
         try {
@@ -84,7 +96,7 @@ export default function MembersPage() {
                                 members={pendingRequests.map(r => ({ ...r, role: 'MEMBER' }))} // FIX #1 HERE
                                 isLoading={isLoadingRequests}
                                 emptyStateMessage="No pending requests."
-                                isAdminView={true} 
+                                isCurrentUserAdmin={isUserAdminOrMod} 
                                 onApprove={(membershipId) => handleMembershipUpdate(membershipId, 'ACTIVE')}
                                 onReject={(membershipId) => handleMembershipUpdate(membershipId, 'BANNED')} // Note: Rejecting sets status to BANNED
                             />
