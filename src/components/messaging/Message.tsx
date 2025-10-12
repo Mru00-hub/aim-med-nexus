@@ -174,7 +174,7 @@ export const Message: React.FC<MessageProps> = ({
                 </Avatar>
             )}
             
-            <div className={cn("flex flex-col w-full max-w-lg relative", isCurrentUser ? "items-end" : "items-start")}>
+            <div className={cn("flex flex-col w-full relative", isCurrentUser ? "items-end" : "items-start")}>
                 <div className="flex items-center gap-2 mb-1">
                     <span className="font-bold text-sm">{displayName}</span>
                     <span className="text-xs text-muted-foreground">{new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
