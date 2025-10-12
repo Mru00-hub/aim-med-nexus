@@ -1,242 +1,402 @@
-// src/pages/CompleteProfile.tsx
-
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/integrations/supabase/client';
-
-// UI Components
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from '@/components/ui/use-toast';
-import { Skeleton } from "@/components/ui/skeleton"; // Import Skeleton
-import { Save } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { Save, AlertCircle } from 'lucide-react';
+import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
-// Reusable Form Field Components
-import { EducationalFields, ProfessionalFields, PremiumFields } from './FormFields';
-
-// --- NEW SKELETON COMPONENT ---
-const CompleteProfileSkeleton = () => {
-  return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      <main className="container-medical py-12 px-4 sm:px-6">
-        <Card className="card-medical max-w-2xl mx-auto">
-          <CardHeader>
-            <Skeleton className="h-8 w-3/4" />
-            <Skeleton className="h-4 w-full mt-2" />
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-8">
-              <div className="flex flex-col items-center space-y-2">
-                <Skeleton className="h-24 w-24 rounded-full" />
-                <Skeleton className="h-4 w-24" />
-              </div>
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-20" />
-                <Skeleton className="h-10 w-full" />
-              </div>
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-28" />
-                <Skeleton className="h-10 w-full" />
-              </div>
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-32" />
-                <Skeleton className="h-10 w-full" />
-              </div>
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-24" />
-                <Skeleton className="h-24 w-full" />
-              </div>
-              <Skeleton className="h-12 w-full" />
-            </div>
-          </CardContent>
-        </Card>
-      </main>
-      <Footer />
-    </div>
-  );
+const DB_EXPERIENCE_MAP: { [key: string]: string } = {
+  // Map correct values to themselves
+  'fresh': 'fresh',
+  'one_to_three': 'one_to_three',
+  'three_to_five': 'three_to_five',
+  'five_to_ten': 'five_to_ten',
+  'ten_plus': 'ten_plus',
+  // Map common incorrect UI values to the correct DB enum
+  '1-3': 'one_to_three',
+  '3-5': 'three_to_five',
+  '5-10': 'five_to_ten',
+  '10+': 'ten_plus',
 };
 
 const generateUniqueColor = (id: string): string => {
   let hash = 0;
   for (let i = 0; i < id.length; i++) {
     hash = id.charCodeAt(i) + ((hash << 5) - hash);
+    hash = hash & hash; // Convert to 32bit integer
   }
+  // Generate a vibrant, non-grayish color using HSL
   const hue = hash % 360;
-  const saturation = 70 + (hash % 21);
-  const lightness = 40 + (hash % 21);
+  const saturation = 70 + (hash % 21); // 70% to 90%
+  const lightness = 40 + (hash % 21);  // 40% to 60%
+
   return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
 };
 
-
 const CompleteProfile = () => {
+  console.log("[CompleteProfile] Component mounted");
+  
   const navigate = useNavigate();
   const { user, profile, loading: authLoading, refreshProfile } = useAuth();
   const { toast } = useToast();
-  const [searchParams] = useSearchParams();
-  const userRole = searchParams.get('role');
-
+  
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
-
+  
   const [formData, setFormData] = useState({
-    full_name: '', phone: '', current_location: '', otherLocation: '', bio: '',
-    institution: '', otherInstitution: '', course: '', otherCourse: '', year_of_study: '',
-    current_position: '', organization: '', specialization: '', otherSpecialization: '',
-    years_experience: '', medical_license: '',
+    full_name: '',
+    phone: '',
+    current_location: '',
+    current_position: '',
+    organization: '',
+    bio: '',
+    resume_url: '',
+    skills: '',
   });
 
+  console.log("[CompleteProfile] Current state:");
+  console.log("[CompleteProfile] authLoading:", authLoading);
+  console.log("[CompleteProfile] user:", user ? user.id : "null");
+  console.log("[CompleteProfile] profile:", profile ? "exists" : "null");
+
   useEffect(() => {
-    if (!authLoading && !userRole) {
-      console.warn("User landed on complete-profile without a role. Redirecting.");
-      navigate('/select-role', { replace: true });
-      return;
-    }
+    console.log("[CompleteProfile] useEffect triggered");
+    console.log("[CompleteProfile] User:", user ? user.id : "null");
+    console.log("[CompleteProfile] Profile:", profile ? "exists" : "null");
+    
+    try {
+      if (user) {
+        console.log("[CompleteProfile] Processing user data");
+        const metadata = user.user_metadata || {};
+        console.log("[CompleteProfile] User metadata:", JSON.stringify(metadata, null, 2));
+        
+        // Map metadata to form fields - COMPLETE MAPPING
+        const mappedData = {
+          full_name: metadata.full_name || '',
+          phone: metadata.phone || '',
+          current_location: metadata.current_location || '',
+          current_position: metadata.current_position || '',
+          organization: metadata.organization || '',
+          bio: '',
+          resume_url: '',
+          skills: metadata.specialization ? metadata.specialization : '',
+        };
 
-    if (user) {
-      const metadata = user.user_metadata || {};
-      setFormData(prev => ({ ...prev, full_name: metadata.full_name || '' }));
-      
-      if (metadata.full_name && !profile?.profile_picture_url) {
-        const uniqueColor = generateUniqueColor(user.id).replace('#', '');
-        const generatedUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(
-          metadata.full_name
-        )}&background=${uniqueColor}&color=fff&size=256`;
-        setAvatarUrl(generatedUrl);
+        console.log("[CompleteProfile] Mapped form data:", JSON.stringify(mappedData, null, 2));
+        setFormData(mappedData);
+
+        if (metadata.full_name) {
+          const uniqueColor = generateUniqueColor(user.id); // Use the new function
+          const generatedUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(
+            metadata.full_name
+          )}&background=${uniqueColor}&color=fff&size=256`; // Use the unique color
+          console.log("[CompleteProfile] Generated unique avatar URL:", generatedUrl);
+          setAvatarUrl(generatedUrl);
+        }
       }
-    }
 
-    if (profile) {
-       setAvatarUrl(profile.profile_picture_url || avatarUrl);
-    }
-  }, [user, profile, userRole, navigate, authLoading, avatarUrl]);
+      // If profile exists (editing scenario), override with profile data
+      if (profile) {
+        console.log("[CompleteProfile] Profile exists - entering EDIT mode");
+        console.log("[CompleteProfile] Profile data:", JSON.stringify(profile, null, 2));
+        
+        const skillsString = profile.skills && Array.isArray(profile.skills) 
+          ? profile.skills.join(', ') 
+          : '';
 
+        const profileData = {
+          full_name: profile.full_name || '',
+          phone: profile.phone || '',
+          current_location: profile.current_location || '',
+          current_position: profile.current_position || '',
+          organization: profile.organization || '',
+          bio: profile.bio || '',
+          resume_url: profile.resume_url || '',
+          skills: skillsString,
+        };
+        
+        console.log("[CompleteProfile] Profile-based form data:", JSON.stringify(profileData, null, 2));
+        setFormData(profileData);
+
+        if (profile.profile_picture_url) {
+          console.log("[CompleteProfile] Using existing avatar:", profile.profile_picture_url);
+          setAvatarUrl(profile.profile_picture_url);
+        }
+      }
+    } catch (e: any) {
+      console.error("[CompleteProfile] Error processing data:", e);
+      console.error("[CompleteProfile] Error message:", e.message);
+      console.error("[CompleteProfile] Error stack:", e.stack);
+      setError("Failed to load your profile data. Please try refreshing the page.");
+    }
+  }, [profile, user]);
 
   const handleInputChange = (field: string, value: string) => {
+    console.log(`[CompleteProfile] Field changed: ${field} = ${value.substring(0, 50)}...`);
     setFormData(prev => ({ ...prev, [field]: value }));
-  };
-  
-  const handleSelectChange = (field: string, value: string) => {
-    setFormData(prev => ({...prev, [field]: value}));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !userRole) {
-      toast({ title: "Error", description: "Session invalid. Please try again.", variant: "destructive" });
+    console.log("[CompleteProfile] Form submitted");
+    
+    if (!user) {
+      console.error("[CompleteProfile] No user found");
+      setError("User not found. Please log in again.");
       return;
     }
-    setIsSubmitting(true);
-
-    const finalData = {
-      id: user.id, email: user.email, full_name: formData.full_name,
-      phone: formData.phone, user_role: userRole,
-      current_location: formData.current_location === 'other' ? formData.otherLocation : formData.current_location,
-      bio: formData.bio, institution: formData.institution === 'other' ? formData.otherInstitution : formData.institution,
-      course: formData.course === 'other' ? formData.otherCourse : formData.course,
-      year_of_study: formData.year_of_study, current_position: formData.current_position,
-      organization: formData.organization, specialization: formData.specialization === 'other' ? formData.otherSpecialization : formData.specialization,
-      years_experience: formData.years_experience, medical_license: formData.medical_license,
-      profile_picture_url: avatarUrl, is_onboarded: true,
-    };
     
-    if (userRole === 'student') {
-      delete (finalData as any).current_position; delete (finalData as any).organization;
-      delete (finalData as any).specialization; delete (finalData as any).years_experience; delete (finalData as any).medical_license;
-    } else {
-      delete (finalData as any).year_of_study;
-    }
-    if (userRole !== 'premium') {
-      delete (finalData as any).medical_license;
-    }
+    console.log("[CompleteProfile] Submitting for user:", user.id);
+    console.log("[CompleteProfile] Form data:", JSON.stringify(formData, null, 2));
+    
+    setIsSubmitting(true);
+    setError('');
 
-    const { error } = await supabase.from('profiles').upsert(finalData);
+    try {
+      const metadata = user.user_metadata || {};
+      console.log("[CompleteProfile] User metadata for profile creation:", JSON.stringify(metadata, null, 2));
+      
+      const skillsArray = formData.skills
+        .split(',')
+        .map(s => s.trim())
+        .filter(Boolean);
+      console.log("[CompleteProfile] Processed skills array:", skillsArray);
 
-    setIsSubmitting(false);
+      const uniqueColor = generateUniqueColor(user.id);
 
-    if (error) {
-      console.error("Error saving profile:", error);
-      toast({ title: "Error", description: `Could not save your profile. ${error.message}`, variant: "destructive" });
-    } else {
-      toast({ title: "Profile Saved!", description: "Welcome to AIMedNet!" });
-      await refreshProfile();
-      if (userRole === 'premium') {
-         navigate('/payment', { replace: true });
-      } else {
-         navigate('/community', { replace: true });
+      const finalAvatarUrl = avatarUrl || 
+        `https://ui-avatars.com/api/?name=${encodeURIComponent(
+          formData.full_name
+        )}&background=${encodedColor.replace('%20', '')}&color=fff&size=256&bold=true`;
+      console.log("[CompleteProfile] Final avatar URL:", finalAvatarUrl);
+
+      const rawExperienceValue = metadata.years_experience || null;
+      const mappedExperienceValue = rawExperienceValue ? DB_EXPERIENCE_MAP[rawExperienceValue] || null : null;
+
+      // Complete profile data with metadata fallbacks
+      const profileData = {
+        id: user.id,
+        email: user.email || metadata.email,
+        full_name: formData.full_name,
+        phone: formData.phone,
+        user_role: metadata.user_role || 'professional',
+        current_location: formData.current_location,
+        profile_picture_url: finalAvatarUrl,
+        bio: formData.bio,
+        years_experience: mappedExperienceValue,
+        is_verified: metadata.email_verified || false,
+        institution: metadata.institution || null,
+        course: metadata.course || null,
+        year_of_study: metadata.year_of_study || null,
+        current_position: formData.current_position,
+        organization: formData.organization,
+        specialization: metadata.specialization || null,
+        medical_license: metadata.medical_license || null,
+        resume_url: formData.resume_url,
+        skills: skillsArray,
+        is_onboarded: true,
+      };
+
+      console.log("[CompleteProfile] Final profile data to upsert:");
+      console.log(JSON.stringify(profileData, null, 2));
+      console.log("[CompleteProfile] Calling Supabase upsert...");
+
+      const { data: upsertedData, error: upsertError } = await supabase
+        .from('profiles')
+        .upsert(profileData) // 1. Perform the upsert operation first
+        .select()           // 2. Then, select the data that was just upserted
+        .single();
+      if (upsertError) {
+        console.error("[CompleteProfile] Upsert failed");
+        console.error("[CompleteProfile] Error code", upsertError.code);
+        console.error("[CompleteProfile] Error message", upsertError.message);
+        console.error("[CompleteProfile] Error details:", upsertError.details);
+        console.error("[CompleteProfile] Full error object:", JSON.stringify(upsertError, null, 2));
+        // Check for specific error types
+        if (upsertError.code === '42501') {
+          console.error("[CompleteProfile] RLS POLICY ERROR - User doesn't have permission");
+          throw new Error("Permission denied. Please contact support about RLS policies.");
+        } else if (upsertError.code === '23505') {
+          console.error("[CompleteProfile] UNIQUE CONSTRAINT VIOLATION");
+          throw new Error("A profile with this ID already exists.");
+        } else {
+          throw upsertError;
+        }
       }
+
+      console.log("[CompleteProfile] Profile saved successfully!");
+      // Now the 'upsertedData' variable exists and this line will work correctly
+      console.log("[CompleteProfile] Upserted data:", JSON.stringify(upsertedData, null, 2));
+      toast({
+        title: "Profile Saved!",
+        description: "Your profile has been created successfully.",
+      });
+
+      await refreshProfile();
+      console.log("[CompleteProfile] Navigating to /community");
+      navigate('/community', { replace: true });
+
+    } catch (err: any) {
+      console.error("[CompleteProfile] Fatal error in handleSubmit:", err);
+      console.error("[CompleteProfile] Error type:", err.constructor.name);
+      console.error("[CompleteProfile] Error message:", err.message);
+      console.error("[CompleteProfile] Error stack:", err.stack);
+      
+      const errorMessage = `Failed to save profile: ${err.message}`;
+      console.error("[CompleteProfile] Showing error to user:", errorMessage);
+      
+      setError(errorMessage); // Set the error state to display it in the UI
+      toast({
+        title: "Save Failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false); // Ensure the button is re-enabled on success or failure
+      // The navigate call has been removed. The user stays on the page.
     }
   };
 
-  if (authLoading || !userRole) {
-    return <CompleteProfileSkeleton />;
+  const handleSkip = async () => {
+    if (!user) {
+        toast({ title: "Error", description: "User not found.", variant: "destructive" });
+        return;
+    }
+    setIsSubmitting(true);
+    console.log("[CompleteProfile] User clicked Skip. Marking as onboarded.");
+    
+    const { error: skipError } = await supabase
+        .from('profiles')
+        .update({ is_onboarded: true })
+        .eq('id', user.id);
+
+    if (skipError) {
+        toast({ title: "Error", description: "Could not process request. Please try again.", variant: "destructive" });
+        setIsSubmitting(false);
+    } else {
+        await refreshProfile(); // Refresh the context
+        navigate('/community', { replace: true });
+    }
+  };
+
+  if (authLoading) {
+    console.log("[CompleteProfile] Auth still loading, showing skeleton");
+    return <PageSkeleton />;
   }
 
+  if (error) {
+    console.log("[CompleteProfile] Error state, showing error alert");
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <main className="container-medical flex items-center justify-center py-20 px-4">
+          <Alert variant="destructive" className="max-w-lg">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>An Error Occurred</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (!user) {
+    console.log("[CompleteProfile] No user found, showing skeleton");
+    return <PageSkeleton />;
+  }
+
+  console.log("[CompleteProfile] Rendering form");
   return (
     <div className="min-h-screen bg-background">
       <Header />
       <main className="container-medical py-12 px-4 sm:px-6">
         <Card className="card-medical max-w-2xl mx-auto">
           <CardHeader>
-            <CardTitle className="text-2xl sm:text-3xl">Complete Your {userRole.charAt(0).toUpperCase() + userRole.slice(1)} Profile</CardTitle>
+            <CardTitle className="text-2xl sm:text-3xl">
+              {profile ? "Edit Your Profile" : "Complete Your Profile"}
+            </CardTitle>
             <CardDescription>
-              Welcome! Please provide the following details to get started.
+              {profile 
+                ? "Keep your professional information up to date."
+                : "Welcome! Please review your information and add a few more details."}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
+            {avatarUrl && (
               <div className="flex flex-col items-center mb-8 space-y-2">
                 <Avatar className="h-24 w-24 border-2 border-primary/50">
                   <AvatarImage src={avatarUrl} alt={formData.full_name} />
-                  <AvatarFallback>{formData.full_name?.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                  <AvatarFallback>
+                    {formData.full_name?.split(' ').map(n => n[0]).join('')}
+                  </AvatarFallback>
                 </Avatar>
-                <p className="text-sm text-muted-foreground">Your profile avatar</p>
+                <p className="text-sm text-muted-foreground">
+                  Your profile avatar
+                </p>
               </div>
+            )}
+            
+            <form onSubmit={handleSubmit} className="space-y-6">
               <div>
                 <label className="block text-sm font-medium mb-2">Full Name *</label>
                 <Input value={formData.full_name} onChange={(e) => handleInputChange('full_name', e.target.value)} required />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2">Phone Number</label>
-                <Input type="tel" value={formData.phone} onChange={(e) => handleInputChange('phone', e.target.value)} placeholder="+91 XXXXX XXXXX" />
+                <label className="block text-sm font-medium mb-2">Current Position</label>
+                <Input value={formData.current_position} onChange={(e) => handleInputChange('current_position', e.target.value)} placeholder="e.g., Resident Doctor, Medical Student" />
               </div>
-
-              <EducationalFields formData={formData} onSelectChange={handleSelectChange} onInputChange={handleInputChange} />
-              
-              {userRole === 'student' && (
-                <div>
-                  <label className="block text-sm font-medium mb-2">Year/Status *</label>
-                  <Select value={formData.year_of_study} onValueChange={(value) => handleSelectChange('year_of_study', value)}>
-                    <SelectTrigger><SelectValue placeholder="Current year/status" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1">1st Year</SelectItem>
-                      <SelectItem value="2">2nd Year</SelectItem>
-                      <SelectItem value="3">3rd Year</SelectItem>
-                      <SelectItem value="4">4th Year</SelectItem>
-                      <SelectItem value="intern">Internship</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-
-              {userRole === 'professional' && <ProfessionalFields formData={formData} onSelectChange={handleSelectChange} onInputChange={handleInputChange} />}
-              {userRole === 'premium' && <PremiumFields formData={formData} onSelectChange={handleSelectChange} onInputChange={handleInputChange} />}
-
+               <div>
+                <label className="block text-sm font-medium mb-2">Organization</label>
+                <Input value={formData.organization} onChange={(e) => handleInputChange('organization', e.target.value)} placeholder="e.g., City Hospital, AIIMS Delhi" />
+              </div>
+               <div>
+                <label className="block text-sm font-medium mb-2">Location</label>
+                <Input value={formData.current_location} onChange={(e) => handleInputChange('current_location', e.target.value)} placeholder="e.g., Nagpur, India" />
+              </div>
+               <div>
+                <label className="block text-sm font-medium mb-2">Phone</label>
+                <Input value={formData.phone} onChange={(e) => handleInputChange('phone', e.target.value)} placeholder="+91 XXXXX XXXXX" />
+              </div>
               <div>
                 <label className="block text-sm font-medium mb-2">Professional Bio</label>
                 <Textarea value={formData.bio} onChange={(e) => handleInputChange('bio', e.target.value)} placeholder="A brief summary of your background, interests, and goals..." rows={4} />
               </div>
-
-              <Button type="submit" size="lg" className="btn-medical w-full" disabled={isSubmitting}>
-                {isSubmitting ? 'Saving...' : (userRole === 'premium' ? 'Proceed to Payment' : 'Save Profile')}
-                <Save className="ml-2 h-5 w-5" />
-              </Button>
+              <div>
+                <label className="block text-sm font-medium mb-2">Skills (comma-separated)</label>
+                <Textarea value={formData.skills} onChange={(e) => handleInputChange('skills', e.target.value)} placeholder="e.g., Cardiology, Python, Public Speaking" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Resume/CV URL</label>
+                <Input type="url" value={formData.resume_url} onChange={(e) => handleInputChange('resume_url', e.target.value)} placeholder="https://linkedin.com/in/your-profile/..." />
+              </div>
+              
+              <div className="flex gap-4">
+                <Button type="submit" size="lg" className="btn-medical flex-1" disabled={isSubmitting}>
+                  {isSubmitting ? 'Saving...' : 'Save Profile'}
+                  <Save className="ml-2 h-5 w-5" />
+                </Button>
+                
+                <Button 
+                  type="button"
+                  variant="outline"
+                  size="lg"
+                  onClick={handleSkip}
+                  disabled={isSubmitting}
+                >
+                  Skip for Now
+                </Button>
+              </div>
             </form>
           </CardContent>
         </Card>
@@ -245,5 +405,29 @@ const CompleteProfile = () => {
     </div>
   );
 };
+
+const PageSkeleton = () => (
+  <div className="min-h-screen bg-background">
+    <Header />
+    <main className="container-medical py-12 px-4 sm:px-6">
+      <Card className="card-medical max-w-2xl mx-auto">
+        <CardHeader>
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="h-4 w-64 mt-2" />
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="flex flex-col items-center mb-8 space-y-2">
+            <Skeleton className="h-24 w-24 rounded-full" />
+          </div>
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-24 w-full" />
+          <Skeleton className="h-12 w-full" />
+        </CardContent>
+      </Card>
+    </main>
+    <Footer />
+  </div>
+);
 
 export default CompleteProfile;
