@@ -56,7 +56,7 @@ export const HeroSection = () => {
                 size="lg"
                 className="text-lg px-8 py-6 border-primary text-primary hover:bg-primary/5"
                 // CHANGE 5: Use navigate function and update to the correct path
-                onClick={() => navigate('/community/forums')}
+                onClick={() => navigate('/community')}
               >
                 Explore Platform
               </Button>
