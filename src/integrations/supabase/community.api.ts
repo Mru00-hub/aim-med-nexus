@@ -24,7 +24,7 @@ export type SpaceWithDetails = Space & {
 };
 
 export type MemberProfile = {
-    user_id: string; // This is the user's ID (from profiles table)
+    id: string; // This is the user's ID (from profiles table)
     membership_id: string; // This is the ID of the membership row itself
     full_name: string;
     profile_picture_url: string | null;
@@ -188,7 +188,7 @@ export const getSpaceMemberList = async (spaceId: string): Promise<MemberProfile
     if (error) throw error;
 
     const members: MemberProfile[] = data.map(m => ({
-        user_id: m.user_id,
+        id: m.user_id,
         membership_id: m.id, // <-- Add the membership_id
         role: m.role,
         full_name: m.profiles.full_name || 'Anonymous User',
