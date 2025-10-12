@@ -45,66 +45,60 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
-    // 1. Set up the listener for auth changes first.
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, newSession) => {
-        // Get the current user ID before the state updates
-        const currentUserId = user?.id;
-        
-        // Update session and user state immediately. This is lightweight.
-        setSession(newSession);
-        setUser(newSession?.user ?? null);
+    // 1. Define an async function to get the initial session and profile.
+    const initializeSession = async () => {
+      // Get the initial session data
+      const { data: { session: initialSession }, error: sessionError } = await supabase.auth.getSession();
 
-        // This is the crucial logic:
-        // Only do a disruptive profile fetch if the USER has actually changed.
-        if (newSession?.user && newSession.user.id !== currentUserId) {
-          // A new user has logged in. Set loading state and fetch their profile.
-          setLoading(true);
-          supabase.from('profiles').select('*, is_onboarded').eq('id', newSession.user.id).single()
-            .then(({ data: userProfile, error: profileError }) => {
-              if (profileError && profileError.code !== 'PGRST116') throw profileError;
-              setProfile(userProfile);
-            })
-            .catch(error => console.error("Error fetching new user profile:", error))
-            .finally(() => setLoading(false));
-
-        } else if (!newSession?.user && currentUserId) {
-          // The user has logged out. Clear the profile.
-          setProfile(null);
-        }
-        // If the session is refreshed for the SAME user, we do nothing disruptive.
-        // The session token is updated silently, and no major re-render is triggered.
-      }
-    );
-
-    // 2. On initial page load, we still need to set the initial state.
-    // We set loading to true only for this very first check.
-    setLoading(true);
-    supabase.auth.getSession().then(({ data: { session: initialSession } }) => {
-        if (initialSession) {
-            supabase.from('profiles').select('*, is_onboarded').eq('id', initialSession.user.id).single()
-            .then(({ data: userProfile, error: profileError }) => {
-              if (profileError && profileError.code !== 'PGRST116') throw profileError;
-              setProfile(userProfile);
-            })
-            .catch(error => {
-                console.error("Error fetching initial profile:", error);
-                // Optionally, show a toast to the user
-                toast({
-                    title: "Could not load profile",
-                    description: "There was an issue fetching your profile data.",
-                    variant: "destructive"
-                });
-            });
-        }
-    }).finally(() => {
+      if (sessionError) {
+        console.error("Error getting session:", sessionError);
+        toast({ title: "Error", description: "Could not initialize session.", variant: "destructive" });
         setLoading(false);
+        return;
+      }
+
+      if (initialSession) {
+        // If a session exists, fetch the corresponding profile
+        const { data: userProfile, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', initialSession.user.id)
+          .single();
+        
+        if (profileError && profileError.code !== 'PGRST116') {
+          console.error("Error fetching initial profile:", profileError);
+          toast({ title: "Could not load profile", description: profileError.message, variant: "destructive" });
+        } else {
+          setProfile(userProfile);
+        }
+        
+        // Set user and session state
+        setUser(initialSession.user);
+        setSession(initialSession);
+      }
+      
+      // We are done with the initial load
+      setLoading(false);
+    };
+
+    // 2. Call the initialization function.
+    initializeSession();
+
+    // 3. Set up the listener for ANY SUBSEQUENT auth changes.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      // This listener now only worries about *changes* after the initial load.
+      setSession(newSession);
+      setUser(newSession?.user ?? null);
+      // We call the async function here to re-fetch the profile when the user changes.
+      // This also handles the case where the user logs out (newSession becomes null).
+      initializeSession(); 
     });
 
+    // 4. Unsubscribe from the listener when the component unmounts.
     return () => {
       subscription.unsubscribe();
     };
-  }, []); // Keep the empty dependency array. The logic inside now correctly handles state changes..
+  }, []);
 
   // --- No changes needed for the functions below ---
   const signUp = async (email: string, password: string, metadata?: any) => {
