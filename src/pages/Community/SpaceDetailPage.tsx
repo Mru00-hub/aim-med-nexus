@@ -57,7 +57,7 @@ export default function SpaceDetailPage() {
   // Memoized check to find the current user's role in this space.
   const currentUserMembership = useMemo(() => {
     if (!user || !memberList) return null;
-    return memberList.find(member => member.user_id === user.id);
+    return memberList.find(member => member.id === user.id);
   }, [user, memberList]);
   
   // Memoized permission check for administrative actions.
