@@ -27,6 +27,7 @@ interface MessageProps {
     message: MessageWithDetails;
     currentUserId: string;
     onDelete: (messageId: number) => void;
+    onEditMessage: (messageId: number, newBody: string) => void; 
     onReplyClick: (message: MessageWithDetails) => void;
     onReaction: (messageId: number, emoji: string) => void;
 }
@@ -81,6 +82,7 @@ export const Message: React.FC<MessageProps> = ({
     message, 
     currentUserId, 
     onDelete,
+    onEditMessage, 
     onReplyClick,
     onReaction 
 }) => {
@@ -118,15 +120,9 @@ export const Message: React.FC<MessageProps> = ({
             setIsEditing(false);
             return;
         }
-        try {
-            await editMessage(message.id, editedBody);
-            toast({ title: 'Message Updated' });
-            // The UI will update via the real-time subscription in the parent
-        } catch (error: any) {
-            toast({ variant: 'destructive', title: 'Edit Failed', description: error.message });
-        } finally {
-            setIsEditing(false);
-        }
+        // Call the parent's handler function instead of the API
+        onEditMessage(message.id, editedBody); 
+        setIsEditing(false);
     };
 
     const messageContent = isEditing ? (
