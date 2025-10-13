@@ -298,6 +298,7 @@ export const ThreadView: React.FC<ThreadViewProps> = ({ threadId }) => {
                         message={msg} 
                         currentUserId={user?.id || ''}
                         onDelete={handleDeleteMessage}
+                        onEditMessage={handleEditMessage}
                         onReplyClick={handleReplyClick}
                         onReaction={handleReaction}
                     />
