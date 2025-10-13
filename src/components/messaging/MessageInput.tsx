@@ -194,14 +194,12 @@ const MessageInputComponent = forwardRef<HTMLTextAreaElement, MessageInputProps>
                     size="icon" 
                     className="self-end"
                     title="Attach Files"
-                    asChild // This prop allows the Button to act as a container for the label
+                    asChild
                 >
-                    {/* The pointer-events-none is important to ensure the label receives the click */}
-                    <span className="cursor-pointer pointer-events-none"> 
-                        <Paperclip className="h-5 w-5" />
-                    </span>
+                    <label htmlFor="file-attachment-input" className="cursor-pointer">
+                      <Paperclip className="h-5 w-5" />
+                    </label>
                 </Button>
-            </label>
     
             {/* --- END OF REPLACEMENT --- */}
 
