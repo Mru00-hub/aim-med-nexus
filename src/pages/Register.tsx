@@ -485,23 +485,24 @@ const Register = () => {
                             </div>
                           )}
                         </div>
-                        <div>
-                          <label className="block text-sm font-medium mb-2">Year/Status *</label>
-                          <Select value={formData.yearOfStudy} onValueChange={(value) => handleInputChange('yearOfStudy', value)}>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Current year/status" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="1">1st Year</SelectItem>
-                              <SelectItem value="2">2nd Year</SelectItem>
-                              <SelectItem value="3">3rd Year</SelectItem>
-                              <SelectItem value="4">4th Year</SelectItem>
-                              <SelectItem value="5">5th Year</SelectItem>
-                              <SelectItem value="intern">Internship</SelectItem>
-                              <SelectItem value="graduated">Graduated</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
+                        {registrationType === 'student' && (
+                          <div>
+                            <label className="block text-sm font-medium mb-2">Year/Status *</label>
+                            <Select value={formData.yearOfStudy} onValueChange={(value) => handleInputChange('yearOfStudy', value)}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Current year/status" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="1">1st Year</SelectItem>
+                                <SelectItem value="2">2nd Year</SelectItem>
+                                <SelectItem value="3">3rd Year</SelectItem>
+                                <SelectItem value="4">4th Year</SelectItem>
+                                <SelectItem value="intern">Internship</SelectItem>
+                                <SelectItem value="graduated">Graduated</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        )}
                       </div>
 
                       {/* Professional Details for non-student registrations */}
