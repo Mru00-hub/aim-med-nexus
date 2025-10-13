@@ -55,7 +55,7 @@ const MessageInputComponent = forwardRef<HTMLTextAreaElement, MessageInputProps>
   
   const handleSend = async () => {
     const trimmedBody = body.trim();
-    if (trimmedBody === '' && attachedFiles.length === 0 || isSending) return;
+    if ((trimmedBody === '' && attachedFiles.length === 0) || isSending) return;
     
     setIsSending(true);
 
@@ -186,9 +186,6 @@ const MessageInputComponent = forwardRef<HTMLTextAreaElement, MessageInputProps>
                 id="file-attachment-input" // <-- We've added an ID
                 multiple 
             />
-
-            {/* 2. The Button is now wrapped in a Label linked to the input's ID */}
-            <label htmlFor="file-attachment-input">
                 <Button 
                     variant="outline" 
                     size="icon" 
