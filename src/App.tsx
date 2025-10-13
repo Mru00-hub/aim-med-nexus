@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import AuthGuard from "@/components/AuthGuard";
 import OnboardingGuard from "@/components/OnboardingGuard";
+import AuthCallback from './pages/AuthCallback'; 
 
 // --- NEW CRITICAL IMPORT ---
 import { CommunityProvider } from "./context/CommunityContext"; 
