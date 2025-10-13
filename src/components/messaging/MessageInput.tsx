@@ -191,11 +191,10 @@ const MessageInputComponent = forwardRef<HTMLTextAreaElement, MessageInputProps>
                     size="icon" 
                     className="self-end"
                     title="Attach Files"
-                    asChild
+                    onClick={() => fileInputRef.current?.click()}
+                    type="button"
                 >
-                    <label htmlFor="file-attachment-input" className="cursor-pointer">
-                      <Paperclip className="h-5 w-5" />
-                    </label>
+                    <Paperclip className="h-5 w-5" />
                 </Button>
     
             {/* --- END OF REPLACEMENT --- */}
