@@ -7,7 +7,6 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import AuthGuard from "@/components/AuthGuard";
 import OnboardingGuard from "@/components/OnboardingGuard";
-import AuthCallback from './pages/AuthCallback'; 
 
 // --- NEW CRITICAL IMPORT ---
 import { CommunityProvider } from "./context/CommunityContext"; 
@@ -28,6 +27,7 @@ import PaymentPage from "./pages/PaymentPage";
 import NotFound from "./pages/NotFound";
 import ProfilePage from './pages/ProfilePage';
 import CompleteProfile from "./pages/CompleteProfile";
+import AuthCallback from './pages/AuthCallback'; 
 
 // --- UPDATED COMMUNITY IMPORTS ---
 import Forums from "./pages/Community/Forums";
@@ -54,6 +54,7 @@ const App = () => {
                 {/* --- Core App Routes (Index and Public) --- */}
                 <Route path="/" element={<Index />} />
                 <Route path="/please-verify" element={<PleaseVerify />} />
+                <Route path="/auth/callback" element={<AuthCallback />} />
                 <Route path="/jobs" element={<Jobs />} />
                 <Route path="/networking" element={<Networking />} />
                 <Route path="/partnerships" element={<Partnerships />} />
