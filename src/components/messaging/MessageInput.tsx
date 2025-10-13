@@ -1,5 +1,5 @@
 import { useAuth } from '@/hooks/useAuth';
-import React, { useState, useRef, useEffect, memo } from 'react';
+import React, { useState, useRef, useEffect, memo, forwardRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Paperclip, Send, X, File as FileIcon, XCircle } from 'lucide-react';
@@ -15,6 +15,8 @@ interface MessageInputProps {
   replyingTo: MessageWithDetails | null;
   onCancelReply: () => void;  
 }
+
+export type MessageInputRef = React.Ref<HTMLTextAreaElement>;
 
 const MessageInputComponent: React.FC<MessageInputProps> = ({ 
     threadId, 
