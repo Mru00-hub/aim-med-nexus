@@ -18,12 +18,12 @@ interface MessageInputProps {
 
 export type MessageInputRef = React.Ref<HTMLTextAreaElement>;
 
-const MessageInputComponent: React.FC<MessageInputProps> = ({ 
+const MessageInputComponent = forwardRef<HTMLTextAreaElement, MessageInputProps>(({ 
     threadId, 
     onSendMessage, 
     replyingTo,
     onCancelReply
-}) => {
+}, ref) => {
   const { profile } = useAuth();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -208,6 +208,7 @@ const MessageInputComponent: React.FC<MessageInputProps> = ({
             {/* --- END OF REPLACEMENT --- */}
 
             <Textarea
+                ref={ref} 
                 placeholder="Type your message..."
                 value={body}
                 onChange={(e) => setBody(e.target.value)}
