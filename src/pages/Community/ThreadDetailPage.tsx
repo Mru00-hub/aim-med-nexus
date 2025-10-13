@@ -2,6 +2,7 @@
 
 import { useParams } from 'react-router-dom';
 import { Header } from '@/components/layout/Header';
+import { Footer } from '@/components/layout/Footer';
 import { ThreadView } from '@/components/messaging/ThreadView'; // We will put all the logic here
 import AuthGuard from '@/components/AuthGuard'; // Protect this page
 import { useEffect, useState } from 'react';
@@ -146,6 +147,7 @@ export default function ThreadDetailPage() {
             <ThreadView threadId={threadId!} />
           </div>
         </main>
+        <Footer />
       </div>
     </AuthGuard>
   );
