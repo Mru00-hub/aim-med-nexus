@@ -16,8 +16,6 @@ interface MessageInputProps {
   onCancelReply: () => void;  
 }
 
-export type MessageInputRef = React.Ref<HTMLTextAreaElement>;
-
 const MessageInputComponent = forwardRef<HTMLTextAreaElement, MessageInputProps>(({ 
     threadId, 
     onSendMessage, 
@@ -144,7 +142,7 @@ const MessageInputComponent = forwardRef<HTMLTextAreaElement, MessageInputProps>
                 {attachedFiles.map((file, index) => {
                     const isImage = file.type.startsWith('image/');
                     return (
-                        <div key={index} className="relative group w-20 h-20 touch-manipulation">
+                        <div key={`${file.name}-${file.lastModified}`} className="relative group w-20 h-20 touch-manipulation">
                             {isImage ? (
                                 <img 
                                     src={previewUrls[index]} 
