@@ -19,7 +19,7 @@ import {
 } from '@/integrations/supabase/community.api'; 
 
 import { Message } from './Message'; 
-import { MessageInput } from './MessageInput'; 
+import { MessageInput, MessageInputRef } from './MessageInput'; 
 
 interface ThreadViewProps {
   threadId: string;
@@ -250,7 +250,7 @@ export const ThreadView: React.FC<ThreadViewProps> = ({ threadId }) => {
     handleEditMessage,
     handleReaction
   } = useThreadData(threadId, user?.id, profile);
-  
+  const messageInputRef = useRef<HTMLTextAreaElement>(null); 
   const scrollViewportRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = useCallback(() => {
@@ -261,8 +261,12 @@ export const ThreadView: React.FC<ThreadViewProps> = ({ threadId }) => {
   
   useEffect(() => { scrollToBottom(); }, [flatMessages, scrollToBottom]); 
     
-  const handleReplyClick = (message: MessageWithDetails) => { setReplyingTo(message); };
-
+  const handleReplyClick = (message: MessageWithDetails) => { 
+    setReplyingTo(message);
+    scrollToBottom(); // <-- 2. ADD THIS to scroll down
+    setTimeout(() => messageInputRef.current?.focus(), 100);
+  };
+  
   const onCancelReply = useCallback(() => {
     setReplyingTo(null);
   }, [setReplyingTo]); // setReplyingTo is stable and won't cause this to be recreated.
@@ -312,6 +316,7 @@ export const ThreadView: React.FC<ThreadViewProps> = ({ threadId }) => {
       
       <div className="mt-4 p-4 border-t bg-background">
         <MessageInput 
+            ref={messageInputRef}
             threadId={threadId} 
             onSendMessage={handleSendMessage} 
             replyingTo={replyingTo}
