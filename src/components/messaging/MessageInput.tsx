@@ -221,5 +221,5 @@ const MessageInputComponent = forwardRef<HTMLTextAreaElement, MessageInputProps>
         </div>
     </div>
   );
-);
+};
 export const MessageInput = memo(MessageInputComponent);
