@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useSocialCounts } from '@/context/SocialCountsContext';
 import { Header } from '@/components/layout/Header';
@@ -9,7 +9,6 @@ import { socialApi } from '@/integrations/supabase/social.api';
 import { supabase } from '@/integrations/supabase/client';
 import type { Tables } from '@/integrations/supabase/types';
 
-// Import the new, corrected child components
 import { ConversationList } from '@/components/social/ConversationList';
 import { ConversationView } from '@/components/social/ConversationView';
 
@@ -23,83 +22,65 @@ const FunctionalInbox = () => {
   const { setUnreadInboxCount } = useSocialCounts();
   const location = useLocation();
 
+  // Effect to update the global unread count
   useEffect(() => {
     const totalUnread = conversations.reduce((acc, convo) => acc + (convo.unread_count || 0), 0);
     setUnreadInboxCount(totalUnread);
   }, [conversations, setUnreadInboxCount]);
 
+  // *** LOGIC SEPARATED: Effect for data fetching and real-time subscription ***
   useEffect(() => {
     const fetchInbox = async () => {
       setLoading(true);
       const { data } = await socialApi.messaging.getInbox();
-      if (data) {
-        setConversations(data);
-      }
+      if (data) setConversations(data);
       setLoading(false);
     };
 
     fetchInbox();
-      
-    // Set up real-time subscription for new messages to update the conversation list
+
     const channel = supabase
       .channel('public:direct_messages')
-      .on<DirectMessagePayload>(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'direct_messages' },
+      .on<DirectMessagePayload>('postgres_changes', { event: 'INSERT', schema: 'public', table: 'direct_messages' },
         (payload) => {
-          const newMessage = payload.new;
-          setConversations(currentConvos => {
-            const convoIndex = currentConvos.findIndex(c => c.conversation_id === newMessage.conversation_id);
-            
-            // If the conversation exists, update it and move it to the top
-            if (convoIndex > -1) {
-              const updatedConvo = {
-                ...currentConvos[convoIndex],
-                last_message_content: newMessage.content,
-                last_message_at: newMessage.created_at,
-                // Increment unread count only if the conversation is not currently selected
-                unread_count: selectedConversation?.conversation_id !== newMessage.conversation_id
-                  ? (currentConvos[convoIndex].unread_count || 0) + 1
-                  : 0,
-              };
-              const newConvos = [...currentConvos];
-              newConvos.splice(convoIndex, 1);
-              return [updatedConvo, ...newConvos];
-            }
-            
-            // If it's a new conversation not yet in our list, refetch everything to get full details.
-            fetchInbox();
-            return currentConvos;
-          });
+          // When a new message arrives, always refetch the inbox list to get the latest order and details
+          fetchInbox();
         }
       )
       .subscribe();
       
-      // Clean up the subscription on component unmount
       return () => { supabase.removeChannel(channel); };
-  }, [selectedConversation]); // Re-run effect if selectedConversation changes to update unread count logic
+  }, []); // *** FIX: Dependency array is now empty to run only once on mount ***
 
+  // *** LOGIC SEPARATED: Effect for handling auto-selection from navigation ***
   useEffect(() => {
-    const conversationIdFromState = location.state?.conversationId;
+    const navState = location.state as { conversationId?: string; participant?: any };
+    const conversationIdFromState = navState?.conversationId;
     if (!conversationIdFromState) return;
+
     const convoInList = conversations.find(c => c.conversation_id === conversationIdFromState);
 
     if (convoInList) {
-      // If found, select it and we're done.
       setSelectedConversation(convoInList);
-      window.history.replaceState({}, document.title); // Clear state
-    } else if (!loading) {
-      // 2. If not found and the initial load is finished, fetch it directly
-      const fetchSpecificConvo = async () => {
-        const { data } = await socialApi.messaging.getConversationById(conversationIdFromState);
-        if (data) {
-          // Add the newly fetched conversation to the top of our list and select it
-          setConversations(prevConvos => [data, ...prevConvos.filter(c => c.conversation_id !== data.conversation_id)]);
-          setSelectedConversation(data);
-          window.history.replaceState({}, document.title); // Clear state
-        }
+      window.history.replaceState({}, document.title);
+    } else if (!loading && navState.participant) {
+      // *** THE FALLBACK LOGIC ***
+      // If the conversation is not in the list (because it's new and empty),
+      // create a temporary "phantom" conversation object to display immediately.
+      const phantomConversation: Conversation = {
+        conversation_id: conversationIdFromState,
+        last_message_at: new Date().toISOString(),
+        last_message_content: "Start the conversation!",
+        participant_avatar_url: navState.participant.profile_picture_url,
+        participant_full_name: navState.participant.full_name,
+        participant_id: navState.participant.id,
+        unread_count: 0,
+        updated_at: new Date().toISOString(),
       };
-      fetchSpecificConvo();
+      // Add it to the list and select it
+      setConversations(prev => [phantomConversation, ...prev]);
+      setSelectedConversation(phantomConversation);
+      window.history.replaceState({}, document.title);
     }
   }, [location.state, conversations, loading]);
 
