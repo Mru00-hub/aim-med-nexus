@@ -27,11 +27,10 @@ import AuthCallback from './pages/AuthCallback';
 
 // --- NEW SOCIAL PAGE IMPORTS (PLACEHOLDERS) ---
 import Social from "./pages/Social/Social";
-import Networking from "./pages/Social/Networking";
+import Opportunities from "./pages/Social/Opportunities";
 
 // --- NEW SOCIAL PAGE IMPORTS (FUNCTIONAL) ---
 import FunctionalSocial from "./pages/Social/FunctionalSocial";
-import FunctionalNetworking from "./pages/Social/FunctionalNetworking";
 import FunctionalInbox from "./pages/Social/FunctionalInbox";
 
 // --- COMMUNITY IMPORTS ---
@@ -68,10 +67,9 @@ const App = () => {
                 <Route path="/jobs" element={<Jobs />} />
                 <Route path="/partnerships" element={<Partnerships />} />
                 <Route path="/community" element={<Forums />} /> 
-
+                <Route path="/opportunities" element={<Opportunities />} /> 
                 {/* --- Conditionally Rendered Social/Networking/Inbox Routes --- */}
                 <Route path="/social" element={<ConditionalRoute AuthComponent={FunctionalSocial} PublicComponent={Social} />} />
-                <Route path="/networking" element={<ConditionalRoute AuthComponent={FunctionalNetworking} PublicComponent={Networking} />} />
                 
                 {/* --- Public Auth Routes (AuthGuard redirects if logged in) --- */}
                 <Route element={<AuthGuard requireAuth={false} />}>
