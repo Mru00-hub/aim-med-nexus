@@ -15,22 +15,36 @@ type MessageWithRelations = Tables<'direct_messages'> & {
   direct_message_reactions: Tables<'direct_message_reactions'>[];
 };
 
+type ReplyContext = {
+    id: number;
+    content: string;
+    sender_id: string;
+    author_name: string;
+};
+
 interface DirectMessageProps {
   message: MessageWithRelations;
   authorProfile: Profile | undefined;
-  recipientProfile: Profile | undefined;
+  onReplyClick: (context: ReplyContext) => void;
 }
 
-export const DirectMessage = ({ message, authorProfile, recipientProfile }: DirectMessageProps) => {
+const EmojiPicker: React.FC<{ onSelect: (emoji: string) => void }> = ({ onSelect }) => (
+    <div className="flex gap-1 p-1 bg-background border rounded-full shadow-lg">
+        {['👍', '❤️', '🔥', '🤔', '😂'].map(emoji => (
+            <span key={emoji} className="cursor-pointer hover:bg-muted rounded-full p-1 transition-colors" onClick={() => onSelect(emoji)}>{emoji}</span>
+        ))}
+    </div>
+);
+
+export const DirectMessage = ({ message, authorProfile, onReplyClick }: DirectMessageProps) => {
     const { user } = useAuth();
-    const { toast } = useToast();
     const [isEditing, setIsEditing] = useState(false);
     const [editedContent, setEditedContent] = useState(message.content);
     const [showActions, setShowActions] = useState(false);
     const [showPicker, setShowPicker] = useState(false);
 
     const isMe = message.sender_id === user?.id;
-    const profile = isMe ? authorProfile : recipientProfile;
+    const displayName = authorProfile?.full_name || 'User';
     
     const reactionCounts = useMemo(() => {
         return (message.direct_message_reactions || []).reduce((acc, reaction) => {
@@ -57,6 +71,12 @@ export const DirectMessage = ({ message, authorProfile, recipientProfile }: Dire
         }
         await socialApi.messaging.editMessage(message.id, editedContent.trim());
         setIsEditing(false);
+    };
+
+    const handleReply = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        onReplyClick({ id: message.id, content: message.content, sender_id: message.sender_id, author_name: displayName });
+        setShowActions(false);
     };
     
     const messageStyle = cn(
@@ -98,17 +118,18 @@ export const DirectMessage = ({ message, authorProfile, recipientProfile }: Dire
                         </div>
                     )}
                 </div>
-                 {showActions && (
-                    <div className={cn( "absolute z-10 flex items-center bg-card border rounded-full shadow-md top-[-16px]", isMe ? "left-0" : "right-0")}>
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setShowPicker(p => !p)} title="Add Reaction"><SmilePlus className="h-4 w-4" /></Button>
+                {showActions && (
+                    <div className={cn("absolute z-10 flex items-center bg-card border rounded-full shadow-md top-[-16px]", isMe ? "left-0" : "right-0")}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleReply} title="Reply"><Reply className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); setShowPicker(p => !p); }} title="Add Reaction"><SmilePlus className="h-4 w-4" /></Button>
                         {isMe && <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setIsEditing(true)} title="Edit"><Pencil className="h-4 w-4" /></Button>}
                         {isMe && <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleDelete} title="Delete"><Trash2 className="h-4 w-4 text-destructive" /></Button>}
                     </div>
                 )}
-                {showPicker && <div className="absolute top-0 z-20 flex gap-1 p-1 bg-background border rounded-full shadow-lg"><span onClick={() => handleReaction('👍')}>👍</span> <span onClick={() => handleReaction('❤️')}>❤️</span></div>}
+                {showPicker && <div className="absolute top-[-16px] z-20" style={isMe ? {left: '50px'} : {right: '50px'}}><EmojiPicker onSelect={handleReaction} /></div>}
             </div>
             
-            {isMe && <Avatar className="h-8 w-8"><AvatarImage src={profile?.profile_picture_url} /><AvatarFallback>{profile?.full_name?.charAt(0)}</AvatarFallback></Avatar>}
+            {isMe && <Avatar className="h-8 w-8"><AvatarImage src={authorProfile?.profile_picture_url} /><AvatarFallback>{displayName.charAt(0)}</AvatarFallback></Avatar>}
         </div>
     );
 };
