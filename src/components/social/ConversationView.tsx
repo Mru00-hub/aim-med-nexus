@@ -29,7 +29,7 @@ interface ConversationViewProps {
 }
 
 export const ConversationView = ({ conversation }: ConversationViewProps) => {
-  const { user } = useAuth();
+  const { user, profile: currentUserProfile } = useAuth();
   const [messages, setMessages] = useState<MessageWithRelations[]>([]);
   const [profiles, setProfiles] = useState<Record<string, Profile>>({});
   const [loading, setLoading] = useState(true);
@@ -37,20 +37,27 @@ export const ConversationView = ({ conversation }: ConversationViewProps) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
   const fetchAndSetData = async () => {
-    if (!conversation?.conversation_id || !conversation.participant_id) return;
+    if (!conversation?.conversation_id || !conversation.participant_id || !currentUserProfile) return;
     setLoading(true);
 
-    // Fetch messages and recipient profile in parallel
-    const [messagesRes, recipientRes] = await Promise.all([
-      socialApi.messaging.getMessagesForConversation(conversation.conversation_id),
-      supabase.from('profiles').select('*').eq('id', conversation.participant_id).single()
-    ]);
-    
-    if (messagesRes.data) setMessages(messagesRes.data as MessageWithRelations[]);
-    if (recipientRes.data) setRecipientProfile(recipientRes.data);
-    
+    const { data: messagesData } = await socialApi.messaging.getMessagesForConversation(conversation.conversation_id);
+    const { data: recipientData } = await supabase.from('profiles').select('*').eq('id', conversation.participant_id).single();
+
+    if (messagesData) {
+        setMessages(messagesData as MessageWithRelations[]);
+    }
+
+    if (recipientData) {
+        // Create a complete map of profiles for this conversation
+        setProfiles({
+            [currentUserProfile.id]: currentUserProfile, // The logged-in user
+            [recipientData.id]: recipientData,          // The other participant
+        });
+    }
+
     setLoading(false);
-  };
+};
+  
 useEffect(() => {
     fetchAndSetData();
 
