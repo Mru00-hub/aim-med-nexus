@@ -27,17 +27,6 @@ export const ConversationList = ({ conversations, loading, onSelectConversation,
     );
   }, [conversations, searchQuery]);
 
-  useEffect(() => {
-    const fetchInbox = async () => {
-      setLoading(true);
-      const { data } = await socialApi.messaging.getInbox();
-      if (data) setConversations(data);
-      setLoading(false);
-    };
-    fetchInbox();
-    // In a production app, subscribe to a channel that notifies of new conversations
-  }, []);
-
   const totalUnread = conversations.reduce((acc, convo) => acc + (convo.unread_count || 0), 0);
 
   return (
