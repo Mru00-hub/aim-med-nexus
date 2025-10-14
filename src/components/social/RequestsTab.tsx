@@ -16,7 +16,18 @@ export const RequestsTab = ({ requests, sentRequests, loading, onRespondRequest,
       </TabsList>
       <TabsContent value="incoming" className="mt-4 space-y-2">
         {loading ? <Skeleton className="h-24 w-full" /> : requests.length > 0 ? requests.map(req => (
-          <UserActionCard key={req.requester_id} user={{ id: req.requester_id, full_name: req.full_name, profile_picture_url: req.profile_picture_url, subtitle: req.organization }}>
+          <UserActionCard 
+            key={req.requester_id} 
+            // CHANGED: Passing more details from the 'req' object
+            user={{ 
+              id: req.requester_id, 
+              full_name: req.full_name, 
+              profile_picture_url: req.profile_picture_url, 
+              [span_1](start_span)title: req.course, // The pending_connection_requests view has 'course'[span_1](end_span)
+              organization: req.organization, 
+              location: req.current_location 
+            }}
+          >
             <Button size="sm" onClick={() => onRespondRequest(req.requester_id, 'accepted')}>Accept</Button>
             <Button size="sm" variant="outline" onClick={() => onRespondRequest(req.requester_id, 'ignored')}>Ignore</Button>
             <DropdownMenu>
@@ -30,7 +41,18 @@ export const RequestsTab = ({ requests, sentRequests, loading, onRespondRequest,
       </TabsContent>
       <TabsContent value="sent" className="mt-4 space-y-2">
         {loading ? <Skeleton className="h-24 w-full" /> : sentRequests.length > 0 ? sentRequests.map(req => (
-          <UserActionCard key={req.addressee_id} user={{ id: req.addressee_id, full_name: req.full_name, profile_picture_url: req.profile_picture_url, subtitle: req.organization }}>
+          <UserActionCard 
+            key={req.addressee_id} 
+            // CHANGED: Passing more details from the 'req' object
+            user={{ 
+              id: req.addressee_id, 
+              full_name: req.full_name, 
+              profile_picture_url: req.profile_picture_url, 
+              title: req.current_position, // The sent_pending_requests view has 'current_position'
+              organization: req.organization, 
+              location: null // This view doesn't have location
+            }}
+          >
             <Badge variant="outline">Pending</Badge>
             <Button size="sm" variant="ghost" onClick={() => onWithdrawRequest(req.addressee_id)}>Withdraw</Button>
           </UserActionCard>
