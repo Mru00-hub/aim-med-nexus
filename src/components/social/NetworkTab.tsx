@@ -32,7 +32,7 @@ export const NetworkTab = ({ myConnections, loading, onRemoveConnection }) => {
               id: conn.id, 
               full_name: conn.full_name, 
               profile_picture_url: conn.profile_picture_url, 
-              [span_0](start_span)title: conn.course, // The my_connections view has 'course'[span_0](end_span)
+              title: conn.course, 
               organization: conn.organization, 
               location: conn.current_location 
             }}
