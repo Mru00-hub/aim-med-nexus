@@ -1,0 +1,41 @@
+import React from 'react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { MoreHorizontal, Ban } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { UserActionCard } from './UserActionCard';
+
+export const RequestsTab = ({ requests, sentRequests, loading, onRespondRequest, onBlockUser, onWithdrawRequest }) => {
+  return (
+    <Tabs defaultValue="incoming" className="w-full">
+      <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="incoming">Incoming ({requests.length})</TabsTrigger>
+          <TabsTrigger value="sent">Sent ({sentRequests.length})</TabsTrigger>
+      </TabsList>
+      <TabsContent value="incoming" className="mt-4 space-y-2">
+        {loading ? <Skeleton className="h-24 w-full" /> : requests.length > 0 ? requests.map(req => (
+          <UserActionCard key={req.requester_id} user={{ id: req.requester_id, full_name: req.full_name, profile_picture_url: req.profile_picture_url, subtitle: req.organization }}>
+            <Button size="sm" onClick={() => onRespondRequest(req.requester_id, 'accepted')}>Accept</Button>
+            <Button size="sm" variant="outline" onClick={() => onRespondRequest(req.requester_id, 'ignored')}>Ignore</Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal /></Button></DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem onSelect={() => onBlockUser(req.requester_id)} className="text-destructive focus:bg-destructive/10 focus:text-destructive"><Ban className="h-4 w-4 mr-2" />Block</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </UserActionCard>
+        )) : <p className="text-center text-muted-foreground py-8">No incoming requests.</p>}
+      </TabsContent>
+      <TabsContent value="sent" className="mt-4 space-y-2">
+        {loading ? <Skeleton className="h-24 w-full" /> : sentRequests.length > 0 ? sentRequests.map(req => (
+          <UserActionCard key={req.addressee_id} user={{ id: req.addressee_id, full_name: req.full_name, profile_picture_url: req.profile_picture_url, subtitle: req.organization }}>
+            <Badge variant="outline">Pending</Badge>
+            <Button size="sm" variant="ghost" onClick={() => onWithdrawRequest(req.addressee_id)}>Withdraw</Button>
+          </UserActionCard>
+        )) : <p className="text-center text-muted-foreground py-8">No pending sent requests.</p>}
+      </TabsContent>
+    </Tabs>
+  );
+};
