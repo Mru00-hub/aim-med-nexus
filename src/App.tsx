@@ -8,7 +8,7 @@ import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import AuthGuard from "@/components/AuthGuard";
 import OnboardingGuard from "@/components/OnboardingGuard";
 import { CommunityProvider } from "./context/CommunityContext"; 
-import { SocialCountsProvider } from './context/SocialCountsContext';
+import { SocialCountsProvider } from './context/SocialCountsContext'; // Import the provider
 
 // --- Core Page Imports ---
 import Index from "./pages/Index";
@@ -25,11 +25,9 @@ import ProfilePage from './pages/ProfilePage';
 import CompleteProfile from "./pages/CompleteProfile";
 import AuthCallback from './pages/AuthCallback'; 
 
-// --- NEW SOCIAL PAGE IMPORTS (PLACEHOLDERS) ---
+// --- SOCIAL PAGE IMPORTS ---
 import Social from "./pages/Social/Social";
 import Opportunities from "./pages/Social/Opportunities";
-
-// --- NEW SOCIAL PAGE IMPORTS (FUNCTIONAL) ---
 import FunctionalSocial from "./pages/Social/FunctionalSocial";
 import FunctionalInbox from "./pages/Social/FunctionalInbox";
 
@@ -55,53 +53,57 @@ const App = () => {
       <TooltipProvider>
         <BrowserRouter>
           <AuthProvider>
-            <Toaster />
-            <Sonner />
-            
-            <CommunityProvider>
-              <Routes>
-                {/* --- Core App Routes (Index and Public) --- */}
-                <Route path="/" element={<Index />} />
-                <Route path="/please-verify" element={<PleaseVerify />} />
-                <Route path="/auth/callback" element={<AuthCallback />} />
-                <Route path="/jobs" element={<Jobs />} />
-                <Route path="/partnerships" element={<Partnerships />} />
-                <Route path="/community" element={<Forums />} /> 
-                <Route path="/opportunities" element={<Opportunities />} /> 
-                {/* --- Conditionally Rendered Social/Networking/Inbox Routes --- */}
-                <Route path="/social" element={<ConditionalRoute AuthComponent={FunctionalSocial} PublicComponent={Social} />} />
-                
-                {/* --- Public Auth Routes (AuthGuard redirects if logged in) --- */}
-                <Route element={<AuthGuard requireAuth={false} />}>
-                  <Route path="/register" element={<Register />} />
-                  <Route path="/login" element={<Login />} />
-                </Route>
-
-                {/* --- Protected Routes (AuthGuard redirects if NOT logged in) --- */}
-                <Route element={<AuthGuard />}>
-                  <Route path="/complete-profile" element={<CompleteProfile />} />
-                  <Route path="/profile/:userId" element={<ProfilePage />} />
-                  <Route path="/feedback" element={<Feedback />} />
-                  <Route path="/notifications" element={<Notifications />} />
-                  <Route path="/payment" element={<PaymentPage />} />
-                  <Route path="/inbox" element={<FunctionalInbox />} />
-
-                  {/* Community Protected Routes */}
-                  <Route path="/community/create-thread" element={<CreateThread />} />
-                  <Route path="/community/space/:spaceId" element={<SpaceDetailPage />} />
-                  <Route path="/community/space/:spaceId/members" element={<MembersPage />} />
-                  <Route path="/community/thread/:threadId" element={<ThreadDetailPage />} />
+            {/* THIS WRAPPER MAKES THE COUNTS GLOBALLY AVAILABLE */}
+            <SocialCountsProvider>
+              <Toaster />
+              <Sonner />
+              
+              <CommunityProvider>
+                <Routes>
+                  {/* --- Core App Routes (Index and Public) --- */}
+                  <Route path="/" element={<Index />} />
+                  <Route path="/please-verify" element={<PleaseVerify />} />
+                  <Route path="/auth/callback" element={<AuthCallback />} />
+                  <Route path="/jobs" element={<Jobs />} />
+                  <Route path="/partnerships" element={<Partnerships />} />
+                  <Route path="/community" element={<Forums />} /> 
+                  <Route path="/opportunities" element={<Opportunities />} /> 
                   
-                  {/* Routes that ALSO require the user to be fully onboarded */}
-                  <Route element={<OnboardingGuard />}>
-                    <Route path="/profile" element={<ProfilePage />} />
+                  {/* --- Conditionally Rendered Social Route --- */}
+                  <Route path="/social" element={<ConditionalRoute AuthComponent={FunctionalSocial} PublicComponent={Social} />} />
+                  
+                  {/* --- Public Auth Routes (AuthGuard redirects if logged in) --- */}
+                  <Route element={<AuthGuard requireAuth={false} />}>
+                    <Route path="/register" element={<Register />} />
+                    <Route path="/login" element={<Login />} />
                   </Route>
-                </Route>
-                
-                {/* CATCH-ALL "*" ROUTE - MUST BE LAST */}
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </CommunityProvider>
+
+                  {/* --- Protected Routes (AuthGuard redirects if NOT logged in) --- */}
+                  <Route element={<AuthGuard />}>
+                    <Route path="/complete-profile" element={<CompleteProfile />} />
+                    <Route path="/profile/:userId" element={<ProfilePage />} />
+                    <Route path="/feedback" element={<Feedback />} />
+                    <Route path="/notifications" element={<Notifications />} />
+                    <Route path="/payment" element={<PaymentPage />} />
+                    <Route path="/inbox" element={<FunctionalInbox />} />
+
+                    {/* Community Protected Routes */}
+                    <Route path="/community/create-thread" element={<CreateThread />} />
+                    <Route path="/community/space/:spaceId" element={<SpaceDetailPage />} />
+                    <Route path="/community/space/:spaceId/members" element={<MembersPage />} />
+                    <Route path="/community/thread/:threadId" element={<ThreadDetailPage />} />
+                    
+                    {/* Routes that ALSO require the user to be fully onboarded */}
+                    <Route element={<OnboardingGuard />}>
+                      <Route path="/profile" element={<ProfilePage />} />
+                    </Route>
+                  </Route>
+                  
+                  {/* CATCH-ALL "*" ROUTE - MUST BE LAST */}
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </CommunityProvider>
+            </SocialCountsProvider>
           </AuthProvider>
         </BrowserRouter>
       </TooltipProvider>
