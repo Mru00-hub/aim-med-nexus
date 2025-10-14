@@ -8,45 +8,58 @@ import type { Tables } from '@/integrations/supabase/types';
 import { MoreVertical, Star } from 'lucide-react';
 import { DirectMessage } from './DirectMessage';
 import { DirectMessageInput } from './DirectMessageInput';
+import { useAuth } from '@/hooks/useAuth';
 
 type Conversation = Tables<'inbox_conversations'>;
 type MessageWithRelations = Tables<'direct_messages'> & {
   direct_message_reactions: Tables<'direct_message_reactions'>[];
   direct_message_attachments: Tables<'direct_message_attachments'>[];
 };
+type Profile = Tables<'profiles'>;
 
 interface ConversationViewProps {
   conversation: Conversation;
 }
 
 export const ConversationView = ({ conversation }: ConversationViewProps) => {
+  const { user, profile: authorProfile } = useAuth(); // Logged-in user's profile
   const [messages, setMessages] = useState<MessageWithRelations[]>([]);
+  const [recipientProfile, setRecipientProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const fetchMessages = async () => {
-    if (!conversation?.conversation_id) return;
+  const fetchAndSetData = async () => {
+    if (!conversation?.conversation_id || !conversation.participant_id) return;
     setLoading(true);
-    const { data } = await socialApi.messaging.getMessagesForConversation(conversation.conversation_id);
-    if (data) {
-      setMessages(data as MessageWithRelations[]);
-    }
+
+    // Fetch messages and recipient profile in parallel
+    const [messagesRes, recipientRes] = await Promise.all([
+      socialApi.messaging.getMessagesForConversation(conversation.conversation_id),
+      supabase.from('profiles').select('*').eq('id', conversation.participant_id).single()
+    ]);
+    
+    if (messagesRes.data) setMessages(messagesRes.data as MessageWithRelations[]);
+    if (recipientRes.data) setRecipientProfile(recipientRes.data);
+    
     setLoading(false);
   };
-
-  useEffect(() => {
-    fetchMessages();
+useEffect(() => {
+    fetchAndSetData();
 
     const channel = supabase
       .channel(`conversation-${conversation.conversation_id}`)
-      .on<Tables<'direct_messages'>>(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'direct_messages', filter: `conversation_id=eq.${conversation.conversation_id}` },
-        () => {
-          // Re-fetch all messages on any change to ensure reactions/edits are captured
-          fetchMessages(); 
-        }
-      )
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'direct_messages', 
+        filter: `conversation_id=eq.${conversation.conversation_id}` 
+      }, () => fetchAndSetData())
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'direct_message_reactions', 
+        // A bit trickier to filter, so we just refetch on any reaction change
+      }, () => fetchAndSetData())
       .subscribe();
 
     return () => {
@@ -61,28 +74,24 @@ export const ConversationView = ({ conversation }: ConversationViewProps) => {
   return (
     <>
       <CardHeader className="pb-4 border-b border-border">
-        {/* ... Header UI as before ... */}
+        <h3 className="font-semibold">{conversation.participant_full_name}</h3>
       </CardHeader>
-      <CardContent className="flex-1 overflow-y-auto p-4 space-y-4 bg-muted/20">
+      <CardContent className="flex-1 overflow-y-auto p-4 space-y-6 bg-muted/20">
         {loading ? (
-          <div className="space-y-4">
-            <Skeleton className="h-12 w-1/2" />
-            <Skeleton className="h-12 w-1/2 ml-auto" />
-            <Skeleton className="h-12 w-1/2" />
-          </div>
-        ) : messages.length > 0 ? (
-          messages.map((message) => <DirectMessage key={message.id} message={message} />)
+          <div className="space-y-4"> <Skeleton className="h-12 w-1/2" /><Skeleton className="h-12 w-1/2 ml-auto" /></div>
         ) : (
-          <div className="flex justify-center items-center h-full text-muted-foreground">
-            <p>This is the beginning of your conversation.</p>
-          </div>
+          messages.map((message) => 
+            <DirectMessage 
+              key={message.id} 
+              message={message} 
+              authorProfile={authorProfile}
+              recipientProfile={recipientProfile}
+            />
+          )
         )}
         <div ref={messagesEndRef} />
       </CardContent>
-      <DirectMessageInput
-        conversationId={conversation.conversation_id}
-        onMessageSent={fetchMessages}
-      />
+      <DirectMessageInput conversationId={conversation.conversation_id} />
     </>
   );
 };
