@@ -23,7 +23,7 @@ export const RequestsTab = ({ requests, sentRequests, loading, onRespondRequest,
               id: req.requester_id, 
               full_name: req.full_name, 
               profile_picture_url: req.profile_picture_url, 
-              [span_1](start_span)title: req.course, // The pending_connection_requests view has 'course'[span_1](end_span)
+              title: req.course, // The pending_connection_requests view has 'course'[span_1](end_span)
               organization: req.organization, 
               location: req.current_location 
             }}
