@@ -2,12 +2,28 @@ import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search, UserX } from 'lucide-react';
+import { Search, UserX, MessageSquare } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { UserActionCard } from './UserActionCard';
+import { socialApi } from '@/integrations/supabase/social.api';
+import { useToast } from '@/components/ui/use-toast';
 
 export const NetworkTab = ({ myConnections, loading, onRemoveConnection }) => {
   const [searchTerm, setSearchTerm] = useState('');
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  const handleStartConversation = async (userId: string) => {
+    toast({ title: "Opening conversation..." });
+    const { data: conversationId, error } = await socialApi.messaging.createOrGetConversation(userId);
+
+    if (error || !conversationId) {
+      toast({ title: "Error", description: "Could not start conversation.", variant: "destructive" });
+    } else {
+      // Navigate to the inbox and pass the conversationId in the state
+      navigate('/inbox', { state: { conversationId } });
+    }
+  };
 
   const filteredConnections = useMemo(() => {
     if (!searchTerm) return myConnections;
@@ -37,6 +53,9 @@ export const NetworkTab = ({ myConnections, loading, onRemoveConnection }) => {
               location: conn.current_location 
             }}
           >
+            <Button variant="ghost" size="icon" onClick={() => handleStartConversation(conn.id)}>
+                <MessageSquare className="h-5 w-5" />
+            </Button>
             <Button variant="outline" size="sm" onClick={() => onRemoveConnection(conn.id)}><UserX className="h-4 w-4 mr-2" />Remove</Button>
           </UserActionCard>
         ))}
