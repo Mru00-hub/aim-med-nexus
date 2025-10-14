@@ -28,7 +28,6 @@ import AuthCallback from './pages/AuthCallback';
 // --- NEW SOCIAL PAGE IMPORTS (PLACEHOLDERS) ---
 import Social from "./pages/Social/Social";
 import Networking from "./pages/Social/Networking";
-import Inbox from "./pages/Social/Inbox"; // <-- CORRECTLY IMPORTED PLACEHOLDER
 
 // --- NEW SOCIAL PAGE IMPORTS (FUNCTIONAL) ---
 import FunctionalSocial from "./pages/Social/FunctionalSocial";
@@ -73,8 +72,6 @@ const App = () => {
                 {/* --- Conditionally Rendered Social/Networking/Inbox Routes --- */}
                 <Route path="/social" element={<ConditionalRoute AuthComponent={FunctionalSocial} PublicComponent={Social} />} />
                 <Route path="/networking" element={<ConditionalRoute AuthComponent={FunctionalNetworking} PublicComponent={Networking} />} />
-                {/* --- CORRECTED INBOX ROUTE --- */}
-                <Route path="/inbox" element={<ConditionalRoute AuthComponent={FunctionalInbox} PublicComponent={Inbox} />} />
                 
                 {/* --- Public Auth Routes (AuthGuard redirects if logged in) --- */}
                 <Route element={<AuthGuard requireAuth={false} />}>
@@ -89,6 +86,7 @@ const App = () => {
                   <Route path="/feedback" element={<Feedback />} />
                   <Route path="/notifications" element={<Notifications />} />
                   <Route path="/payment" element={<PaymentPage />} />
+                  <Route path="/inbox" element={<FunctionalInbox />} />
 
                   {/* Community Protected Routes */}
                   <Route path="/community/create-thread" element={<CreateThread />} />
