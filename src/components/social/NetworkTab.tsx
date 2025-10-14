@@ -25,7 +25,18 @@ export const NetworkTab = ({ myConnections, loading, onRemoveConnection }) => {
       </CardHeader>
       <CardContent className="space-y-2">
         {loading ? <Skeleton className="h-20 w-full" /> : filteredConnections.map(conn => (
-          <UserActionCard key={conn.id} user={{ id: conn.id, full_name: conn.full_name, profile_picture_url: conn.profile_picture_url, subtitle: conn.organization }}>
+          <UserActionCard 
+            key={conn.id} 
+            // CHANGED: Passing more details from the 'conn' object
+            user={{ 
+              id: conn.id, 
+              full_name: conn.full_name, 
+              profile_picture_url: conn.profile_picture_url, 
+              [span_0](start_span)title: conn.course, // The my_connections view has 'course'[span_0](end_span)
+              organization: conn.organization, 
+              location: conn.current_location 
+            }}
+          >
             <Button variant="outline" size="sm" onClick={() => onRemoveConnection(conn.id)}><UserX className="h-4 w-4 mr-2" />Remove</Button>
           </UserActionCard>
         ))}
