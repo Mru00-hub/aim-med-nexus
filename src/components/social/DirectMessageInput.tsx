@@ -30,6 +30,17 @@ export const DirectMessageInput = ({ conversationId, replyingTo, onCancelReply }
   const [isSending, setIsSending] = useState(false);
   const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
   const [fileInputKey, setFileInputKey] = useState(Date.now());
+  const [previewUrls, setPreviewUrls] = useState<string[]>([]);
+
+  useEffect(() => {
+      const newUrls = attachedFiles.map(file => URL.createObjectURL(file));
+      setPreviewUrls(newUrls);
+
+      // Clean up object URLs to prevent memory leaks when the component unmounts
+      // or when the attachedFiles array changes.
+      return () => newUrls.forEach(url => URL.revokeObjectURL(url));
+  }, [attachedFiles]);
+
 
   useEffect(() => {
       if(replyingTo) {
