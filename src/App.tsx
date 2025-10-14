@@ -27,7 +27,7 @@ import AuthCallback from './pages/AuthCallback';
 
 // --- SOCIAL PAGE IMPORTS ---
 import Social from "./pages/Social/Social";
-import Opportunities from "./pages/Social/Opportunities";
+import IndustryHub from "./pages/Social/IndustryHub";
 import FunctionalSocial from "./pages/Social/FunctionalSocial";
 import FunctionalInbox from "./pages/Social/FunctionalInbox";
 
@@ -67,7 +67,7 @@ const App = () => {
                   <Route path="/jobs" element={<Jobs />} />
                   <Route path="/partnerships" element={<Partnerships />} />
                   <Route path="/community" element={<Forums />} /> 
-                  <Route path="/opportunities" element={<Opportunities />} /> 
+                  <Route path="/industryhub" element={<IndustryHub />} /> 
                   
                   {/* --- Conditionally Rendered Social Route --- */}
                   <Route path="/social" element={<ConditionalRoute AuthComponent={FunctionalSocial} PublicComponent={Social} />} />
