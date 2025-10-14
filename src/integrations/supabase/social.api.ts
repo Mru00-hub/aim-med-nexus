@@ -180,6 +180,21 @@ export const socialApi = {
     },
 
     /**
+     * Fetches the details for a single conversation by its ID.
+     * @param conversationId - The ID of the conversation to fetch.
+     */
+    getConversationById: async (
+      conversationId: string
+    ): Promise<ApiResponse<Tables<"inbox_conversations">>> => {
+      const response = await supabase
+        .from("inbox_conversations")
+        .select("*")
+        .eq("conversation_id", conversationId)
+        .single();
+      return handleResponse(response);
+    },
+
+    /**
      * [span_9](start_span)Fetches a list of all users blocked by the current user[span_9](end_span).
      */
     getBlockedUsers: async (): Promise<
