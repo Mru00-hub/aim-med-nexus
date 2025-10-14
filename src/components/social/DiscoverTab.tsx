@@ -26,7 +26,19 @@ export const DiscoverTab = ({ recommendations, loading, onSendRequest, onBlockUs
       </CardHeader>
       <CardContent className="space-y-2">
         {loading ? <Skeleton className="h-20 w-full" /> : filteredRecommendations.map(rec => (
-          <UserActionCard key={rec.id} user={{ id: rec.id, full_name: rec.full_name, profile_picture_url: null, subtitle: rec.specialization || rec.course }}>
+          <UserActionCard 
+            key={rec.id} 
+            // CHANGED: Passing more details from the 'rec' object
+            user={{ 
+              id: rec.id, 
+              full_name: rec.full_name, 
+              // The recommendation function does not provide a profile picture URL
+              profile_picture_url: null, 
+              title: rec.specialization || rec.course,
+              organization: rec.organization,
+              location: rec.current_location,
+            }}
+          >
             <Button size="sm" onClick={() => onSendRequest(rec.id)}><UserPlus className="h-4 w-4 mr-2" />Connect</Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal /></Button></DropdownMenuTrigger>
