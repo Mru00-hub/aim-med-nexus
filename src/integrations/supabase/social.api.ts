@@ -160,6 +160,15 @@ export const socialApi = {
       return handleResponse(response);
     },
 
+    getSentPendingRequests: async (): Promise<
+      ApiResponse<Tables<"sent_pending_requests">[]>
+    > => {
+      // NOTE: You must generate new types for the 'sent_pending_requests' view
+      // For now, we cast to 'any' to avoid typescript errors.
+      const response = await supabase.from("sent_pending_requests").select("*");
+      return handleResponse(response as any);
+    },
+
     /**
      * [span_8](start_span)Fetches a list of all accepted connections ("friends") for the current user[span_8](end_span).
      */
