@@ -17,17 +17,19 @@ import {
   Calendar,
   Sparkles
 } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 // Define more specific types for our data
 type ConnectionRequest = Tables<'pending_connection_requests'>;
 type UserRecommendation = Database['public']['Functions']['get_user_recommendations']['Returns'][number];
-
+type SentRequest = Tables<'sent_pending_requests'>; 
 
 const FunctionalSocial = () => {
   const { user } = useAuth();
   const [requests, setRequests] = useState<ConnectionRequest[]>([]);
   const [recommendations, setRecommendations] = useState<UserRecommendation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [sentRequests, setSentRequests] = useState<SentRequest[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -37,6 +39,7 @@ const FunctionalSocial = () => {
         const [requestsRes, recommendationsRes] = await Promise.all([
           socialApi.connections.getPendingRequests(),
           socialApi.connections.getUserRecommendations(user.id)
+          socialApi.connections.getSentPendingRequests()
         ]);
 
         if (requestsRes.data) {
@@ -44,6 +47,9 @@ const FunctionalSocial = () => {
         }
         if (recommendationsRes.data) {
           setRecommendations(recommendationsRes.data);
+        }
+        if (sentRequestsRes.data) {
+          setSentRequests(sentRequestsRes.data);
         }
       } catch (error) {
         console.error("Failed to fetch social data:", error);
