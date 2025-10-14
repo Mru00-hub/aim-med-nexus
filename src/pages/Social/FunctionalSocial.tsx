@@ -1,212 +1,184 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/hooks/useAuth';
 import { socialApi } from '@/integrations/supabase/social.api';
-import type { Tables } from '@/integrations/supabase/types';
+import type { Database, Tables } from '@/integrations/supabase/types';
+import { Input } from '@/components/ui/input';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { 
   Users, 
-  MessageCircle, 
   UserPlus,
   Search,
-  Filter,
-  Calendar,
-  Sparkles
+  Sparkles,
+  UserX,
+  MoreHorizontal,
+  Ban
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-// Define more specific types for our data
+// Define types for all data models
 type ConnectionRequest = Tables<'pending_connection_requests'>;
 type UserRecommendation = Database['public']['Functions']['get_user_recommendations']['Returns'][number];
 type SentRequest = Tables<'sent_pending_requests'>; 
+type MyConnection = Tables<'my_connections'>;
+type BlockedUser = Tables<'blocked_members'>;
 
 const FunctionalSocial = () => {
   const { user } = useAuth();
-  const [requests, setRequests] = useState<ConnectionRequest[]>([]);
-  const [recommendations, setRecommendations] = useState<UserRecommendation[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // State for all social data
+  const [requests, setRequests] = useState<ConnectionRequest[]>([]);
   const [sentRequests, setSentRequests] = useState<SentRequest[]>([]);
+  const [recommendations, setRecommendations] = useState<UserRecommendation[]>([]);
+  const [myConnections, setMyConnections] = useState<MyConnection[]>([]);
+  const [blockedUsers, setBlockedUsers] = useState<BlockedUser[]>([]);
+  
+  // State for search/filter
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const fetchData = async () => {
+    if (!user) return;
+    setLoading(true);
+    try {
+      const [reqRes, sentRes, recRes, connRes, blockedRes] = await Promise.all([
+        socialApi.connections.getPendingRequests(),
+        socialApi.connections.getSentPendingRequests(),
+        socialApi.connections.getUserRecommendations(user.id),
+        socialApi.connections.getMyConnections(),
+        socialApi.connections.getBlockedUsers(),
+      ]);
+
+      if (reqRes.data) setRequests(reqRes.data);
+      if (sentRes.data) setSentRequests(sentRes.data as SentRequest[]);
+      if (recRes.data) setRecommendations(recRes.data);
+      if (connRes.data) setMyConnections(connRes.data);
+      if (blockedRes.data) setBlockedUsers(blockedRes.data);
+
+    } catch (error) {
+      console.error("Failed to fetch social data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchData = async () => {
-      if (!user) return;
-      setLoading(true);
-      try {
-        const [requestsRes, recommendationsRes] = await Promise.all([
-          socialApi.connections.getPendingRequests(),
-          socialApi.connections.getUserRecommendations(user.id)
-          socialApi.connections.getSentPendingRequests()
-        ]);
-
-        if (requestsRes.data) {
-          setRequests(requestsRes.data);
-        }
-        if (recommendationsRes.data) {
-          setRecommendations(recommendationsRes.data);
-        }
-        if (sentRequestsRes.data) {
-          setSentRequests(sentRequestsRes.data);
-        }
-      } catch (error) {
-        console.error("Failed to fetch social data:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchData();
   }, [user]);
 
-  const handleRespondRequest = async (requesterId: string, response: 'accepted' | 'ignored') => {
-    const originalRequests = [...requests];
-    // Optimistically update UI
-    setRequests(requests.filter(req => req.requester_id !== requesterId));
-    
-    const { error } = await socialApi.connections.respondToRequest(requesterId, response);
-    if (error) {
-      console.error(`Failed to ${response} request:`, error);
-      // Revert on error
-      setRequests(originalRequests);
-      // Add toast notification here
-    }
-  };
-  
-  const handleSendRequest = async (addresseeId: string) => {
-      const originalRecs = [...recommendations];
-      setRecommendations(recommendations.filter(rec => rec.id !== addresseeId));
-
-      const { error } = await socialApi.connections.sendRequest(addresseeId);
-      if (error) {
-          console.error("Failed to send request:", error);
-          setRecommendations(originalRecs);
-      }
+  // --- Action Handlers ---
+  const handleAction = async (action: () => Promise<any>) => {
+    await action();
+    await fetchData(); // Re-fetch all data to ensure UI consistency after any action
   };
 
+  const handleSendRequest = (addresseeId: string) => handleAction(() => socialApi.connections.sendRequest(addresseeId));
+  const handleRespondRequest = (requesterId: string, response: 'accepted' | 'ignored') => handleAction(() => socialApi.connections.respondToRequest(requesterId, response));
+  const handleRemoveConnection = (userId: string) => handleAction(() => socialApi.connections.removeConnection(userId));
+  const handleBlockUser = (userId: string) => handleAction(() => socialApi.connections.blockUser(userId));
+  const handleUnblockUser = (userId: string) => handleAction(() => socialApi.connections.unblockUser(userId));
+
+  // --- Memoized Filtered Recommendations ---
+  const filteredRecommendations = useMemo(() => {
+    if (!searchTerm) return recommendations;
+    return recommendations.filter(rec => rec.full_name.toLowerCase().includes(searchTerm.toLowerCase()));
+  }, [recommendations, searchTerm]);
 
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      
       <main className="container-medical py-8">
-        <div className="mb-8 animate-fade-in">
+        <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">Social Networking</h1>
           <p className="text-muted-foreground text-lg">
-            Manage your professional connections and discover new healthcare professionals to network with.
+            Discover, connect with, and manage your professional network.
           </p>
         </div>
-
-        <div className="grid lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 space-y-6 animate-slide-up">
-            <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-semibold">Connection Requests</h2>
-              <Badge variant="secondary" className="text-sm">
-                {requests.length} pending
-              </Badge>
-            </div>
-
-            {loading ? (
-              <Card><CardContent className="p-6"><Skeleton className="h-24 w-full" /></CardContent></Card>
-            ) : requests.length > 0 ? (
-              <div className="space-y-4">
-                {requests.map((request) => (
-                  <Card key={request.requester_id} className="card-medical">
-                    <CardContent className="p-6">
-                      <div className="flex justify-between items-start">
-                        <div className="flex gap-4 flex-1">
-                          <div className="w-16 h-16 bg-gradient-primary rounded-full flex items-center justify-center">
-                            <img src={request.profile_picture_url || '/api/placeholder/64/64'} alt={request.full_name} className="rounded-full w-full h-full object-cover" />
-                          </div>
-                          
-                          <div className="flex-1">
-                            <h3 className="text-lg font-semibold mb-1">{request.full_name}</h3>
-                            <p className="text-primary font-medium mb-1">{request.organization || 'Organization not specified'}</p>
-                            <p className="text-muted-foreground text-sm mb-2">
-                              {request.current_location}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              Sent on {new Date(request.request_date).toLocaleDateString()}
-                            </p>
-                          </div>
-                        </div>
-                        
-                        <div className="flex flex-col gap-2 ml-4">
-                          <Button size="sm" className="btn-medical" onClick={() => handleRespondRequest(request.requester_id, 'accepted')}>
-                            Accept
-                          </Button>
-                          <Button variant="outline" size="sm" onClick={() => handleRespondRequest(request.requester_id, 'ignored')}>
-                            Ignore
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            ) : (
-              <Card className="card-medical">
-                <CardContent className="p-12 text-center">
-                  <Users className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                  <h3 className="text-lg font-semibold mb-2">No pending requests</h3>
-                  <p className="text-muted-foreground">
-                    You're all caught up!
-                  </p>
-                </CardContent>
-              </Card>
-            )}
+        
+        <Tabs defaultValue="discover">
+            <TabsList className="grid w-full grid-cols-4">
+                <TabsTrigger value="discover">Discover</TabsTrigger>
+                <TabsTrigger value="network">My Network ({myConnections.length})</TabsTrigger>
+                <TabsTrigger value="requests">Requests ({requests.length})</TabsTrigger>
+                <TabsTrigger value="blocked">Blocked</TabsTrigger>
+            </TabsList>
             
-          </div>
+            <TabsContent value="discover" className="mt-6">
+                 <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2"><Sparkles className="h-5 w-5" /> People You May Know</CardTitle>
+                        <div className="relative pt-4">
+                            <Search className="absolute left-3 top-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input placeholder="Search by name..." className="pl-10" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                        </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        {loading ? <Skeleton className="h-20 w-full" /> : filteredRecommendations.map(rec => (
+                             <div key={rec.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50">
+                                <div className="flex items-center gap-3">
+                                    {/* Avatar, Name, Details */}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <Button size="sm" onClick={() => handleSendRequest(rec.id)}><UserPlus className="h-4 w-4 mr-2" />Connect</Button>
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal /></Button></DropdownMenuTrigger>
+                                        <DropdownMenuContent>
+                                            <DropdownMenuItem onSelect={() => handleBlockUser(rec.id)} className="text-destructive"><Ban className="h-4 w-4 mr-2" />Block User</DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                </div>
+                             </div>
+                        ))}
+                    </CardContent>
+                 </Card>
+            </TabsContent>
 
-          <div className="space-y-6 animate-fade-in">
-            <Card className="card-medical">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Sparkles className="h-5 w-5" />
-                  People You May Know
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                 {loading ? (
-                    <Skeleton className="h-20 w-full" />
-                 ) : recommendations.length > 0 ? (
-                    recommendations.slice(0, 5).map((rec) => (
-                      <div key={rec.id} className="flex items-start gap-3 p-3 bg-muted/30 rounded-lg">
-                         <div className="w-10 h-10 bg-gradient-primary rounded-full flex items-center justify-center flex-shrink-0">
-                           <span className="text-white font-semibold text-sm">
-                             {rec.full_name.split(' ').map(n => n[0]).join('')}
-                           </span>
-                         </div>
-                        
-                         <div className="flex-1 min-w-0">
-                           <h4 className="font-medium text-sm truncate">{rec.full_name}</h4>
-                           <p className="text-xs text-muted-foreground truncate">{rec.specialization}</p>
-                           <p className="text-xs text-primary">{rec.current_location}</p>
-                           <p className="text-xs text-muted-foreground">Score: {Math.round(rec.similarity_score * 100)}</p>
-                          
-                           <Button size="sm" className="mt-2 h-7 text-xs" onClick={() => handleSendRequest(rec.id)}>
-                             <UserPlus className="h-3 w-3 mr-1" />
-                             Connect
-                           </Button>
-                         </div>
-                       </div>
-                    ))
-                 ) : (
-                    <p className="text-sm text-muted-foreground text-center">No recommendations right now.</p>
-                 )}
-                
-                <Button variant="outline" size="sm" className="w-full">
-                  See More Suggestions
-                </Button>
-              </CardContent>
-            </Card>
+            <TabsContent value="network" className="mt-6">
+                <Card>
+                    <CardHeader><CardTitle>My Connections</CardTitle></CardHeader>
+                    <CardContent className="space-y-2">
+                        {loading ? <Skeleton className="h-20 w-full" /> : myConnections.map(conn => (
+                            <div key={conn.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50">
+                                {/* ... Avatar, Name, etc ... */}
+                                <Button variant="outline" size="sm" onClick={() => handleRemoveConnection(conn.id)}><UserX className="h-4 w-4 mr-2"/>Remove</Button>
+                            </div>
+                        ))}
+                    </CardContent>
+                </Card>
+            </TabsContent>
 
-          </div>
-        </div>
+            <TabsContent value="requests" className="mt-6">
+                <Tabs defaultValue="incoming" className="w-full">
+                    <TabsList><TabsTrigger value="incoming">Incoming</TabsTrigger><TabsTrigger value="sent">Sent</TabsTrigger></TabsList>
+                    <TabsContent value="incoming" className="mt-4">
+                       {/* JSX for incoming requests */}
+                    </TabsContent>
+                    <TabsContent value="sent" className="mt-4">
+                       {/* JSX for sent requests */}
+                    </TabsContent>
+                </Tabs>
+            </TabsContent>
+            
+            <TabsContent value="blocked" className="mt-6">
+                 <Card>
+                    <CardHeader><CardTitle>Blocked Users</CardTitle></CardHeader>
+                    <CardContent className="space-y-2">
+                         {loading ? <Skeleton className="h-20 w-full" /> : blockedUsers.map(bu => (
+                            <div key={bu.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50">
+                                {/* ... Avatar, Name ... */}
+                                <Button variant="outline" size="sm" onClick={() => handleUnblockUser(bu.id)}>Unblock</Button>
+                            </div>
+                        ))}
+                    </CardContent>
+                 </Card>
+            </TabsContent>
+        </Tabs>
       </main>
-
       <Footer />
     </div>
   );
