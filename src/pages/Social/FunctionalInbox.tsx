@@ -24,26 +24,11 @@ const FunctionalInbox = () => {
   const location = useLocation();
 
   useEffect(() => {
-    // This effect calculates and updates the global unread count whenever conversations change
     const totalUnread = conversations.reduce((acc, convo) => acc + (convo.unread_count || 0), 0);
     setUnreadInboxCount(totalUnread);
   }, [conversations, setUnreadInboxCount]);
 
   useEffect(() => {
-    // This effect handles auto-selecting a conversation from navigation state
-    const conversationIdFromState = location.state?.conversationId;
-    if (conversationIdFromState && conversations.length > 0 && !loading) {
-      const convoToSelect = conversations.find(c => c.conversation_id === conversationIdFromState);
-      if (convoToSelect) {
-        setSelectedConversation(convoToSelect);
-        // Clear the state so it doesn't re-trigger on other renders
-        window.history.replaceState({}, document.title);
-      }
-    }
-  }, [location.state, conversations, loading]);
-
-  useEffect(() => {
-    // Function to fetch the initial list of conversations
     const fetchInbox = async () => {
       setLoading(true);
       const { data } = await socialApi.messaging.getInbox();
@@ -54,7 +39,7 @@ const FunctionalInbox = () => {
     };
 
     fetchInbox();
-
+      
     // Set up real-time subscription for new messages to update the conversation list
     const channel = supabase
       .channel('public:direct_messages')
@@ -93,6 +78,30 @@ const FunctionalInbox = () => {
       // Clean up the subscription on component unmount
       return () => { supabase.removeChannel(channel); };
   }, [selectedConversation]); // Re-run effect if selectedConversation changes to update unread count logic
+
+  useEffect(() => {
+    const conversationIdFromState = location.state?.conversationId;
+    if (!conversationIdFromState) return;
+    const convoInList = conversations.find(c => c.conversation_id === conversationIdFromState);
+
+    if (convoInList) {
+      // If found, select it and we're done.
+      setSelectedConversation(convoInList);
+      window.history.replaceState({}, document.title); // Clear state
+    } else if (!loading) {
+      // 2. If not found and the initial load is finished, fetch it directly
+      const fetchSpecificConvo = async () => {
+        const { data } = await socialApi.messaging.getConversationById(conversationIdFromState);
+        if (data) {
+          // Add the newly fetched conversation to the top of our list and select it
+          setConversations(prevConvos => [data, ...prevConvos.filter(c => c.conversation_id !== data.conversation_id)]);
+          setSelectedConversation(data);
+          window.history.replaceState({}, document.title); // Clear state
+        }
+      };
+      fetchSpecificConvo();
+    }
+  }, [location.state, conversations, loading]);
 
   return (
     <div className="min-h-screen bg-background">
