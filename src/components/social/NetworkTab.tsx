@@ -16,7 +16,7 @@ export const NetworkTab = ({ myConnections, loading, onRemoveConnection }) => {
 
   const handleStartConversation = async (userId: string) => {
     toast({ title: "Opening conversation..." });
-    const { data: conversationId, error } = await socialApi.messaging.createOrGetConversation(userId);
+    const { data: conversationId, error } = await socialApi.messaging.createOrGetConversation(connection.id);
 
     if (error || !conversationId) {
       toast({ title: "Error", description: "Could not start conversation.", variant: "destructive" });
