@@ -7,6 +7,11 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "13.0.5"
+  }
   graphql_public: {
     Tables: {
       [_ in never]: never
@@ -34,6 +39,75 @@ export type Database = {
   }
   public: {
     Tables: {
+      conversation_participants: {
+        Row: {
+          conversation_id: string
+          user_id: string
+        }
+        Insert: {
+          conversation_id: string
+          user_id: string
+        }
+        Update: {
+          conversation_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversation_participants_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversation_participants_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "blocked_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversation_participants_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "inbox_conversations"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "conversation_participants_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "my_connections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversation_participants_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      conversations: {
+        Row: {
+          created_at: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       courses_programs: {
         Row: {
           created_at: string | null
@@ -57,6 +131,204 @@ export type Database = {
           name?: string
         }
         Relationships: []
+      }
+      direct_message_attachments: {
+        Row: {
+          created_at: string
+          file_name: string | null
+          file_size_bytes: number | null
+          file_type: string | null
+          file_url: string
+          id: string
+          message_id: number
+          uploaded_by: string
+        }
+        Insert: {
+          created_at?: string
+          file_name?: string | null
+          file_size_bytes?: number | null
+          file_type?: string | null
+          file_url: string
+          id?: string
+          message_id: number
+          uploaded_by: string
+        }
+        Update: {
+          created_at?: string
+          file_name?: string | null
+          file_size_bytes?: number | null
+          file_type?: string | null
+          file_url?: string
+          id?: string
+          message_id?: number
+          uploaded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "direct_message_attachments_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "direct_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "direct_message_attachments_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "blocked_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "direct_message_attachments_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "inbox_conversations"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "direct_message_attachments_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "my_connections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "direct_message_attachments_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      direct_message_reactions: {
+        Row: {
+          created_at: string
+          id: string
+          message_id: number
+          reaction_emoji: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message_id: number
+          reaction_emoji: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message_id?: number
+          reaction_emoji?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "direct_message_reactions_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "direct_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "direct_message_reactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "blocked_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "direct_message_reactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "inbox_conversations"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "direct_message_reactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "my_connections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "direct_message_reactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      direct_messages: {
+        Row: {
+          content: string
+          conversation_id: string
+          created_at: string
+          id: number
+          is_edited: boolean
+          is_read: boolean
+          sender_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          content: string
+          conversation_id: string
+          created_at?: string
+          id?: number
+          is_edited?: boolean
+          is_read?: boolean
+          sender_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          content?: string
+          conversation_id?: string
+          created_at?: string
+          id?: number
+          is_edited?: boolean
+          is_read?: boolean
+          sender_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "direct_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "direct_messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "blocked_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "direct_messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "inbox_conversations"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "direct_messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "my_connections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "direct_messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       email_notifications: {
         Row: {
@@ -112,6 +384,33 @@ export type Database = {
         }
         Relationships: []
       }
+      institutions: {
+        Row: {
+          created_at: string | null
+          established_year: number | null
+          id: string
+          location: string | null
+          name: string
+          value: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          established_year?: number | null
+          id?: string
+          location?: string | null
+          name: string
+          value?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          established_year?: number | null
+          id?: string
+          location?: string | null
+          name?: string
+          value?: string | null
+        }
+        Relationships: []
+      }
       job_applications: {
         Row: {
           applicant_id: string | null
@@ -144,6 +443,27 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "job_applications_applicant_id_fkey"
+            columns: ["applicant_id"]
+            isOneToOne: false
+            referencedRelation: "blocked_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_applications_applicant_id_fkey"
+            columns: ["applicant_id"]
+            isOneToOne: false
+            referencedRelation: "inbox_conversations"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "job_applications_applicant_id_fkey"
+            columns: ["applicant_id"]
+            isOneToOne: false
+            referencedRelation: "my_connections"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "job_applications_applicant_id_fkey"
             columns: ["applicant_id"]
@@ -263,34 +583,31 @@ export type Database = {
             foreignKeyName: "job_postings_posted_by_fkey"
             columns: ["posted_by"]
             isOneToOne: false
+            referencedRelation: "blocked_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_postings_posted_by_fkey"
+            columns: ["posted_by"]
+            isOneToOne: false
+            referencedRelation: "inbox_conversations"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "job_postings_posted_by_fkey"
+            columns: ["posted_by"]
+            isOneToOne: false
+            referencedRelation: "my_connections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_postings_posted_by_fkey"
+            columns: ["posted_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
-      }
-      medical_colleges: {
-        Row: {
-          created_at: string | null
-          established_year: number | null
-          id: string
-          location: string | null
-          name: string
-        }
-        Insert: {
-          created_at?: string | null
-          established_year?: number | null
-          id?: string
-          location?: string | null
-          name: string
-        }
-        Update: {
-          created_at?: string | null
-          established_year?: number | null
-          id?: string
-          location?: string | null
-          name?: string
-        }
-        Relationships: []
       }
       memberships: {
         Row: {
@@ -328,6 +645,34 @@ export type Database = {
             referencedRelation: "spaces"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "memberships_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "blocked_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "memberships_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "inbox_conversations"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "memberships_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "my_connections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "memberships_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       message_attachments: {
@@ -340,7 +685,6 @@ export type Database = {
           id: string
           message_id: number
           uploaded_by: string | null
-          user_id: string | null
         }
         Insert: {
           created_at?: string
@@ -351,7 +695,6 @@ export type Database = {
           id?: string
           message_id: number
           uploaded_by?: string | null
-          user_id?: string | null
         }
         Update: {
           created_at?: string
@@ -362,7 +705,6 @@ export type Database = {
           id?: string
           message_id?: number
           uploaded_by?: string | null
-          user_id?: string | null
         }
         Relationships: [
           {
@@ -376,12 +718,26 @@ export type Database = {
             foreignKeyName: "message_attachments_uploaded_by_fkey"
             columns: ["uploaded_by"]
             isOneToOne: false
-            referencedRelation: "profiles"
+            referencedRelation: "blocked_members"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "message_attachments_user_id_fkey"
-            columns: ["user_id"]
+            foreignKeyName: "message_attachments_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "inbox_conversations"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "message_attachments_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "my_connections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_attachments_uploaded_by_fkey"
+            columns: ["uploaded_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -466,6 +822,34 @@ export type Database = {
             referencedRelation: "threads"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "messages_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "blocked_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "inbox_conversations"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "messages_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "my_connections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       notification_preferences: {
@@ -503,6 +887,93 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      notifications: {
+        Row: {
+          actor_id: string | null
+          created_at: string
+          entity_id: string | null
+          id: string
+          is_read: boolean
+          type: Database["public"]["Enums"]["notification_type"]
+          user_id: string
+        }
+        Insert: {
+          actor_id?: string | null
+          created_at?: string
+          entity_id?: string | null
+          id?: string
+          is_read?: boolean
+          type: Database["public"]["Enums"]["notification_type"]
+          user_id: string
+        }
+        Update: {
+          actor_id?: string | null
+          created_at?: string
+          entity_id?: string | null
+          id?: string
+          is_read?: boolean
+          type?: Database["public"]["Enums"]["notification_type"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "blocked_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "inbox_conversations"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "notifications_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "my_connections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "blocked_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "inbox_conversations"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "my_connections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       partner_services: {
         Row: {
@@ -590,6 +1061,27 @@ export type Database = {
             foreignKeyName: "partners_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "blocked_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partners_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "inbox_conversations"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "partners_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "my_connections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partners_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -641,6 +1133,27 @@ export type Database = {
             foreignKeyName: "payment_transactions_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "blocked_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_transactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "inbox_conversations"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "payment_transactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "my_connections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_transactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -649,6 +1162,7 @@ export type Database = {
       profiles: {
         Row: {
           bio: string | null
+          connection_count: number
           course: string | null
           created_at: string | null
           current_location: string | null
@@ -676,6 +1190,7 @@ export type Database = {
         }
         Insert: {
           bio?: string | null
+          connection_count?: number
           course?: string | null
           created_at?: string | null
           current_location?: string | null
@@ -703,6 +1218,7 @@ export type Database = {
         }
         Update: {
           bio?: string | null
+          connection_count?: number
           course?: string | null
           created_at?: string | null
           current_location?: string | null
@@ -763,6 +1279,27 @@ export type Database = {
             foreignKeyName: "spaces_creator_id_fkey"
             columns: ["creator_id"]
             isOneToOne: false
+            referencedRelation: "blocked_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "spaces_creator_id_fkey"
+            columns: ["creator_id"]
+            isOneToOne: false
+            referencedRelation: "inbox_conversations"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "spaces_creator_id_fkey"
+            columns: ["creator_id"]
+            isOneToOne: false
+            referencedRelation: "my_connections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "spaces_creator_id_fkey"
+            columns: ["creator_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -802,6 +1339,7 @@ export type Database = {
         Row: {
           created_at: string
           creator_id: string
+          description: string | null
           id: string
           last_activity_at: string | null
           message_count: number
@@ -812,6 +1350,7 @@ export type Database = {
         Insert: {
           created_at?: string
           creator_id: string
+          description?: string | null
           id?: string
           last_activity_at?: string | null
           message_count?: number
@@ -822,6 +1361,7 @@ export type Database = {
         Update: {
           created_at?: string
           creator_id?: string
+          description?: string | null
           id?: string
           last_activity_at?: string | null
           message_count?: number
@@ -841,35 +1381,133 @@ export type Database = {
       }
       user_connections: {
         Row: {
-          addressee_id: string | null
-          created_at: string | null
+          addressee_id: string
+          created_at: string
           id: string
-          requester_id: string | null
-          status: string | null
+          requester_id: string
+          status: Database["public"]["Enums"]["connection_status"]
           updated_at: string | null
         }
         Insert: {
-          addressee_id?: string | null
-          created_at?: string | null
+          addressee_id: string
+          created_at?: string
           id?: string
-          requester_id?: string | null
-          status?: string | null
+          requester_id: string
+          status?: Database["public"]["Enums"]["connection_status"]
           updated_at?: string | null
         }
         Update: {
-          addressee_id?: string | null
-          created_at?: string | null
+          addressee_id?: string
+          created_at?: string
           id?: string
-          requester_id?: string | null
-          status?: string | null
+          requester_id?: string
+          status?: Database["public"]["Enums"]["connection_status"]
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_addressee"
+            columns: ["addressee_id"]
+            isOneToOne: false
+            referencedRelation: "blocked_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_addressee"
+            columns: ["addressee_id"]
+            isOneToOne: false
+            referencedRelation: "inbox_conversations"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "fk_addressee"
+            columns: ["addressee_id"]
+            isOneToOne: false
+            referencedRelation: "my_connections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_addressee"
+            columns: ["addressee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_requester"
+            columns: ["requester_id"]
+            isOneToOne: false
+            referencedRelation: "blocked_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_requester"
+            columns: ["requester_id"]
+            isOneToOne: false
+            referencedRelation: "inbox_conversations"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "fk_requester"
+            columns: ["requester_id"]
+            isOneToOne: false
+            referencedRelation: "my_connections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_requester"
+            columns: ["requester_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_connections_addressee_id_fkey"
+            columns: ["addressee_id"]
+            isOneToOne: false
+            referencedRelation: "blocked_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_connections_addressee_id_fkey"
+            columns: ["addressee_id"]
+            isOneToOne: false
+            referencedRelation: "inbox_conversations"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "user_connections_addressee_id_fkey"
+            columns: ["addressee_id"]
+            isOneToOne: false
+            referencedRelation: "my_connections"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "user_connections_addressee_id_fkey"
             columns: ["addressee_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_connections_requester_id_fkey"
+            columns: ["requester_id"]
+            isOneToOne: false
+            referencedRelation: "blocked_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_connections_requester_id_fkey"
+            columns: ["requester_id"]
+            isOneToOne: false
+            referencedRelation: "inbox_conversations"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "user_connections_requester_id_fkey"
+            columns: ["requester_id"]
+            isOneToOne: false
+            referencedRelation: "my_connections"
             referencedColumns: ["id"]
           },
           {
@@ -917,7 +1555,7 @@ export type Database = {
             foreignKeyName: "user_education_college_id_fkey"
             columns: ["college_id"]
             isOneToOne: false
-            referencedRelation: "medical_colleges"
+            referencedRelation: "institutions"
             referencedColumns: ["id"]
           },
           {
@@ -925,6 +1563,27 @@ export type Database = {
             columns: ["course_id"]
             isOneToOne: false
             referencedRelation: "courses_programs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_education_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "blocked_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_education_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "inbox_conversations"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "user_education_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "my_connections"
             referencedColumns: ["id"]
           },
           {
@@ -993,6 +1652,27 @@ export type Database = {
             foreignKeyName: "user_professional_details_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "blocked_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_professional_details_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "inbox_conversations"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "user_professional_details_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "my_connections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_professional_details_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -1031,6 +1711,27 @@ export type Database = {
             foreignKeyName: "user_recommendations_recommended_user_id_fkey"
             columns: ["recommender_id"]
             isOneToOne: false
+            referencedRelation: "blocked_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_recommendations_recommended_user_id_fkey"
+            columns: ["recommender_id"]
+            isOneToOne: false
+            referencedRelation: "inbox_conversations"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "user_recommendations_recommended_user_id_fkey"
+            columns: ["recommender_id"]
+            isOneToOne: false
+            referencedRelation: "my_connections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_recommendations_recommended_user_id_fkey"
+            columns: ["recommender_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -1038,7 +1739,49 @@ export type Database = {
             foreignKeyName: "user_recommendations_recommender_id_fkey"
             columns: ["recommender_id"]
             isOneToOne: false
+            referencedRelation: "blocked_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_recommendations_recommender_id_fkey"
+            columns: ["recommender_id"]
+            isOneToOne: false
+            referencedRelation: "inbox_conversations"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "user_recommendations_recommender_id_fkey"
+            columns: ["recommender_id"]
+            isOneToOne: false
+            referencedRelation: "my_connections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_recommendations_recommender_id_fkey"
+            columns: ["recommender_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_recommendations_user_id_fkey"
+            columns: ["recommendee_id"]
+            isOneToOne: false
+            referencedRelation: "blocked_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_recommendations_user_id_fkey"
+            columns: ["recommendee_id"]
+            isOneToOne: false
+            referencedRelation: "inbox_conversations"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "user_recommendations_user_id_fkey"
+            columns: ["recommendee_id"]
+            isOneToOne: false
+            referencedRelation: "my_connections"
             referencedColumns: ["id"]
           },
           {
@@ -1093,6 +1836,27 @@ export type Database = {
             foreignKeyName: "user_subscriptions_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "blocked_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_subscriptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "inbox_conversations"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "user_subscriptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "my_connections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_subscriptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -1100,20 +1864,140 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      blocked_members: {
+        Row: {
+          blocked_at: string | null
+          full_name: string | null
+          id: string | null
+          profile_picture_url: string | null
+        }
+        Relationships: []
+      }
+      inbox_conversations: {
+        Row: {
+          conversation_id: string | null
+          last_message_at: string | null
+          last_message_content: string | null
+          participant_avatar_url: string | null
+          participant_full_name: string | null
+          participant_id: string | null
+          unread_count: number | null
+          updated_at: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversation_participants_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      my_connections: {
+        Row: {
+          course: string | null
+          current_location: string | null
+          full_name: string | null
+          id: string | null
+          institution: string | null
+          organization: string | null
+          profile_picture_url: string | null
+        }
+        Relationships: []
+      }
+      pending_connection_requests: {
+        Row: {
+          course: string | null
+          current_location: string | null
+          full_name: string | null
+          institution: string | null
+          organization: string | null
+          profile_picture_url: string | null
+          request_date: string | null
+          requester_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_requester"
+            columns: ["requester_id"]
+            isOneToOne: false
+            referencedRelation: "blocked_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_requester"
+            columns: ["requester_id"]
+            isOneToOne: false
+            referencedRelation: "inbox_conversations"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "fk_requester"
+            columns: ["requester_id"]
+            isOneToOne: false
+            referencedRelation: "my_connections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_requester"
+            columns: ["requester_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_connections_requester_id_fkey"
+            columns: ["requester_id"]
+            isOneToOne: false
+            referencedRelation: "blocked_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_connections_requester_id_fkey"
+            columns: ["requester_id"]
+            isOneToOne: false
+            referencedRelation: "inbox_conversations"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "user_connections_requester_id_fkey"
+            columns: ["requester_id"]
+            isOneToOne: false
+            referencedRelation: "my_connections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_connections_requester_id_fkey"
+            columns: ["requester_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
+      block_user: {
+        Args: { blocked_user_id: string }
+        Returns: undefined
+      }
       can_view_thread: {
         Args: { p_thread_id: string }
         Returns: boolean
       }
-      create_thread: {
-        Args: { p_body: string; p_space_id?: string; p_title: string }
+      create_or_get_conversation: {
+        Args: { other_user_id: string }
         Returns: string
       }
-      create_user_connection: {
-        Args: { addressee_id: string; requester_id: string }
-        Returns: Json
+      create_thread: {
+        Args: {
+          p_body: string
+          p_description?: string
+          p_space_id?: string
+          p_title: string
+        }
+        Returns: string
       }
       get_job_recommendations: {
         Args: { target_user_id: string }
@@ -1139,6 +2023,14 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_mutual_connections: {
+        Args: { other_user_id: string }
+        Returns: {
+          full_name: string
+          id: string
+          profile_picture_url: string
+        }[]
+      }
       get_pending_requests: {
         Args: { p_space_id: string }
         Returns: {
@@ -1157,6 +2049,20 @@ export type Database = {
         Args: { thread_id_to_check: string }
         Returns: string
       }
+      get_spaces_with_details: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          created_at: string
+          creator_full_name: string
+          creator_id: string
+          description: string
+          id: string
+          join_level: Database["public"]["Enums"]["space_join_level"]
+          moderators: Json
+          name: string
+          space_type: Database["public"]["Enums"]["space_type"]
+        }[]
+      }
       get_threads: {
         Args: { p_space_id?: string }
         Returns: {
@@ -1172,11 +2078,14 @@ export type Database = {
       get_user_recommendations: {
         Args: { target_user_id: string }
         Returns: {
+          course: string
           current_location: string
           full_name: string
+          id: string
+          institution: string
+          organization: string
           similarity_score: number
           specialization: string
-          user_id: string
           years_experience: string
         }[]
       }
@@ -1184,16 +2093,12 @@ export type Database = {
         Args: { counter_name_param: string }
         Returns: number
       }
-      is_space_admin_or_creator: {
-        Args: { space_id_to_check: string }
-        Returns: boolean
-      }
       is_space_member: {
         Args: { space_id_to_check: string }
         Returns: boolean
       }
       is_space_moderator_or_admin: {
-        Args: { space_id_to_check: string }
+        Args: { p_space_id: string; p_user_id: string }
         Returns: boolean
       }
       is_thread_creator: {
@@ -1212,6 +2117,10 @@ export type Database = {
           user_id: string
         }[]
       }
+      mark_conversation_as_read: {
+        Args: { p_conversation_id: string }
+        Returns: undefined
+      }
       post_message_with_reply: {
         Args: {
           p_body: string
@@ -1229,9 +2138,47 @@ export type Database = {
           user_id: string
         }[]
       }
+      remove_connection: {
+        Args: { user_to_remove_id: string }
+        Returns: undefined
+      }
       request_to_join_space: {
-        Args: { p_space_id: string; p_space_type: string }
+        Args: { p_space_id: string }
         Returns: string
+      }
+      respond_to_connection_request: {
+        Args: {
+          requester_uuid: string
+          response: Database["public"]["Enums"]["connection_status"]
+        }
+        Returns: undefined
+      }
+      send_connection_request: {
+        Args: { addressee_uuid: string }
+        Returns: undefined
+      }
+      toggle_reaction_dm: {
+        Args: { p_emoji: string; p_message_id: number }
+        Returns: Json
+      }
+      unblock_user: {
+        Args: { unblocked_user_id: string }
+        Returns: undefined
+      }
+      update_member_role: {
+        Args: {
+          p_membership_id: string
+          p_new_role: Database["public"]["Enums"]["membership_role"]
+        }
+        Returns: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["membership_role"]
+          space_id: string
+          status: Database["public"]["Enums"]["membership_status"]
+          updated_at: string
+          user_id: string
+        }[]
       }
       update_membership_status: {
         Args: {
@@ -1250,6 +2197,7 @@ export type Database = {
       }
     }
     Enums: {
+      connection_status: "pending" | "accepted" | "blocked" | "ignored"
       experience_level:
         | "fresh"
         | "one_to_three"
@@ -1260,6 +2208,7 @@ export type Database = {
       job_type: "full_time" | "part_time" | "contract" | "internship" | "locum"
       membership_role: "ADMIN" | "MODERATOR" | "MEMBER"
       membership_status: "ACTIVE" | "PENDING" | "BANNED"
+      notification_type: "new_connection_request" | "connection_accepted"
       space_join_level: "OPEN" | "INVITE_ONLY"
       space_type: "PUBLIC" | "COMMUNITY_SPACE" | "FORUM"
       specialization:
@@ -1450,6 +2399,7 @@ export const Constants = {
   },
   public: {
     Enums: {
+      connection_status: ["pending", "accepted", "blocked", "ignored"],
       experience_level: [
         "fresh",
         "one_to_three",
@@ -1461,6 +2411,7 @@ export const Constants = {
       job_type: ["full_time", "part_time", "contract", "internship", "locum"],
       membership_role: ["ADMIN", "MODERATOR", "MEMBER"],
       membership_status: ["ACTIVE", "PENDING", "BANNED"],
+      notification_type: ["new_connection_request", "connection_accepted"],
       space_join_level: ["OPEN", "INVITE_ONLY"],
       space_type: ["PUBLIC", "COMMUNITY_SPACE", "FORUM"],
       specialization: [
@@ -1526,4 +2477,3 @@ export const Constants = {
     },
   },
 } as const
-
