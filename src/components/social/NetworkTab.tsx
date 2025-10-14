@@ -22,7 +22,16 @@ export const NetworkTab = ({ myConnections, loading, onRemoveConnection }) => {
       toast({ title: "Error", description: "Could not start conversation.", variant: "destructive" });
     } else {
       // Navigate to the inbox and pass the conversationId in the state
-      navigate('/inbox', { state: { conversationId } });
+      navigate('/inbox', { 
+        state: { 
+          conversationId: conversationId,
+          participant: {
+            id: connection.id,
+            full_name: connection.full_name,
+            profile_picture_url: connection.profile_picture_url,
+          }
+        } 
+      });
     }
   };
 
@@ -54,7 +63,7 @@ export const NetworkTab = ({ myConnections, loading, onRemoveConnection }) => {
               location: conn.current_location 
             }}
           >
-            <Button variant="ghost" size="icon" onClick={() => handleStartConversation(conn.id)}>
+            <Button variant="ghost" size="icon" onClick={() => handleStartConversation(conn)}>
                 <MessageSquare className="h-5 w-5" />
             </Button>
             <Button variant="outline" size="sm" onClick={() => onRemoveConnection(conn.id)}><UserX className="h-4 w-4 mr-2" />Remove</Button>
