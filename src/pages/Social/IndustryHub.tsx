@@ -19,7 +19,7 @@ const exampleCollaborations = [
   { id: 2, title: 'Diabetes Research – Lifestyle Study', type: 'Research', location: 'Remote (India)', description: 'Seeking collaborators for a 6-month observational study.', skills: ['Research', 'Data Collection'], duration: '6 months', participants: 8 }
 ];
 
-const Opportunities = () => {
+const IndustryHub = () => {
   const navigate = useNavigate();
   const handleSignIn = () => navigate('/login');
 
@@ -28,9 +28,9 @@ const Opportunities = () => {
       <Header />
       <main className="container-medical py-8">
         <div className="mb-8 animate-fade-in">
-          <h1 className="text-3xl font-bold mb-2">Opportunities</h1>
+          <h1 className="text-3xl font-bold mb-2">Industry Hub</h1>
           <p className="text-muted-foreground text-lg">
-            Discover companies and collaborations. Sign in to post and engage.
+            A space for companies to showcase their work and for professionals to find collaborations.
           </p>
         </div>
 
@@ -125,4 +125,4 @@ const Opportunities = () => {
   );
 };
 
-export default Opportunities;
+export default IndustryHub;
