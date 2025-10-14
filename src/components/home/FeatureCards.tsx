@@ -131,12 +131,13 @@ export const FeatureCards = () => {
       isActive: true
     },
     {
-      title: 'Professional Networking',
-      description: 'Build your professional profile, connect with healthcare professionals, and explore collaboration opportunities across the medical field.',
-      icon: Users,
-      href: '/networking',
+      title: 'Industry Hub',
+      description: 'A space for companies to showcase innovative products and for professionals to discover research and collaboration opportunities.',
+      icon: Building, 
+      href: '/industryhub',
       isActive: true
     }
+
   ];
 
   const comingSoonFeatures = [
