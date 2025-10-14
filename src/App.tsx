@@ -1,24 +1,20 @@
-//src/App.tsx
+// src/App.tsx
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { AuthProvider } from "@/hooks/useAuth";
+import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import AuthGuard from "@/components/AuthGuard";
 import OnboardingGuard from "@/components/OnboardingGuard";
 
-// --- NEW CRITICAL IMPORT ---
 import { CommunityProvider } from "./context/CommunityContext"; 
 
-// page imports
+// --- Core Page Imports ---
 import Index from "./pages/Index";
 import Jobs from "./pages/Jobs";
-import Networking from "./pages/Networking";
 import Partnerships from "./pages/Partnerships";
 import Feedback from "./pages/Feedback";
-import Social from "./pages/Social";
-import Inbox from "./pages/Inbox";
 import Notifications from "./pages/Notifications";
 import Register from "./pages/Register";
 import Login from "./pages/Login";
@@ -29,7 +25,17 @@ import ProfilePage from './pages/ProfilePage';
 import CompleteProfile from "./pages/CompleteProfile";
 import AuthCallback from './pages/AuthCallback'; 
 
-// --- UPDATED COMMUNITY IMPORTS ---
+// --- NEW SOCIAL PAGE IMPORTS (PLACEHOLDERS) ---
+import Social from "./pages/Social/Social";
+import Networking from "./pages/Social/Networking";
+import Inbox from "./pages/Social/Inbox"; // <-- CORRECTLY IMPORTED PLACEHOLDER
+
+// --- NEW SOCIAL PAGE IMPORTS (FUNCTIONAL) ---
+import FunctionalSocial from "./pages/Social/FunctionalSocial";
+import FunctionalNetworking from "./pages/Social/FunctionalNetworking";
+import FunctionalInbox from "./pages/Social/FunctionalInbox";
+
+// --- COMMUNITY IMPORTS ---
 import Forums from "./pages/Community/Forums";
 import SpaceDetailPage from "./pages/Community/SpaceDetailPage";
 import ThreadDetailPage from "./pages/Community/ThreadDetailPage";
@@ -37,6 +43,12 @@ import CreateThread from "./pages/Community/CreateThread";
 import MembersPage from './pages/Community/MembersPage';
 
 const queryClient = new QueryClient();
+
+// Helper component to render a different component based on authentication status.
+const ConditionalRoute = ({ AuthComponent, PublicComponent }: { AuthComponent: React.ComponentType, PublicComponent: React.ComponentType }) => {
+  const { user } = useAuth();
+  return user ? <AuthComponent /> : <PublicComponent />;
+};
 
 const App = () => {
   console.log("App component is rendering. Current time:", new Date().toLocaleTimeString());
@@ -48,7 +60,6 @@ const App = () => {
             <Toaster />
             <Sonner />
             
-            {/* The CommunityProvider wraps routes that use useCommunity hook */}
             <CommunityProvider>
               <Routes>
                 {/* --- Core App Routes (Index and Public) --- */}
@@ -56,13 +67,16 @@ const App = () => {
                 <Route path="/please-verify" element={<PleaseVerify />} />
                 <Route path="/auth/callback" element={<AuthCallback />} />
                 <Route path="/jobs" element={<Jobs />} />
-                <Route path="/networking" element={<Networking />} />
                 <Route path="/partnerships" element={<Partnerships />} />
-                
-                {/* NOTE: Forums is the discovery page, it must be inside the provider */}
                 <Route path="/community" element={<Forums />} /> 
 
-                {/* --- Public Routes (AuthGuard redirects if logged in) --- */}
+                {/* --- Conditionally Rendered Social/Networking/Inbox Routes --- */}
+                <Route path="/social" element={<ConditionalRoute AuthComponent={FunctionalSocial} PublicComponent={Social} />} />
+                <Route path="/networking" element={<ConditionalRoute AuthComponent={FunctionalNetworking} PublicComponent={Networking} />} />
+                {/* --- CORRECTED INBOX ROUTE --- */}
+                <Route path="/inbox" element={<ConditionalRoute AuthComponent={FunctionalInbox} PublicComponent={Inbox} />} />
+                
+                {/* --- Public Auth Routes (AuthGuard redirects if logged in) --- */}
                 <Route element={<AuthGuard requireAuth={false} />}>
                   <Route path="/register" element={<Register />} />
                   <Route path="/login" element={<Login />} />
@@ -72,10 +86,7 @@ const App = () => {
                 <Route element={<AuthGuard />}>
                   <Route path="/complete-profile" element={<CompleteProfile />} />
                   <Route path="/profile/:userId" element={<ProfilePage />} />
-
                   <Route path="/feedback" element={<Feedback />} />
-                  <Route path="/social" element={<Social />} />
-                  <Route path="/inbox" element={<Inbox />} />
                   <Route path="/notifications" element={<Notifications />} />
                   <Route path="/payment" element={<PaymentPage />} />
 
