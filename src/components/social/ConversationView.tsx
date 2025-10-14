@@ -17,17 +17,25 @@ type MessageWithRelations = Tables<'direct_messages'> & {
 };
 type Profile = Tables<'profiles'>;
 
+type ReplyContext = {
+    id: number;
+    content: string;
+    sender_id: string;
+    author_name: string;
+};
+
 interface ConversationViewProps {
   conversation: Conversation;
 }
 
 export const ConversationView = ({ conversation }: ConversationViewProps) => {
-  const { user, profile: authorProfile } = useAuth(); // Logged-in user's profile
+  const { user } = useAuth();
   const [messages, setMessages] = useState<MessageWithRelations[]>([]);
-  const [recipientProfile, setRecipientProfile] = useState<Profile | null>(null);
+  const [profiles, setProfiles] = useState<Record<string, Profile>>({});
   const [loading, setLoading] = useState(true);
+  const [replyingTo, setReplyingTo] = useState<ReplyContext | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
+  
   const fetchAndSetData = async () => {
     if (!conversation?.conversation_id || !conversation.participant_id) return;
     setLoading(true);
@@ -77,21 +85,23 @@ useEffect(() => {
         <h3 className="font-semibold">{conversation.participant_full_name}</h3>
       </CardHeader>
       <CardContent className="flex-1 overflow-y-auto p-4 space-y-6 bg-muted/20">
-        {loading ? (
-          <div className="space-y-4"> <Skeleton className="h-12 w-1/2" /><Skeleton className="h-12 w-1/2 ml-auto" /></div>
-        ) : (
+        {loading ? ( <Skeleton /> ) : (
           messages.map((message) => 
             <DirectMessage 
               key={message.id} 
               message={message} 
-              authorProfile={authorProfile}
-              recipientProfile={recipientProfile}
+              authorProfile={profiles[message.sender_id]}
+              onReplyClick={setReplyingTo}
             />
           )
         )}
         <div ref={messagesEndRef} />
       </CardContent>
-      <DirectMessageInput conversationId={conversation.conversation_id} />
+      <DirectMessageInput 
+        conversationId={conversation.conversation_id}
+        replyingTo={replyingTo}
+        onCancelReply={() => setReplyingTo(null)}
+      />
     </>
   );
 };
