@@ -18,27 +18,27 @@ import {
     DropdownMenuSeparator, 
     DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
+import { useSocialCounts } from '@/context/SocialCountsContext'; 
 
 export const Header = () => {
   const { user, loading, signOut } = useAuth();
   const navigate = useNavigate();
   const [lovingItCount, setLovingItCount] = useState(0);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { requestCount, unreadInboxCount } = useSocialCounts();
 
   // --- THIS DATA IS NEEDED FOR THE ICONS ---
   const MOCK_DATA = {
     notificationCount: 5,
-    socialRequestCount: 3,
-    inboxCount: 7,
   };
-  const { notificationCount, socialRequestCount, inboxCount } = MOCK_DATA;
+  const { notificationCount} = MOCK_DATA;
 
   // --- THIS ARRAY DEFINITION WAS ACCIDENTALLY OMITTED ---
   const headerIcons = [
     { icon: Bell, label: 'Notifications', href: '/notifications', showBadge: true, badge: notificationCount, color: 'text-warning hover:text-warning/80' },
     { icon: MessageSquare, label: 'Feedback', href: '/feedback', showBadge: false, color: 'text-success hover:text-success/80' },
-    { icon: Users, label: 'Social', href: '/social', showBadge: true, badge: socialRequestCount, color: 'text-primary hover:text-primary/80' },
-    { icon: MessageCircle, label: 'Inbox', href: '/inbox', showBadge: true, badge: inboxCount, color: 'text-premium hover:text-premium/80' }
+    { icon: Users, label: 'Social', href: '/social', showBadge: true, badge: requestCount, color: 'text-primary hover:text-primary/80' },
+    { icon: MessageCircle, label: 'Inbox', href: '/inbox', showBadge: true, badge: unreadInboxCount, color: 'text-premium hover:text-premium/80' }
   ];
 
   const handleMobileNav = (path: string) => {
