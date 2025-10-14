@@ -2,13 +2,17 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { Separator } from '@/components/ui/separator';
 
-// A generic user type to handle different data shapes from various views/functions
+// CHANGED: Expanded the User interface to include more optional details
 interface User {
   id: string;
   full_name: string;
   profile_picture_url?: string | null;
-  subtitle: string;
+  // NEW: Optional detailed fields
+  title?: string | null;
+  organization?: string | null;
+  location?: string | null;
 }
 
 interface UserActionCardProps {
@@ -17,6 +21,13 @@ interface UserActionCardProps {
 }
 
 export const UserActionCard = ({ user, children }: UserActionCardProps) => {
+  // NEW: Create a details array to cleanly render available info
+  const userDetails = [
+    user.title,
+    user.organization,
+    user.location,
+  ].filter(Boolean); // Filter out any null or empty strings
+
   return (
     <Card className="hover:bg-muted/50 transition-colors">
       <CardContent className="p-3 flex items-center justify-between">
@@ -31,7 +42,17 @@ export const UserActionCard = ({ user, children }: UserActionCardProps) => {
             <Link to={`/profile/${user.id}`} className="hover:underline">
                 <h4 className="font-semibold">{user.full_name}</h4>
             </Link>
-            <p className="text-sm text-muted-foreground">{user.subtitle}</p>
+            {/* CHANGED: Render the new detailed information line */}
+            {userDetails.length > 0 && (
+              <p className="text-sm text-muted-foreground flex items-center flex-wrap">
+                {userDetails.map((detail, index) => (
+                  <React.Fragment key={index}>
+                    <span>{detail}</span>
+                    {index < userDetails.length - 1 && <span className="mx-1.5">&bull;</span>}
+                  </React.Fragment>
+                ))}
+              </p>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-2">
