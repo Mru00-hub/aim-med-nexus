@@ -7,8 +7,8 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import AuthGuard from "@/components/AuthGuard";
 import OnboardingGuard from "@/components/OnboardingGuard";
-
 import { CommunityProvider } from "./context/CommunityContext"; 
+import { SocialCountsProvider } from './context/SocialCountsContext';
 
 // --- Core Page Imports ---
 import Index from "./pages/Index";
