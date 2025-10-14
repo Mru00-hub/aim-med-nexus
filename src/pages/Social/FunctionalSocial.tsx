@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { useAuth } from '@/hooks/useAuth';
@@ -6,6 +6,7 @@ import { socialApi } from '@/integrations/supabase/social.api';
 import type { Database, Tables } from '@/integrations/supabase/types';
 import { useToast } from '@/components/ui/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useSocialCounts } from '@/context/SocialCountsContext'; 
 
 // Import the new tab components
 import { DiscoverTab } from '@/components/social/DiscoverTab';
@@ -23,6 +24,7 @@ type BlockedUser = Tables<'blocked_members'>;
 const FunctionalSocial = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { setRequestCount } = useSocialCounts();
   const [loading, setLoading] = useState(true);
   
   // State for all social data
@@ -31,6 +33,11 @@ const FunctionalSocial = () => {
   const [recommendations, setRecommendations] = useState<UserRecommendation[]>([]);
   const [myConnections, setMyConnections] = useState<MyConnection[]>([]);
   const [blockedUsers, setBlockedUsers] = useState<BlockedUser[]>([]);
+
+  useEffect(() => {
+    // Update the global request count whenever the local `requests` state changes
+    setRequestCount(requests.length);
+  }, [requests, setRequestCount]);
   
   const fetchData = async () => {
     if (!user) return;
