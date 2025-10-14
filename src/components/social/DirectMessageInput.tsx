@@ -110,11 +110,20 @@ export const DirectMessageInput = ({ conversationId, replyingTo, onCancelReply }
         )}
         
         {attachedFiles.length > 0 && (
+            <div className="flex flex-wrap gap-3 p-2 bg-muted/50 border rounded-lg">
+                {attachedFiles.map((file, index) => {
                     const isImage = file.type.startsWith('image/');
+                    // The previewUrls state holds the temporary URLs for images
+                    const previewUrl = previewUrls[index];
+
                     return (
                         <div key={`${file.name}-${index}`} className="relative group w-20 h-20">
-                            {isImage ? (
-                                <img src={previewUrls[index]} alt={file.name} className="w-full h-full rounded-md object-cover border" />
+                            {isImage && previewUrl ? (
+                                <img 
+                                    src={previewUrl} 
+                                    alt={file.name} 
+                                    className="w-full h-full rounded-md object-cover border" 
+                                />
                             ) : (
                                 <div className="w-full h-full rounded-md bg-muted flex flex-col items-center justify-center p-1 text-center">
                                     <FileIcon className="h-8 w-8 text-muted-foreground" />
@@ -134,6 +143,7 @@ export const DirectMessageInput = ({ conversationId, replyingTo, onCancelReply }
                 })}
             </div>
         )}
+
 
         <div className="relative flex items-end gap-2">
             <input key={fileInputKey} type="file" ref={fileInputRef} onChange={handleFileChange} className="sr-only" multiple />
