@@ -5,19 +5,27 @@ import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Search } from 'lucide-react';
 import { socialApi } from '@/integrations/supabase/social.api';
-import { Tables } from '@/integrations/supabase/types';
+import type { Tables } from '@/integrations/supabase/types';
 import TimeAgo from 'react-timeago';
 
 type Conversation = Tables<'inbox_conversations'>;
 
 interface ConversationListProps {
+  conversations: Conversation[];
+  loading: boolean;
   onSelectConversation: (conversation: Conversation) => void;
   selectedConversationId: string | null;
 }
 
-export const ConversationList = ({ onSelectConversation, selectedConversationId }: ConversationListProps) => {
-  const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [loading, setLoading] = useState(true);
+export const ConversationList = ({ conversations, loading, onSelectConversation, selectedConversationId }: ConversationListProps) => {
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const filteredConversations = useMemo(() => {
+    if (!searchQuery) return conversations;
+    return conversations.filter(convo =>
+      convo.participant_full_name?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [conversations, searchQuery]);
 
   useEffect(() => {
     const fetchInbox = async () => {
@@ -45,13 +53,9 @@ export const ConversationList = ({ onSelectConversation, selectedConversationId 
         </div>
       </CardHeader>
       <CardContent className="p-0 overflow-y-auto flex-1">
-        {loading ? (
-          <div className="p-3 space-y-2">
-            <Skeleton className="h-16 w-full" /><Skeleton className="h-16 w-full" />
-          </div>
-        ) : (
+        {loading ? ( <Skeleton className="h-16 w-full" /> ) : (
           <div className="space-y-1">
-            {conversations.map((convo) => (
+            {filteredConversations.map((convo) => (
               <div
                 key={convo.conversation_id}
                 onClick={() => onSelectConversation(convo)}
