@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useLocation } from 'react-router-dom';
+import { useSocialCounts } from '@/context/SocialCountsContext';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { Card, CardContent } from '@/components/ui/card';
@@ -18,6 +20,27 @@ const FunctionalInbox = () => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
+  const { setUnreadInboxCount } = useSocialCounts();
+  const location = useLocation();
+
+  useEffect(() => {
+    // This effect calculates and updates the global unread count whenever conversations change
+    const totalUnread = conversations.reduce((acc, convo) => acc + (convo.unread_count || 0), 0);
+    setUnreadInboxCount(totalUnread);
+  }, [conversations, setUnreadInboxCount]);
+
+  useEffect(() => {
+    // This effect handles auto-selecting a conversation from navigation state
+    const conversationIdFromState = location.state?.conversationId;
+    if (conversationIdFromState && conversations.length > 0 && !loading) {
+      const convoToSelect = conversations.find(c => c.conversation_id === conversationIdFromState);
+      if (convoToSelect) {
+        setSelectedConversation(convoToSelect);
+        // Clear the state so it doesn't re-trigger on other renders
+        window.history.replaceState({}, document.title);
+      }
+    }
+  }, [location.state, conversations, loading]);
 
   useEffect(() => {
     // Function to fetch the initial list of conversations
