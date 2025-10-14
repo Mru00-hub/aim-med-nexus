@@ -1,27 +1,17 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/hooks/useAuth';
 import { socialApi } from '@/integrations/supabase/social.api';
 import type { Database, Tables } from '@/integrations/supabase/types';
-import { Input } from '@/components/ui/input';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { 
-  Users, 
-  UserPlus,
-  Search,
-  Sparkles,
-  UserX,
-  MoreHorizontal,
-  Ban
-} from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { useToast } from '@/components/ui/use-toast';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+// Import the new tab components
+import { DiscoverTab } from '@/components/social/DiscoverTab';
+import { NetworkTab } from '@/components/social/NetworkTab';
+import { RequestsTab } from '@/components/social/RequestsTab';
+import { BlockedTab } from '@/components/social/BlockedTab';
 
 // Define types for all data models
 type ConnectionRequest = Tables<'pending_connection_requests'>;
@@ -42,9 +32,6 @@ const FunctionalSocial = () => {
   const [myConnections, setMyConnections] = useState<MyConnection[]>([]);
   const [blockedUsers, setBlockedUsers] = useState<BlockedUser[]>([]);
   
-  // State for search/filter
-  const [searchTerm, setSearchTerm] = useState('');
-
   const fetchData = async () => {
     if (!user) return;
     setLoading(true);
@@ -70,12 +57,9 @@ const FunctionalSocial = () => {
       setLoading(false);
     }
   };
+  useEffect(() => { fetchData(); }, [user]);
 
-  useEffect(() => {
-    fetchData();
-  }, [user]);
-
-  // --- Action Handlers ---
+  // Action Handlers
   const handleAction = async (action: () => Promise<any>, successMessage: string) => {
     const { error } = await action();
     if (error) {
@@ -91,13 +75,7 @@ const FunctionalSocial = () => {
   const handleRemoveConnection = (userId: string) => handleAction(() => socialApi.connections.removeConnection(userId), "Connection removed.");
   const handleBlockUser = (userId: string) => handleAction(() => socialApi.connections.blockUser(userId), "User has been blocked.");
   const handleUnblockUser = (userId: string) => handleAction(() => socialApi.connections.unblockUser(userId), "User has been unblocked.");
-
-  // --- Memoized Filtered Recommendations ---
-  const filteredRecommendations = useMemo(() => {
-    if (!searchTerm) return recommendations;
-    return recommendations.filter(rec => rec.full_name.toLowerCase().includes(searchTerm.toLowerCase()));
-  }, [recommendations, searchTerm]);
-
+  
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -114,145 +92,43 @@ const FunctionalSocial = () => {
                 <TabsTrigger value="discover">Discover</TabsTrigger>
                 <TabsTrigger value="network">My Network ({myConnections.length})</TabsTrigger>
                 <TabsTrigger value="requests">Requests ({requests.length})</TabsTrigger>
-                <TabsTrigger value="blocked">Blocked</TabsTrigger>
+                <TabsTrigger value="blocked">Blocked ({blockedUsers.length})</TabsTrigger>
             </TabsList>
             
             <TabsContent value="discover" className="mt-6">
-                 <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2"><Sparkles className="h-5 w-5" /> People You May Know</CardTitle>
-                        <div className="relative pt-4">
-                            <Search className="absolute left-3 top-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input placeholder="Search by name..." className="pl-10" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-                        </div>
-                    </CardHeader>
-                    <CardContent className="space-y-2">
-                        {loading ? <Skeleton className="h-20 w-full" /> : filteredRecommendations.map(rec => (
-                             <div key={rec.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50">
-                                <div className="flex items-center gap-4">
-                                    <Avatar>
-                                        <AvatarImage src={`https://i.pravatar.cc/40?u=${rec.id}`} />
-                                        <AvatarFallback>{rec.full_name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
-                                    </Avatar>
-                                    <div>
-                                        <h4 className="font-semibold">{rec.full_name}</h4>
-                                        <p className="text-sm text-muted-foreground">{rec.specialization || rec.course}</p>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <Button size="sm" onClick={() => handleSendRequest(rec.id)}><UserPlus className="h-4 w-4 mr-2" />Connect</Button>
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal /></Button></DropdownMenuTrigger>
-                                        <DropdownMenuContent>
-                                            <DropdownMenuItem onSelect={() => handleBlockUser(rec.id)} className="text-destructive focus:bg-destructive/10 focus:text-destructive"><Ban className="h-4 w-4 mr-2" />Block User</DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-                                </div>
-                             </div>
-                        ))}
-                    </CardContent>
-                 </Card>
+                <DiscoverTab
+                    recommendations={recommendations}
+                    loading={loading}
+                    onSendRequest={handleSendRequest}
+                    onBlockUser={handleBlockUser}
+                />
             </TabsContent>
 
             <TabsContent value="network" className="mt-6">
-                <Card>
-                    <CardHeader><CardTitle>My Connections</CardTitle></CardHeader>
-                    <CardContent className="space-y-2">
-                        {loading ? <Skeleton className="h-20 w-full" /> : myConnections.map(conn => (
-                            <div key={conn.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50">
-                                <div className="flex items-center gap-4">
-                                    <Avatar>
-                                        <AvatarImage src={conn.profile_picture_url || `https://i.pravatar.cc/40?u=${conn.id}`} />
-                                        <AvatarFallback>{conn.full_name?.split(' ').map(n => n[0]).join('')}</AvatarFallback>
-                                    </Avatar>
-                                    <div>
-                                        <h4 className="font-semibold">{conn.full_name}</h4>
-                                        <p className="text-sm text-muted-foreground">{conn.organization}</p>
-                                    </div>
-                                </div>
-                                <Button variant="outline" size="sm" onClick={() => handleRemoveConnection(conn.id)}><UserX className="h-4 w-4 mr-2"/>Remove</Button>
-                            </div>
-                        ))}
-                    </CardContent>
-                </Card>
+                <NetworkTab
+                    myConnections={myConnections}
+                    loading={loading}
+                    onRemoveConnection={handleRemoveConnection}
+                />
             </TabsContent>
 
             <TabsContent value="requests" className="mt-6">
-                <Tabs defaultValue="incoming" className="w-full">
-                    <TabsList className="grid w-full grid-cols-2"><TabsTrigger value="incoming">Incoming</TabsTrigger><TabsTrigger value="sent">Sent</TabsTrigger></TabsList>
-                    <TabsContent value="incoming" className="mt-4">
-                       {loading ? <Skeleton className="h-24 w-full" /> : requests.length > 0 ? requests.map(req => (
-                           <Card key={req.requester_id} className="mb-4">
-                               <CardContent className="p-4 flex items-center justify-between">
-                                   <div className="flex items-center gap-4">
-                                       <Avatar>
-                                            <AvatarImage src={req.profile_picture_url || `https://i.pravatar.cc/40?u=${req.requester_id}`} />
-                                            <AvatarFallback>{req.full_name?.split(' ').map(n => n[0]).join('')}</AvatarFallback>
-                                       </Avatar>
-                                       <div>
-                                           <h4 className="font-semibold">{req.full_name}</h4>
-                                           <p className="text-sm text-muted-foreground">{req.organization}</p>
-                                       </div>
-                                   </div>
-                                   <div className="flex gap-2">
-                                       <Button size="sm" onClick={() => handleRespondRequest(req.requester_id, 'accepted')}>Accept</Button>
-                                       <Button size="sm" variant="outline" onClick={() => handleRespondRequest(req.requester_id, 'ignored')}>Ignore</Button>
-                                       <DropdownMenu>
-                                           <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal/></Button></DropdownMenuTrigger>
-                                           <DropdownMenuContent>
-                                                <DropdownMenuItem onSelect={() => handleBlockUser(req.requester_id)} className="text-destructive focus:bg-destructive/10 focus:text-destructive"><Ban className="h-4 w-4 mr-2"/>Block</DropdownMenuItem>
-                                           </DropdownMenuContent>
-                                       </DropdownMenu>
-                                   </div>
-                               </CardContent>
-                           </Card>
-                       )) : <p className="text-center text-muted-foreground py-8">No incoming requests.</p>}
-                    </TabsContent>
-                    <TabsContent value="sent" className="mt-4">
-                       {loading ? <Skeleton className="h-24 w-full" /> : sentRequests.length > 0 ? sentRequests.map(req => (
-                           <Card key={req.addressee_id} className="mb-4">
-                               <CardContent className="p-4 flex items-center justify-between">
-                                   <div className="flex items-center gap-4">
-                                       <Avatar>
-                                           <AvatarImage src={req.profile_picture_url || `https://i.pravatar.cc/40?u=${req.addressee_id}`} />
-                                           <AvatarFallback>{req.full_name?.split(' ').map(n => n[0]).join('')}</AvatarFallback>
-                                       </Avatar>
-                                       <div>
-                                            <h4 className="font-semibold">{req.full_name}</h4>
-                                            <p className="text-sm text-muted-foreground">{req.organization}</p>
-                                       </div>
-                                   </div>
-                                   <div className="flex gap-2">
-                                       <Badge variant="outline">Pending</Badge>
-                                       <Button size="sm" variant="ghost" onClick={() => handleRemoveConnection(req.addressee_id)}>Withdraw</Button>
-                                   </div>
-                               </CardContent>
-                           </Card>
-                       )) : <p className="text-center text-muted-foreground py-8">No pending sent requests.</p>}
-                    </TabsContent>
-                </Tabs>
+                <RequestsTab
+                    requests={requests}
+                    sentRequests={sentRequests}
+                    loading={loading}
+                    onRespondRequest={handleRespondRequest}
+                    onBlockUser={handleBlockUser}
+                    onWithdrawRequest={handleRemoveConnection} // Withdrawing is the same as removing
+                />
             </TabsContent>
             
             <TabsContent value="blocked" className="mt-6">
-                 <Card>
-                    <CardHeader><CardTitle>Blocked Users</CardTitle></CardHeader>
-                    <CardContent className="space-y-2">
-                         {loading ? <Skeleton className="h-20 w-full" /> : blockedUsers.map(bu => (
-                            <div key={bu.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50">
-                                <div className="flex items-center gap-4">
-                                    <Avatar>
-                                        <AvatarImage src={bu.profile_picture_url || `https://i.pravatar.cc/40?u=${bu.id}`} />
-                                        <AvatarFallback>{bu.full_name?.split(' ').map(n => n[0]).join('')}</AvatarFallback>
-                                    </Avatar>
-                                    <div>
-                                        <h4 className="font-semibold">{bu.full_name}</h4>
-                                    </div>
-                                </div>
-                                <Button variant="outline" size="sm" onClick={() => handleUnblockUser(bu.id)}>Unblock</Button>
-                            </div>
-                        ))}
-                    </CardContent>
-                 </Card>
+                 <BlockedTab
+                    blockedUsers={blockedUsers}
+                    loading={loading}
+                    onUnblockUser={handleUnblockUser}
+                 />
             </TabsContent>
         </Tabs>
       </main>
