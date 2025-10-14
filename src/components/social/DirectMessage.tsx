@@ -92,7 +92,7 @@ export const DirectMessage = ({ message, authorProfile, onReplyClick }: DirectMe
             onMouseEnter={() => setShowActions(true)}
             onMouseLeave={() => setShowActions(false)}
         >
-            {!isMe && <Avatar className="h-8 w-8"> <AvatarImage src={authorProfile?.profile_picture_url} /> <AvatarFallback>{authorProfile?.full_name?.charAt(0)}</AvatarFallback> </Avatar>
+            {!isMe && <Avatar className="h-8 w-8"> <AvatarImage src={authorProfile?.profile_picture_url} /> <AvatarFallback>{authorProfile?.full_name?.charAt(0)}</AvatarFallback> </Avatar>}
 
             <div className={cn("flex flex-col w-full relative", isMe ? "items-end" : "items-start")}>
                 <div className={messageStyle}>
