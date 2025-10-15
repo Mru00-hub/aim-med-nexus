@@ -44,7 +44,6 @@ const FunctionalSocial = () => {
   const { toast } = useToast();
   const { setRequestCount } = useSocialCounts();
   const [loading, setLoading] = useState(true);
-  const [requests, setRequests] = useState<ConnectionRequest[]>([]);
   
   // State for all social data
   const [requests, setRequests] = useState<ConnectionRequest[]>([]);
