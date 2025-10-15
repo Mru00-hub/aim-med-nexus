@@ -12,7 +12,7 @@ import type { Tables } from '@/integrations/supabase/types';
 import { ConversationList } from '@/components/social/ConversationList';
 import { ConversationView } from '@/components/social/ConversationView';
 
-type Conversation = Tables<'inbox_conversations'>;
+type Conversation = Tables<'inbox_conversations'> & { is_starred?: boolean };
 type DirectMessagePayload = Tables<'direct_messages'>;
 
 const FunctionalInbox = () => {
@@ -22,37 +22,39 @@ const FunctionalInbox = () => {
   const { setUnreadInboxCount } = useSocialCounts();
   const location = useLocation();
 
+  const fetchAndSetConversations = async () => {
+    setLoading(true);
+    const { data } = await socialApi.messaging.getInbox();
+    if (data) {
+      // Sort conversations to show starred ones at the top
+      data.sort((a, b) => (b.is_starred ? 1 : 0) - (a.is_starred ? 1 : 0));
+      setConversations(data as Conversation[]);
+    }
+    setLoading(false);
+  };
+
   // Effect to update the global unread count
   useEffect(() => {
     const totalUnread = conversations.reduce((acc, convo) => acc + (convo.unread_count || 0), 0);
     setUnreadInboxCount(totalUnread);
   }, [conversations, setUnreadInboxCount]);
 
-  // *** LOGIC SEPARATED: Effect for data fetching and real-time subscription ***
   useEffect(() => {
-    const fetchInbox = async () => {
-      setLoading(true);
-      const { data } = await socialApi.messaging.getInbox();
-      if (data) setConversations(data);
-      setLoading(false);
-    };
-
-    fetchInbox();
+    fetchAndSetConversations(); // Initial fetch
 
     const channel = supabase
       .channel('public:direct_messages')
       .on<DirectMessagePayload>('postgres_changes', { event: 'INSERT', schema: 'public', table: 'direct_messages' },
         (payload) => {
-          // When a new message arrives, always refetch the inbox list to get the latest order and details
-          fetchInbox();
+          // A new message should always trigger a refetch to update order and content
+          fetchAndSetConversations();
         }
       )
       .subscribe();
       
       return () => { supabase.removeChannel(channel); };
-  }, []); // *** FIX: Dependency array is now empty to run only once on mount ***
+  }, []);
 
-  // *** LOGIC SEPARATED: Effect for handling auto-selection from navigation ***
   useEffect(() => {
     const navState = location.state as { conversationId?: string; participant?: any };
     const conversationIdFromState = navState?.conversationId;
@@ -64,9 +66,6 @@ const FunctionalInbox = () => {
       setSelectedConversation(convoInList);
       window.history.replaceState({}, document.title);
     } else if (!loading && navState.participant) {
-      // *** THE FALLBACK LOGIC ***
-      // If the conversation is not in the list (because it's new and empty),
-      // create a temporary "phantom" conversation object to display immediately.
       const phantomConversation: Conversation = {
         conversation_id: conversationIdFromState,
         last_message_at: new Date().toISOString(),
@@ -76,14 +75,14 @@ const FunctionalInbox = () => {
         participant_id: navState.participant.id,
         unread_count: 0,
         updated_at: new Date().toISOString(),
+        is_starred: false, // Ensure phantom conversations have the property
       };
-      // Add it to the list and select it
       setConversations(prev => [phantomConversation, ...prev]);
       setSelectedConversation(phantomConversation);
       window.history.replaceState({}, document.title);
     }
   }, [location.state, conversations, loading]);
-
+  
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -105,7 +104,10 @@ const FunctionalInbox = () => {
           </Card>
           <Card className="card-medical lg:col-span-3 flex flex-col">
             {selectedConversation ? (
-              <ConversationView conversation={selectedConversation} />
+              <ConversationView 
+                conversation={selectedConversation} 
+                onConversationUpdate={fetchAndSetConversations}
+              />
             ) : (
               <CardContent className="flex-1 flex items-center justify-center">
                 <div className="text-center">
