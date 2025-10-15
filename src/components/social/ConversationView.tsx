@@ -37,7 +37,7 @@ export const ConversationView = ({ conversation, onConversationUpdate }: Convers
     handleDeleteMessage,
     handleEditMessage,
     handleReaction
-  } = useConversationData(conversation.conversation_id);
+  } = useConversationData(conversation.conversation_id, conversation.participant_id);
 
   useEffect(() => {
     // On the very first render, prevMessagesLength.current is null, so we set it.
