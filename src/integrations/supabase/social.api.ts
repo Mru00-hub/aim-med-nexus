@@ -1,410 +1,361 @@
 /**
  * @file social.api.ts
  * @description This file serves as the API layer for all social networking and
- * direct messaging features. It encapsulates all Supabase RPC calls, table queries,
- * and view selections related to user connections and private chats, providing a
- * clean and type-safe interface for the frontend.
+ * direct messaging features. It encapsulates all Supabase RPC calls and table queries,
+ * providing a clean and type-safe interface for the frontend.
  *
- * @see Backend Documentation- Social & Messaging Features.docx
- * @see types.ts
+ * REFACTORED: This version aligns with the patterns established in community.api.ts,
+ * using standalone async functions that throw errors, and providing rich data types
+ * for a better developer experience and more robust optimistic UI updates.
  */
 
 import { supabase } from "./client";
 import type { Database, Enums, Tables, TablesInsert } from "./types";
 
-// Define a consistent error handling structure
-type ApiError = {
-  message: string;
-  details: any;
+//================================================================================
+//  Type Definitions
+//================================================================================
+
+export type DirectMessage = Tables<'direct_messages'>;
+export type DirectMessageReaction = Tables<'direct_message_reactions'>;
+export type DirectMessageAttachment = Tables<'direct_message_attachments'>;
+export type Profile = Tables<'profiles'>;
+export type ConnectionRequest = Tables<"pending_connection_requests">;
+export type Connection = Tables<"my_connections">;
+export type BlockedUser = Tables<"blocked_members">;
+export type Conversation = Tables<"inbox_conversations">;
+
+/**
+ * A rich type for a direct message, including details about the author,
+ * reactions, and attachments. This is crucial for rendering messages in the UI.
+ */
+export type DirectMessageWithDetails = DirectMessage & {
+  author: {
+    full_name: string | null;
+    profile_picture_url: string | null;
+  } | null;
+  reactions: DirectMessageReaction[];
+  attachments: DirectMessageAttachment[];
 };
 
-type ApiResponse<T> = {
-  data: T | null;
-  error: ApiError | null;
+//================================================================================
+//  Helper Functions
+//================================================================================
+
+/**
+ * A standardized helper to ensure a user session exists before making an API call.
+ * Throws an error if the user is not authenticated.
+ */
+const getSessionOrThrow = async () => {
+  const { data: { session }, error } = await supabase.auth.getSession();
+  if (error) throw new Error(error.message);
+  if (!session) throw new Error("Authentication required. Please log in.");
+  return session;
+};
+
+//================================================================================
+//  System 1: User Connections & Social Graph API
+//================================================================================
+
+// --- Connection Actions ---
+
+/**
+ * Sends a connection request to another user.
+ * @param addresseeId - The UUID of the user to send the request to.
+ */
+export const sendConnectionRequest = async (addresseeId: string): Promise<void> => {
+    const { error } = await supabase.rpc("send_connection_request", { addressee_uuid: addresseeId });
+    if (error) throw error;
 };
 
 /**
- * A helper function to handle Supabase responses and format them consistently.
- * @param response - The response object from a Supabase query.
- * @returns A formatted ApiResponse object.
+ * Responds to a pending connection request.
+ * @param requesterId - The UUID of the user who sent the request.
+ * @param responseStatus - The response, either 'accepted' or 'ignored'.
  */
-const handleResponse = <T>(response: {
-  data: T | null;
-  error: any;
-}): ApiResponse<T> => {
-  if (response.error) {
-    console.error("Supabase API Error:", response.error);
-    return {
-      data: null,
-      error: { message: response.error.message, details: response.error },
-    };
-  }
-  return { data: response.data, error: null };
+export const respondToRequest = async (requesterId: string, responseStatus: "accepted" | "ignored"): Promise<void> => {
+    const status: Enums<"connection_status"> = responseStatus;
+    const { error } = await supabase.rpc("respond_to_connection_request", { requester_uuid: requesterId, response: status });
+    if (error) throw error;
 };
 
-export const socialApi = {
-  //================================================================================
-  // System 1: User Connections & Social Graph API
-  //================================================================================
-  connections: {
-    /**
-     * [span_0](start_span)Sends a connection request to another user[span_0](end_span).
-     * @param addresseeId - The UUID of the user to send the request to.
-     */
-    sendRequest: async (
-      addresseeId: string
-    ): Promise<ApiResponse<undefined>> => {
-      const response = await supabase
-        .rpc("send_connection_request", {
-          addressee_uuid: addresseeId,
-        });
-      return handleResponse(response);
-    },
+/**
+ * Removes an existing 'accepted' connection (unfriends a user).
+ * @param userIdToRemove - The UUID of the user to remove.
+ */
+export const removeConnection = async (userIdToRemove: string): Promise<void> => {
+    const { error } = await supabase.rpc("remove_connection", { user_to_remove_id: userIdToRemove });
+    if (error) throw error;
+};
 
-    /**
-     * [span_1](start_span)Responds to a pending connection request[span_1](end_span).
-     * @param requesterId - The UUID of the user who sent the request.
-     * @param responseStatus - The response, either 'accepted' or 'ignored'.
-     */
-    respondToRequest: async (
-      requesterId: string,
-      responseStatus: "accepted" | "ignored"
-    ): Promise<ApiResponse<undefined>> => {
-      const status: Enums<"connection_status"> = responseStatus;
-      const response = await supabase
-        .rpc("respond_to_connection_request", {
-          requester_uuid: requesterId,
-          response: status,
-        });
-      return handleResponse(response);
-    },
+/**
+ * Blocks another user, preventing all interactions.
+ * @param userIdToBlock - The UUID of the user to block.
+ */
+export const blockUser = async (userIdToBlock: string): Promise<void> => {
+    const { error } = await supabase.rpc("block_user", { blocked_user_id: userIdToBlock });
+    if (error) throw error;
+};
 
-    /**
-     * [span_2](start_span)Removes an existing 'accepted' connection (unfriends a user)[span_2](end_span).
-     * @param userIdToRemove - The UUID of the user to remove.
-     */
-    removeConnection: async (
-      userIdToRemove: string
-    ): Promise<ApiResponse<undefined>> => {
-      const response = await supabase
-        .rpc("remove_connection", {
-          user_to_remove_id: userIdToRemove,
-        });
-      return handleResponse(response);
-    },
+/**
+ * Unblocks a user, allowing interactions again.
+ * @param userIdToUnblock - The UUID of the user to unblock.
+ */
+export const unblockUser = async (userIdToUnblock: string): Promise<void> => {
+    const { error } = await supabase.rpc("unblock_user", { unblocked_user_id: userIdToUnblock });
+    if (error) throw error;
+};
 
-    /**
-     * [span_3](start_span)Blocks another user, preventing all interactions[span_3](end_span).
-     * @param userIdToBlock - The UUID of the user to block.
-     */
-    blockUser: async (
-      userIdToBlock: string
-    ): Promise<ApiResponse<undefined>> => {
-      const response = await supabase
-        .rpc("block_user", {
-          blocked_user_id: userIdToBlock,
-        });
-      return handleResponse(response);
-    },
+// --- Data Fetching ---
 
-    /**
-     * [span_4](start_span)Unblocks a user, allowing interactions again[span_4](end_span).
-     * @param userIdToUnblock - The UUID of the user to unblock.
-     */
-    unblockUser: async (
-      userIdToUnblock: string
-    ): Promise<ApiResponse<undefined>> => {
-      const response = await supabase
-        .rpc("unblock_user", {
-          unblocked_user_id: userIdToUnblock,
-        });
-      return handleResponse(response);
-    },
-    
-    /**
-     * [span_5](start_span)Fetches a list of recommended users to connect with[span_5](end_span).
-     * @param targetUserId - The ID of the user for whom to get recommendations.
-     */
-    getUserRecommendations: async (
-        targetUserId: string
-    ): Promise<ApiResponse<Database['public']['Functions']['get_user_recommendations']['Returns']>> => {
-        const response = await supabase.rpc('get_user_recommendations', { target_user_id: targetUserId });
-        return handleResponse(response);
-    },
+/**
+ * Fetches all incoming pending connection requests for the current user.
+ */
+export const getPendingRequests = async (): Promise<ConnectionRequest[]> => {
+    const { data, error } = await supabase.from("pending_connection_requests").select("*");
+    if (error) throw error;
+    return data;
+};
 
-    /**
-     * [span_6](start_span)Fetches a list of mutual connections with another user[span_6](end_span).
-     * @param otherUserId - The UUID of the other user.
-     */
-    getMutualConnections: async (
-      otherUserId: string
-    ): Promise<ApiResponse<Database['public']['Functions']['get_mutual_connections']['Returns']>> => {
-      const response = await supabase
-        .rpc("get_mutual_connections", {
-          other_user_id: otherUserId,
-        });
-      return handleResponse(response);
-    },
-    
-    // --- Data Fetching from Helper Views ---
+/**
+ * Fetches a list of all accepted connections ("friends") for the current user.
+ */
+export const getMyConnections = async (): Promise<Connection[]> => {
+    const { data, error } = await supabase.from("my_connections").select("*");
+    if (error) throw error;
+    return data;
+};
 
-    /**
-     * [span_7](start_span)Fetches all incoming pending connection requests for the current user[span_7](end_span).
-     */
-    getPendingRequests: async (): Promise<
-      ApiResponse<Tables<"pending_connection_requests">[]>
-    > => {
-      const response = await supabase
-        .from("pending_connection_requests")
-        .select("*");
-      return handleResponse(response);
-    },
+/**
+ * Fetches a list of all users blocked by the current user.
+ */
+export const getBlockedUsers = async (): Promise<BlockedUser[]> => {
+    const { data, error } = await supabase.from("blocked_members").select("*");
+    if (error) throw error;
+    return data;
+};
 
-    getSentPendingRequests: async (): Promise<
-      ApiResponse<Tables<"sent_pending_requests">[]>
-    > => {
-      // NOTE: You must generate new types for the 'sent_pending_requests' view
-      // For now, we cast to 'any' to avoid typescript errors.
-      const response = await supabase.from("sent_pending_requests").select("*");
-      return handleResponse(response as any);
-    },
+//================================================================================
+//  System 2: Direct Messaging API (REFACTORED)
+//================================================================================
 
-    /**
-     * [span_8](start_span)Fetches a list of all accepted connections ("friends") for the current user[span_8](end_span).
-     */
-    getMyConnections: async (): Promise<
-      ApiResponse<Tables<"my_connections">[]>
-    > => {
-      const response = await supabase.from("my_connections").select("*");
-      return handleResponse(response);
-    },
+// --- Conversation Management ---
 
-    /**
-     * Fetches the details for a single conversation by its ID.
-     * @param conversationId - The ID of the conversation to fetch.
-     */
-    getConversationById: async (
-      conversationId: string
-    ): Promise<ApiResponse<Tables<"inbox_conversations">>> => {
-      const response = await supabase
-        .from("inbox_conversations")
-        .select("*")
-        .eq("conversation_id", conversationId)
-        .single();
-      return handleResponse(response);
-    },
+/**
+ * Gets an existing 1-on-1 conversation or creates a new one.
+ * @param otherUserId - The UUID of the other participant.
+ * @returns The conversation_id.
+ */
+export const createOrGetConversation = async (otherUserId: string): Promise<string> => {
+    const { data, error } = await supabase.rpc("create_or_get_conversation", { other_user_id: otherUserId });
+    if (error) throw error;
+    if (!data) throw new Error("Could not create or get conversation.");
+    return data;
+};
 
-    /**
-     * [span_9](start_span)Fetches a list of all users blocked by the current user[span_9](end_span).
-     */
-    getBlockedUsers: async (): Promise<
-      ApiResponse<Tables<"blocked_members">[]>
-    > => {
-      const response = await supabase.from("blocked_members").select("*");
-      return handleResponse(response);
-    },
-  },
+/**
+ * Marks all unread messages in a conversation as read.
+ * @param conversationId - The ID of the conversation to mark as read.
+ */
+export const markConversationAsRead = async (conversationId: string): Promise<void> => {
+    const { error } = await supabase.rpc("mark_conversation_as_read", { p_conversation_id: conversationId });
+    if (error) throw error;
+};
 
-  //================================================================================
-  // System 2: Direct Messaging API
-  //================================================================================
-  messaging: {
-    /**
-     * [span_10](start_span)Gets an existing 1-on-1 conversation or creates a new one[span_10](end_span).
-     * @param otherUserId - The UUID of the other participant.
-     * @returns The conversation_id.
-     */
-    createOrGetConversation: async (
-      otherUserId: string
-    ): Promise<ApiResponse<string>> => {
-      const response = await supabase
-        .rpc("create_or_get_conversation", {
-          other_user_id: otherUserId,
-        });
-      return handleResponse(response);
-    },
-
-    /**
-     * [span_11](start_span)Marks all unread messages in a conversation as read[span_11](end_span).
-     * @param conversationId - The ID of the conversation to mark as read.
-     */
-    markConversationAsRead: async (
-      conversationId: string
-    ): Promise<ApiResponse<undefined>> => {
-      const response = await supabase
-        .rpc("mark_conversation_as_read", {
-          p_conversation_id: conversationId,
-        });
-      return handleResponse(response);
-    },
-
-    /**
-     * [span_12](start_span)Adds, updates, or removes an emoji reaction on a direct message[span_12](end_span).
-     * @param messageId - The ID of the message to react to.
-     * @param emoji - The emoji to use for the reaction.
-     */
-    toggleReaction: async (
-      messageId: number,
-      emoji: string
-    ): Promise<ApiResponse<any>> => {
-      const response = await supabase
-        .rpc("toggle_reaction_dm", {
-          p_message_id: messageId,
-          p_emoji: emoji,
-        });
-      return handleResponse(response);
-    },
-
-    /**
-     * Sends a new message to a conversation.
-     * @param messageData - The data for the new message.
-     */
-    sendMessage: async (
-        messageData: TablesInsert<'direct_messages'>
-    ): Promise<ApiResponse<Tables<'direct_messages'>>> => {
-        const response = await supabase
-            .from('direct_messages')
-            .insert(messageData)
-            .select()
-            .single();
-        return handleResponse(response);
-    },
-    
-    /**
-     * Edits an existing message. [span_13](start_span)RLS policies ensure a user can only edit their own messages[span_13](end_span).
-     * [span_14](start_span)The `on_message_edit` trigger will automatically handle the `updated_at` timestamp[span_14](end_span).
-     * @param messageId - The ID of the message to edit.
-     * @param newContent - The new text content for the message.
-     */
-    editMessage: async (
-        messageId: number,
-        newContent: string
-    ): Promise<ApiResponse<Tables<'direct_messages'>>> => {
-        const response = await supabase
-            .from('direct_messages')
-            .update({ content: newContent, is_edited: true })
-            .eq('id', messageId)
-            .select()
-            .single();
-        return handleResponse(response);
-    },
-
-    /**
-     * Deletes a message. [span_15](start_span)RLS policies ensure a user can only delete their own messages[span_15](end_span).
-     * @param messageId - The ID of the message to delete.
-     */
-    deleteMessage: async (
-        messageId: number
-    ): Promise<ApiResponse<null>> => {
-        const response = await supabase
-            .from('direct_messages')
-            .delete()
-            .eq('id', messageId);
-        // The delete operation doesn't return the deleted record, so we just check for errors.
-        return handleResponse({ data: null, error: response.error });
-    },
-
-    /**
-     * Uploads a file to Supabase Storage for use as a message attachment.
-     * @param file - The file to upload.
-     * @param conversationId - Used to create a unique path for the file.
-     * @returns The public URL of the uploaded file.
-     */
-    uploadAttachment: async (
-      file: File,
-      conversationId: string
-    ): Promise<ApiResponse<{ publicUrl: string }>> => {
-      const fileExtension = file.name.split('.').pop();
-      const fileName = `${Date.now()}.${fileExtension}`;
-      const filePath = `${conversationId}/${fileName}`;
-
-      const { data, error } = await supabase.storage
-        .from('direct_message_attachments') // Assuming a bucket with this name exists
-        .upload(filePath, file);
-
-      if (error) {
-        return handleResponse({ data: null, error });
-      }
-
-      // Get the public URL for the uploaded file
-      const { data: urlData } = supabase.storage
-        .from('direct_message_attachments')
-        .getPublicUrl(data.path);
-
-      return handleResponse({ data: { publicUrl: urlData.publicUrl }, error: null });
-    },
-
-    /**
-     * [span_16](start_span)Adds an attachment record to the database after the file has been uploaded[span_16](end_span).
-     * @param attachmentData - The metadata for the attachment.
-     */
-    addAttachmentToMessage: async (
-        attachmentData: TablesInsert<'direct_message_attachments'>
-    ): Promise<ApiResponse<Tables<'direct_message_attachments'>>> => {
-        const response = await supabase
-            .from('direct_message_attachments')
-            .insert(attachmentData)
-            .select()
-            .single();
-        return handleResponse(response);
-    },
-
-    // --- Data Fetching from Helper Views & Tables ---
-
-    /**
-     * Fetches the complete list of conversations for the user's inbox.
-     * [span_17](start_span)This view includes participant details, the last message, and unread counts[span_17](end_span).
-     */
-    getInbox: async (): Promise<
-      ApiResponse<Tables<"inbox_conversations">[]>
-    > => {
-      const response = await supabase
+/**
+ * Fetches the complete list of conversations for the user's inbox.
+ */
+export const getInbox = async (): Promise<Conversation[]> => {
+    const { data, error } = await supabase
         .from("inbox_conversations")
         .select("*")
         .order("last_message_at", { ascending: false, nullsFirst: false });
-      return handleResponse(response);
-    },
+    if (error) throw error;
+    return data;
+};
 
-    /**
-     * Fetches all messages for a specific conversation.
-     * @param conversationId - The ID of the conversation.
-     */
-    getMessagesForConversation: async (conversationId: string) => {
-        const { data, error } = await supabase
-            .from('direct_messages')
-            .select(`
-                *,
-                direct_message_reactions(*),
-                direct_message_attachments(*),
-                parent_message:direct_messages!parent_message_id (
-                    id,
-                    content,
-                    sender:profiles!sender_id (full_name)
-                )
-            `)
-            .eq('conversation_id', conversationId)
-            .order('created_at', { ascending: true });
-    
-        if (error) {
-            console.error("Error fetching messages:", error);
-            throw error;
-        }
-        return data;
-    },
-    
-    toggleStarConversation: async (conversationId: number, is_starred: boolean) => {
-      const { data, error } = await supabase
-        .from('inbox_conversations')
-        .update({ is_starred })
-        .eq('id', conversationId)
+// --- Message Actions ---
+
+/**
+ * Posts a new message or a reply to a conversation. This function requires a
+ * new RPC function in your Supabase project to handle replies correctly.
+ *
+ * @param conversationId - The conversation to post to.
+ * @param content - The text of the message.
+ * @param parentMessageId - The ID of the message being replied to (optional).
+ * @returns The newly created message object.
+ *
+ * REQUIRED Supabase SQL Function:
+ *
+ * CREATE OR REPLACE FUNCTION post_direct_message(
+ * p_conversation_id uuid,
+ * p_content text,
+ * p_parent_message_id bigint DEFAULT NULL
+ * ) RETURNS direct_messages
+ * LANGUAGE plpgsql
+ * AS $$
+ * DECLARE
+ * new_message direct_messages;
+ * BEGIN
+ * INSERT INTO public.direct_messages (conversation_id, sender_id, content, parent_message_id)
+ * VALUES (p_conversation_id, auth.uid(), p_content, p_parent_message_id)
+ * RETURNING * INTO new_message;
+ * RETURN new_message;
+ * END;
+ * $$;
+ */
+export const postDirectMessage = async (
+    conversationId: string,
+    content: string,
+    parentMessageId: number | null = null
+): Promise<DirectMessage> => {
+    await getSessionOrThrow();
+    const { data, error } = await supabase.rpc('post_direct_message', {
+        p_conversation_id: conversationId,
+        p_content: content,
+        p_parent_message_id: parentMessageId
+    }).select().single();
+
+    if (error) throw error;
+    if (!data) throw new Error("Failed to post message: No data returned.");
+    return data;
+};
+
+/**
+ * Edits an existing direct message.
+ * @param messageId - The ID of the message to edit.
+ * @param newContent - The new text content for the message.
+ */
+export const editDirectMessage = async (messageId: number, newContent: string): Promise<DirectMessage> => {
+    await getSessionOrThrow();
+    const { data, error } = await supabase
+        .from('direct_messages')
+        .update({ content: newContent, is_edited: true, updated_at: new Date().toISOString() })
+        .eq('id', messageId)
         .select()
         .single();
-        
-      if (error) {
-        console.error('Error updating conversation star status:', error);
-        throw error;
-      }
-      return data;
-    },
-  },
+    if (error) throw error;
+    if (!data) throw new Error("Failed to edit message: No data returned.");
+    return data;
+};
+
+/**
+ * Deletes a direct message. RLS policies ensure a user can only delete their own messages.
+ * @param messageId - The ID of the message to delete.
+ */
+export const deleteDirectMessage = async (messageId: number): Promise<void> => {
+    await getSessionOrThrow();
+    const { error } = await supabase.from('direct_messages').delete().eq('id', messageId);
+    if (error) throw error;
+};
+
+// --- Reaction Actions ---
+
+/**
+ * Adds a reaction to a direct message.
+ * @param messageId - The ID of the message to react to.
+ * @param emoji - The emoji to add.
+ */
+export const addDirectMessageReaction = async (messageId: number, emoji: string): Promise<DirectMessageReaction> => {
+    const session = await getSessionOrThrow();
+    const { data, error } = await supabase.from('direct_message_reactions').insert({
+      message_id: messageId,
+      reaction_emoji: emoji,
+      user_id: session.user.id
+    }).select().single();
+    if (error) throw error;
+    if (!data) throw new Error("Failed to add reaction.");
+    return data;
+};
+
+/**
+ * Removes a reaction from a direct message.
+ * @param messageId - The ID of the message to react to.
+ * @param emoji - The emoji to remove.
+ */
+export const removeDirectMessageReaction = async (messageId: number, emoji: string): Promise<{ success: boolean }> => {
+    const session = await getSessionOrThrow();
+    const { error } = await supabase.from('direct_message_reactions').delete().match({
+      message_id: messageId,
+      reaction_emoji: emoji,
+      user_id: session.user.id
+    });
+    if (error) throw error;
+    return { success: true };
+};
+
+// --- Attachment Actions ---
+
+/**
+ * Uploads a file, gets its public URL, and creates a corresponding record
+ * in the `direct_message_attachments` table.
+ * @param messageId - The message to associate the attachment with.
+ * @param file - The file to upload.
+ * @returns The newly created attachment database record.
+ */
+export const uploadDirectMessageAttachment = async (
+  messageId: number,
+  file: File
+): Promise<DirectMessageAttachment> => {
+    const session = await getSessionOrThrow();
+    const userId = session.user.id;
+    const filePath = `public/${userId}/${messageId}/${Date.now()}-${file.name}`;
+
+    const { error: uploadError } = await supabase.storage
+        .from('direct_message_attachments')
+        .upload(filePath, file);
+    if (uploadError) throw new Error(`Storage Error: ${uploadError.message}`);
+
+    const { data: { publicUrl } } = supabase.storage
+        .from('direct_message_attachments')
+        .getPublicUrl(filePath);
+    if (!publicUrl) throw new Error("Could not get public URL for attachment.");
+
+    const attachmentRecord = {
+        message_id: messageId,
+        uploaded_by: userId,
+        file_name: file.name,
+        file_url: publicUrl,
+        file_type: file.type,
+        file_size_bytes: file.size,
+    };
+
+    const { data: newAttachment, error: insertError } = await supabase
+        .from('direct_message_attachments')
+        .insert(attachmentRecord)
+        .select()
+        .single();
+    if (insertError) throw new Error(`Database Error: ${insertError.message}`);
+    if (!newAttachment) throw new Error("Failed to create attachment record in database.");
+
+    return newAttachment;
+};
+
+// --- Message Data Fetching ---
+
+/**
+ * Fetches all messages for a specific conversation, including author profiles,
+ * reactions, and attachments for a rich chat experience.
+ * @param conversationId - The ID of the conversation.
+ */
+export const getDirectMessagesWithDetails = async (conversationId: string): Promise<DirectMessageWithDetails[]> => {
+    const { data, error } = await supabase
+        .from('direct_messages')
+        .select(`
+            *,
+            author:profiles!sender_id (
+              full_name,
+              profile_picture_url
+            ),
+            reactions:direct_message_reactions (*),
+            attachments:direct_message_attachments (*)
+        `)
+        .eq('conversation_id', conversationId)
+        .order('created_at', { ascending: true });
+
+    if (error) throw error;
+    // We cast to `any` then `DirectMessageWithDetails[]` because the Supabase
+    // client library's generated types don't always understand custom aliases like `author`.
+    // Our custom `DirectMessageWithDetails` type ensures type safety in the app.
+    return data as any as DirectMessageWithDetails[];
 };
