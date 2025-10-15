@@ -1,130 +1,209 @@
-import { useState, useEffect, useCallback } from 'react';
+import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { socialApi } from '@/integrations/supabase/social.api';
-import type { Tables } from '@/integrations/supabase/types';
-import { useAuth } from './useAuth';
+import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/components/ui/use-toast';
+import {
+    postDirectMessage,
+    getDirectMessagesWithDetails,
+    deleteDirectMessage,
+    editDirectMessage,
+    addDirectMessageReaction,
+    removeDirectMessageReaction,
+    uploadDirectMessageAttachment,
+    DirectMessageWithDetails,
+    DirectMessageReaction,
+    Profile
+} from '@/integrations/supabase/social.api';
 
-// MODIFICATION: The type is updated to include the parent message details.
-// This must match the type in DirectMessage.tsx and what your API returns.
-type MessageWithRelations = Tables<'direct_messages'> & {
-  direct_message_reactions: Tables<'direct_message_reactions'>[];
-  direct_message_attachments: Tables<'direct_message_attachments'>[];
-  parent_message: {
-      id: number;
-      content: string;
-      sender: { full_name: string };
-  } | null;
+export type MessageWithParent = DirectMessageWithDetails & {
+  parent_message_details?: DirectMessageWithDetails | null;
 };
 
 export const useConversationData = (conversationId: string | undefined) => {
-  const { user, profile } = useAuth();
-  const { toast } = useToast();
-  const [messages, setMessages] = useState<MessageWithRelations[]>([]);
-  const [loading, setLoading] = useState(true);
+    const { user, profile } = useAuth();
+    const { toast } = useToast();
+    const [messages, setMessages] = useState<DirectMessageWithDetails[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [replyingTo, setReplyingTo] = useState<DirectMessageWithDetails | null>(null);
 
-  const fetchMessages = useCallback(async () => {
-    if (!conversationId) return;
-    setLoading(true);
-    // This assumes your `getMessagesForConversation` in social.api.ts has been updated
-    // to fetch the `parent_message` details as shown in the previous response.
-    const data = await socialApi.messaging.getMessagesForConversation(conversationId);
-    if (data) setMessages(data as MessageWithRelations[]);
-    setLoading(false);
-  }, [conversationId]);
-
-  useEffect(() => {
-    if (conversationId) {
-        fetchMessages();
-        const channel = supabase
-          .channel(`conversation-${conversationId}`)
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'direct_messages', filter: `conversation_id=eq.${conversationId}` }, fetchMessages)
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'direct_message_reactions' }, fetchMessages)
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'direct_message_attachments' }, fetchMessages)
-          .subscribe();
-        return () => { supabase.removeChannel(channel); };
-    }
-  }, [conversationId, fetchMessages]);
-
-  // MODIFICATION: The function signature now accepts `parentId` to handle replies.
-  const sendMessage = useCallback(async (body: string, files: File[], parentId: number | null) => {
-    if (!conversationId || !user || !profile) return;
-
-    const tempMsgId = -Date.now();
-    const optimisticAttachments = files.map((file, i) => ({
-      id: `temp-att-${i}`,
-      message_id: tempMsgId,
-      file_name: file.name,
-      file_type: file.type,
-      file_url: URL.createObjectURL(file),
-      uploaded_by: user.id,
-      isUploading: true,
-    }));
-
-    // MODIFICATION: Optimistic message now includes parent fields for type consistency.
-    const optimisticMessage: MessageWithRelations = {
-      id: tempMsgId,
-      conversation_id: conversationId,
-      sender_id: user.id,
-      content: body,
-      created_at: new Date().toISOString(),
-      updated_at: null,
-      is_edited: false,
-      is_read: false,
-      parent_message_id: parentId,
-      parent_message: null,
-      direct_message_reactions: [],
-      direct_message_attachments: optimisticAttachments as any,
-    };
-
-    setMessages(current => [...current, optimisticMessage]);
-
-    try {
-      // MODIFICATION: Add workaround for attachment-only messages.
-      // If the body is empty but there are files, send placeholder text.
-      const messageContent = body.trim() === '' && files.length > 0 ? '[Attachment]' : body;
-
-      const { data: realMessage } = await socialApi.messaging.sendMessage({
-          conversation_id: conversationId,
-          sender_id: user.id,
-          content: messageContent,
-          parent_message_id: parentId // `parentId` is now passed to the API.
-      });
-
-      if (!realMessage || !realMessage.id) {
-          throw new Error("Message creation failed on the server.");
+    const fetchMessages = useCallback(async () => {
+      if (!conversationId) return;
+      setIsLoading(true);
+      try {
+        const data = await getDirectMessagesWithDetails(conversationId);
+        setMessages(data);
+      } catch (error) {
+        console.error('Error fetching messages:', error);
+        toast({ variant: 'destructive', title: 'Error', description: 'Could not load messages.' });
+      } finally {
+        setIsLoading(false);
       }
-      
-      setMessages(current => current.map(msg => msg.id === tempMsgId ? { ...msg, id: realMessage.id } : msg));
+    }, [conversationId, toast]);
 
-      if (files.length > 0) {
-        await Promise.all(files.map(async (file, index) => {
-          try {
-            const { data: uploadData } = await socialApi.messaging.uploadAttachment(file, conversationId);
-            if (!uploadData?.publicUrl) throw new Error("Upload failed.");
+    const handleSendMessage = useCallback(async (content: string, parentMessageId: number | null, files: File[]) => {
+        if (!user || !profile || !conversationId) {
+            toast({ variant: 'destructive', title: 'Not Logged In', description: 'You must be logged in to send a message.' });
+            return;
+        }
 
-            const { data: realAttachment } = await socialApi.messaging.addAttachmentToMessage({
-              message_id: realMessage.id,
-              file_url: uploadData.publicUrl,
-              file_name: file.name,
-              file_type: file.type,
-              file_size_bytes: file.size,
-              uploaded_by: user.id,
-            });
-
-            if (!realAttachment) throw new Error("Attachment record creation failed.");
-            
-            setMessages(current => current.map(msg => msg.id === realMessage.id ? { ...msg, direct_message_attachments: msg.direct_message_attachments.map(att => att.id === optimisticAttachments[index].id ? { ...realAttachment, isUploading: false } : att) } : msg));
-          } catch (uploadError) {
-             setMessages(current => current.map(msg => msg.id === realMessage.id ? { ...msg, direct_message_attachments: msg.direct_message_attachments.map(att => att.id === optimisticAttachments[index].id ? { ...att, isUploading: false, file_url: 'upload-failed' } : att) } : msg));
-          }
+        // 1. Optimistic UI: Create a temporary message
+        const tempMsgId = -Date.now();
+        const optimisticAttachments = files.map((file, index) => ({
+            id: `temp_att_${Date.now()}_${index}`,
+            message_id: -1,
+            file_name: file.name,
+            file_type: file.type,
+            file_url: URL.createObjectURL(file),
+            file_size_bytes: file.size,
+            created_at: new Date().toISOString(),
+            uploaded_by: user.id,
+            isUploading: true,
         }));
-      }
-    } catch (error: any) {
-      toast({ variant: 'destructive', title: 'Failed to Send', description: error.message });
-      setMessages(current => current.filter(m => m.id !== tempMsgId));
-    }
-  }, [conversationId, user, profile, toast]);
 
-  return { messages, loading, sendMessage };
+        const optimisticMessage: DirectMessageWithDetails = {
+            id: tempMsgId,
+            conversation_id: conversationId,
+            sender_id: user.id,
+            content,
+            parent_message_id: parentMessageId,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            is_edited: false,
+            author: {
+                full_name: profile.full_name,
+                profile_picture_url: profile.profile_picture_url,
+            },
+            reactions: [],
+            attachments: optimisticAttachments as any,
+        };
+
+        setMessages(current => [...current, optimisticMessage]);
+
+        // 2. Call the real API
+        try {
+            const realMessage = await postDirectMessage(conversationId, content, parentMessageId);
+            setMessages(current => current.map(msg => msg.id === tempMsgId ? { ...msg, id: realMessage.id } : msg));
+
+            // 3. Handle Attachments
+            if (files.length > 0) {
+                await Promise.all(files.map(async (file, index) => {
+                    try {
+                        const realAttachment = await uploadDirectMessageAttachment(realMessage.id, file);
+                        setMessages(current => current.map(msg =>
+                            msg.id === realMessage.id ? { ...msg, attachments: msg.attachments.map(att => att.id === optimisticAttachments[index].id ? { ...realAttachment, isUploading: false } : att) } : msg
+                        ));
+                    } catch (uploadError) {
+                        console.error(`Upload failed for ${file.name}:`, uploadError);
+                        setMessages(current => current.map(msg =>
+                            msg.id === realMessage.id ? { ...msg, attachments: msg.attachments.map(att => att.id === optimisticAttachments[index].id ? { ...att, isUploading: false, file_url: 'upload-failed' } : att) } : msg
+                        ));
+                    }
+                }));
+            }
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: 'Failed to Send', description: error.message });
+            setMessages(current => current.filter(m => m.id !== tempMsgId)); // Revert on failure
+            throw error;
+        }
+    }, [user, profile, conversationId, toast]);
+
+    const handleDeleteMessage = useCallback(async (messageId: number) => {
+        const previousMessages = messages;
+        setMessages(current => current.filter(m => m.id !== messageId));
+        try {
+            await deleteDirectMessage(messageId);
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: 'Delete Failed', description: error.message });
+            setMessages(previousMessages);
+        }
+    }, [messages, toast]);
+    
+    const handleEditMessage = useCallback(async (messageId: number, newContent: string) => {
+        const previousMessages = messages;
+        setMessages(current => current.map(m => m.id === messageId ? { ...m, content: newContent, is_edited: true } : m));
+        try {
+            await editDirectMessage(messageId, newContent);
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: 'Edit Failed', description: error.message });
+            setMessages(previousMessages);
+        }
+    }, [messages, toast]);
+
+    const handleReaction = useCallback(async (messageId: number, emoji: string) => {
+        if (!user) return;
+        const previousMessages = messages;
+        const targetMessage = messages.find(m => m.id === messageId);
+        if (!targetMessage) return;
+
+        const existingReaction = targetMessage.reactions.find(r => r.user_id === user.id && r.reaction_emoji === emoji);
+
+        // Optimistic UI update
+        setMessages(current => current.map(msg => {
+            if (msg.id === messageId) {
+                let newReactions = [...msg.reactions];
+                if (existingReaction) {
+                    newReactions = newReactions.filter(r => r.id !== existingReaction.id);
+                } else {
+                    const newOptimisticReaction: DirectMessageReaction = { id: -Date.now(), message_id: messageId, user_id: user.id, reaction_emoji: emoji, created_at: new Date().toISOString() };
+                    newReactions.push(newOptimisticReaction);
+                }
+                return { ...msg, reactions: newReactions };
+            }
+            return msg;
+        }));
+
+        // API call
+        try {
+            if (existingReaction) {
+                await removeDirectMessageReaction(messageId, emoji);
+            } else {
+                await addDirectMessageReaction(messageId, emoji);
+            }
+            // Optional: Resync messages to get real reaction IDs
+            fetchMessages();
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: 'Reaction Failed', description: error.message });
+            setMessages(previousMessages);
+        }
+    }, [messages, user, toast, fetchMessages]);
+
+    useEffect(() => {
+        fetchMessages();
+        // Setup Supabase real-time subscription
+        const channel = supabase
+          .channel(`direct_messages:${conversationId}`)
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'direct_messages', filter: `conversation_id=eq.${conversationId}` }, () => {
+              fetchMessages();
+          })
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'direct_message_reactions' }, () => {
+              fetchMessages();
+          })
+          .subscribe();
+        return () => {
+          supabase.removeChannel(channel);
+        };
+    }, [conversationId, fetchMessages]);
+    
+    // FIX: This memoized value creates the parent_message_details object.
+    // This is the fix for Problem #2.
+    const flatMessages = useMemo((): MessageWithParent[] => {
+        const messageMap = new Map(messages.map(m => [m.id, m]));
+        return messages
+            .map(message => ({
+                ...message,
+                parent_message_details: message.parent_message_id ? messageMap.get(message.parent_message_id) : null,
+            }))
+            .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+    }, [messages]);
+
+    return { 
+        messages: flatMessages, 
+        isLoading, 
+        replyingTo,
+        setReplyingTo,
+        handleSendMessage,
+        handleDeleteMessage,
+        handleEditMessage,
+        handleReaction 
+    };
 };
