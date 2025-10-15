@@ -4,11 +4,11 @@ import { socialApi } from '@/integrations/supabase/social.api';
 import { Tables } from '@/integrations/supabase/types';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { useToast } from '@/components/ui/use-toast';
 import { cn } from '@/lib/utils';
-import { SmilePlus, Trash2, Pencil, MoreHorizontal, Reply } from 'lucide-react';
+import { SmilePlus, Trash2, Pencil, Reply } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { EmojiPicker } from './EmojiPicker'; // <-- The new import
 
 type Profile = Tables<'profiles'>;
 type MessageWithRelations = Tables<'direct_messages'> & {
@@ -28,21 +28,10 @@ interface DirectMessageProps {
   onReplyClick: (context: ReplyContext) => void;
 }
 
-function EmojiPicker({ onSelect }: { onSelect: (emoji: string) => void }) {
-    return (
-        <div className="flex gap-1 p-1 bg-background border rounded-full shadow-lg">
-            {['👍', '❤️', '🔥', '🤔', '😂'].map(emoji => (
-                <span key={emoji} className="cursor-pointer hover:bg-muted rounded-full p-1 transition-colors" onClick={() => onSelect(emoji)}>{emoji}</span>
-            ))}
-        </div>
-    );
-}
-
 export const DirectMessage = ({ message, authorProfile, onReplyClick }: DirectMessageProps) => {
     const { user } = useAuth();
     const [isEditing, setIsEditing] = useState(false);
     const [editedContent, setEditedContent] = useState(message.content);
-    const [showActions, setShowActions] = useState(false);
     const [showPicker, setShowPicker] = useState(false);
 
     const isMe = message.sender_id === user?.id;
@@ -58,7 +47,6 @@ export const DirectMessage = ({ message, authorProfile, onReplyClick }: DirectMe
     const handleReaction = async (emoji: string) => {
         setShowPicker(false);
         await socialApi.messaging.toggleReaction(message.id, emoji);
-        // UI updates are handled by the real-time subscription in ConversationView
     };
 
     const handleDelete = async () => {
@@ -78,11 +66,10 @@ export const DirectMessage = ({ message, authorProfile, onReplyClick }: DirectMe
     const handleReply = (e: React.MouseEvent) => {
         e.stopPropagation();
         onReplyClick({ id: message.id, content: message.content, sender_id: message.sender_id, author_name: displayName });
-        setShowActions(false);
     };
     
     const messageStyle = cn(
-        "flex flex-col rounded-xl px-4 py-3 max-w-[85%] shadow-sm group relative",
+        "flex flex-col rounded-xl px-4 py-3 max-w-[85%] shadow-sm relative",
         isMe 
             ? "bg-primary text-primary-foreground" 
             : "bg-card border"
