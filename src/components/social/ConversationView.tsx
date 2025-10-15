@@ -9,6 +9,7 @@ import { MoreVertical, Star } from 'lucide-react';
 import { DirectMessage } from './DirectMessage';
 import { DirectMessageInput } from './DirectMessageInput';
 import { useAuth } from '@/hooks/useAuth';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 type Conversation = Tables<'inbox_conversations'>;
 type MessageWithRelations = Tables<'direct_messages'> & {
@@ -89,10 +90,29 @@ useEffect(() => {
   return (
     <>
       <CardHeader className="pb-4 border-b border-border">
-        <h3 className="font-semibold">{conversation.participant_full_name}</h3>
+        <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+                <Avatar className="h-10 w-10 border">
+                    <AvatarImage src={conversation.participant_avatar_url || undefined} />
+                    <AvatarFallback>{conversation.participant_full_name?.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                </Avatar>
+                <div>
+                    <h3 className="font-semibold">{conversation.participant_full_name}</h3>
+                    {/* Note: Online status is not in the view, so this is a placeholder */}
+                    <p className="text-sm text-muted-foreground flex items-center gap-1.5">
+                        <span className="h-2 w-2 rounded-full bg-green-500"></span>
+                        Online
+                    </p>
+                </div>
+            </div>
+            <div className="flex items-center gap-2">
+                <Button variant="ghost" size="icon" className="h-8 w-8"><Star className="h-4 w-4" /></Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button>
+            </div>
+        </div>
       </CardHeader>
       <CardContent className="flex-1 overflow-y-auto p-4 space-y-6 bg-muted/20">
-        {loading ? ( <Skeleton /> ) : (
+        {loading ? ( <Skeleton className="h-24 w-full" /> ) : (
           messages.map((message) => 
             <DirectMessage 
               key={message.id} 
