@@ -6,6 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { SmilePlus, Trash2, Pencil, Reply, Loader2, AlertCircle } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 import { DirectMessageAttachment, DirectMessageWithDetails } from '@/integrations/supabase/social.api';
 import { MessageWithParent } from '@/hooks/useConversationData'; // NEW: Import the rich type
 
