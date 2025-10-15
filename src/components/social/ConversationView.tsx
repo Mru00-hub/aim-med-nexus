@@ -59,28 +59,37 @@ export const ConversationView = ({ conversation, onConversationUpdate }: Convers
   useEffect(() => {
     setIsStarred(conversation.is_starred ?? false);
   }, [conversation.is_starred]);
-
+  
   const handleToggleStar = async () => {
+      // FIX 1: Add a guard clause to ensure the user object exists
+      if (!user) return;
+
       const newStarredStatus = !isStarred;
-      setIsStarred(newStarredStatus);
+      setIsStarred(newStarredStatus); // Optimistic update
+      
       try {
-          // This can remain a direct call as it's simple.
-          await supabase
-            .from('conversation_participants') // Assuming this is the correct table
+          // FIX 2: Destructure the 'error' object from the result of the await call
+          const { error } = await supabase
+            .from('conversation_participants')
             .update({ is_starred: newStarredStatus })
             .match({
               conversation_id: conversation.conversation_id,
-              user_id: user.id // Updates only YOUR star status
+              user_id: user.id
             });
 
-          if (error) throw error;
+          // FIX 3: Now the 'error' variable exists and this check works correctly
+          if (error) {
+            throw error;
+          }
+
           onConversationUpdate();
+
         } catch (error) {
           console.error("Failed to update star status:", error);
           setIsStarred(!newStarredStatus); // Revert on failure
         }
     };
-
+    
   const handleReplyClick = (message: any) => {
       setReplyingTo(message);
       // Optional: focus input and scroll down
