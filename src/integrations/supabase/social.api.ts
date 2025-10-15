@@ -16,6 +16,16 @@ import type { Database, Enums, Tables, TablesInsert } from "./types";
 //  Type Definitions
 //================================================================================
 
+type ApiError = { message: string; details: any; };
+type ApiResponse<T> = { data: T | null; error: ApiError | null; };
+const handleResponse = <T>(response: { data: T | null; error: any; }): ApiResponse<T> => {
+  if (response.error) {
+    console.error("Supabase API Error:", response.error);
+    return { data: null, error: { message: response.error.message, details: response.error }};
+  }
+  return { data: response.data, error: null };
+};
+
 export type DirectMessage = Tables<'direct_messages'>;
 export type DirectMessageReaction = Tables<'direct_message_reactions'>;
 export type DirectMessageAttachment = Tables<'direct_message_attachments'>;
@@ -111,65 +121,35 @@ export const unblockUser = async (userIdToUnblock: string): Promise<void> => {
 /**
  * Fetches all incoming pending connection requests for the current user.
  */
-export const getPendingRequests = async (): Promise<ConnectionRequest[]> => {
-    const { data, error } = await supabase.from("pending_connection_requests").select("*");
-    if (error) throw error;
-    return data;
+export const getPendingRequests = async (): Promise<ApiResponse<ConnectionRequest[]>> => {
+    const response = await supabase.from("pending_connection_requests").select("*");
+    return handleResponse(response);
 };
 
-/**
- * Fetches a list of all accepted connections ("friends") for the current user.
- */
-export const getMyConnections = async (): Promise<Connection[]> => {
-    const { data, error } = await supabase.from("my_connections").select("*");
-    if (error) throw error;
-    return data;
+export const getMyConnections = async (): Promise<ApiResponse<Connection[]>> => {
+    const response = await supabase.from("my_connections").select("*");
+    return handleResponse(response);
 };
 
-/**
- * Fetches a list of all users blocked by the current user.
- */
-export const getBlockedUsers = async (): Promise<BlockedUser[]> => {
-    const { data, error } = await supabase.from("blocked_members").select("*");
-    if (error) throw error;
-    return data;
+export const getBlockedUsers = async (): Promise<ApiResponse<BlockedUser[]>> => {
+    const response = await supabase.from("blocked_members").select("*");
+    return handleResponse(response);
 };
 
-/**
- * Fetches a list of recommended users to connect with.
- * @param targetUserId - The ID of the user for whom to get recommendations.
- */
-export const getUserRecommendations = async (
-    targetUserId: string
-): Promise<Database['public']['Functions']['get_user_recommendations']['Returns']> => {
-    const { data, error } = await supabase.rpc('get_user_recommendations', { target_user_id: targetUserId });
-    if (error) throw error;
-    return data;
+export const getUserRecommendations = async (targetUserId: string): Promise<ApiResponse<Database['public']['Functions']['get_user_recommendations']['Returns']>> => {
+    const response = await supabase.rpc('get_user_recommendations', { target_user_id: targetUserId });
+    return handleResponse(response);
 };
 
-/**
- * Fetches a list of connection requests sent by the current user that are still pending.
- */
-export const getSentPendingRequests = async (): Promise<any[]> => {
-    // Note: You will need to generate a type for the 'sent_pending_requests' view for full type safety.
-    const { data, error } = await supabase.from("sent_pending_requests").select("*");
-    if (error) throw error;
-    return data;
+export const getSentPendingRequests = async (): Promise<ApiResponse<any[]>> => {
+    const response = await supabase.from("sent_pending_requests").select("*");
+    return handleResponse(response);
 };
 
-/**
- * Fetches a list of mutual connections with another user.
- * @param otherUserId - The UUID of the other user.
- */
-export const getMutualConnections = async (
-  otherUserId: string
-): Promise<Database['public']['Functions']['get_mutual_connections']['Returns']> => {
-  const { data, error } = await supabase
-    .rpc("get_mutual_connections", {
-      other_user_id: otherUserId,
-    });
-  if (error) throw error;
-  return data;
+export const getMutualConnections = async (otherUserId: string): Promise<Database['public']['Functions']['get_mutual_connections']['Returns']> => {
+    const { data, error } = await supabase.rpc("get_mutual_connections", { other_user_id: otherUserId });
+    if (error) throw error; // Mutual connections can still throw as it's called individually
+    return data;
 };
 
 //================================================================================
