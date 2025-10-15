@@ -297,7 +297,7 @@ export const uploadDirectMessageAttachment = async (
 ): Promise<DirectMessageAttachment> => {
     const session = await getSessionOrThrow();
     const userId = session.user.id;
-    const filePath = `public/${userId}/${messageId}/${Date.now()}-${file.name}`;
+    const filePath = `${userId}/${messageId}/${Date.now()}-${file.name}`;
 
     const { error: uploadError } = await supabase.storage
         .from('direct_message_attachments')
