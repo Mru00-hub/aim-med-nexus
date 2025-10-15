@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
+import { Users } from 'lucide-react';
 
 // CHANGED: Expanded the User interface to include more optional details
 interface User {
@@ -13,6 +14,7 @@ interface User {
   title?: string | null;
   organization?: string | null;
   location?: string | null;
+  mutuals?: any[];
 }
 
 interface UserActionCardProps {
@@ -52,6 +54,14 @@ export const UserActionCard = ({ user, children }: UserActionCardProps) => {
                   </React.Fragment>
                 ))}
               </p>
+            )}
+            {user.mutuals && user.mutuals.length > 0 && (
+              <div className="text-xs text-muted-foreground flex items-center mt-1">
+                <Users className="h-3 w-3 mr-1.5" />
+                <span>
+                  {user.mutuals.length} mutual connection{user.mutuals.length > 1 ? 's' : ''}
+                </span>
+              </div>
             )}
           </div>
         </div>
