@@ -76,7 +76,7 @@ export const ConversationView = ({ conversation }: ConversationViewProps) => {
             <DirectMessage 
               key={message.id} 
               message={message} 
-              authorProfile={profiles[message.sender_id]}
+              authorProfile={profilesMap[message.sender_id]} 
               onReplyClick={setReplyingTo}
             />
           )
