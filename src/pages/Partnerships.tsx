@@ -149,7 +149,59 @@ const Partnerships = () => {
         </div>
 
         {/* Partnership Types section remains the same */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16 animate-slide-up">{/* ... partnership cards ... */}</div>
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16 animate-slide-up">
+         {[
+            {
+              icon: Building2,
+              title: 'Healthcare Organizations',
+              description: 'Hospitals, clinics, and healthcare systems partnering for staff networking and professional development.',
+              benefits: ['Staff networking platform', 'Continued education support', 'Talent acquisition access']
+            },
+            {
+              icon: Handshake,
+              title: 'Medical Education Partners',
+              description: 'Medical schools and training institutions bridging education and professional practice.',
+              benefits: ['Student-professional mentorship', 'Career placement support', 'Educational content partnership']
+            },
+            {
+              icon: Globe,
+              title: 'Healthcare Technology',
+              description: 'Technology companies serving healthcare professionals with innovative solutions.',
+              benefits: ['Verified professional access', 'Product feedback loops', 'Innovation showcasing']
+            },
+            {
+              icon: Users,
+              title: 'Medical Associations & Clubs',
+              description: 'Medical associations, clubs, and societies for conferences, CME programs, event management, and elections.',
+              benefits: ['Conference management', 'CME registration system', 'Online/offline events', 'Elections management']
+            }
+          ].map((partnership, index) => (
+            <Card key={index} className="card-medical h-full">
+              <CardHeader>
+                <div className="w-12 h-12 bg-gradient-primary rounded-lg flex items-center justify-center mb-4">
+                  <partnership.icon className="h-6 w-6 text-primary-foreground" />
+                </div>
+                <CardTitle className="text-xl">{partnership.title}</CardTitle>
+                <CardDescription className="text-base leading-relaxed">
+                  {partnership.description}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <h4 className="font-semibold text-sm text-primary">Key Benefits:</h4>
+                  <ul className="space-y-2">
+                    {partnership.benefits.map((benefit, idx) => (
+                      <li key={idx} className="flex items-center text-sm text-muted-foreground">
+                        <div className="w-1.5 h-1.5 bg-primary rounded-full mr-3 flex-shrink-0"></div>
+                        {benefit}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
 
         {/* Partnership Form */}
         <div className="max-w-4xl mx-auto animate-slide-up">
