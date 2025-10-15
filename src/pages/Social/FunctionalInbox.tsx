@@ -1,18 +1,20 @@
-import React, { useState, useEffect } from 'react';
+// src/pages/Social/FunctionalInbox.tsx
+
+import React, 'useState', 'useEffect' from 'react';
 import { useLocation } from 'react-router-dom';
 import { useSocialCounts } from '@/context/SocialCountsContext';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { Card, CardContent } from '@/components/ui/card';
 import { MessageCircle } from 'lucide-react';
-import { socialApi } from '@/integrations/supabase/social.api';
+import { useToast } from '@/components/ui/use-toast'; // FIX: Import useToast for error handling
+import { getInbox, Conversation } from '@/integrations/supabase/social.api'; // FIX: Import new standalone function and type
 import { supabase } from '@/integrations/supabase/client';
 import type { Tables } from '@/integrations/supabase/types';
 
 import { ConversationList } from '@/components/social/ConversationList';
 import { ConversationView } from '@/components/social/ConversationView';
 
-type Conversation = Tables<'inbox_conversations'> & { is_starred?: boolean };
 type DirectMessagePayload = Tables<'direct_messages'>;
 
 const FunctionalInbox = () => {
@@ -20,33 +22,40 @@ const FunctionalInbox = () => {
   const [loading, setLoading] = useState(true);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const { setUnreadInboxCount } = useSocialCounts();
+  const { toast } = useToast(); // FIX: Initialize toast
   const location = useLocation();
 
+  // FIX: Refactored to use the new API style with try...catch error handling
   const fetchAndSetConversations = async () => {
+    // Keep loading true at the start for subsequent fetches
     setLoading(true);
-    const { data } = await socialApi.messaging.getInbox();
-    if (data) {
+    try {
+      const data = await getInbox();
       // Sort conversations to show starred ones at the top
       data.sort((a, b) => (b.is_starred ? 1 : 0) - (a.is_starred ? 1 : 0));
-      setConversations(data as Conversation[]);
+      setConversations(data);
+    } catch (error: any) {
+        console.error("Failed to fetch inbox:", error);
+        toast({ title: "Error", description: "Could not load your inbox.", variant: "destructive" });
+    } finally {
+        setLoading(false);
     }
-    setLoading(false);
   };
 
-  // Effect to update the global unread count
+  // This effect remains the same and is correct.
   useEffect(() => {
     const totalUnread = conversations.reduce((acc, convo) => acc + (convo.unread_count || 0), 0);
     setUnreadInboxCount(totalUnread);
   }, [conversations, setUnreadInboxCount]);
 
+  // This effect for real-time updates is also correct.
   useEffect(() => {
     fetchAndSetConversations(); // Initial fetch
 
     const channel = supabase
-      .channel('public:direct_messages')
+      .channel('public:direct_messages_inbox') // Give it a more specific channel name
       .on<DirectMessagePayload>('postgres_changes', { event: 'INSERT', schema: 'public', table: 'direct_messages' },
         (payload) => {
-          // A new message should always trigger a refetch to update order and content
           fetchAndSetConversations();
         }
       )
@@ -55,19 +64,19 @@ const FunctionalInbox = () => {
       return () => { supabase.removeChannel(channel); };
   }, []);
 
+  // This effect for handling navigation state is also correct.
   useEffect(() => {
     const navState = location.state as { conversationId?: string; participant?: any };
-    const conversationIdFromState = navState?.conversationId;
-    if (!conversationIdFromState) return;
+    if (!navState?.conversationId) return;
 
-    const convoInList = conversations.find(c => c.conversation_id === conversationIdFromState);
+    const convoInList = conversations.find(c => c.conversation_id === navState.conversationId);
 
     if (convoInList) {
       setSelectedConversation(convoInList);
-      window.history.replaceState({}, document.title);
-    } else if (!loading && navState.participant) {
+    } else if (!loading && conversations.length > 0 && navState.participant) {
+      // Create a temporary "phantom" conversation to show in the UI until the real one loads
       const phantomConversation: Conversation = {
-        conversation_id: conversationIdFromState,
+        conversation_id: navState.conversationId,
         last_message_at: new Date().toISOString(),
         last_message_content: "Start the conversation!",
         participant_avatar_url: navState.participant.profile_picture_url,
@@ -75,12 +84,13 @@ const FunctionalInbox = () => {
         participant_id: navState.participant.id,
         unread_count: 0,
         updated_at: new Date().toISOString(),
-        is_starred: false, // Ensure phantom conversations have the property
+        is_starred: false,
       };
       setConversations(prev => [phantomConversation, ...prev]);
       setSelectedConversation(phantomConversation);
-      window.history.replaceState({}, document.title);
     }
+    // Clear the location state after handling it
+    window.history.replaceState({}, document.title);
   }, [location.state, conversations, loading]);
   
   return (
