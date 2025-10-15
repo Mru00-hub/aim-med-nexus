@@ -11,6 +11,7 @@ import { useSocialCounts } from '@/context/SocialCountsContext';
 // FIX: Import the new standalone functions and types from the refactored API
 import {
     getUserRecommendations,
+    getMutualConnections, 
     getSentPendingRequests,
     getPendingRequests,
     getMyConnections,
@@ -30,10 +31,13 @@ import { DiscoverTab } from '@/components/social/DiscoverTab';
 import { NetworkTab } from '@/components/social/NetworkTab';
 import { RequestsTab } from '@/components/social/RequestsTab';
 import { BlockedTab } from '@/components/social/BlockedTab';
+import type { Database, Tables } from '@/integrations/supabase/types';
 
-// Assuming SentRequest type needs to be defined
-type SentRequest = { requestee_id: string; full_name: string | null; profile_picture_url: string | null; created_at: string; };
-type UserRecommendation = any; // Define this type based on your function's return value
+type UserRecommendation = Database['public']['Functions']['get_user_recommendations']['Returns'][number];
+type SentRequest = Tables<'sent_pending_requests'>;
+type RecommendationWithMutuals = UserRecommendation & {
+    mutuals?: any[]; // The array of mutual connections
+};
 
 const FunctionalSocial = () => {
   const { user } = useAuth();
@@ -44,7 +48,7 @@ const FunctionalSocial = () => {
   // State for all social data
   const [requests, setRequests] = useState<ConnectionRequest[]>([]);
   const [sentRequests, setSentRequests] = useState<SentRequest[]>([]); // Assuming type
-  const [recommendations, setRecommendations] = useState<UserRecommendation[]>([]);
+  const [recommendations, setRecommendations] = useState<RecommendationWithMutuals[]>([]);
   const [myConnections, setMyConnections] = useState<Connection[]>([]);
   const [blockedUsers, setBlockedUsers] = useState<BlockedUser[]>([]);
 
@@ -58,19 +62,31 @@ const FunctionalSocial = () => {
     setLoading(true);
     try {
       // Promise.all fetches data in parallel for better performance
-      const [requestsData, connectionsData, blockedData, sentRequestsData, recommendationsData,] = await Promise.all([
+      const [requestsData, connectionsData, blockedData, sentRequestsData, recommendationsData, initialRecommendations,] = await Promise.all([
         getPendingRequests(),
         getMyConnections(),
         getBlockedUsers(),
         getSentPendingRequests(), 
         getUserRecommendations(user.id),
       ]);
+      if (initialRecommendations && initialRecommendations.length > 0) {
+                const mutualsPromises = initialRecommendations.map(rec => getMutualConnections(rec.id));
+                const mutualsResults = await Promise.all(mutualsPromises);
+
+                // 3. Combine the initial recommendations with their mutuals
+                const recommendationsWithMutuals = initialRecommendations.map((rec, index) => ({
+                    ...rec,
+                    mutuals: mutualsResults[index] || [], // Attach the mutuals array
+                }));
+                setRecommendations(recommendationsWithMutuals);
+            } else {
+                setRecommendations([]);
+      }
 
       setRequests(requestsData);
       setMyConnections(connectionsData);
       setBlockedUsers(blockedData);
       setSentRequests(sentRes.data as SentRequest[]);
-      setRecommendations(recRes.data);
 
     } catch (error: any) {
       console.error("Failed to fetch social data:", error);
