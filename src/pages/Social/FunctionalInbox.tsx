@@ -1,6 +1,6 @@
 // src/pages/Social/FunctionalInbox.tsx
 
-import React, 'useState', 'useEffect' from 'react';
+import React, { useState, useEffect} from 'react';
 import { useLocation } from 'react-router-dom';
 import { useSocialCounts } from '@/context/SocialCountsContext';
 import { Header } from '@/components/layout/Header';
