@@ -65,7 +65,7 @@ export const useConversationData = (conversationId: string | undefined) => {
     setMessages(current => [...current, optimisticMessage]);
 
     try {
-      const { data: realMessage } = await socialApi.messaging.sendMessage({ conversation_id: conversationId, sender_id: user.id, content: body });
+      const { data: realMessage } = await socialApi.messaging.sendMessage({ conversation_id: conversationId, sender_id: user.id, content: body, parent_message_id: parentId });
       if (!realMessage || !realMessage.id) {
           throw new Error("Message creation failed on the server.");
       }
