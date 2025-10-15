@@ -7,13 +7,6 @@ import { socialApi } from '@/integrations/supabase/social.api';
 import { useAuth } from '@/hooks/useAuth';
 import type { Tables } from '@/integrations/supabase/types';
 
-type ReplyContext = {
-    id: number;
-    content: string;
-    sender_id: string;
-    author_name: string;
-};
-
 interface DirectMessageInputProps {
   conversationId: string;
   replyingTo: ReplyContext | null;
@@ -49,49 +42,25 @@ export const DirectMessageInput = ({ conversationId, replyingTo, onCancelReply }
   }, [replyingTo]);
 
   const handleSend = async () => {
-    if ((!body.trim() && attachedFiles.length === 0) || isSending || !user) return;
-    
+    if ((!body.trim() && attachedFiles.length === 0) || isSending) return;
     setIsSending(true);
-
     try {
-      // For this implementation, we will add attachment links to the message content.
-      const uploadPromises = attachedFiles.map(file => socialApi.messaging.uploadAttachment(file, conversationId));
-      const uploadResults = await Promise.all(uploadPromises);
-      const attachmentUrls = uploadResults.map(res => res.data?.publicUrl).filter(Boolean) as string[];
-
-      // Construct the final message body with reply context and attachments
       let finalBody = body.trim();
-
       if (replyingTo) {
-        const quote = `> ${replyingTo.author_name}: ${replyingTo.content.substring(0, 50)}...\n\n`;
-        finalBody = quote + finalBody;
+        finalBody = `> ${replyingTo.author_name}: ${replyingTo.content.substring(0, 50)}...\n\n` + finalBody;
       }
-
-      if (attachmentUrls.length > 0) {
-        const attachmentLinks = attachmentUrls.map(url => `\n📎 Attachment: ${url}`).join('');
-        finalBody += attachmentLinks;
-      }
-      
-      if (finalBody) {
-        await socialApi.messaging.sendMessage({
-          conversation_id: conversationId,
-          sender_id: user.id,
-          content: finalBody,
-        });
-      }
-      
+      await onSendMessage(finalBody, attachedFiles);
       setBody('');
       setAttachedFiles([]);
       onCancelReply();
       setFileInputKey(Date.now());
-
-    } catch (error: any) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Your message could not be sent.' });
+    } catch (error) {
+      // The hook handles the primary error toast
     } finally {
       setIsSending(false);
     }
   };
-
+    
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) setAttachedFiles(prev => [...prev, ...Array.from(e.target.files)]);
   };
