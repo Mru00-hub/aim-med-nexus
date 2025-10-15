@@ -10,6 +10,8 @@ import { useSocialCounts } from '@/context/SocialCountsContext';
 
 // FIX: Import the new standalone functions and types from the refactored API
 import {
+    getUserRecommendations,
+    getSentPendingRequests,
     getPendingRequests,
     getMyConnections,
     getBlockedUsers,
@@ -22,10 +24,6 @@ import {
     Connection,
     BlockedUser,
 } from '@/integrations/supabase/social.api';
-
-// NOTE: The `getUserRecommendations` and `getSentPendingRequests` functions were not in the
-// final refactored social.api.ts. For now, I have commented them out. You would need to add
-// them to the API file in the same standalone async/throw pattern if you need them.
 
 // Import the tab components
 import { DiscoverTab } from '@/components/social/DiscoverTab';
@@ -60,19 +58,19 @@ const FunctionalSocial = () => {
     setLoading(true);
     try {
       // Promise.all fetches data in parallel for better performance
-      const [requestsData, connectionsData, blockedData] = await Promise.all([
+      const [requestsData, connectionsData, blockedData, sentRequestsData, recommendationsData,] = await Promise.all([
         getPendingRequests(),
         getMyConnections(),
         getBlockedUsers(),
-        // socialApi.connections.getSentPendingRequests(), // Add these back once they are in the refactored API
-        // socialApi.connections.getUserRecommendations(user.id),
+        getSentPendingRequests(), 
+        getUserRecommendations(user.id),
       ]);
 
       setRequests(requestsData);
       setMyConnections(connectionsData);
       setBlockedUsers(blockedData);
-      // setSentRequests(sentRes.data as SentRequest[]);
-      // setRecommendations(recRes.data);
+      setSentRequests(sentRes.data as SentRequest[]);
+      setRecommendations(recRes.data);
 
     } catch (error: any) {
       console.error("Failed to fetch social data:", error);
