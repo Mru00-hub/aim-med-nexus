@@ -134,10 +134,34 @@ export const DirectMessage = ({ message, authorProfile, onReplyClick }: DirectMe
 
                     <div className={cn("flex flex-col w-auto", "items-start")}>
                         <div className={messageStyle}>
-                            {isEditing ? ( /* Editing UI */ ) : ( /* Message Content */ )}
-                            {Object.keys(reactionCounts).length > 0 && ( /* Reactions */ )}
+                             {isEditing ? (
+                                <div className="w-64">
+                                    <Textarea value={editedContent} onChange={(e) => setEditedContent(e.target.value)} autoFocus rows={3} className="bg-background text-foreground" />
+                                    <div className="flex justify-end gap-2 mt-2">
+                                        <Button variant="ghost" size="sm" onClick={() => setIsEditing(false)}>Cancel</Button>
+                                        <Button size="sm" onClick={handleSaveEdit}>Save</Button>
+                                    </div>
+                                </div>
+                            ) : (
+                            {message.parent_message && (
+                                  <div className="text-xs rounded-md p-2 border-l-2 border-current/50 bg-current/10 mb-2 opacity-80">
+                                      <p className="font-bold">{message.parent_message.sender.full_name}</p>
+                                      <p className="truncate">{message.parent_message.content}</p>
+                                  </div>
+                              )}
+                              <p className="text-sm break-words whitespace-pre-wrap">{message.content} {message.is_edited && <span className="text-xs opacity-70">(edited)</span>}</p>
+                            )}
+                            {Object.keys(reactionCounts).length > 0 && (
+                                <div className="absolute -bottom-3 right-2 flex gap-1">
+                                    {Object.entries(reactionCounts).map(([emoji, count]) => (
+                                        <Badge key={emoji} variant="secondary" className="shadow-md cursor-pointer" onClick={() => handleReaction(emoji)}>
+                                            {emoji} {count}
+                                        </Badge>
+                                    ))}
+                                </div>
+                            )}
                         </div>
-                    </div>
+                      </div>
                 </>
             )}
 
