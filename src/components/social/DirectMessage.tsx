@@ -1,169 +1,142 @@
+// src/components/social/DirectMessage.tsx
+
 import React, { useState, useMemo } from 'react';
-import { useAuth } from '@/hooks/useAuth';
-import { socialApi } from '@/integrations/supabase/social.api';
-import { Tables } from '@/integrations/supabase/types';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
-import { SmilePlus, Trash2, Pencil, Reply } from 'lucide-react';
+import { SmilePlus, Trash2, Pencil, Reply, Loader2, AlertCircle } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
-import { EmojiPicker } from './EmojiPicker';
+import { DirectMessageAttachment, DirectMessageWithDetails } from '@/integrations/supabase/social.api';
+import { MessageWithParent } from '@/hooks/useConversationData'; // NEW: Import the rich type
 
-type Profile = Tables<'profiles'>;
-type MessageWithRelations = Tables<'direct_messages'> & {
-  direct_message_reactions: Tables<'direct_message_reactions'>[];
-  direct_message_attachments: Tables<'direct_message_attachments'>[];
-  parent_message: {
-      id: number;
-      content: string;
-      sender: { full_name: string };
-  } | null;
+// NEW: Attachment sub-component, learned from your working example
+const Attachment: React.FC<{ attachment: DirectMessageAttachment & { isUploading?: boolean } }> = ({ attachment }) => {
+    if (attachment.isUploading) {
+        return <div className="flex items-center gap-2 p-2 mt-2 rounded-lg bg-muted border animate-pulse"><Loader2 className="h-4 w-4 animate-spin" /><span className="text-xs truncate">{attachment.file_name}</span></div>;
+    }
+    if (attachment.file_url === 'upload-failed') {
+        return <div className="flex items-center gap-2 p-2 mt-2 rounded-lg bg-destructive/20 text-destructive"><AlertCircle className="h-4 w-4" /><span className="text-xs truncate">Upload Failed</span></div>;
+    }
+    if (attachment.file_type?.startsWith('image/')) {
+        return <a href={attachment.file_url} target="_blank" rel="noopener noreferrer" className="mt-2 block"><img src={attachment.file_url} alt={attachment.file_name} className="max-w-xs max-h-64 rounded-lg object-cover border"/></a>;
+    }
+    return <a href={attachment.file_url} target="_blank" rel="noopener noreferrer" download className="flex items-center gap-2 p-2 mt-2 rounded-lg bg-muted border hover:bg-muted/80"><p className="text-sm font-medium truncate">{attachment.file_name}</p></a>;
 };
 
-type ReplyContext = {
-    id: number;
-    content: string;
-    sender_id: string;
-    author_name: string;
-};
 
 interface DirectMessageProps {
-  message: MessageWithRelations;
-  authorProfile: Profile | undefined;
-  onReplyClick: (context: ReplyContext) => void;
+  message: MessageWithParent;
+  currentUserId: string;
+  onReplyClick: (message: DirectMessageWithDetails) => void;
+  onDelete: (messageId: number) => void;
+  onEdit: (messageId: number, newContent: string) => void;
+  onReaction: (messageId: number, emoji: string) => void;
 }
 
-export const DirectMessage = ({ message, authorProfile, onReplyClick }: DirectMessageProps) => {
-    const { user } = useAuth();
+export const DirectMessage = ({ message, currentUserId, onReplyClick, onDelete, onEdit, onReaction }: DirectMessageProps) => {
     const [isEditing, setIsEditing] = useState(false);
     const [editedContent, setEditedContent] = useState(message.content);
-    const [showPicker, setShowPicker] = useState(false);
+    const [showActions, setShowActions] = useState(false); // FIX: State for the action menu, fixes Problem #5
+    const [showPicker, setShowPicker] = useState(false); // State for emoji picker
 
-    const isMe = message.sender_id === user?.id;
-    const displayName = authorProfile?.full_name || 'User';
+    const isMe = message.sender_id === currentUserId;
+    const displayName = message.author?.full_name || 'User';
     
     const reactionCounts = useMemo(() => {
-        return (message.direct_message_reactions || []).reduce((acc, reaction) => {
+        return (message.reactions || []).reduce((acc, reaction) => {
             acc[reaction.reaction_emoji] = (acc[reaction.reaction_emoji] || 0) + 1;
             return acc;
         }, {} as Record<string, number>);
-    }, [message.direct_message_reactions]);
+    }, [message.reactions]);
 
-    const handleReaction = async (emoji: string) => {
-        setShowPicker(false);
-        await socialApi.messaging.toggleReaction(message.id, emoji);
-    };
-
-    const handleDelete = async () => {
-        if (!window.confirm("Are you sure?")) return;
-        await socialApi.messaging.deleteMessage(message.id);
-    };
-
-    const handleSaveEdit = async () => {
+    const handleSaveEdit = () => {
         if (!editedContent.trim() || editedContent.trim() === message.content) {
             setIsEditing(false);
             return;
         }
-        await socialApi.messaging.editMessage(message.id, editedContent.trim());
+        onEdit(message.id, editedContent.trim());
         setIsEditing(false);
     };
 
-    const handleReply = (e: React.MouseEvent) => {
-        e.stopPropagation();
-        onReplyClick({ id: message.id, content: message.content, sender_id: message.sender_id, author_name: displayName });
-    };
+    const handleReactionClick = (emoji: string) => {
+        onReaction(message.id, emoji);
+        setShowPicker(false);
+    }
     
+    // FIX: Squeezed text (Problem #1) is solved by adding max-w classes and word break utilities.
     const messageStyle = cn(
-        "flex flex-col rounded-xl px-4 py-3 max-w-[85%] shadow-sm relative",
-        isMe 
-            ? "bg-primary text-primary-foreground" 
-            : "bg-card border"
+        "flex flex-col rounded-xl px-3 py-2 shadow-sm relative group cursor-pointer",
+        "max-w-[85%] sm:max-w-lg", // This is the specific fix for Problem #1
+        isMe ? "bg-primary text-primary-foreground" : "bg-card border"
     );
 
-    // This constant correctly renders the message content in all states
-    const MessageContent = (
-      <>
-        {isEditing ? (
-          <div className="w-64">
-            <Textarea value={editedContent} onChange={(e) => setEditedContent(e.target.value)} autoFocus rows={3} className="bg-background text-foreground" />
-            <div className="flex justify-end gap-2 mt-2">
-                <Button variant="ghost" size="sm" onClick={() => setIsEditing(false)}>Cancel</Button>
-                <Button size="sm" onClick={handleSaveEdit}>Save</Button>
-            </div>
+    const messageContent = isEditing ? (
+        <div className="w-64">
+          <Textarea value={editedContent} onChange={(e) => setEditedContent(e.target.value)} autoFocus rows={3} className="bg-background text-foreground" />
+          <div className="flex justify-end gap-2 mt-2">
+              <Button variant="ghost" size="sm" onClick={() => setIsEditing(false)}>Cancel</Button>
+              <Button size="sm" onClick={handleSaveEdit}>Save</Button>
           </div>
-        ) : (
-          <>
-            {message.parent_message && (
-                <div className="text-xs rounded-md p-2 border-l-2 border-current/50 bg-current/10 mb-2 opacity-80">
-                    <p className="font-bold">{message.parent_message?.sender?.full_name}</p>
-                    <p className="truncate">{message.parent_message.content}</p>
-                </div>
-            )}
-            <p className="text-sm break-words whitespace-pre-wrap">{message.content} {message.is_edited && <span className="text-xs opacity-70">(edited)</span>}</p>
-          </>
-        )}
-
-        {Object.keys(reactionCounts).length > 0 && (
-            <div className="absolute -bottom-3 right-2 flex gap-1">
-                {Object.entries(reactionCounts).map(([emoji, count]) => (
-                    <Badge key={emoji} variant="secondary" className="shadow-md cursor-pointer" onClick={() => handleReaction(emoji)}>
-                        {emoji} {count}
-                    </Badge>
-                ))}
-            </div>
-        )}
-      </>
+        </div>
+    ) : (
+        <>
+          {/* FIX: Reply preview (Problem #2) now works because useConversationData provides the parent_message_details object. */}
+          {message.parent_message_details && (
+              <div className="text-xs rounded-md p-2 border-l-2 border-current/50 bg-current/10 mb-2 opacity-80">
+                  <p className="font-bold">{message.parent_message_details.author?.full_name}</p>
+                  <p className="truncate">{message.parent_message_details.content}</p>
+              </div>
+          )}
+          {/* FIX: Word break utilities also help solve Problem #1 */}
+          <p className="text-sm break-words whitespace-pre-wrap">{message.content} {message.is_edited && <span className="text-xs opacity-70">(edited)</span>}</p>
+          {message.attachments && message.attachments.length > 0 && (
+              <div className="mt-2 space-y-2">
+                  {message.attachments.map(att => (
+                      <Attachment key={att.id} attachment={att as any} />
+                  ))}
+              </div>
+          )}
+        </>
     );
 
     return (
-        <div className={cn("flex w-full items-start gap-2 group relative", isMe ? "justify-end" : "justify-start")}>
-
-            {/* BLOCK 1: Content for the OTHER person's messages */}
-            {!isMe && (
-                <>
-                    <Avatar className="h-8 w-8 flex-shrink-0">
-                        <AvatarImage src={authorProfile?.profile_picture_url} />
-                        <AvatarFallback>{authorProfile?.full_name?.charAt(0)}</AvatarFallback>
-                    </Avatar>
-
-                    <div className="flex items-center self-center rounded-full border bg-card shadow-sm opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleReply} title="Reply"><Reply className="h-4 w-4" /></Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); setShowPicker(p => !p); }} title="Add Reaction"><SmilePlus className="h-4 w-4" /></Button>
-                    </div>
-
-                    <div className={cn("flex flex-col w-auto", "items-start")}>
-                        <div className={messageStyle}>
-                             {MessageContent}
-                        </div>
-                    </div>
-                </>
-            )}
-
-            {/* BLOCK 2: Content for YOUR messages */}
-            {isMe && (
-                <>
-                    <div className="flex items-center self-center rounded-full border bg-card shadow-sm opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleReply} title="Reply"><Reply className="h-4 w-4" /></Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); setShowPicker(p => !p); }} title="Add Reaction"><SmilePlus className="h-4 w-4" /></Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setIsEditing(true)} title="Edit"><Pencil className="h-4 w-4" /></Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleDelete} title="Delete"><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                    </div>
-                     <div className={cn("flex flex-col w-auto", "items-end")}>
-                        <div className={messageStyle}>{MessageContent}</div>
-                    </div>
-                    <Avatar className="h-8 w-8 flex-shrink-0">
-                        <AvatarImage src={authorProfile?.profile_picture_url} />
-                        <AvatarFallback>{displayName.charAt(0)}</AvatarFallback>
-                    </Avatar>
-                </>
-            )}
+        <div className={cn("flex w-full items-start gap-3 relative", isMe ? "justify-end" : "justify-start")}>
+            {!isMe && <Avatar className="h-8 w-8 flex-shrink-0"><AvatarImage src={message.author?.profile_picture_url || undefined} /><AvatarFallback>{displayName.charAt(0)}</AvatarFallback></Avatar>}
             
-            {showPicker && (
-                <div className={cn("absolute z-20 top-[-20px]", isMe ? "left-1/2 -translate-x-1/2" : "right-1/2 translate-x-1/2")}>
-                    <EmojiPicker onSelect={handleReaction} />
+            <div className="flex flex-col" onMouseEnter={() => setShowActions(true)} onMouseLeave={() => {setShowActions(false); setShowPicker(false);}}>
+                <div className={messageStyle}>
+                    {messageContent}
+                </div>
+                 {/* Reaction display */}
+                {Object.keys(reactionCounts).length > 0 && (
+                    <div className={cn("mt-1 flex gap-1", isMe ? "justify-end" : "justify-start")}>
+                        {Object.entries(reactionCounts).map(([emoji, count]) => (
+                            <Badge key={emoji} variant="secondary" className="shadow-sm cursor-pointer" onClick={() => handleReactionClick(emoji)}>
+                                {emoji} {count}
+                            </Badge>
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            {/* FIX: Unified Action Menu (solves Problem #5) */}
+            {(showActions || showPicker) && (
+                <div className={cn("absolute z-10 flex items-center bg-card border rounded-full shadow-md", "top-[-16px]", isMe ? "right-12" : "left-12")}>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onReplyClick(message)} title="Reply"><Reply className="h-4 w-4" /></Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setShowPicker(p => !p)} title="Add Reaction"><SmilePlus className="h-4 w-4" /></Button>
+                    {isMe && <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setIsEditing(true)} title="Edit"><Pencil className="h-4 w-4" /></Button>}
+                    {isMe && <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onDelete(message.id)} title="Delete"><Trash2 className="h-4 w-4 text-destructive" /></Button>}
                 </div>
             )}
+            {showPicker && (
+                 <div className="absolute z-20 top-[-16px] left-1/2 -translate-x-1/2 flex gap-1 p-1 bg-background border rounded-full shadow-lg">
+                    {['👍', '❤️', '🔥', '🤔', '😂'].map(emoji => (
+                        <span key={emoji} className="cursor-pointer hover:bg-muted rounded-full p-1" onClick={() => handleReactionClick(emoji)}>{emoji}</span>
+                    ))}
+                </div>
+            )}
+
+            {isMe && <Avatar className="h-8 w-8 flex-shrink-0"><AvatarImage src={message.author?.profile_picture_url || undefined} /><AvatarFallback>{displayName.charAt(0)}</AvatarFallback></Avatar>}
         </div>
     );
 };
