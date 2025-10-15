@@ -64,6 +64,42 @@ const FunctionalInbox = () => {
       return () => { supabase.removeChannel(channel); };
   }, []);
 
+  const handleMarkAsRead = async (conversationId: string) => {
+    // 1. OPTIMISTIC UPDATE: Immediately update the local state.
+    setConversations(prevConvos =>
+      prevConvos.map(convo =>
+        convo.conversation_id === conversationId
+          ? { ...convo, unread_count: 0 } // Instantly set the count to zero
+          : convo
+      )
+    );
+
+    // 2. BACKGROUND TASK: Tell the database to make the change permanent.
+    // We don't need to wait for this to finish.
+    try {
+      await supabase.rpc('mark_conversation_as_read', { 
+        p_conversation_id: conversationId 
+      });
+      // We don't even need to refetch here, because our local state is already correct!
+    } catch (error) {
+      console.error("Failed to mark conversation as read in the background:", error);
+      toast({
+        title: "Error",
+        description: "Could not mark messages as read. Please try again.",
+        variant: "destructive",
+      });
+      
+      // Set the conversation's unread_count back to its original value.
+      setConversations(prevConvos =>
+        prevConvos.map(convo =>
+          convo.conversation_id === conversationId
+            ? { ...convo, unread_count: originalUnreadCount }
+            : convo
+        )
+      );
+    }
+  };
+  
   // This effect for handling navigation state is also correct.
   useEffect(() => {
     const navState = location.state as { conversationId?: string; participant?: any };
@@ -116,6 +152,7 @@ const FunctionalInbox = () => {
             {selectedConversation ? (
               <ConversationView 
                 conversation={selectedConversation} 
+                onMarkAsRead={handleMarkAsRead}
                 onConversationUpdate={fetchAndSetConversations}
               />
             ) : (
