@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/components/ui/use-toast';
 import {
+    canSendMessage, 
     postDirectMessage,
     getDirectMessagesWithDetails,
     deleteDirectMessage,
@@ -19,7 +20,7 @@ export type MessageWithParent = DirectMessageWithDetails & {
   parent_message_details?: DirectMessageWithDetails | null;
 };
 
-export const useConversationData = (conversationId: string | undefined) => {
+export const useConversationData = (conversationId: string | undefined, recipientId: string | undefined) => {
     const { user, profile } = useAuth();
     const { toast } = useToast();
     const [messages, setMessages] = useState<DirectMessageWithDetails[]>([]);
@@ -45,6 +46,18 @@ export const useConversationData = (conversationId: string | undefined) => {
             toast({ variant: 'destructive', title: 'Not Logged In', description: 'You must be logged in to send a message.' });
             return;
         }
+
+        if (!recipientId) { // Check if we even have a recipient to check against
+            toast({ variant: 'destructive', title: 'Error', description: 'Recipient not found.' });
+            return;
+        }
+
+        try {
+            const isConnected = await canSendMessage(recipientId);
+            if (!isConnected) {
+                // This is the user-facing error message you requested.
+                throw new Error("You are no longer connected with this user.");
+            }
 
         // 1. Optimistic UI: Create a temporary message
         const tempMsgId = -Date.now();
@@ -102,10 +115,11 @@ export const useConversationData = (conversationId: string | undefined) => {
             }
         } catch (error: any) {
             toast({ variant: 'destructive', title: 'Failed to Send', description: error.message });
-            setMessages(current => current.filter(m => m.id !== tempMsgId)); // Revert on failure
+            // Revert optimistic message on failure
+            setMessages(current => current.filter(m => m.id !== tempMsgId));
             throw error;
         }
-    }, [user, profile, conversationId, toast]);
+    }, [user, profile, conversationId, recipientId, toast]);
 
     const handleDeleteMessage = useCallback(async (messageId: number) => {
         const previousMessages = messages;
