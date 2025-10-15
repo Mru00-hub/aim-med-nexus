@@ -66,15 +66,20 @@ export const ConversationView = ({ conversation, onConversationUpdate }: Convers
       try {
           // This can remain a direct call as it's simple.
           await supabase
-            .from('conversations') // Assuming this is the correct table
+            .from('conversation_participants') // Assuming this is the correct table
             .update({ is_starred: newStarredStatus })
-            .eq('id', conversation.conversation_id);
+            .match({
+              conversation_id: conversation.conversation_id,
+              user_id: user.id // Updates only YOUR star status
+            });
+
+          if (error) throw error;
           onConversationUpdate();
-      } catch (error) {
+        } catch (error) {
           console.error("Failed to update star status:", error);
-          setIsStarred(!newStarredStatus); // Revert
-      }
-  };
+          setIsStarred(!newStarredStatus); // Revert on failure
+        }
+    };
 
   const handleReplyClick = (message: any) => {
       setReplyingTo(message);
