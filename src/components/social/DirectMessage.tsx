@@ -28,13 +28,15 @@ interface DirectMessageProps {
   onReplyClick: (context: ReplyContext) => void;
 }
 
-const EmojiPicker: React.FC<{ onSelect: (emoji: string) => void }> = ({ onSelect }) => (
-    <div className="flex gap-1 p-1 bg-background border rounded-full shadow-lg">
-        {['👍', '❤️', '🔥', '🤔', '😂'].map(emoji => (
-            <span key={emoji} className="cursor-pointer hover:bg-muted rounded-full p-1 transition-colors" onClick={() => onSelect(emoji)}>{emoji}</span>
-        ))}
-    </div>
-);
+function EmojiPicker({ onSelect }: { onSelect: (emoji: string) => void }) {
+    return (
+        <div className="flex gap-1 p-1 bg-background border rounded-full shadow-lg">
+            {['👍', '❤️', '🔥', '🤔', '😂'].map(emoji => (
+                <span key={emoji} className="cursor-pointer hover:bg-muted rounded-full p-1 transition-colors" onClick={() => onSelect(emoji)}>{emoji}</span>
+            ))}
+        </div>
+    );
+}
 
 export const DirectMessage = ({ message, authorProfile, onReplyClick }: DirectMessageProps) => {
     const { user } = useAuth();
