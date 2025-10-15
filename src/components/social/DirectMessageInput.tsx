@@ -40,7 +40,7 @@ export const DirectMessageInput = ({ onSendMessage, replyingTo, onCancelReply }:
     try {
       // FIX: The handler now passes the parent ID, fixing Problem #3.
       // Attachments are passed correctly, fixing Problem #4.
-      const messageContent = body.trim() || (attachedFiles.length > 0 ? '' : ''); // Send empty string if only attachment
+      const messageContent = body.trim() || (attachedFiles.length > 0 ? '📎 Attachment' : '');
       await onSendMessage(messageContent, replyingTo?.id || null, attachedFiles);
       setBody('');
       setAttachedFiles([]);
