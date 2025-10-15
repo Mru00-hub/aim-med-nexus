@@ -68,9 +68,11 @@ export const DirectMessage = ({ message, currentUserId, onReplyClick, onDelete, 
     
     // FIX: Squeezed text (Problem #1) is solved by adding max-w classes and word break utilities.
     const messageStyle = cn(
-        "flex flex-col rounded-xl px-3 py-2 shadow-sm relative group cursor-pointer",
-        "max-w-[85%] sm:max-w-lg", // This is the specific fix for Problem #1
-        isMe ? "bg-primary text-primary-foreground" : "bg-card border"
+        "flex flex-col rounded-xl px-4 py-3 shadow-sm relative group cursor-pointer",
+        "max-w-[85%] sm:max-w-lg", // This limits the width
+        isMe 
+            ? "bg-blue-100 dark:bg-blue-900/50 text-blue-900 dark:text-blue-100" // Lighter blue style
+            : "bg-card border"
     );
 
     const messageContent = isEditing ? (
@@ -104,10 +106,16 @@ export const DirectMessage = ({ message, currentUserId, onReplyClick, onDelete, 
 
     return (
         <div className={cn("flex w-full items-start gap-3 relative", isMe ? "justify-end" : "justify-start")}>
-            {!isMe && <Avatar className="h-8 w-8 flex-shrink-0"><AvatarImage src={message.author?.profile_picture_url || undefined} /><AvatarFallback>{displayName.charAt(0)}</AvatarFallback></Avatar>}
+            {!isMe && <Avatar className="h-8 w-8 flex-shrink-0">...</Avatar>}
             
-            <div className="flex flex-col w-full relative" >
-                {/* This wrapper now controls the menu toggle */}
+            {/* This is the main content wrapper */}
+            <div className={cn("flex flex-col w-auto", isMe ? "items-end" : "items-start")}>
+                <div className="flex items-center gap-2 mb-1">
+                    <span className="font-bold text-sm">{displayName}</span>
+                    <span className="text-xs text-muted-foreground">{new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                </div>
+
+                {/* The main message bubble itself */}
                 <div onClick={() => setShowActions(p => !p)}>
                     <div className={messageStyle}>
                         {messageContent}
