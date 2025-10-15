@@ -379,5 +379,20 @@ export const socialApi = {
         .order("created_at", { ascending: true });
       return handleResponse(response);
     },
+    
+    toggleStarConversation: async (conversationId: number, is_starred: boolean) => {
+      const { data, error } = await supabase
+        .from('inbox_conversations')
+        .update({ is_starred })
+        .eq('id', conversationId)
+        .select()
+        .single();
+        
+      if (error) {
+        console.error('Error updating conversation star status:', error);
+        throw error;
+      }
+      return data;
+    },
   },
 };
