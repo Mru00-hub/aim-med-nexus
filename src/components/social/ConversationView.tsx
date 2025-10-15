@@ -1,77 +1,73 @@
-import React, { useState, useEffect, useRef } from 'react';
+// src/components/social/ConversationView.tsx
+
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { socialApi } from '@/integrations/supabase/social.api';
-import { supabase } from '@/integrations/supabase/client';
-import type { Tables } from '@/integrations/supabase/types';
-import { Star } from 'lucide-react'; // <-- Re-added Star import, was missing from your latest snippet
+import { Star, Loader2 } from 'lucide-react';
 import { DirectMessage } from './DirectMessage';
 import { DirectMessageInput } from './DirectMessageInput';
 import { useAuth } from '@/hooks/useAuth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { useConversationData } from '@/hooks/useConversationData'; 
-import { cn } from '@/lib/utils'; // <-- Added import for cn utility for dynamic classes
+import { useConversationData } from '@/hooks/useConversationData'; // NEW: Using our powerful hook
+import { cn } from '@/lib/utils';
+import { Tables } from '@/integrations/supabase/types';
+import { supabase } from '@/integrations/supabase/client'; // For profile fetching and starring
 
-// FIX #3: Add `is_starred` to the Conversation type
 type Conversation = Tables<'inbox_conversations'> & { is_starred?: boolean };
-type Profile = Tables<'profiles'>;
-type ReplyContext = { id: number; content: string; sender_id: string; author_name: string; };
 
 interface ConversationViewProps {
   conversation: Conversation;
-  onConversationUpdate: () => void; 
+  onConversationUpdate: () => void;
 }
 
-export const ConversationView = ({ conversation }: ConversationViewProps) => {
-  const { profile: currentUserProfile } = useAuth();
-  const [recipientProfile, setRecipientProfile] = useState<Profile | null>(null);
-  const [replyingTo, setReplyingTo] = useState<ReplyContext | null>(null);
-  // FIX #1: Added the missing useState declaration for isStarred
+export const ConversationView = ({ conversation, onConversationUpdate }: ConversationViewProps) => {
+  const { user } = useAuth();
   const [isStarred, setIsStarred] = useState(conversation.is_starred ?? false);
-  const { messages, loading, sendMessage } = useConversationData(conversation.conversation_id);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const prevMessagesLength = useRef(messages.length);
-  
-  useEffect(() => {
-    // Fetch the other participant's profile
-    const fetchRecipient = async () => {
-      if (!conversation.participant_id) return;
-      const { data } = await supabase.from('profiles').select('*').eq('id', conversation.participant_id).single();
-      if (data) setRecipientProfile(data);
-    };
-    fetchRecipient();
-  }, [conversation.participant_id]);
+
+  // NEW: All message logic is now handled by the hook.
+  const {
+    messages,
+    isLoading,
+    replyingTo,
+    setReplyingTo,
+    handleSendMessage,
+    handleDeleteMessage,
+    handleEditMessage,
+    handleReaction
+  } = useConversationData(conversation.conversation_id);
 
   useEffect(() => {
-    // Update star state if the conversation prop changes
+    // Scroll to bottom on new messages
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  useEffect(() => {
     setIsStarred(conversation.is_starred ?? false);
   }, [conversation.is_starred]);
-
-  useEffect(() => {
-    // Only scroll to bottom if the number of messages has increased
-    if (messages.length > prevMessagesLength.current) {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }
-    // Update the ref to the current length for the next render
-    prevMessagesLength.current = messages.length;
-  }, [messages]);
 
   const handleToggleStar = async () => {
       const newStarredStatus = !isStarred;
       setIsStarred(newStarredStatus);
       try {
-          await socialApi.messaging.toggleStarConversation(conversation.conversation_id, newStarredStatus);
-          onConversationUpdate(); // FIX: Call the callback to refetch the list
+          // This can remain a direct call as it's simple.
+          await supabase
+            .from('conversations') // Assuming this is the correct table
+            .update({ is_starred: newStarredStatus })
+            .eq('id', conversation.conversation_id);
+          onConversationUpdate();
       } catch (error) {
           console.error("Failed to update star status:", error);
-          setIsStarred(!newStarredStatus); // Revert on failure
+          setIsStarred(!newStarredStatus); // Revert
       }
   };
-  const profilesMap = {
-    ...(currentUserProfile && { [currentUserProfile.id]: currentUserProfile }),
-    ...(recipientProfile && { [recipientProfile.id]: recipientProfile }),
-  };
+
+  const handleReplyClick = (message: any) => {
+      setReplyingTo(message);
+      // Optional: focus input and scroll down
+      messagesEndRef.current?.scrollIntoView();
+  }
 
   return (
     <>
@@ -87,29 +83,34 @@ export const ConversationView = ({ conversation }: ConversationViewProps) => {
                 </div>
             </div>
             <div className="flex items-center gap-2">
-                {/* FIX #2: Correctly closed the Button tag and added the Star icon back inside it */}
                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleToggleStar}>
                     <Star className={cn("h-4 w-4", isStarred && "fill-current text-yellow-500")} />
                 </Button>
             </div>
         </div>
       </CardHeader>
-      <CardContent className="flex-1 overflow-y-auto p-4 space-y-6 bg-muted/20">
-        {loading ? ( <Skeleton className="h-24 w-full" /> ) : (
-          messages.map((message) => 
-            <DirectMessage 
-              key={message.id} 
-              message={message} 
-              authorProfile={profilesMap[message.sender_id]} 
-              onReplyClick={setReplyingTo}
+      <CardContent className="flex-1 overflow-y-auto p-4 space-y-4 bg-muted/20">
+        {isLoading ? (
+          <div className="flex justify-center items-center h-full">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        ) : (
+          messages.map((message) =>
+            <DirectMessage
+              key={message.id}
+              message={message}
+              currentUserId={user?.id || ''}
+              onReplyClick={handleReplyClick}
+              onDelete={handleDeleteMessage}
+              onEdit={handleEditMessage}
+              onReaction={handleReaction}
             />
           )
         )}
         <div ref={messagesEndRef} />
       </CardContent>
-      <DirectMessageInput 
-        conversationId={conversation.conversation_id}
-        sendMessage={sendMessage}
+      <DirectMessageInput
+        onSendMessage={handleSendMessage} // FIX: Pass the handler from the hook
         replyingTo={replyingTo}
         onCancelReply={() => setReplyingTo(null)}
       />
