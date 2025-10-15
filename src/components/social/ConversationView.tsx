@@ -38,8 +38,24 @@ export const ConversationView = ({ conversation }: ConversationViewProps) => {
   }, [conversation.participant_id]);
 
   useEffect(() => {
+    // Update star state if the conversation prop changes
+    setIsStarred(conversation.is_starred ?? false);
+  }, [conversation.is_starred]);
+
+  useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  const handleToggleStar = async () => {
+    const newStarredStatus = !isStarred;
+    setIsStarred(newStarredStatus); // Optimistic update
+    try {
+      await socialApi.messaging.toggleStarConversation(conversation.conversation_id, newStarredStatus);
+    } catch (error) {
+      console.error("Failed to update star status:", error);
+      setIsStarred(!newStarredStatus); // Revert on failure
+    }
+  };
 
   const profilesMap = {
     ...(currentUserProfile && { [currentUserProfile.id]: currentUserProfile }),
@@ -57,16 +73,10 @@ export const ConversationView = ({ conversation }: ConversationViewProps) => {
                 </Avatar>
                 <div>
                     <h3 className="font-semibold">{conversation.participant_full_name}</h3>
-                    {/* Note: Online status is not in the view, so this is a placeholder */}
-                    <p className="text-sm text-muted-foreground flex items-center gap-1.5">
-                        <span className="h-2 w-2 rounded-full bg-green-500"></span>
-                        Online
-                    </p>
                 </div>
             </div>
             <div className="flex items-center gap-2">
-                <Button variant="ghost" size="icon" className="h-8 w-8"><Star className="h-4 w-4" /></Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleToggleStar}>
             </div>
         </div>
       </CardHeader>
@@ -85,6 +95,7 @@ export const ConversationView = ({ conversation }: ConversationViewProps) => {
       </CardContent>
       <DirectMessageInput 
         conversationId={conversation.conversation_id}
+        sendMessage={sendMessage}
         replyingTo={replyingTo}
         onCancelReply={() => setReplyingTo(null)}
       />
