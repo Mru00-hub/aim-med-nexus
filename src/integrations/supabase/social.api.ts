@@ -191,6 +191,19 @@ export const getInbox = async (): Promise<Conversation[]> => {
     return data;
 };
 
+/**
+ * Checks if the current user is allowed to send a message to another user (i.e., they are connected).
+ * @param otherUserId - The UUID of the message recipient.
+ */
+export const canSendMessage = async (otherUserId: string): Promise<boolean> => {
+  const { data, error } = await supabase.rpc('can_send_direct_message', { other_user_id: otherUserId });
+  if (error) {
+    console.error("Error checking send permission:", error);
+    return false; // Fail safely
+  }
+  return data;
+};
+
 // --- Message Actions ---
 
 /**
