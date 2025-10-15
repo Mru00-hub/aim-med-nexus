@@ -13,6 +13,7 @@ import { useConversationData } from '@/hooks/useConversationData'; // NEW: Using
 import { cn } from '@/lib/utils';
 import { Tables } from '@/integrations/supabase/types';
 import { supabase } from '@/integrations/supabase/client'; // For profile fetching and starring
+import { markConversationAsRead } from '@/integrations/supabase/social.api';
 
 type Conversation = Tables<'inbox_conversations'> & { is_starred?: boolean };
 
@@ -39,6 +40,31 @@ export const ConversationView = ({ conversation, onConversationUpdate }: Convers
     handleReaction
   } = useConversationData(conversation.conversation_id, conversation.participant_id);
 
+  useEffect(() => {
+    // This effect runs whenever the user switches to a new conversation.
+    const markAsRead = async () => {
+      // Only make an API call if there are actually unread messages.
+      if (conversation && conversation.unread_count && conversation.unread_count > 0) {
+        try {
+          // Call the RPC function to update the database.
+          await supabase.rpc('mark_conversation_as_read', { 
+            p_conversation_id: conversation.conversation_id 
+          });
+          // After a brief moment, trigger a refetch of the conversation list
+          // to update the "unread" badge in the sidebar.
+          setTimeout(() => {
+            onConversationUpdate();
+          }, 500); // Small delay to ensure DB has time to update
+        } catch (error) {
+          console.error("Failed to mark conversation as read:", error);
+        }
+      }
+    };
+
+    markAsRead();
+
+  }, [conversation.conversation_id, conversation.unread_count, onConversationUpdate]); 
+  
   useEffect(() => {
     // On the very first render, prevMessagesLength.current is null, so we set it.
     if (prevMessagesLength.current === null) {
