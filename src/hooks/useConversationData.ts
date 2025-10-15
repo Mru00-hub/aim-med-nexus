@@ -47,57 +47,58 @@ export const useConversationData = (conversationId: string | undefined, recipien
             return;
         }
 
-        if (!recipientId) { // Check if we even have a recipient to check against
+        if (!recipientId) {
             toast({ variant: 'destructive', title: 'Error', description: 'Recipient not found.' });
             return;
         }
+        
+        // We need the temporary ID outside the try block for the catch block to access it.
+        const tempMsgId = -Date.now();
 
         try {
+            // STEP 1: Check connection status first.
             const isConnected = await canSendMessage(recipientId);
             if (!isConnected) {
-                // This is the user-facing error message you requested.
                 throw new Error("You are no longer connected with this user.");
             }
 
-        // 1. Optimistic UI: Create a temporary message
-        const tempMsgId = -Date.now();
-        const optimisticAttachments = files.map((file, index) => ({
-            id: `temp_att_${Date.now()}_${index}`,
-            message_id: -1,
-            file_name: file.name,
-            file_type: file.type,
-            file_url: URL.createObjectURL(file),
-            file_size_bytes: file.size,
-            created_at: new Date().toISOString(),
-            uploaded_by: user.id,
-            isUploading: true,
-        }));
+            // STEP 2: Optimistic UI update.
+            const optimisticAttachments = files.map((file, index) => ({
+                id: `temp_att_${Date.now()}_${index}`,
+                message_id: -1,
+                file_name: file.name,
+                file_type: file.type,
+                file_url: URL.createObjectURL(file),
+                file_size_bytes: file.size,
+                created_at: new Date().toISOString(),
+                uploaded_by: user.id,
+                isUploading: true,
+            }));
 
-        const optimisticMessage: DirectMessageWithDetails = {
-            id: tempMsgId,
-            conversation_id: conversationId,
-            sender_id: user.id,
-            content,
-            parent_message_id: parentMessageId,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-            is_edited: false,
-            author: {
-                full_name: profile.full_name,
-                profile_picture_url: profile.profile_picture_url,
-            },
-            reactions: [],
-            attachments: optimisticAttachments as any,
-        };
+            const optimisticMessage: DirectMessageWithDetails = {
+                id: tempMsgId,
+                conversation_id: conversationId,
+                sender_id: user.id,
+                content,
+                parent_message_id: parentMessageId,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+                is_edited: false,
+                author: {
+                    full_name: profile.full_name,
+                    profile_picture_url: profile.profile_picture_url,
+                },
+                reactions: [],
+                attachments: optimisticAttachments as any,
+            };
 
-        setMessages(current => [...current, optimisticMessage]);
+            setMessages(current => [...current, optimisticMessage]);
 
-        // 2. Call the real API
-        try {
+            // STEP 3: Call the real API.
             const realMessage = await postDirectMessage(conversationId, content, parentMessageId);
             setMessages(current => current.map(msg => msg.id === tempMsgId ? { ...msg, id: realMessage.id } : msg));
 
-            // 3. Handle Attachments
+            // STEP 4: Handle Attachments.
             if (files.length > 0) {
                 await Promise.all(files.map(async (file, index) => {
                     try {
@@ -114,12 +115,14 @@ export const useConversationData = (conversationId: string | undefined, recipien
                 }));
             }
         } catch (error: any) {
+            // This single catch block will handle any failure from any step.
             toast({ variant: 'destructive', title: 'Failed to Send', description: error.message });
-            // Revert optimistic message on failure
+            // Revert the optimistic message on failure.
             setMessages(current => current.filter(m => m.id !== tempMsgId));
-            throw error;
+            // We can re-throw the error if a parent component needs to know about it.
+            // throw error; 
         }
-    }, [user, profile, conversationId, recipientId, toast]);
+    }, [user, profile, conversationId, recipientId, toast, messages]);
 
     const handleDeleteMessage = useCallback(async (messageId: number) => {
         const previousMessages = messages;
