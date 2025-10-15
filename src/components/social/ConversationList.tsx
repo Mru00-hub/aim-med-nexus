@@ -10,7 +10,7 @@ import TimeAgo from 'react-timeago';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Star } from 'lucide-react';
 
-type Conversation = Tables<'inbox_conversations'>;
+type Conversation = Tables<'inbox_conversations'> & { is_starred?: boolean };
 
 interface ConversationListProps {
   conversations: Conversation[];
@@ -56,8 +56,8 @@ export const ConversationList = ({ conversations, loading, onSelectConversation,
               <div
                 key={convo.conversation_id}
                 onClick={() => onSelectConversation(convo)}
-                className={`p-3 cursor-pointer hover:bg-muted/50 transition-colors border-l-2 ${selectedConversationId === convo.conversation_id ? 'bg-primary/5 border-l-primary' : 'border-l-transparent'}`}>
-                <div className="flex items-start gap-3">
+                className={`flex items-center justify-between p-3 cursor-pointer hover:bg-muted/50 transition-colors border-l-2 ${selectedConversationId === convo.conversation_id ? 'bg-primary/5 border-l-primary' : 'border-l-transparent'}`}>
+                <div className="flex items-start gap-3 flex-1 min-w-0">
                     <Avatar className="h-10 w-10 border">
                         <AvatarImage src={convo.participant_avatar_url || undefined} />
                         <AvatarFallback>{convo.participant_full_name?.split(' ').map(n => n[0]).join('')}</AvatarFallback>
@@ -81,6 +81,11 @@ export const ConversationList = ({ conversations, loading, onSelectConversation,
                         </div>
                     </div>
                 </div>
+                {convo.is_starred && (
+                  <div className="ml-2 flex-shrink-0">
+                    <Star className="h-4 w-4 text-yellow-500 fill-current" />
+                  </div>
+                )}
               </div>
             ))}
           </div>
