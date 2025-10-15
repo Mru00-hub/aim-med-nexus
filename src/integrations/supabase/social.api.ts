@@ -369,15 +369,27 @@ export const socialApi = {
      * Fetches all messages for a specific conversation.
      * @param conversationId - The ID of the conversation.
      */
-    getMessagesForConversation: async (
-      conversationId: string
-    ): Promise<ApiResponse<Tables<"direct_messages">[]>> => {
-      const response = await supabase
-        .from("direct_messages")
-        .select("*, direct_message_attachments(*), direct_message_reactions(*)")
-        .eq("conversation_id", conversationId)
-        .order("created_at", { ascending: true });
-      return handleResponse(response);
+    getMessagesForConversation: async (conversationId: string) => {
+        const { data, error } = await supabase
+            .from('direct_messages')
+            .select(`
+                *,
+                direct_message_reactions(*),
+                direct_message_attachments(*),
+                parent_message:direct_messages!parent_message_id (
+                    id,
+                    content,
+                    sender:profiles!sender_id (full_name)
+                )
+            `)
+            .eq('conversation_id', conversationId)
+            .order('created_at', { ascending: true });
+    
+        if (error) {
+            console.error("Error fetching messages:", error);
+            throw error;
+        }
+        return data;
     },
     
     toggleStarConversation: async (conversationId: number, is_starred: boolean) => {
