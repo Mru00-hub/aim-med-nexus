@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { SmilePlus, Trash2, Pencil, Reply, Loader2, AlertCircle } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { EmojiPicker } from './EmojiPicker';
 import { DirectMessageAttachment, DirectMessageWithDetails } from '@/integrations/supabase/social.api';
 import { MessageWithParent } from '@/hooks/useConversationData'; // NEW: Import the rich type
 
@@ -37,8 +38,8 @@ interface DirectMessageProps {
 export const DirectMessage = ({ message, currentUserId, onReplyClick, onDelete, onEdit, onReaction }: DirectMessageProps) => {
     const [isEditing, setIsEditing] = useState(false);
     const [editedContent, setEditedContent] = useState(message.content);
-    const [showActions, setShowActions] = useState(false); // FIX: State for the action menu, fixes Problem #5
-    const [showPicker, setShowPicker] = useState(false); // State for emoji picker
+    const [showActions, setShowActions] = useState(false);
+    const [showPicker, setShowPicker] = useState(false);
 
     const isMe = message.sender_id === currentUserId;
     const displayName = message.author?.full_name || 'User';
@@ -62,6 +63,7 @@ export const DirectMessage = ({ message, currentUserId, onReplyClick, onDelete, 
     const handleReactionClick = (emoji: string) => {
         onReaction(message.id, emoji);
         setShowPicker(false);
+        setShowActions(false);
     }
     
     // FIX: Squeezed text (Problem #1) is solved by adding max-w classes and word break utilities.
@@ -104,11 +106,14 @@ export const DirectMessage = ({ message, currentUserId, onReplyClick, onDelete, 
         <div className={cn("flex w-full items-start gap-3 relative", isMe ? "justify-end" : "justify-start")}>
             {!isMe && <Avatar className="h-8 w-8 flex-shrink-0"><AvatarImage src={message.author?.profile_picture_url || undefined} /><AvatarFallback>{displayName.charAt(0)}</AvatarFallback></Avatar>}
             
-            <div className="flex flex-col" onMouseEnter={() => setShowActions(true)} onMouseLeave={() => {setShowActions(false); setShowPicker(false);}}>
-                <div className={messageStyle}>
-                    {messageContent}
+            <div className="flex flex-col w-full relative" >
+                {/* This wrapper now controls the menu toggle */}
+                <div onClick={() => setShowActions(p => !p)}>
+                    <div className={messageStyle}>
+                        {messageContent}
+                    </div>
                 </div>
-                 {/* Reaction display */}
+
                 {Object.keys(reactionCounts).length > 0 && (
                     <div className={cn("mt-1 flex gap-1", isMe ? "justify-end" : "justify-start")}>
                         {Object.entries(reactionCounts).map(([emoji, count]) => (
@@ -118,24 +123,22 @@ export const DirectMessage = ({ message, currentUserId, onReplyClick, onDelete, 
                         ))}
                     </div>
                 )}
+            
+                {/* FIX: The menu is now stable because it's only controlled by the `showActions` state */}
+                {showActions && (
+                    <div className={cn("absolute z-10 flex items-center bg-card border rounded-full shadow-md", "top-[-16px]", isMe ? "right-12" : "left-12")}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { onReplyClick(message); setShowActions(false); }} title="Reply"><Reply className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setShowPicker(p => !p)} title="Add Reaction"><SmilePlus className="h-4 w-4" /></Button>
+                        {isMe && <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setIsEditing(true); setShowActions(false); }} title="Edit"><Pencil className="h-4 w-4" /></Button>}
+                        {isMe && <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onDelete(message.id)} title="Delete"><Trash2 className="h-4 w-4 text-destructive" /></Button>}
+                    </div>
+                )}
+                {showPicker && (
+                     <div className="absolute z-20 top-[-20px] left-1/2 -translate-x-1/2">
+                        <EmojiPicker onSelect={handleReactionClick} />
+                    </div>
+                )}
             </div>
-
-            {/* FIX: Unified Action Menu (solves Problem #5) */}
-            {(showActions || showPicker) && (
-                <div className={cn("absolute z-10 flex items-center bg-card border rounded-full shadow-md", "top-[-16px]", isMe ? "right-12" : "left-12")}>
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onReplyClick(message)} title="Reply"><Reply className="h-4 w-4" /></Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setShowPicker(p => !p)} title="Add Reaction"><SmilePlus className="h-4 w-4" /></Button>
-                    {isMe && <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setIsEditing(true)} title="Edit"><Pencil className="h-4 w-4" /></Button>}
-                    {isMe && <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onDelete(message.id)} title="Delete"><Trash2 className="h-4 w-4 text-destructive" /></Button>}
-                </div>
-            )}
-            {showPicker && (
-                 <div className="absolute z-20 top-[-16px] left-1/2 -translate-x-1/2 flex gap-1 p-1 bg-background border rounded-full shadow-lg">
-                    {['👍', '❤️', '🔥', '🤔', '😂'].map(emoji => (
-                        <span key={emoji} className="cursor-pointer hover:bg-muted rounded-full p-1" onClick={() => handleReactionClick(emoji)}>{emoji}</span>
-                    ))}
-                </div>
-            )}
 
             {isMe && <Avatar className="h-8 w-8 flex-shrink-0"><AvatarImage src={message.author?.profile_picture_url || undefined} /><AvatarFallback>{displayName.charAt(0)}</AvatarFallback></Avatar>}
         </div>
