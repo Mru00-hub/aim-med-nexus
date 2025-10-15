@@ -8,7 +8,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { cn } from '@/lib/utils';
 import { SmilePlus, Trash2, Pencil, MoreHorizontal, Reply } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '../ui/badge';
+import { Badge } from '@/components/ui/badge';
 
 type Profile = Tables<'profiles'>;
 type MessageWithRelations = Tables<'direct_messages'> & {
@@ -87,10 +87,9 @@ export const DirectMessage = ({ message, authorProfile, onReplyClick }: DirectMe
     );
 
     return (
-        <div className={cn("flex w-full items-start gap-2 group", isMe ? "justify-end" : "justify-start")}>
+        <div className={cn("flex w-full items-start gap-2 group relative", isMe ? "justify-end" : "justify-start")}>
             {!isMe && <Avatar className="h-8 w-8"> <AvatarImage src={authorProfile?.profile_picture_url} /> <AvatarFallback>{authorProfile?.full_name?.charAt(0)}</AvatarFallback> </Avatar>}
 
-            {/* Actions for other users' messages */}
             {!isMe && (
                 <div className="flex items-center self-center rounded-full border bg-card shadow-sm opacity-0 group-hover:opacity-100 transition-opacity">
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleReply} title="Reply"><Reply className="h-4 w-4" /></Button>
@@ -98,7 +97,7 @@ export const DirectMessage = ({ message, authorProfile, onReplyClick }: DirectMe
                 </div>
             )}
             
-            <div className={cn("flex flex-col w-auto relative", isMe ? "items-end" : "items-start")}>
+            <div className={cn("flex flex-col w-auto", isMe ? "items-end" : "items-start")}>
                 <div className={messageStyle}>
                     {isEditing ? (
                         <div className="w-64">
@@ -122,7 +121,9 @@ export const DirectMessage = ({ message, authorProfile, onReplyClick }: DirectMe
                         </div>
                     )}
                 </div>
-                {isMe && (
+            </div>
+
+            {isMe && (
                 <div className="flex items-center self-center rounded-full border bg-card shadow-sm opacity-0 group-hover:opacity-100 transition-opacity">
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleReply} title="Reply"><Reply className="h-4 w-4" /></Button>
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); setShowPicker(p => !p); }} title="Add Reaction"><SmilePlus className="h-4 w-4" /></Button>
@@ -133,8 +134,11 @@ export const DirectMessage = ({ message, authorProfile, onReplyClick }: DirectMe
 
             {isMe && <Avatar className="h-8 w-8"><AvatarImage src={authorProfile?.profile_picture_url} /><AvatarFallback>{displayName.charAt(0)}</AvatarFallback></Avatar>}
             
-            {/* The Emoji picker needs to be handled outside the flow */}
-            {showPicker && <div className="absolute z-20"><EmojiPicker onSelect={handleReaction} /></div>}
+            {showPicker && (
+                <div className={cn("absolute z-20 top-[-20px]", isMe ? "left-1/2 -translate-x-1/2" : "right-1/2 translate-x-1/2")}>
+                    <EmojiPicker onSelect={handleReaction} />
+                </div>
+            )}
         </div>
     );
 };
