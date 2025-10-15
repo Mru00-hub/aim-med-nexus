@@ -5,9 +5,16 @@ import type { Tables } from '@/integrations/supabase/types';
 import { useAuth } from './useAuth';
 import { useToast } from '@/components/ui/use-toast';
 
+// MODIFICATION: The type is updated to include the parent message details.
+// This must match the type in DirectMessage.tsx and what your API returns.
 type MessageWithRelations = Tables<'direct_messages'> & {
   direct_message_reactions: Tables<'direct_message_reactions'>[];
   direct_message_attachments: Tables<'direct_message_attachments'>[];
+  parent_message: {
+      id: number;
+      content: string;
+      sender: { full_name: string };
+  } | null;
 };
 
 export const useConversationData = (conversationId: string | undefined) => {
@@ -19,23 +26,28 @@ export const useConversationData = (conversationId: string | undefined) => {
   const fetchMessages = useCallback(async () => {
     if (!conversationId) return;
     setLoading(true);
-    const { data } = await socialApi.messaging.getMessagesForConversation(conversationId);
+    // This assumes your `getMessagesForConversation` in social.api.ts has been updated
+    // to fetch the `parent_message` details as shown in the previous response.
+    const data = await socialApi.messaging.getMessagesForConversation(conversationId);
     if (data) setMessages(data as MessageWithRelations[]);
     setLoading(false);
   }, [conversationId]);
 
   useEffect(() => {
-    fetchMessages();
-    const channel = supabase
-      .channel(`conversation-${conversationId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'direct_messages', filter: `conversation_id=eq.${conversationId}` }, fetchMessages)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'direct_message_reactions' }, fetchMessages)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'direct_message_attachments' }, fetchMessages)
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    if (conversationId) {
+        fetchMessages();
+        const channel = supabase
+          .channel(`conversation-${conversationId}`)
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'direct_messages', filter: `conversation_id=eq.${conversationId}` }, fetchMessages)
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'direct_message_reactions' }, fetchMessages)
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'direct_message_attachments' }, fetchMessages)
+          .subscribe();
+        return () => { supabase.removeChannel(channel); };
+    }
   }, [conversationId, fetchMessages]);
 
-  const sendMessage = useCallback(async (body: string, files: File[]) => {
+  // MODIFICATION: The function signature now accepts `parentId` to handle replies.
+  const sendMessage = useCallback(async (body: string, files: File[], parentId: number | null) => {
     if (!conversationId || !user || !profile) return;
 
     const tempMsgId = -Date.now();
@@ -49,6 +61,7 @@ export const useConversationData = (conversationId: string | undefined) => {
       isUploading: true,
     }));
 
+    // MODIFICATION: Optimistic message now includes parent fields for type consistency.
     const optimisticMessage: MessageWithRelations = {
       id: tempMsgId,
       conversation_id: conversationId,
@@ -58,6 +71,8 @@ export const useConversationData = (conversationId: string | undefined) => {
       updated_at: null,
       is_edited: false,
       is_read: false,
+      parent_message_id: parentId,
+      parent_message: null,
       direct_message_reactions: [],
       direct_message_attachments: optimisticAttachments as any,
     };
@@ -65,10 +80,21 @@ export const useConversationData = (conversationId: string | undefined) => {
     setMessages(current => [...current, optimisticMessage]);
 
     try {
-      const { data: realMessage } = await socialApi.messaging.sendMessage({ conversation_id: conversationId, sender_id: user.id, content: body, parent_message_id: parentId });
+      // MODIFICATION: Add workaround for attachment-only messages.
+      // If the body is empty but there are files, send placeholder text.
+      const messageContent = body.trim() === '' && files.length > 0 ? '[Attachment]' : body;
+
+      const { data: realMessage } = await socialApi.messaging.sendMessage({
+          conversation_id: conversationId,
+          sender_id: user.id,
+          content: messageContent,
+          parent_message_id: parentId // `parentId` is now passed to the API.
+      });
+
       if (!realMessage || !realMessage.id) {
           throw new Error("Message creation failed on the server.");
       }
+      
       setMessages(current => current.map(msg => msg.id === tempMsgId ? { ...msg, id: realMessage.id } : msg));
 
       if (files.length > 0) {
@@ -100,6 +126,5 @@ export const useConversationData = (conversationId: string | undefined) => {
     }
   }, [conversationId, user, profile, toast]);
 
-  // Return the state and handlers for the view component to use
   return { messages, loading, sendMessage };
 };
