@@ -20,6 +20,7 @@ type ReplyContext = { id: number; content: string; sender_id: string; author_nam
 
 interface ConversationViewProps {
   conversation: Conversation;
+  onConversationUpdate: () => void; 
 }
 
 export const ConversationView = ({ conversation }: ConversationViewProps) => {
@@ -29,6 +30,7 @@ export const ConversationView = ({ conversation }: ConversationViewProps) => {
   // FIX #1: Added the missing useState declaration for isStarred
   const [isStarred, setIsStarred] = useState(conversation.is_starred ?? false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const prevMessagesLength = useRef(messages.length);
   const { messages, loading, sendMessage } = useConversationData(conversation.conversation_id);
 
   useEffect(() => {
@@ -47,20 +49,25 @@ export const ConversationView = ({ conversation }: ConversationViewProps) => {
   }, [conversation.is_starred]);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    // Only scroll to bottom if the number of messages has increased
+    if (messages.length > prevMessagesLength.current) {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+    // Update the ref to the current length for the next render
+    prevMessagesLength.current = messages.length;
   }, [messages]);
 
   const handleToggleStar = async () => {
-    const newStarredStatus = !isStarred;
-    setIsStarred(newStarredStatus); // Optimistic update
-    try {
-      await socialApi.messaging.toggleStarConversation(conversation.conversation_id, newStarredStatus);
-    } catch (error) {
-      console.error("Failed to update star status:", error);
-      setIsStarred(!newStarredStatus); // Revert on failure
-    }
+      const newStarredStatus = !isStarred;
+      setIsStarred(newStarredStatus);
+      try {
+          await socialApi.messaging.toggleStarConversation(conversation.conversation_id, newStarredStatus);
+          onConversationUpdate(); // FIX: Call the callback to refetch the list
+      } catch (error) {
+          console.error("Failed to update star status:", error);
+          setIsStarred(!newStarredStatus); // Revert on failure
+      }
   };
-
   const profilesMap = {
     ...(currentUserProfile && { [currentUserProfile.id]: currentUserProfile }),
     ...(recipientProfile && { [recipientProfile.id]: recipientProfile }),
