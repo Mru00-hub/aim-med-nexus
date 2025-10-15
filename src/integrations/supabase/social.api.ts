@@ -135,6 +135,43 @@ export const getBlockedUsers = async (): Promise<BlockedUser[]> => {
     return data;
 };
 
+/**
+ * Fetches a list of recommended users to connect with.
+ * @param targetUserId - The ID of the user for whom to get recommendations.
+ */
+export const getUserRecommendations = async (
+    targetUserId: string
+): Promise<Database['public']['Functions']['get_user_recommendations']['Returns']> => {
+    const { data, error } = await supabase.rpc('get_user_recommendations', { target_user_id: targetUserId });
+    if (error) throw error;
+    return data;
+};
+
+/**
+ * Fetches a list of connection requests sent by the current user that are still pending.
+ */
+export const getSentPendingRequests = async (): Promise<any[]> => {
+    // Note: You will need to generate a type for the 'sent_pending_requests' view for full type safety.
+    const { data, error } = await supabase.from("sent_pending_requests").select("*");
+    if (error) throw error;
+    return data;
+};
+
+/**
+ * Fetches a list of mutual connections with another user.
+ * @param otherUserId - The UUID of the other user.
+ */
+export const getMutualConnections = async (
+  otherUserId: string
+): Promise<Database['public']['Functions']['get_mutual_connections']['Returns']> => {
+  const { data, error } = await supabase
+    .rpc("get_mutual_connections", {
+      other_user_id: otherUserId,
+    });
+  if (error) throw error;
+  return data;
+};
+
 //================================================================================
 //  System 2: Direct Messaging API (REFACTORED)
 //================================================================================
