@@ -13,6 +13,12 @@ import { EmojiPicker } from './EmojiPicker'; // <-- The new import
 type Profile = Tables<'profiles'>;
 type MessageWithRelations = Tables<'direct_messages'> & {
   direct_message_reactions: Tables<'direct_message_reactions'>[];
+  direct_message_attachments: Tables<'direct_message_attachments'>[];
+  parent_message: { // <-- ADD THIS
+      id: number;
+      content: string;
+      sender: { full_name: string };
+  } | null;
 };
 
 type ReplyContext = {
@@ -115,6 +121,12 @@ export const DirectMessage = ({ message, authorProfile, onReplyClick }: DirectMe
                                     </div>
                                 </div>
                             ) : (
+                                {message.parent_message && (
+                                    <div className="text-xs rounded-md p-2 border-l-2 border-current/50 bg-current/10 mb-2 opacity-80">
+                                        <p className="font-bold">{message.parent_message.sender.full_name}</p>
+                                        <p className="truncate">{message.parent_message.content}</p>
+                                    </div>
+                                )}
                                 <p className="text-sm break-words whitespace-pre-wrap">{message.content} {message.is_edited && <span className="text-xs opacity-70">(edited)</span>}</p>
                             )}
 
