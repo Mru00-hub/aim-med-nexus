@@ -5,14 +5,16 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { socialApi } from '@/integrations/supabase/social.api';
 import { supabase } from '@/integrations/supabase/client';
 import type { Tables } from '@/integrations/supabase/types';
-import { MoreVertical, Star } from 'lucide-react';
+import { Star } from 'lucide-react'; // <-- Re-added Star import, was missing from your latest snippet
 import { DirectMessage } from './DirectMessage';
 import { DirectMessageInput } from './DirectMessageInput';
 import { useAuth } from '@/hooks/useAuth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useConversationData } from '@/hooks/useConversationData'; 
+import { cn } from '@/lib/utils'; // <-- Added import for cn utility for dynamic classes
 
-type Conversation = Tables<'inbox_conversations'>;
+// FIX #3: Add `is_starred` to the Conversation type
+type Conversation = Tables<'inbox_conversations'> & { is_starred?: boolean };
 type Profile = Tables<'profiles'>;
 type ReplyContext = { id: number; content: string; sender_id: string; author_name: string; };
 
@@ -24,6 +26,8 @@ export const ConversationView = ({ conversation }: ConversationViewProps) => {
   const { profile: currentUserProfile } = useAuth();
   const [recipientProfile, setRecipientProfile] = useState<Profile | null>(null);
   const [replyingTo, setReplyingTo] = useState<ReplyContext | null>(null);
+  // FIX #1: Added the missing useState declaration for isStarred
+  const [isStarred, setIsStarred] = useState(conversation.is_starred ?? false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { messages, loading, sendMessage } = useConversationData(conversation.conversation_id);
 
@@ -76,7 +80,10 @@ export const ConversationView = ({ conversation }: ConversationViewProps) => {
                 </div>
             </div>
             <div className="flex items-center gap-2">
+                {/* FIX #2: Correctly closed the Button tag and added the Star icon back inside it */}
                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleToggleStar}>
+                    <Star className={cn("h-4 w-4", isStarred && "fill-current text-yellow-500")} />
+                </Button>
             </div>
         </div>
       </CardHeader>
