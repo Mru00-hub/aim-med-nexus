@@ -96,7 +96,7 @@ export const DirectMessage = ({ message, authorProfile, onReplyClick }: DirectMe
           <>
             {message.parent_message && (
                 <div className="text-xs rounded-md p-2 border-l-2 border-current/50 bg-current/10 mb-2 opacity-80">
-                    <p className="font-bold">{message.parent_message.sender.full_name}</p>
+                    <p className="font-bold">{message.parent_message?.sender?.full_name || 'Original Sender'}</p>
                     <p className="truncate">{message.parent_message.content}</p>
                 </div>
             )}
