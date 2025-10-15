@@ -25,6 +25,7 @@ export const ConversationView = ({ conversation, onConversationUpdate }: Convers
   const { user } = useAuth();
   const [isStarred, setIsStarred] = useState(conversation.is_starred ?? false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const prevMessagesLength = useRef<number | null>(null);
 
   // NEW: All message logic is now handled by the hook.
   const {
@@ -39,9 +40,21 @@ export const ConversationView = ({ conversation, onConversationUpdate }: Convers
   } = useConversationData(conversation.conversation_id);
 
   useEffect(() => {
-    // Scroll to bottom on new messages
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    // On the very first render, prevMessagesLength.current is null, so we set it.
+    if (prevMessagesLength.current === null) {
+        prevMessagesLength.current = messages.length;
+        return; // And we don't scroll
+    }
+
+    // We only scroll if the number of messages has actually increased.
+    // This prevents scrolling on edits, deletes, or reactions.
+    if (messages.length > prevMessagesLength.current) {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    // After every render, we update the ref to the current length for the next comparison.
+    prevMessagesLength.current = messages.length;
+  }, [messages]); 
 
   useEffect(() => {
     setIsStarred(conversation.is_starred ?? false);
