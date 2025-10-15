@@ -8,13 +8,13 @@ import { cn } from '@/lib/utils';
 import { SmilePlus, Trash2, Pencil, Reply } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { EmojiPicker } from './EmojiPicker'; // <-- The new import
+import { EmojiPicker } from './EmojiPicker';
 
 type Profile = Tables<'profiles'>;
 type MessageWithRelations = Tables<'direct_messages'> & {
   direct_message_reactions: Tables<'direct_message_reactions'>[];
   direct_message_attachments: Tables<'direct_message_attachments'>[];
-  parent_message: { // <-- ADD THIS
+  parent_message: {
       id: number;
       content: string;
       sender: { full_name: string };
@@ -81,6 +81,7 @@ export const DirectMessage = ({ message, authorProfile, onReplyClick }: DirectMe
             : "bg-card border"
     );
 
+    // This constant correctly renders the message content in all states
     const MessageContent = (
       <>
         {isEditing ? (
@@ -117,7 +118,6 @@ export const DirectMessage = ({ message, authorProfile, onReplyClick }: DirectMe
 
     return (
         <div className={cn("flex w-full items-start gap-2 group relative", isMe ? "justify-end" : "justify-start")}>
-            {/* --- FIX: RESTRUCTURED FOR CORRECT ALIGNMENT --- */}
 
             {/* BLOCK 1: Content for the OTHER person's messages */}
             {!isMe && (
@@ -134,48 +134,23 @@ export const DirectMessage = ({ message, authorProfile, onReplyClick }: DirectMe
 
                     <div className={cn("flex flex-col w-auto", "items-start")}>
                         <div className={messageStyle}>
-                             {isEditing ? (
-                                <div className="w-64">
-                                    <Textarea value={editedContent} onChange={(e) => setEditedContent(e.target.value)} autoFocus rows={3} className="bg-background text-foreground" />
-                                    <div className="flex justify-end gap-2 mt-2">
-                                        <Button variant="ghost" size="sm" onClick={() => setIsEditing(false)}>Cancel</Button>
-                                        <Button size="sm" onClick={handleSaveEdit}>Save</Button>
-                                    </div>
-                                </div>
-                            ) : (
-                            {message.parent_message && (
-                                  <div className="text-xs rounded-md p-2 border-l-2 border-current/50 bg-current/10 mb-2 opacity-80">
-                                      <p className="font-bold">{message.parent_message.sender.full_name}</p>
-                                      <p className="truncate">{message.parent_message.content}</p>
-                                  </div>
-                              )}
-                              <p className="text-sm break-words whitespace-pre-wrap">{message.content} {message.is_edited && <span className="text-xs opacity-70">(edited)</span>}</p>
-                            )}
-                            {Object.keys(reactionCounts).length > 0 && (
-                                <div className="absolute -bottom-3 right-2 flex gap-1">
-                                    {Object.entries(reactionCounts).map(([emoji, count]) => (
-                                        <Badge key={emoji} variant="secondary" className="shadow-md cursor-pointer" onClick={() => handleReaction(emoji)}>
-                                            {emoji} {count}
-                                        </Badge>
-                                    ))}
-                                </div>
-                            )}
+                             {MessageContent}
                         </div>
-                      </div>
+                    </div>
                 </>
             )}
 
             {/* BLOCK 2: Content for YOUR messages */}
             {isMe && (
                 <>
-                    <div className={cn("flex flex-col w-auto", "items-end")}>
-                        <div className={messageStyle}>{MessageContent}</div>
-                    </div>
                     <div className="flex items-center self-center rounded-full border bg-card shadow-sm opacity-0 group-hover:opacity-100 transition-opacity">
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleReply} title="Reply"><Reply className="h-4 w-4" /></Button>
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); setShowPicker(p => !p); }} title="Add Reaction"><SmilePlus className="h-4 w-4" /></Button>
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setIsEditing(true)} title="Edit"><Pencil className="h-4 w-4" /></Button>
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleDelete} title="Delete"><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                    </div>
+                     <div className={cn("flex flex-col w-auto", "items-end")}>
+                        <div className={messageStyle}>{MessageContent}</div>
                     </div>
                     <Avatar className="h-8 w-8 flex-shrink-0">
                         <AvatarImage src={authorProfile?.profile_picture_url} />
@@ -184,7 +159,6 @@ export const DirectMessage = ({ message, authorProfile, onReplyClick }: DirectMe
                 </>
             )}
             
-            {/* This remains outside the main blocks for positioning */}
             {showPicker && (
                 <div className={cn("absolute z-20 top-[-20px]", isMe ? "left-1/2 -translate-x-1/2" : "right-1/2 translate-x-1/2")}>
                     <EmojiPicker onSelect={handleReaction} />
