@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Search, Sparkles, UserPlus, MoreHorizontal, Ban } from 'lucide-react';
+import { Users, Search, Sparkles, UserPlus, MoreHorizontal, Ban } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { UserActionCard } from './UserActionCard';
 
@@ -32,11 +32,11 @@ export const DiscoverTab = ({ recommendations, loading, onSendRequest, onBlockUs
             user={{ 
               id: rec.id, 
               full_name: rec.full_name, 
-              // The recommendation function does not provide a profile picture URL
               profile_picture_url: null, 
               title: rec.specialization || rec.course,
               organization: rec.organization,
               location: rec.current_location,
+              mutuals: rec.mutuals, 
             }}
           >
             <Button size="sm" onClick={() => onSendRequest(rec.id)}><UserPlus className="h-4 w-4 mr-2" />Connect</Button>
