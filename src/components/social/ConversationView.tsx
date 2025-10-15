@@ -30,8 +30,8 @@ export const ConversationView = ({ conversation }: ConversationViewProps) => {
   // FIX #1: Added the missing useState declaration for isStarred
   const [isStarred, setIsStarred] = useState(conversation.is_starred ?? false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const prevMessagesLength = useRef(messages.length);
   const { messages, loading, sendMessage } = useConversationData(conversation.conversation_id);
+  const prevMessagesLength = useRef(messages.length);
 
   useEffect(() => {
     // Fetch the other participant's profile
