@@ -7,6 +7,7 @@ import { Search } from 'lucide-react';
 import { socialApi } from '@/integrations/supabase/social.api';
 import type { Tables } from '@/integrations/supabase/types';
 import TimeAgo from 'react-timeago';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 type Conversation = Tables<'inbox_conversations'>;
 
@@ -55,7 +56,30 @@ export const ConversationList = ({ conversations, loading, onSelectConversation,
                 key={convo.conversation_id}
                 onClick={() => onSelectConversation(convo)}
                 className={`p-3 cursor-pointer hover:bg-muted/50 transition-colors border-l-2 ${selectedConversationId === convo.conversation_id ? 'bg-primary/5 border-l-primary' : 'border-l-transparent'}`}>
-                {/* ... Conversation Item UI ... */}
+                <div className="flex items-start gap-3">
+                    <Avatar className="h-10 w-10 border">
+                        <AvatarImage src={convo.participant_avatar_url || undefined} />
+                        <AvatarFallback>{convo.participant_full_name?.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between mb-1">
+                            <h4 className="font-medium text-sm truncate pr-2">{convo.participant_full_name}</h4>
+                            <span className="text-xs text-muted-foreground flex-shrink-0">
+                                {convo.last_message_at && <TimeAgo date={convo.last_message_at} />}
+                            </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                            <p className="text-xs text-muted-foreground truncate pr-2 flex-1">
+                                {convo.last_message_content}
+                            </p>
+                            {convo.unread_count > 0 && (
+                                <Badge variant="destructive" className="h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs flex-shrink-0">
+                                    {convo.unread_count}
+                                </Badge>
+                            )}
+                        </div>
+                    </div>
+                </div>
               </div>
             ))}
           </div>
