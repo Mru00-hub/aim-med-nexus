@@ -8,6 +8,7 @@ import { socialApi } from '@/integrations/supabase/social.api';
 import type { Tables } from '@/integrations/supabase/types';
 import TimeAgo from 'react-timeago';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Star } from 'lucide-react';
 
 type Conversation = Tables<'inbox_conversations'>;
 
