@@ -66,8 +66,9 @@ export const useConversationData = (conversationId: string | undefined) => {
 
     try {
       const { data: realMessage } = await socialApi.messaging.sendMessage({ conversation_id: conversationId, sender_id: user.id, content: body });
-      if (!realMessage) throw new Error("Message creation failed.");
-
+      if (!realMessage || !realMessage.id) {
+          throw new Error("Message creation failed on the server.");
+      }
       setMessages(current => current.map(msg => msg.id === tempMsgId ? { ...msg, id: realMessage.id } : msg));
 
       if (files.length > 0) {
