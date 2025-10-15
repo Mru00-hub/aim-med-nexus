@@ -87,14 +87,18 @@ export const DirectMessage = ({ message, authorProfile, onReplyClick }: DirectMe
     );
 
     return (
-        <div 
-            className={cn("flex w-full gap-3", isMe ? "justify-end" : "justify-start")}
-            onMouseEnter={() => setShowActions(true)}
-            onMouseLeave={() => setShowActions(false)}
-        >
+        <div className={cn("flex w-full items-start gap-2 group", isMe ? "justify-end" : "justify-start")}>
             {!isMe && <Avatar className="h-8 w-8"> <AvatarImage src={authorProfile?.profile_picture_url} /> <AvatarFallback>{authorProfile?.full_name?.charAt(0)}</AvatarFallback> </Avatar>}
 
-            <div className={cn("flex flex-col w-full relative", isMe ? "items-end" : "items-start")}>
+            {/* Actions for other users' messages */}
+            {!isMe && (
+                <div className="flex items-center self-center rounded-full border bg-card shadow-sm opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleReply} title="Reply"><Reply className="h-4 w-4" /></Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); setShowPicker(p => !p); }} title="Add Reaction"><SmilePlus className="h-4 w-4" /></Button>
+                </div>
+            )}
+            
+            <div className={cn("flex flex-col w-auto relative", isMe ? "items-end" : "items-start")}>
                 <div className={messageStyle}>
                     {isEditing ? (
                         <div className="w-64">
@@ -118,18 +122,19 @@ export const DirectMessage = ({ message, authorProfile, onReplyClick }: DirectMe
                         </div>
                     )}
                 </div>
-                {showActions && (
-                    <div className={cn("absolute z-10 flex items-center bg-card border rounded-full shadow-md top-[-16px]", isMe ? "left-0" : "right-0")}>
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleReply} title="Reply"><Reply className="h-4 w-4" /></Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); setShowPicker(p => !p); }} title="Add Reaction"><SmilePlus className="h-4 w-4" /></Button>
-                        {isMe && <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setIsEditing(true)} title="Edit"><Pencil className="h-4 w-4" /></Button>}
-                        {isMe && <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleDelete} title="Delete"><Trash2 className="h-4 w-4 text-destructive" /></Button>}
-                    </div>
-                )}
-                {showPicker && <div className="absolute top-[-16px] z-20" style={isMe ? {left: '50px'} : {right: '50px'}}><EmojiPicker onSelect={handleReaction} /></div>}
-            </div>
-            
+                {isMe && (
+                <div className="flex items-center self-center rounded-full border bg-card shadow-sm opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleReply} title="Reply"><Reply className="h-4 w-4" /></Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); setShowPicker(p => !p); }} title="Add Reaction"><SmilePlus className="h-4 w-4" /></Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setIsEditing(true)} title="Edit"><Pencil className="h-4 w-4" /></Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleDelete} title="Delete"><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                </div>
+            )}
+
             {isMe && <Avatar className="h-8 w-8"><AvatarImage src={authorProfile?.profile_picture_url} /><AvatarFallback>{displayName.charAt(0)}</AvatarFallback></Avatar>}
+            
+            {/* The Emoji picker needs to be handled outside the flow */}
+            {showPicker && <div className="absolute z-20"><EmojiPicker onSelect={handleReaction} /></div>}
         </div>
     );
 };
