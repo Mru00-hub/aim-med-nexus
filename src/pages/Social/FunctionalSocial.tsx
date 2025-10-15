@@ -1,25 +1,41 @@
-import React, { useState, useEffect, useMemo } from 'react';
+// src/pages/Social/FunctionalSocial.tsx
+
+import React, { useState, useEffect } from 'react';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { useAuth } from '@/hooks/useAuth';
-import { socialApi } from '@/integrations/supabase/social.api';
-import type { Database, Tables } from '@/integrations/supabase/types';
 import { useToast } from '@/components/ui/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useSocialCounts } from '@/context/SocialCountsContext'; 
+import { useSocialCounts } from '@/context/SocialCountsContext';
 
-// Import the new tab components
+// FIX: Import the new standalone functions and types from the refactored API
+import {
+    getPendingRequests,
+    getMyConnections,
+    getBlockedUsers,
+    sendConnectionRequest,
+    respondToRequest,
+    removeConnection,
+    blockUser,
+    unblockUser,
+    ConnectionRequest,
+    Connection,
+    BlockedUser,
+} from '@/integrations/supabase/social.api';
+
+// NOTE: The `getUserRecommendations` and `getSentPendingRequests` functions were not in the
+// final refactored social.api.ts. For now, I have commented them out. You would need to add
+// them to the API file in the same standalone async/throw pattern if you need them.
+
+// Import the tab components
 import { DiscoverTab } from '@/components/social/DiscoverTab';
 import { NetworkTab } from '@/components/social/NetworkTab';
 import { RequestsTab } from '@/components/social/RequestsTab';
 import { BlockedTab } from '@/components/social/BlockedTab';
 
-// Define types for all data models
-type ConnectionRequest = Tables<'pending_connection_requests'>;
-type UserRecommendation = Database['public']['Functions']['get_user_recommendations']['Returns'][number];
-type SentRequest = Tables<'sent_pending_requests'>; 
-type MyConnection = Tables<'my_connections'>;
-type BlockedUser = Tables<'blocked_members'>;
+// Assuming SentRequest type needs to be defined
+type SentRequest = { requestee_id: string; full_name: string | null; profile_picture_url: string | null; created_at: string; };
+type UserRecommendation = any; // Define this type based on your function's return value
 
 const FunctionalSocial = () => {
   const { user } = useAuth();
@@ -29,59 +45,61 @@ const FunctionalSocial = () => {
   
   // State for all social data
   const [requests, setRequests] = useState<ConnectionRequest[]>([]);
-  const [sentRequests, setSentRequests] = useState<SentRequest[]>([]);
+  const [sentRequests, setSentRequests] = useState<SentRequest[]>([]); // Assuming type
   const [recommendations, setRecommendations] = useState<UserRecommendation[]>([]);
-  const [myConnections, setMyConnections] = useState<MyConnection[]>([]);
+  const [myConnections, setMyConnections] = useState<Connection[]>([]);
   const [blockedUsers, setBlockedUsers] = useState<BlockedUser[]>([]);
 
   useEffect(() => {
-    // Update the global request count whenever the local `requests` state changes
     setRequestCount(requests.length);
   }, [requests, setRequestCount]);
   
+  // FIX: Refactored to use new API functions and a single try...catch block
   const fetchData = async () => {
     if (!user) return;
     setLoading(true);
     try {
-      const [reqRes, sentRes, recRes, connRes, blockedRes] = await Promise.all([
-        socialApi.connections.getPendingRequests(),
-        socialApi.connections.getSentPendingRequests(),
-        socialApi.connections.getUserRecommendations(user.id),
-        socialApi.connections.getMyConnections(),
-        socialApi.connections.getBlockedUsers(),
+      // Promise.all fetches data in parallel for better performance
+      const [requestsData, connectionsData, blockedData] = await Promise.all([
+        getPendingRequests(),
+        getMyConnections(),
+        getBlockedUsers(),
+        // socialApi.connections.getSentPendingRequests(), // Add these back once they are in the refactored API
+        // socialApi.connections.getUserRecommendations(user.id),
       ]);
 
-      if (reqRes.data) setRequests(reqRes.data);
-      if (sentRes.data) setSentRequests(sentRes.data as SentRequest[]);
-      if (recRes.data) setRecommendations(recRes.data);
-      if (connRes.data) setMyConnections(connRes.data);
-      if (blockedRes.data) setBlockedUsers(blockedRes.data);
+      setRequests(requestsData);
+      setMyConnections(connectionsData);
+      setBlockedUsers(blockedData);
+      // setSentRequests(sentRes.data as SentRequest[]);
+      // setRecommendations(recRes.data);
 
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to fetch social data:", error);
-       toast({ title: "Error", description: "Could not fetch social data.", variant: "destructive" });
+       toast({ title: "Error", description: "Could not fetch your network data.", variant: "destructive" });
     } finally {
       setLoading(false);
     }
   };
   useEffect(() => { fetchData(); }, [user]);
 
-  // Action Handlers
+  // FIX: Refactored `handleAction` to be much simpler with the new API style.
   const handleAction = async (action: () => Promise<any>, successMessage: string) => {
-    const { error } = await action();
-    if (error) {
-        toast({ title: "Error", description: error.message, variant: "destructive" });
-    } else {
+    try {
+        await action();
         toast({ title: "Success", description: successMessage });
-        await fetchData(); // Re-fetch all data to ensure UI consistency
+        await fetchData(); // Re-fetch all data to ensure UI is consistent
+    } catch (error: any) {
+        toast({ title: "Error", description: error.message, variant: "destructive" });
     }
   };
 
-  const handleSendRequest = (addresseeId: string) => handleAction(() => socialApi.connections.sendRequest(addresseeId), "Connection request sent.");
-  const handleRespondRequest = (requesterId: string, response: 'accepted' | 'ignored') => handleAction(() => socialApi.connections.respondToRequest(requesterId, response), `Request ${response}.`);
-  const handleRemoveConnection = (userId: string) => handleAction(() => socialApi.connections.removeConnection(userId), "Connection removed.");
-  const handleBlockUser = (userId: string) => handleAction(() => socialApi.connections.blockUser(userId), "User has been blocked.");
-  const handleUnblockUser = (userId: string) => handleAction(() => socialApi.connections.unblockUser(userId), "User has been unblocked.");
+  // FIX: These handlers now call the new standalone functions.
+  const handleSendRequest = (addresseeId: string) => handleAction(() => sendConnectionRequest(addresseeId), "Connection request sent.");
+  const handleRespondRequest = (requesterId: string, response: 'accepted' | 'ignored') => handleAction(() => respondToRequest(requesterId, response), `Request ${response}.`);
+  const handleRemoveConnection = (userId: string) => handleAction(() => removeConnection(userId), "Connection removed.");
+  const handleBlockUser = (userId: string) => handleAction(() => blockUser(userId), "User has been blocked.");
+  const handleUnblockUser = (userId: string) => handleAction(() => unblockUser(userId), "User has been unblocked.");
   
   return (
     <div className="min-h-screen bg-background">
@@ -126,7 +144,7 @@ const FunctionalSocial = () => {
                     loading={loading}
                     onRespondRequest={handleRespondRequest}
                     onBlockUser={handleBlockUser}
-                    onWithdrawRequest={handleRemoveConnection} // Withdrawing is the same as removing
+                    onWithdrawRequest={handleRemoveConnection} // Withdrawing is the same as removing a pending connection
                 />
             </TabsContent>
             
