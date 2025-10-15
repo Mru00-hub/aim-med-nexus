@@ -60,40 +60,44 @@ const FunctionalSocial = () => {
   const fetchData = async () => {
     if (!user) return;
     setLoading(true);
-    try {
-      // Promise.all fetches data in parallel for better performance
-      const [requestsData, connectionsData, blockedData, sentRequestsData, recommendationsData, initialRecommendations,] = await Promise.all([
-        getPendingRequests(),
-        getMyConnections(),
-        getBlockedUsers(),
-        getSentPendingRequests(), 
-        getUserRecommendations(user.id),
-      ]);
-      if (initialRecommendations && initialRecommendations.length > 0) {
-                const mutualsPromises = initialRecommendations.map(rec => getMutualConnections(rec.id));
-                const mutualsResults = await Promise.all(mutualsPromises);
+    const [
+      requestsRes,
+      connectionsRes,
+      blockedRes,
+      sentRequestsRes,
+      recommendationsRes,
+    ] = await Promise.all([
+      getPendingRequests(),
+      getMyConnections(),
+      getBlockedUsers(),
+      getSentPendingRequests(),
+      getUserRecommendations(user.id),
+    ]);
 
-                // 3. Combine the initial recommendations with their mutuals
-                const recommendationsWithMutuals = initialRecommendations.map((rec, index) => ({
-                    ...rec,
-                    mutuals: mutualsResults[index] || [], // Attach the mutuals array
-                }));
-                setRecommendations(recommendationsWithMutuals);
-            } else {
-                setRecommendations([]);
+    // Check each response individually and set state if data exists
+    if (requestsRes.data) setRequests(requestsRes.data);
+    if (connectionsRes.data) setMyConnections(connectionsRes.data);
+    if (blockedRes.data) setBlockedUsers(blockedRes.data);
+    if (sentRequestsRes.data) setSentRequests(sentRequestsRes.data);
+    
+    // Handle recommendations and their mutual connections
+    if (recommendationsRes.data) {
+      const initialRecommendations = recommendationsRes.data;
+      try {
+        const mutualsPromises = initialRecommendations.map(rec => getMutualConnections(rec.id));
+        const mutualsResults = await Promise.all(mutualsPromises);
+        const recommendationsWithMutuals = initialRecommendations.map((rec, index) => ({
+          ...rec,
+          mutuals: mutualsResults[index] || [],
+        }));
+        setRecommendations(recommendationsWithMutuals);
+      } catch (error) {
+        console.error("Failed to fetch mutual connections:", error);
+        // If mutuals fail, still show the recommendations
+        setRecommendations(initialRecommendations.map(rec => ({ ...rec, mutuals: [] })));
       }
-
-      setRequests(requestsData);
-      setMyConnections(connectionsData);
-      setBlockedUsers(blockedData);
-      setSentRequests(sentRes.data as SentRequest[]);
-
-    } catch (error: any) {
-      console.error("Failed to fetch social data:", error);
-       toast({ title: "Error", description: "Could not fetch your network data.", variant: "destructive" });
-    } finally {
-      setLoading(false);
     }
+    setLoading(false);
   };
   useEffect(() => { fetchData(); }, [user]);
 
