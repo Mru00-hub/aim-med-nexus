@@ -2,20 +2,18 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Paperclip, Send, X, File as FileIcon, Loader2 } from 'lucide-react';
-import { useToast } from '@/components/ui/use-toast';
-import { socialApi } from '@/integrations/supabase/social.api';
-import { useAuth } from '@/hooks/useAuth';
 import type { Tables } from '@/integrations/supabase/types';
+
+type ReplyContext = { id: number; content: string; sender_id: string; author_name: string; };
 
 interface DirectMessageInputProps {
   conversationId: string;
   replyingTo: ReplyContext | null;
   onCancelReply: () => void;
+  sendMessage: (body: string, files: File[]) => Promise<void>;
 }
 
-export const DirectMessageInput = ({ conversationId, replyingTo, onCancelReply }: DirectMessageInputProps) => {
-  const { user } = useAuth();
-  const { toast } = useToast();
+export const DirectMessageInput = ({ conversationId, replyingTo, onCancelReply, sendMessage }: DirectMessageInputProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   
@@ -45,17 +43,13 @@ export const DirectMessageInput = ({ conversationId, replyingTo, onCancelReply }
     if ((!body.trim() && attachedFiles.length === 0) || isSending) return;
     setIsSending(true);
     try {
-      let finalBody = body.trim();
-      if (replyingTo) {
-        finalBody = `> ${replyingTo.author_name}: ${replyingTo.content.substring(0, 50)}...\n\n` + finalBody;
-      }
-      await onSendMessage(finalBody, attachedFiles);
+      await sendMessage(body.trim(), attachedFiles);
       setBody('');
       setAttachedFiles([]);
       onCancelReply();
       setFileInputKey(Date.now());
     } catch (error) {
-      // The hook handles the primary error toast
+      console.error("Failed to send message:", error);
     } finally {
       setIsSending(false);
     }
