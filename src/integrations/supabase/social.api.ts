@@ -184,25 +184,6 @@ export const getInbox = async (): Promise<Conversation[]> => {
  * @param content - The text of the message.
  * @param parentMessageId - The ID of the message being replied to (optional).
  * @returns The newly created message object.
- *
- * REQUIRED Supabase SQL Function:
- *
- * CREATE OR REPLACE FUNCTION post_direct_message(
- * p_conversation_id uuid,
- * p_content text,
- * p_parent_message_id bigint DEFAULT NULL
- * ) RETURNS direct_messages
- * LANGUAGE plpgsql
- * AS $$
- * DECLARE
- * new_message direct_messages;
- * BEGIN
- * INSERT INTO public.direct_messages (conversation_id, sender_id, content, parent_message_id)
- * VALUES (p_conversation_id, auth.uid(), p_content, p_parent_message_id)
- * RETURNING * INTO new_message;
- * RETURN new_message;
- * END;
- * $$;
  */
 export const postDirectMessage = async (
     conversationId: string,
