@@ -14,7 +14,7 @@ export const NetworkTab = ({ myConnections, loading, onRemoveConnection }) => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const handleStartConversation = async (userId: string) => {
+  const handleStartConversation = async (connection) => {
     toast({ title: "Opening conversation..." });
     const { data: conversationId, error } = await socialApi.messaging.createOrGetConversation(connection.id);
 
