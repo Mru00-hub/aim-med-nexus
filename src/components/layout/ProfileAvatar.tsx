@@ -38,6 +38,16 @@ export const ProfileAvatar = () => {
     return <Skeleton className="h-10 w-10 rounded-full" />;
   }
 
+  if (user && !profile) {
+    return (
+      <Link to="/complete-profile" title="Complete your profile">
+        <Avatar className="cursor-pointer bg-muted">
+          <AvatarFallback className="text-muted-foreground">?</AvatarFallback>
+        </Avatar>
+      </Link>
+    );
+  }
+
   // FIX 2: Re-added the important check for logged-out users or missing profiles
   if (!user || !profile) {
     return null;
