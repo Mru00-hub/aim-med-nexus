@@ -5,6 +5,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { Profile } from '@/integrations/supabase/community.api';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { deriveKey } from '@/lib/crypto';
+const ENCRYPTION_KEY_STORAGE_KEY = 'aimednet-encryption-key';
 
 // --- UPDATED: AuthContextType now includes a loading message ---
 interface AuthContextType {
@@ -47,6 +48,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single();
     setProfile(data);
   };
+
+  useEffect(() => {
+    const loadKeyFromSession = async () => {
+      const storedKey = sessionStorage.getItem(ENCRYPTION_KEY_STORAGE_KEY);
+      if (storedKey) {
+        try {
+          const jwk = JSON.parse(storedKey);
+          const key = await crypto.subtle.importKey(
+            'jwk',
+            jwk,
+            { name: 'AES-GCM', length: 256 },
+            true,
+            ['encrypt', 'decrypt']
+          );
+          setEncryptionKey(key);
+          console.log("✅ Encryption key loaded from session storage.");
+        } catch (e) {
+          console.error("Failed to load encryption key from session:", e);
+          sessionStorage.removeItem(ENCRYPTION_KEY_STORAGE_KEY); // Clear corrupted key
+        }
+      }
+    };
+    loadKeyFromSession();
+  }, []); 
 
   useEffect(() => {
     // 1. Define an async function to get the initial session and profile.
@@ -96,6 +121,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (!newSession) {
         setEncryptionKey(null);
         setProfile(null);
+        sessionStorage.removeItem(ENCRYPTION_KEY_STORAGE_KEY);
       } else {
         // Re-fetch profile on sign-in
         refreshProfile();
@@ -115,7 +141,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const key = await deriveKey(password, salt);
       setEncryptionKey(key);
-      console.log("✅ Encryption key derived and set in context.");
+      const jwk = await crypto.subtle.exportKey('jwk', key);
+      // Save the JSON string to session storage
+      sessionStorage.setItem(ENCRYPTION_KEY_STORAGE_KEY, JSON.stringify(jwk));
+
+      console.log("✅ Encryption key derived and saved to session storage.");
     } catch (error) {
       console.error("Failed to derive encryption key:", error);
       toast({ title: "Critical Error", description: "Could not prepare secure session.", variant: "destructive" });
@@ -199,6 +229,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signOut = async () => {
     setLoading(true);
+    sessionStorage.removeItem(ENCRYPTION_KEY_STORAGE_KEY);
     const { error } = await supabase.auth.signOut();
     if (error) {
       toast({
