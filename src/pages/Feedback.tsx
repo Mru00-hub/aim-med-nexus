@@ -1,49 +1,81 @@
-import React, { useState } from 'react';
+// pages/feedback.tsx OR components/pages/Feedback.tsx
+
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/router'; // Or your router of choice
+import { useUser } from '@supabase/auth-helpers-react'; // Essential hook for user data
+import { submitFeedback, FeedbackFormInput } from '@/lib/api/feedback';
+
+// ShadCN UI Components
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
-import { 
-  MessageSquare, 
-  Star,
-  Lightbulb,
-  Bug,
-  Heart,
-  Send,
-  CheckCircle
-} from 'lucide-react';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { useToast } from "@/components/ui/use-toast"; // Import toast hook
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Loader2, MessageSquare, Star, Lightbulb, Bug, Heart, Send } from 'lucide-react';
 
-/**
- * Feedback Page - User feedback and suggestions
- * Allows users to submit feedback, bug reports, and feature requests
- */
 const Feedback = () => {
-  const [isSubmitted, setIsSubmitted] = useState(false);
-  const [formData, setFormData] = useState({
+  const router = useRouter();
+  const user = useUser(); // Get the authenticated user
+  const { toast } = useToast(); // Initialize toast
+
+  const [isLoading, setIsLoading] = useState(false);
+  // Use the inferred type for strong typing
+  const [formData, setFormData] = useState<FeedbackFormInput>({
     category: '',
     subject: '',
-    email: '',
     description: '',
-    rating: 0
+    rating: 0,
   });
+  
+  // State for user email, to be pre-filled
+  const [userEmail, setUserEmail] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Effect to pre-fill the user's email once the user object is available
+  useEffect(() => {
+    if (user?.email) {
+      setUserEmail(user.email);
+    }
+  }, [user]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // In real app, this would submit to API
-    setIsSubmitted(true);
+    if (formData.rating === 0) {
+      toast({
+        variant: "destructive",
+        title: "Missing Information",
+        description: "Please rate your experience before submitting.",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      await submitFeedback(formData);
+      
+      toast({
+        title: "Feedback Submitted!",
+        description: "Thank you! We've received your feedback and will review it shortly.",
+      });
+
+      // Redirect user to their dashboard or home page after successful submission
+      router.push('/dashboard'); 
+
+    } catch (error) {
+      console.error(error);
+      toast({
+        variant: "destructive",
+        title: "Submission Failed",
+        description: error instanceof Error ? error.message : "An unexpected error occurred. Please try again.",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleInputChange = (field: string, value: string | number) => {
+  const handleInputChange = (field: keyof FeedbackFormInput, value: string | number) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
@@ -51,46 +83,13 @@ const Feedback = () => {
     setFormData(prev => ({ ...prev, rating }));
   };
 
-  if (isSubmitted) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Header />
-        
-        <main className="container-medical py-16">
-          <div className="max-w-2xl mx-auto text-center animate-scale-in">
-            <div className="w-20 h-20 bg-gradient-primary rounded-full flex items-center justify-center mx-auto mb-6">
-              <CheckCircle className="h-10 w-10 text-primary-foreground" />
-            </div>
-            
-            <h1 className="text-3xl font-bold mb-4">Thank You for Your Feedback!</h1>
-            <p className="text-lg text-muted-foreground mb-8">
-              Your feedback is valuable to us and helps improve AIMedNet for all healthcare professionals. 
-              We'll review your submission and may reach out if we need more details.
-            </p>
-            
-            <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Reference ID: <span className="font-mono font-bold">FB-{Date.now().toString().slice(-6)}</span>
-              </p>
-              
-              <Button className="btn-medical" onClick={() => setIsSubmitted(false)}>
-                Submit More Feedback
-              </Button>
-            </div>
-          </div>
-        </main>
-        
-        <Footer />
-      </div>
-    );
-  }
-
+  // The rest of your JSX remains largely the same, with a few key changes:
   return (
     <div className="min-h-screen bg-background">
       <Header />
       
       <main className="container-medical py-8">
-        {/* Page Header */}
+        {/* ... (Your existing header and category cards section - no changes needed here) ... */}
         <div className="text-center mb-12 animate-fade-in">
           <h1 className="text-4xl font-bold mb-4">We Value Your Feedback</h1>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
@@ -98,8 +97,7 @@ const Feedback = () => {
             Your feedback shapes the future of healthcare professional networking.
           </p>
         </div>
-
-        {/* Feedback Categories */}
+        
         <div className="grid md:grid-cols-4 gap-6 mb-12 animate-slide-up">
           {[
             {
@@ -138,7 +136,7 @@ const Feedback = () => {
             </Card>
           ))}
         </div>
-
+        
         {/* Feedback Form */}
         <div className="max-w-4xl mx-auto animate-slide-up">
           <Card className="card-premium border-primary/20">
@@ -148,17 +146,17 @@ const Feedback = () => {
                 Your input helps us create a better platform for healthcare professionals
               </CardDescription>
             </CardHeader>
-            
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-medium mb-2">Feedback Category *</label>
-                    <Select value={formData.category} onValueChange={(value) => handleInputChange('category', value)}>
+                    <Select value={formData.category} onValueChange={(value) => handleInputChange('category', value)} required>
                       <SelectTrigger>
                         <SelectValue placeholder="Select feedback category" />
                       </SelectTrigger>
                       <SelectContent>
+                        {/* Values must match the CHECK constraint in your SQL table */}
                         <SelectItem value="general">General Feedback</SelectItem>
                         <SelectItem value="feature-request">Feature Request</SelectItem>
                         <SelectItem value="bug-report">Bug Report</SelectItem>
@@ -173,13 +171,14 @@ const Feedback = () => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium mb-2">Email Address *</label>
+                    <label className="block text-sm font-medium mb-2">Your Email</label>
+                    {/* Make this input read-only as it's tied to the logged-in user */}
                     <Input 
-                      value={formData.email}
-                      onChange={(e) => handleInputChange('email', e.target.value)}
-                      placeholder="your.email@example.com"
+                      value={userEmail}
+                      placeholder="Loading your email..."
                       type="email"
-                      required
+                      readOnly
+                      className="bg-muted/50 cursor-not-allowed"
                     />
                   </div>
                 </div>
@@ -227,13 +226,12 @@ const Feedback = () => {
                   <Textarea 
                     value={formData.description}
                     onChange={(e) => handleInputChange('description', e.target.value)}
-                    placeholder="Please provide detailed feedback, suggestions, or describe any issues you've encountered. The more specific you are, the better we can help!"
+                    placeholder="Please provide detailed feedback..."
                     className="min-h-32"
                     required
                   />
                 </div>
-
-                {/* Tips for better feedback */}
+                
                 <div className="p-4 bg-muted/30 rounded-lg">
                   <h4 className="font-semibold mb-2 text-primary">💡 Tips for Effective Feedback:</h4>
                   <ul className="text-sm text-muted-foreground space-y-1">
@@ -246,59 +244,32 @@ const Feedback = () => {
 
                 <div className="pt-6 border-t border-border">
                   <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                    <Button type="submit" size="lg" className="btn-medical px-8 py-6 group">
-                      <Send className="mr-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
-                      Submit Feedback
+                    <Button type="submit" size="lg" className="btn-medical px-8 py-6 group" disabled={isLoading}>
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                          Submitting...
+                        </>
+                      ) : (
+                        <>
+                          <Send className="mr-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                          Submit Feedback
+                        </>
+                      )}
                     </Button>
-                    
-                    <Button 
-                      type="button"
-                      variant="outline" 
-                      size="lg"
-                      className="px-8 py-6 border-primary text-primary hover:bg-primary/5"
-                    >
-                      Save as Draft
-                    </Button>
+                    {/* Removed "Save as Draft" for simplicity */}
                   </div>
-                  
+                  {/* UPDATE THE CONTACT EMAIL AS PER PREVIOUS INSTRUCTIONS */}
                   <p className="text-sm text-muted-foreground text-center mt-4">
-                    📧 For urgent issues: <a href="mailto:support@aimednet.com" className="text-primary hover:underline">support@aimednet.com</a>
+                    For urgent issues, please contact us at: <a href="mailto:mrudulabhalke75917@gmail.com" className="text-primary hover:underline">Phone:8610475917</a>
                   </p>
                 </div>
               </form>
             </CardContent>
           </Card>
         </div>
-
-        {/* Contact Information */}
-        <div className="mt-16 text-center animate-fade-in">
-          <Card className="card-medical max-w-2xl mx-auto">
-            <CardContent className="pt-6">
-              <h3 className="text-xl font-semibold mb-4">Other Ways to Reach Us</h3>
-              <div className="grid md:grid-cols-2 gap-6 text-sm">
-                <div>
-                  <h4 className="font-medium mb-2">📧 Email Support</h4>
-                  <p className="text-muted-foreground">
-                    General: <a href="mailto:support@aimednet.com" className="text-primary hover:underline">support@aimednet.com</a><br />
-                    Feedback: <a href="mailto:feedback@aimednet.com" className="text-primary hover:underline">feedback@aimednet.com</a>
-                  </p>
-                </div>
-                <div>
-                  <h4 className="font-medium mb-2">📱 Phone Support</h4>
-                  <p className="text-muted-foreground">
-                    <a href="tel:+917094800291" className="text-primary hover:underline">+91 7094800291</a><br />
-                    Mon-Fri: 9:00 AM - 6:00 PM IST
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </main>
-
       <Footer />
     </div>
   );
 };
-
 export default Feedback;
