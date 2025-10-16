@@ -2,27 +2,25 @@
 
 import React, { createContext, useState, useContext, useEffect, useMemo, ReactNode, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { useToast } from '@/components/ui/use-toast';
-import { 
+import {
     getSpacesWithDetails, 
     getUserSpaces,
     getUserMemberships,
-    getPublicThreads, // This is the important new one
+    getPublicThreads,
     SpaceWithDetails,
-    Space, 
     ThreadWithDetails,
     Membership,
     Enums,
 } from '@/integrations/supabase/community.api';
 
-// --- NEW, SIMPLIFIED INTERFACE ---
-// This now only defines the truly GLOBAL state.
+// --- MODIFIED INTERFACE ---
 interface CommunityContextType {
   spaces: SpaceWithDetails[];
   memberships: Membership[];
   publicThreads: ThreadWithDetails[];
   isLoadingSpaces: boolean;
-  fetchSpaces: () => Promise<void>;
+  refreshSpaces: () => Promise<void>; // <-- RENAMED for clarity
+  updateLocalSpace: (updatedSpace: SpaceWithDetails) => void; // <-- ADDED for optimistic updates
   getMembershipStatus: (spaceId: string) => Enums<'membership_status'> | null;
   setMemberships: React.Dispatch<React.SetStateAction<Membership[]>>;
 }
@@ -31,20 +29,17 @@ const CommunityContext = createContext<CommunityContextType | undefined>(undefin
 
 export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { user } = useAuth();
-  const { toast } = useToast();
   
-  // --- GLOBAL STATE VARIABLES ---
   const [spaces, setSpaces] = useState<SpaceWithDetails[]>([]); 
   const [memberships, setMemberships] = useState<Membership[]>([]);
   const [publicThreads, setPublicThreads] = useState<ThreadWithDetails[]>([]); 
   const [isLoadingSpaces, setIsLoadingSpaces] = useState(true);
 
-  // This function now correctly fetches all necessary GLOBAL data.
-  const fetchSpaces = useCallback(async () => {
+  // This function is now named `refreshSpaces` but its logic is the same
+  const refreshSpaces = useCallback(async () => {
     setIsLoadingSpaces(true);
     try {
       if (user) {
-        // --- LOGGED-IN USER LOGIC ---
         const [spacesData, membershipsData, publicThreadsData] = await Promise.all([
             getSpacesWithDetails(),
             getUserMemberships(),
@@ -54,59 +49,60 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
         setMemberships(membershipsData || []);
         setPublicThreads(publicThreadsData || []);
       } else {
-        // --- LOGGED-OUT USER LOGIC ---
-        // Fetch data using functions that return mocks
         const [mockSpacesData, mockThreadsData] = await Promise.all([
-            getUserSpaces(), // This correctly returns MOCK_SPACES
-            getPublicThreads() // This correctly returns MOCK_PUBLIC_THREADS
+            getUserSpaces(),
+            getPublicThreads()
         ]);
 
-        // IMPORTANT: Your mock data is of type `Space[]`, but your state is `SpaceWithDetails[]`.
-        // We must map the mock data to match the expected type.
         const mappedMockSpaces: SpaceWithDetails[] = mockSpacesData.map(space => ({
           ...space,
-          creator_full_name: 'Community Member', // Add placeholder data
-          moderators: [], // Add placeholder data
+          creator_full_name: 'Community Member',
+          moderators: [],
         }));
 
         setSpaces(mappedMockSpaces);
         setPublicThreads(mockThreadsData || []);
-        setMemberships([]); // Logged-out users have no memberships
+        setMemberships([]);
       }
     } catch (error: any) {
       console.error("Failed to fetch community data:", error.message);
-      // On any failure, clear the state to prevent showing stale data
       setSpaces([]);
       setMemberships([]);
       setPublicThreads([]);
     } finally {
       setIsLoadingSpaces(false);
     }
-  }, [user]); // The function's logic depends on the user state
+  }, [user]);
 
-  // === CHANGE 2: THE MAIN useEffect TO TRIGGER FETCHING ===
-  // This now correctly calls fetchSpaces on ANY change to the user object (login/logout)
+  // Initial data fetch on user change
   useEffect(() => {
-    fetchSpaces();
-  }, [user, fetchSpaces]);
-    
-  // This is a useful utility function that depends on global state.
+    refreshSpaces();
+  }, [user, refreshSpaces]);
+  
+  // --- NEW FUNCTION FOR OPTIMISTIC UPDATES ---
+  // This function directly updates the local state for a single space.
+  const updateLocalSpace = useCallback((updatedSpace: SpaceWithDetails) => {
+    setSpaces(currentSpaces => 
+      currentSpaces.map(s => s.id === updatedSpace.id ? updatedSpace : s)
+    );
+  }, []); // No dependencies needed as `setSpaces` is stable
+
   const getMembershipStatus = useCallback((spaceId: string): Enums<'membership_status'> | null => {
       const membership = memberships.find(m => m.space_id === spaceId);
       return membership ? membership.status : null;
   }, [memberships]);
 
-  // --- FINAL, SIMPLIFIED VALUE ---
-  // The context now only provides the global state and related functions.
+  // --- MODIFIED VALUE ---
   const contextValue = useMemo(() => ({
     spaces,
     memberships,
     publicThreads, 
     isLoadingSpaces,
-    fetchSpaces,
+    refreshSpaces, // <-- EXPOSED as refreshSpaces
+    updateLocalSpace, // <-- EXPOSED the new function
     getMembershipStatus,
     setMemberships, 
-  }), [spaces, memberships, publicThreads, isLoadingSpaces, fetchSpaces, getMembershipStatus]);
+  }), [spaces, memberships, publicThreads, isLoadingSpaces, refreshSpaces, updateLocalSpace, getMembershipStatus]);
 
   return (
     <CommunityContext.Provider value={contextValue}>
@@ -115,7 +111,6 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
   );
 };
 
-// This hook remains the same for easy consumption of the context.
 export const useCommunity = () => {
   const context = useContext(CommunityContext);
   if (context === undefined) {
