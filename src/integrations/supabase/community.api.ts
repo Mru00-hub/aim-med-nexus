@@ -304,6 +304,27 @@ export const getThreadDetails = async (threadId: string): Promise<(Thread & { sp
     return data;
 }
 
+export const updateSpaceDetails = async (
+  spaceId: string,
+  payload: { name: string; description?: string | null; join_level: Enums<'space_join_level'> }
+): Promise<Space> => {
+    await getSessionOrThrow();
+    const { data, error } = await supabase
+      .from('spaces')
+      .update({
+        name: payload.name,
+        description: payload.description,
+        join_level: payload.join_level,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', spaceId)
+      .select()
+      .single();
+      
+    if (error) throw error;
+    return data;
+};
+
 export const updateThreadDetails = async (
   threadId: string,
   payload: { title: string; description?: string | null }
