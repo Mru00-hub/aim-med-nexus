@@ -15,13 +15,14 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { supabase } from '@/integrations/supabase/client';
 
 /**
  * Login Page for AIMedNet with Supabase Authentication
  * Email and password authentication with Google OAuth option
  */
 const Login = () => {
-  const { signIn } = useAuth();
+  const { signIn, generateAndSetKey } = useAuth();
   
   const [formData, setFormData] = useState({
     email: '',
@@ -41,11 +42,45 @@ const Login = () => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
-    const { error } = await signIn(formData.email, formData.password);
-    if (error) {
-      setError(error.message);
+    try {
+      // Step A: Sign in the user
+      const { error: signInError } = await signIn(formData.email, formData.password);
+
+      if (signInError) {
+        throw signInError; // This will be caught by the catch block
+      }
+      
+      // Step B: If sign-in is successful, get the user's session to find their ID
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
+        throw new Error("Could not retrieve user session after login.");
+      }
+
+      // Step C: Fetch the user's profile to get their unique salt
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('encryption_salt')
+        .eq('id', session.user.id)
+        .single();
+      
+      if (profileError) {
+        throw new Error("Could not retrieve your profile. Please contact support.");
+      }
+      if (!profile?.encryption_salt) {
+        // This is a critical issue if the salt is missing for a user.
+        throw new Error("Your account is not configured for secure messaging. Please contact support.");
+      }
+
+      // Step D: Generate the encryption key using the password from the form and the fetched salt
+      await generateAndSetKey(formData.password, profile.encryption_salt);
+      
+      // Note: Navigation will be handled automatically by the onAuthStateChange listener in your useAuth hook.
+
+    } catch (err: any) {
+      setError(err.message || 'An unexpected error occurred.');
+    } finally {
       setIsLoading(false);
-    } 
+    }
   };
 
   return (
