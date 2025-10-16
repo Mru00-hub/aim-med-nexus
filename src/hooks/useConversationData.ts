@@ -19,6 +19,7 @@ import { decryptMessage } from '@/lib/crypto';
 
 export type MessageWithParent = DirectMessageWithDetails & {
   parent_message_details?: DirectMessageWithDetails | null;
+  isOptimistic?: boolean; // This flag will help us identify temporary messages
 };
 
 export const useConversationData = (conversationId: string | undefined, recipientId: string | undefined) => {
@@ -114,11 +115,12 @@ export const useConversationData = (conversationId: string | undefined, recipien
                 isUploading: true,
             }));
 
-            const optimisticMessage: DirectMessageWithDetails = {
+            const optimisticMessage: MessageWithParent = { // Use the updated type here
                 id: tempMsgId,
-                conversation_id: conversationId,
-                sender_id: user.id,
-                content,
+                conversation_id: conversationId!,
+                sender_id: user!.id,
+                content: content, // The plaintext content
+                isOptimistic: true,
                 parent_message_id: parentMessageId,
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString(),
@@ -131,7 +133,7 @@ export const useConversationData = (conversationId: string | undefined, recipien
                 attachments: optimisticAttachments as any,
             };
 
-            setMessages(current => [...current, optimisticMessage]);
+            setMessages(current => [...current, optimisticMessage as DirectMessageWithDetails]);
 
             // STEP 3: Call the real API.
             const realMessage = await postDirectMessage(
