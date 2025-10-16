@@ -10,6 +10,7 @@
  */
 
 import { supabase } from "./client";
+import { encryptMessage } from '@/lib/crypto';
 import type { Database, Enums, Tables, TablesInsert } from "./types";
 
 //================================================================================
@@ -217,13 +218,19 @@ export const canSendMessage = async (otherUserId: string): Promise<boolean> => {
  */
 export const postDirectMessage = async (
     conversationId: string,
-    content: string,
+    plaintext: string, 
+    encryptionKey: CryptoKey,
     parentMessageId: number | null = null
 ): Promise<DirectMessage> => {
     await getSessionOrThrow();
+    if (!encryptionKey) throw new Error("Encryption key is required to post a message.");
+
+    // 4. Encrypt the message content
+    const encryptedContent = await encryptMessage(plaintext, encryptionKey);
+
     const { data, error } = await supabase.rpc('post_direct_message', {
         p_conversation_id: conversationId,
-        p_content: content,
+        p_content: encryptedContent, // 👈 5. Send the encrypted content
         p_parent_message_id: parentMessageId
     }).select().single();
 
@@ -232,19 +239,34 @@ export const postDirectMessage = async (
     return data;
 };
 
+
 /**
  * Edits an existing direct message.
  * @param messageId - The ID of the message to edit.
  * @param newContent - The new text content for the message.
  */
-export const editDirectMessage = async (messageId: number, newContent: string): Promise<DirectMessage> => {
+export const editDirectMessage = async (
+    messageId: number, 
+    newPlaintext: string, // 👈 6. Changed to 'newPlaintext'
+    encryptionKey: CryptoKey // 👈 7. Accept the encryption key
+): Promise<DirectMessage> => {
     await getSessionOrThrow();
+    if (!encryptionKey) throw new Error("Encryption key is required to edit a message.");
+    
+    // 8. Encrypt the new content
+    const encryptedNewContent = await encryptMessage(newPlaintext, encryptionKey);
+
     const { data, error } = await supabase
         .from('direct_messages')
-        .update({ content: newContent, is_edited: true, updated_at: new Date().toISOString() })
+        .update({ 
+            content: encryptedNewContent, // 👈 9. Update with encrypted content
+            is_edited: true, 
+            updated_at: new Date().toISOString() 
+        })
         .eq('id', messageId)
         .select()
         .single();
+
     if (error) throw error;
     if (!data) throw new Error("Failed to edit message: No data returned.");
     return data;
