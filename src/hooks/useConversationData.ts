@@ -149,15 +149,16 @@ export const useConversationData = (conversationId: string | undefined, recipien
     }, [messages, toast]);
     
     const handleEditMessage = useCallback(async (messageId: number, newContent: string) => {
+        if (!encryptionKey) return;
         const previousMessages = messages;
         setMessages(current => current.map(m => m.id === messageId ? { ...m, content: newContent, is_edited: true } : m));
         try {
-            await editDirectMessage(messageId, newContent);
+            await editDirectMessage(messageId, newContent, encryptionKey);
         } catch (error: any) {
             toast({ variant: 'destructive', title: 'Edit Failed', description: error.message });
             setMessages(previousMessages);
         }
-    }, [messages, toast]);
+    }, [messages, toast, encryptionKey]);
 
     const handleReaction = useCallback(async (messageId: number, emoji: string) => {
         if (!user) return;
