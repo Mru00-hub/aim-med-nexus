@@ -70,76 +70,39 @@ const CompleteProfile = () => {
   console.log("[CompleteProfile] profile:", profile ? "exists" : "null");
 
   useEffect(() => {
-    console.log("[CompleteProfile] useEffect triggered");
-    console.log("[CompleteProfile] User:", user ? user.id : "null");
-    console.log("[CompleteProfile] Profile:", profile ? "exists" : "null");
-    
-    try {
-      if (user) {
-        console.log("[CompleteProfile] Processing user data");
-        const metadata = user.user_metadata || {};
-        console.log("[CompleteProfile] User metadata:", JSON.stringify(metadata, null, 2));
+      // This logic now runs only if the auth context is ready.
+      if (!authLoading && user) {
+          // --- 1. SET THE AVATAR URL WITH CLEAR PRIORITY ---
         
-        // Map metadata to form fields - COMPLETE MAPPING
-        const mappedData = {
-          full_name: metadata.full_name || '',
-          phone: metadata.phone || '',
-          current_location: metadata.current_location || '',
-          current_position: metadata.current_position || '',
-          organization: metadata.organization || '',
-          bio: '',
-          resume_url: '',
-          skills: metadata.specialization ? metadata.specialization : '',
-        };
+          // Priority 1: Use the URL from the existing profile if it exists.
+          if (profile?.profile_picture_url) {
+              setAvatarUrl(profile.profile_picture_url);
+          } 
+          // Priority 2: If no profile URL, generate one from metadata.
+          else if (user.user_metadata?.full_name) {
+              const uniqueColor = generateUniqueColor(user.id);
+              const generatedUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                  user.user_metadata.full_name
+              )}&background=${uniqueColor.substring(1)}&color=fff&size=256`; // Use substring(1) to remove '#' from HSL
+              setAvatarUrl(generatedUrl);
+          }
 
-        console.log("[CompleteProfile] Mapped form data:", JSON.stringify(mappedData, null, 2));
-        setFormData(mappedData);
+          // --- 2. POPULATE THE FORM WITH CONSOLIDATED DATA ---
+          const metadata = user.user_metadata || {};
+          const skillsString = (profile?.skills && Array.isArray(profile.skills) ? profile.skills.join(', ') : '') || metadata.specialization || '';
 
-        if (metadata.full_name) {
-          const uniqueColor = generateUniqueColor(user.id); // Use the new function
-          const generatedUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(
-            metadata.full_name
-          )}&background=${uniqueColor}&color=fff&size=256`; // Use the unique color
-          console.log("[CompleteProfile] Generated unique avatar URL:", generatedUrl);
-          setAvatarUrl(generatedUrl);
-        }
+          setFormData({
+              full_name: profile?.full_name || metadata.full_name || '',
+              phone: profile?.phone || metadata.phone || '',
+              current_location: profile?.current_location || metadata.current_location || '',
+              current_position: profile?.current_position || metadata.current_position || '',
+              organization: profile?.organization || metadata.organization || '',
+              bio: profile?.bio || '',
+              resume_url: profile?.resume_url || '',
+              skills: skillsString,
+          });
       }
-
-      // If profile exists (editing scenario), override with profile data
-      if (profile) {
-        console.log("[CompleteProfile] Profile exists - entering EDIT mode");
-        console.log("[CompleteProfile] Profile data:", JSON.stringify(profile, null, 2));
-        
-        const skillsString = profile.skills && Array.isArray(profile.skills) 
-          ? profile.skills.join(', ') 
-          : '';
-
-        const profileData = {
-          full_name: profile.full_name || '',
-          phone: profile.phone || '',
-          current_location: profile.current_location || '',
-          current_position: profile.current_position || '',
-          organization: profile.organization || '',
-          bio: profile.bio || '',
-          resume_url: profile.resume_url || '',
-          skills: skillsString,
-        };
-        
-        console.log("[CompleteProfile] Profile-based form data:", JSON.stringify(profileData, null, 2));
-        setFormData(profileData);
-
-        if (profile.profile_picture_url) {
-          console.log("[CompleteProfile] Using existing avatar:", profile.profile_picture_url);
-          setAvatarUrl(profile.profile_picture_url);
-        }
-      }
-    } catch (e: any) {
-      console.error("[CompleteProfile] Error processing data:", e);
-      console.error("[CompleteProfile] Error message:", e.message);
-      console.error("[CompleteProfile] Error stack:", e.stack);
-      setError("Failed to load your profile data. Please try refreshing the page.");
-    }
-  }, [profile, user]);
+  }, [user, profile, authLoading]);
 
   const handleInputChange = (field: string, value: string) => {
     console.log(`[CompleteProfile] Field changed: ${field} = ${value.substring(0, 50)}...`);
@@ -163,22 +126,10 @@ const CompleteProfile = () => {
     setError('');
 
     try {
-      const metadata = user.user_metadata || {};
-      console.log("[CompleteProfile] User metadata for profile creation:", JSON.stringify(metadata, null, 2));
-      
-      const skillsArray = formData.skills
-        .split(',')
-        .map(s => s.trim())
-        .filter(Boolean);
-      console.log("[CompleteProfile] Processed skills array:", skillsArray);
+      const skillsArray = formData.skills.split(',').map(s => s.trim()).filter(Boolean);
 
-      const uniqueColor = generateUniqueColor(user.id);
-
-      const finalAvatarUrl = avatarUrl || 
-        `https://ui-avatars.com/api/?name=${encodeURIComponent(
-          formData.full_name
-        )}&background=${encodedColor.replace('%20', '')}&color=fff&size=256&bold=true`;
-      console.log("[CompleteProfile] Final avatar URL:", finalAvatarUrl);
+      // --- FIX: Ensure the final URL is the one already in state (which now has the correct priority) ---
+      const finalAvatarUrl = avatarUrl; // The useEffect has already set this correctly.
 
       const rawExperienceValue = metadata.years_experience || null;
       const mappedExperienceValue = rawExperienceValue ? DB_EXPERIENCE_MAP[rawExperienceValue] || null : null;
@@ -207,43 +158,22 @@ const CompleteProfile = () => {
         is_onboarded: true,
       };
 
-      console.log("[CompleteProfile] Final profile data to upsert:");
-      console.log(JSON.stringify(profileData, null, 2));
-      console.log("[CompleteProfile] Calling Supabase upsert...");
-
-      const { data: upsertedData, error: upsertError } = await supabase
-        .from('profiles')
-        .upsert(profileData) // 1. Perform the upsert operation first
-        .select()           // 2. Then, select the data that was just upserted
-        .single();
+      const { error: upsertError } = await supabase
+          .from('profiles')
+          .upsert(profileData)
+          .select()
+          .single();
+            
       if (upsertError) {
-        console.error("[CompleteProfile] Upsert failed");
-        console.error("[CompleteProfile] Error code", upsertError.code);
-        console.error("[CompleteProfile] Error message", upsertError.message);
-        console.error("[CompleteProfile] Error details:", upsertError.details);
-        console.error("[CompleteProfile] Full error object:", JSON.stringify(upsertError, null, 2));
-        // Check for specific error types
-        if (upsertError.code === '42501') {
-          console.error("[CompleteProfile] RLS POLICY ERROR - User doesn't have permission");
-          throw new Error("Permission denied. Please contact support about RLS policies.");
-        } else if (upsertError.code === '23505') {
-          console.error("[CompleteProfile] UNIQUE CONSTRAINT VIOLATION");
-          throw new Error("A profile with this ID already exists.");
-        } else {
-          throw upsertError;
-        }
+           throw upsertError;
       }
 
-      console.log("[CompleteProfile] Profile saved successfully!");
-      // Now the 'upsertedData' variable exists and this line will work correctly
-      console.log("[CompleteProfile] Upserted data:", JSON.stringify(upsertedData, null, 2));
       toast({
-        title: "Profile Saved!",
-        description: "Your profile has been created successfully.",
+          title: "Profile Saved!",
+          description: "Your profile has been updated successfully.",
       });
 
       await refreshProfile();
-      console.log("[CompleteProfile] Navigating to /community");
       navigate('/community', { replace: true });
 
     } catch (err: any) {
