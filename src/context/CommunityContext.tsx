@@ -21,6 +21,7 @@ interface CommunityContextType {
   isLoadingSpaces: boolean;
   refreshSpaces: () => Promise<void>; // <-- RENAMED for clarity
   updateLocalSpace: (updatedSpace: SpaceWithDetails) => void; // <-- ADDED for optimistic updates
+  updateLocalThread: (updatedThread: Partial<ThreadWithDetails> & { id: string }) => void; 
   getMembershipStatus: (spaceId: string) => Enums<'membership_status'> | null;
   setMemberships: React.Dispatch<React.SetStateAction<Membership[]>>;
 }
@@ -87,6 +88,14 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
     );
   }, []); // No dependencies needed as `setSpaces` is stable
 
+  const updateLocalThread = useCallback((updatedThread: Partial<ThreadWithDetails> & { id: string }) => {
+    setPublicThreads(currentThreads =>
+      currentThreads.map(t =>
+        t.id === updatedThread.id ? { ...t, ...updatedThread } : t
+      )
+    );
+  }, []);
+
   const getMembershipStatus = useCallback((spaceId: string): Enums<'membership_status'> | null => {
       const membership = memberships.find(m => m.space_id === spaceId);
       return membership ? membership.status : null;
@@ -100,9 +109,10 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
     isLoadingSpaces,
     refreshSpaces, // <-- EXPOSED as refreshSpaces
     updateLocalSpace, // <-- EXPOSED the new function
+    updateLocalThread,
     getMembershipStatus,
     setMemberships, 
-  }), [spaces, memberships, publicThreads, isLoadingSpaces, refreshSpaces, updateLocalSpace, getMembershipStatus]);
+  }), [spaces, memberships, publicThreads, isLoadingSpaces, refreshSpaces, updateLocalSpace, updateLocalThread, getMembershipStatus]);
 
   return (
     <CommunityContext.Provider value={contextValue}>
