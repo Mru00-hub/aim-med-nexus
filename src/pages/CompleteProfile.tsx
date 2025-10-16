@@ -1,5 +1,5 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, ChangeEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Header } from '@/components/layout/Header';
@@ -13,6 +13,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Save, AlertCircle } from 'lucide-react';
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Upload, CircleX } from 'lucide-react';
 
 const DB_EXPERIENCE_MAP: { [key: string]: string } = {
   // Map correct values to themselves
@@ -52,6 +53,8 @@ const CompleteProfile = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string>('');
   
   const [formData, setFormData] = useState({
     full_name: '',
@@ -109,23 +112,49 @@ const CompleteProfile = () => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  const handleAvatarChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) { // 2MB limit
+        toast({ title: "Image Too Large", description: "Please select an image smaller than 2MB.", variant: "destructive" });
+        return;
+      }
+      setAvatarFile(file);
+      setAvatarPreview(URL.createObjectURL(file));
+    }
+  };
+
+  const removeAvatar = () => {
+    setAvatarFile(null);
+    setAvatarPreview('');
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("[CompleteProfile] Form submitted");
-    
-    if (!user) {
-      console.error("[CompleteProfile] No user found");
-      setError("User not found. Please log in again.");
-      return;
-    }
-    
-    console.log("[CompleteProfile] Submitting for user:", user.id);
-    console.log("[CompleteProfile] Form data:", JSON.stringify(formData, null, 2));
-    
+    if (!user) return;
     setIsSubmitting(true);
     setError('');
 
     try {
+      let finalAvatarUrl = avatarUrl; // Start with the existing or generated URL
+
+      // --- CHANGE: If a new file was selected, upload it ---
+      if (avatarFile) {
+        const fileExt = avatarFile.name.split('.').pop();
+        const fileName = `${crypto.randomUUID()}.${fileExt}`;
+        // Upload to a folder named after the user's ID for security
+        const filePath = `${user.id}/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('avatars')
+          .upload(filePath, avatarFile, { upsert: true }); // Use upsert to overwrite if needed
+
+        if (uploadError) throw uploadError;
+
+        const { data: publicUrlData } = supabase.storage.from('avatars').getPublicUrl(filePath);
+        finalAvatarUrl = publicUrlData.publicUrl;
+      }
+      
       const metadata = user.user_metadata || {};
       const skillsArray = formData.skills.split(',').map(s => s.trim()).filter(Boolean);
       const finalAvatarUrl = avatarUrl; // The useEffect has already set this correctly.
@@ -262,20 +291,30 @@ const CompleteProfile = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {avatarUrl && (
-              <div className="flex flex-col items-center mb-8 space-y-2">
-                <Avatar className="h-24 w-24 border-2 border-primary/50">
-                  <AvatarImage src={avatarUrl} alt={formData.full_name} />
-                  <AvatarFallback>
-                    {formData.full_name?.split(' ').map(n => n[0]).join('')}
-                  </AvatarFallback>
+            <div className="flex flex-col items-center mb-8 gap-4">
+              <div className="relative">
+                <Avatar className="w-24 h-24 border-2 border-primary/20">
+                  {/* It previews the NEW image, but falls back to the CURRENT one */}
+                  <AvatarImage 
+                    src={avatarPreview || avatarUrl} 
+                    alt={formData.full_name} 
+                    className="object-cover" 
+                  />
+                  <AvatarFallback>{formData.full_name?.split(' ').map(n => n[0]).join('')}</AvatarFallback>
                 </Avatar>
-                <p className="text-sm text-muted-foreground">
-                  Your profile avatar
-                </p>
+                {avatarPreview && (
+                  <button type="button" onClick={removeAvatar} className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full p-1 hover:bg-destructive/80">
+                    <CircleX className="h-4 w-4" />
+                  </button>
+                )}
               </div>
-            )}
-            
+              <Button asChild variant="outline">
+                <label htmlFor="avatar-upload" className="cursor-pointer">
+                  <Upload className="mr-2 h-4 w-4" /> Change Picture
+                  <input id="avatar-upload" type="file" className="sr-only" accept="image/png, image/jpeg" onChange={handleAvatarChange} />
+                </label>
+              </Button>
+            </div>
             <form onSubmit={handleSubmit} className="space-y-6">
               <div>
                 <label className="block text-sm font-medium mb-2">Full Name *</label>
