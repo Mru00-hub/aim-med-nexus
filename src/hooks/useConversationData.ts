@@ -15,13 +15,14 @@ import {
     DirectMessageReaction,
     Profile
 } from '@/integrations/supabase/social.api';
+import { decryptMessage } from '@/lib/crypto';
 
 export type MessageWithParent = DirectMessageWithDetails & {
   parent_message_details?: DirectMessageWithDetails | null;
 };
 
 export const useConversationData = (conversationId: string | undefined, recipientId: string | undefined) => {
-    const { user, profile } = useAuth();
+    const { user, profile, encryptionKey} = useAuth();
     const { toast } = useToast();
     const [messages, setMessages] = useState<DirectMessageWithDetails[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -42,8 +43,8 @@ export const useConversationData = (conversationId: string | undefined, recipien
     }, [conversationId, toast]);
 
     const handleSendMessage = useCallback(async (content: string, parentMessageId: number | null, files: File[]) => {
-        if (!user || !profile || !conversationId) {
-            toast({ variant: 'destructive', title: 'Not Logged In', description: 'You must be logged in to send a message.' });
+        if (!user || !profile || !conversationId || !encryptionKey) {
+            toast({ variant: 'destructive', title: 'Cannot Send', description: 'Your secure session is not ready.' });
             return;
         }
 
@@ -95,8 +96,20 @@ export const useConversationData = (conversationId: string | undefined, recipien
             setMessages(current => [...current, optimisticMessage]);
 
             // STEP 3: Call the real API.
-            const realMessage = await postDirectMessage(conversationId, content, parentMessageId);
-            setMessages(current => current.map(msg => msg.id === tempMsgId ? { ...msg, id: realMessage.id } : msg));
+            const realMessage = await postDirectMessage(
+              conversationId, 
+              content, 
+              encryptionKey, // Pass the key for encryption
+              parentMessageId
+            );
+            const decryptedContent = await decryptMessage(realMessage.content, encryptionKey);
+            const finalMessage = {
+              ...optimisticMessage, // Use the structure of our optimistic message
+              ...realMessage,       // Overwrite with real data from DB (like ID, created_at)
+              content: decryptedContent, // Use the decrypted content
+            };
+            
+            setMessages(current => current.map(msg => msg.id === tempMsgId ? finalMessage : msg));
 
             // STEP 4: Handle Attachments.
             if (files.length > 0) {
@@ -122,7 +135,7 @@ export const useConversationData = (conversationId: string | undefined, recipien
             // We can re-throw the error if a parent component needs to know about it.
             // throw error; 
         }
-    }, [user, profile, conversationId, recipientId, toast, messages]);
+    }, [user, profile, conversationId, recipientId, toast, encryptionKey]);
 
     const handleDeleteMessage = useCallback(async (messageId: number) => {
         const previousMessages = messages;
