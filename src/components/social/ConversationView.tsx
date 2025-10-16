@@ -8,12 +8,14 @@ import { Star, Loader2 } from 'lucide-react';
 import { DirectMessage } from './DirectMessage';
 import { DirectMessageInput } from './DirectMessageInput';
 import { useAuth } from '@/hooks/useAuth';
+import { decryptMessage } from '@/lib/crypto'; 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useConversationData } from '@/hooks/useConversationData'; // NEW: Using our powerful hook
 import { cn } from '@/lib/utils';
 import { Tables } from '@/integrations/supabase/types';
 import { supabase } from '@/integrations/supabase/client'; // For profile fetching and starring
 import { markConversationAsRead } from '@/integrations/supabase/social.api';
+import { DirectMessageWithDetails } from '@/integrations/supabase/social.api';
 
 type Conversation = Tables<'inbox_conversations'> & { is_starred?: boolean };
 
@@ -23,7 +25,7 @@ interface ConversationViewProps {
 }
 
 export const ConversationView = ({ conversation, onConversationUpdate }: ConversationViewProps) => {
-  const { user } = useAuth();
+  const { user, encryptionKey } = useAuth();
   const [isStarred, setIsStarred] = useState(conversation.is_starred ?? false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const prevMessagesLength = useRef<number | null>(null);
@@ -39,6 +41,41 @@ export const ConversationView = ({ conversation, onConversationUpdate }: Convers
     handleEditMessage,
     handleReaction
   } = useConversationData(conversation.conversation_id, conversation.participant_id);
+
+  const [decryptedMessages, setDecryptedMessages] = useState<DirectMessageWithDetails[]>([]);
+
+  useEffect(() => {
+    // This function will run whenever the raw messages or the key changes.
+    const decryptAllMessages = async () => {
+      // Don't try to decrypt if there are no messages or the key is not yet available.
+      if (!messages || messages.length === 0 || !encryptionKey) {
+        setDecryptedMessages([]); // Ensure the view is cleared if no key
+        return;
+      }
+
+      console.log(`🛡️ Decrypting ${messages.length} messages...`);
+
+      // Use Promise.all to decrypt all messages concurrently for performance.
+      const decrypted = await Promise.all(
+        messages.map(async (msg) => {
+          try {
+            // Decrypt the content of each message.
+            const decryptedContent = await decryptMessage(msg.content, encryptionKey);
+            // Return a new message object with the plaintext content.
+            return { ...msg, content: decryptedContent };
+          } catch (error) {
+            console.error(`Failed to decrypt message ID ${msg.id}:`, error);
+            // If a single message fails, show an error but don't crash the app.
+            return { ...msg, content: "[Unable to decrypt this message]" };
+          }
+        })
+      );
+      
+      setDecryptedMessages(decrypted as DirectMessageWithDetails[]);
+    };
+
+    decryptAllMessages();
+  }, [messages, encryptionKey]);
 
   useEffect(() => {
     // This effect runs whenever the user switches to a new conversation.
@@ -148,7 +185,7 @@ export const ConversationView = ({ conversation, onConversationUpdate }: Convers
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
         ) : (
-          messages.map((message) =>
+          decryptedMessages.map((message) =>
             <DirectMessage
               key={message.id}
               message={message}
@@ -163,9 +200,10 @@ export const ConversationView = ({ conversation, onConversationUpdate }: Convers
         <div ref={messagesEndRef} />
       </CardContent>
       <DirectMessageInput
-        onSendMessage={handleSendMessage} // FIX: Pass the handler from the hook
+        onSendMessage={handleSendMessage}
         replyingTo={replyingTo}
         onCancelReply={() => setReplyingTo(null)}
+        isKeyAvailable={!!encryptionKey}
       />
     </>
   );
