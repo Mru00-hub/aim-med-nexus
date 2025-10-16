@@ -33,7 +33,7 @@ export default function SpaceDetailPage() {
 
   // --- DATA FETCHING ---
   // 1. Get GLOBAL data from the context for efficiency.
-  const { spaces, isLoadingSpaces, getMembershipStatus, refreshSpaces } = useCommunity();
+  const { spaces, isLoadingSpaces, getMembershipStatus, refreshSpaces, updateLocalSpace } = useCommunity();
   // 2. Get LOCAL data for this page using dedicated hooks.
   const { threads, isLoadingThreads, refreshThreads } = useSpaceThreads(spaceId);
   const { memberCount, threadCount, isLoadingMetrics } = useSpaceMetrics(spaceId);
@@ -101,26 +101,39 @@ export default function SpaceDetailPage() {
   // --- ASYNCHRONOUS ACTIONS ---
 
   const handleSave = async () => {
-    if (!space || !editedName.trim()) {
-        toast({ title: "Name cannot be empty.", variant: "destructive" });
-        return;
-    }
-    setIsSaving(true);
-    try {
-        await updateSpaceDetails(space.id, {
-            name: editedName,
-            description: editedDescription,
-            join_level: editedJoinLevel,
-        });
-        toast({ title: "Success!", description: "Space details updated." });
-        setIsEditing(false);
+      if (!space || !editedName.trim()) {
+          toast({ title: "Name cannot be empty.", variant: "destructive" });
+          return;
+      }
+      const originalSpace = { ...space };
+      const optimisticSpace = {
+          ...space,
+          name: editedName,
+          description: editedDescription,
+          join_level: editedJoinLevel,
+      };
+      updateLocalSpace(optimisticSpace);
+      setIsEditing(false); // Close the edit form right away
+      setIsSaving(true); 
+      try {
+          await updateSpaceDetails(space.id, {
+              name: editedName,
+              description: editedDescription,
+              join_level: editedJoinLevel,
+          });
+          toast({ title: "Success!", description: "Space details updated." });
+          setIsEditing(false);
         // NOTE: Ensure your CommunityContext provides this refresh function
-        if(refreshSpaces) refreshSpaces();
-    } catch (error: any) {
-        toast({ title: "Update Failed", description: error.message, variant: "destructive" });
-    } finally {
-        setIsSaving(false);
-    }
+          refreshSpaces();
+      } catch (error: any) {
+          toast({ title: "Update Failed", description: error.message, variant: "destructive" });
+          updateLocalSpace(originalSpace);
+          setIsEditing(true); // Re-open the form so the user can fix the issue
+
+      } finally {
+        // 9. Stop the loading indicator
+          setIsSaving(false);
+      }
   };
 
   const handleDeleteSpace = async () => {
