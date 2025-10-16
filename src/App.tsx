@@ -9,6 +9,7 @@ import AuthGuard from "@/components/AuthGuard";
 import OnboardingGuard from "@/components/OnboardingGuard";
 import { CommunityProvider } from "./context/CommunityContext"; 
 import { SocialCountsProvider } from './context/SocialCountsContext'; // Import the provider
+import { SecureRouteGuard } from './components/SecureRouteGuard';
 
 // --- Core Page Imports ---
 import Index from "./pages/Index";
@@ -85,7 +86,7 @@ const App = () => {
                     <Route path="/feedback" element={<Feedback />} />
                     <Route path="/notifications" element={<Notifications />} />
                     <Route path="/payment" element={<PaymentPage />} />
-                    <Route path="/inbox" element={<FunctionalInbox />} />
+                    <Route path="/inbox" element={ <SecureRouteGuard> <FunctionalInbox /> </SecureRouteGuard> } />
 
                     {/* Community Protected Routes */}
                     <Route path="/community/create-thread" element={<CreateThread />} />
