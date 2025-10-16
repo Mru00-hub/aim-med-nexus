@@ -69,6 +69,9 @@ export const ConversationList = ({ conversations, loading, onSelectConversation,
                             </span>
                         </div>
                         <div className="flex items-center justify-between">
+                            <p className="text-xs text-muted-foreground truncate pr-2 flex-1">
+                                {convo.last_message_content}
+                            </p>
                             {convo.unread_count > 0 && (
                                 <Badge variant="destructive" className="h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs flex-shrink-0">
                                     {convo.unread_count}
