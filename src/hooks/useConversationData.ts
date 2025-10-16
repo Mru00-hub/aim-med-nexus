@@ -154,7 +154,7 @@ export const useConversationData = (conversationId: string | undefined, recipien
             const optimisticMessage: MessageWithParent = { // Use the updated type here
                 id: tempMsgId,
                 conversation_id: conversationId!,
-                sender_id: user!.id,
+                sender_id: user.id,
                 content: content, // The plaintext content
                 isOptimistic: true,
                 parent_message_id: parentMessageId,
