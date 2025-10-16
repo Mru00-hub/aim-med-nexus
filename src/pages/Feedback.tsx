@@ -1,7 +1,7 @@
 // pages/feedback.tsx OR components/pages/Feedback.tsx
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/router'; // Or your router of choice
+import { useNavigate } from 'react-router-dom';
 import { useUser } from '@supabase/auth-helpers-react'; // Essential hook for user data
 import { submitFeedback, FeedbackFormInput } from '@/lib/api/feedback';
 
@@ -17,12 +17,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Loader2, MessageSquare, Star, Lightbulb, Bug, Heart, Send } from 'lucide-react';
 
 const Feedback = () => {
-  const router = useRouter();
+  const navigate = useNavigate();
   const user = useUser(); // Get the authenticated user
   const { toast } = useToast(); // Initialize toast
 
   const [isLoading, setIsLoading] = useState(false);
   // Use the inferred type for strong typing
+  const [isSubmitted, setIsSubmitted] = useState(false);
   const [formData, setFormData] = useState<FeedbackFormInput>({
     category: '',
     subject: '',
@@ -65,11 +66,16 @@ const Feedback = () => {
       
       toast({
         title: "Feedback Submitted!",
-        description: "Thank you! We've received your feedback and will review it shortly.",
+        description: "Thank you for helping us improve.",
       });
 
-      // Redirect user to their dashboard or home page after successful submission
-      router.push('/dashboard'); 
+      setIsSubmitted(true); // Show the thank you screen
+      setFormData({ // Reset the form for the next time
+        category: '',
+        subject: '',
+        description: '',
+        rating: 0,
+      });
 
     } catch (error) {
       console.error(error);
@@ -90,6 +96,29 @@ const Feedback = () => {
   const handleRating = (rating: number) => {
     setFormData(prev => ({ ...prev, rating }));
   };
+
+  if (isSubmitted) {
+  return (
+    <div className="min-h-screen bg-background">
+      <Header />
+      <main className="container-medical flex items-center justify-center py-16" style={{ minHeight: 'calc(100vh - 160px)' }}>
+        <div className="max-w-2xl mx-auto text-center animate-scale-in">
+          <div className="w-20 h-20 bg-gradient-primary rounded-full flex items-center justify-center mx-auto mb-6">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-10 w-10 text-primary-foreground"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+          </div>
+          <h1 className="text-3xl font-bold mb-4">Thank You!</h1>
+          <p className="text-lg text-muted-foreground mb-8">
+            Your feedback is valuable to us. We'll review your submission and may reach out if we need more details.
+          </p>
+          <Button className="btn-medical" onClick={() => setIsSubmitted(false)}>
+            Submit Another Feedback
+          </Button>
+        </div>
+      </main>
+      <Footer />
+    </div>
+  );
+  }
 
   // The rest of your JSX remains largely the same, with a few key changes:
   return (
