@@ -38,6 +38,31 @@ export const ProfileAvatar = () => {
     return <Skeleton className="h-10 w-10 rounded-full" />;
   }
 
+  if (!user) {
+    return null;
+  }
+
+  if (!profile || !profile.full_name) {
+    return (
+      <Link to="/complete-profile" title="Complete your profile">
+        <Avatar className="cursor-pointer bg-muted">
+          <AvatarFallback className="text-muted-foreground">?</AvatarFallback>
+        </Avatar>
+      </Link>
+    );
+  }
+
+  const initials = useMemo(() => {
+    const names = profile.full_name.split(' ');
+    if (names.length > 1) {
+      return `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase();
+    }
+    return profile.full_name.substring(0, 2).toUpperCase();
+  }, [profile.full_name]);
+
+  // The core logic: If a URL exists, use it. Otherwise, generate the default one.
+  const finalAvatarUrl = profile.profile_picture_url || generateAvatarUrl(profile.full_name, user.id);
+
   if (user && !profile) {
     return (
       <Link to="/complete-profile" title="Complete your profile">
@@ -52,9 +77,7 @@ export const ProfileAvatar = () => {
   if (!user || !profile) {
     return null;
   }
-
-  const finalAvatarUrl = profile.profile_picture_url || generateAvatarUrl(profile.full_name, user.id);
-
+  
   // FIX 3: Removed the incorrect closing brace '}' that was here.
   // The component function now continues correctly to the return statement.
 
