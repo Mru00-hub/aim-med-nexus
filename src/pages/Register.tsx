@@ -163,7 +163,7 @@ const Register = () => {
     setIsLoading(true);
     setError('');
     
-    let profilePictureUrl = `https://api.dicebear.com/8.x/initials/svg?seed=${formData.firstName} ${formData.lastName}`;
+    let profilePictureUrl: string | null = null;
     
     if (avatarFile) {
       const fileExt = avatarFile.name.split('.').pop();
@@ -172,10 +172,11 @@ const Register = () => {
       
       const { error: uploadError } = await supabase.storage
         .from('avatars')
-        .upload(filePath, avatarFile, { upsert: true }); // upsert allows overwriting
+        .upload(filePath, avatarFile);
 
       if (uploadError) {
         setError('Failed to upload profile picture. Please try again.');
+        toast({ title: "Upload Failed", description: uploadError.message, variant: "destructive" });
         setIsLoading(false);
         return;
       }
