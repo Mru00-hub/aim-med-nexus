@@ -304,7 +304,6 @@ export default function SpaceDetailPage() {
                       </div>
                     )}
                 </div>
-              </CardHeader>
               <CardContent>
                   <div className="flex items-center gap-6 pt-4 text-sm text-muted-foreground border-t">
                     <div className="flex items-center gap-1.5">
