@@ -166,10 +166,9 @@ const Register = () => {
     let profilePictureUrl = `https://api.dicebear.com/8.x/initials/svg?seed=${formData.firstName} ${formData.lastName}`;
     
     if (avatarFile) {
-      const { data: userSession } = await supabase.auth.getSession();
-      // Temporary user ID for path, will be confirmed by RLS policy.
-      const tempUserId = userSession?.data.session?.user.id ?? crypto.randomUUID();
-      const filePath = `${tempUserId}/${avatarFile.name}`;
+      const fileExt = avatarFile.name.split('.').pop();
+      const fileName = `${crypto.randomUUID()}.${fileExt}`;
+      const filePath = `public/${fileName}`; 
       
       const { error: uploadError } = await supabase.storage
         .from('avatars')
