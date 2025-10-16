@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useUser } from '@supabase/auth-helpers-react'; // Essential hook for user data
-import { submitFeedback, FeedbackFormInput } from '@src/integrations/supabase/feedback.api';
+import { submitFeedback, FeedbackFormInput } from '@/integrations/supabase/feedback.api';
 
 // ShadCN UI Components
 import { Header } from '@/components/layout/Header';
