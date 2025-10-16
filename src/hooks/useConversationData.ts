@@ -46,22 +46,55 @@ export const useConversationData = (conversationId: string | undefined, recipien
 
     useEffect(() => {
         const processMessages = async () => {
-            // If the key isn't ready or there are no messages, set the display list to empty and stop.
+            // If the key isn't ready or there are no messages, do nothing.
             if (!encryptionKey || !messages || messages.length === 0) {
                 setDisplayMessages([]);
                 return;
             }
 
-            // Step A: Decrypt all messages concurrently.
+            toast({
+                title: "Debug Start",
+                description: `Processing ${messages.length} messages. Key is available.`,
+                duration: 2000,
+            });
+
             const decryptedList = await Promise.all(
                 messages.map(async (msg) => {
+                    // If it's an optimistic message, show its plaintext and skip decryption.
                     if ((msg as MessageWithParent).isOptimistic) {
-                        return msg; // Return the plaintext version as is.
+                        toast({
+                            title: `Debug: Skipping Message ID ${msg.id}`,
+                            description: "Reason: Optimistic message (plaintext).",
+                        });
+                        return msg; 
                     }
+
+                    // For all other messages, attempt decryption.
                     try {
+                        // THIS IS THE MOST IMPORTANT LOG
+                        toast({
+                            title: `Debug: Attempting Decrypt for ID ${msg.id}`,
+                            description: `Content before decrypt: ${msg.content.substring(0, 40)}...`,
+                            duration: 4000,
+                        });
+
                         const decryptedContent = await decryptMessage(msg.content, encryptionKey);
+                        
+                        toast({
+                            title: `✅ Success: Decrypted ID ${msg.id}`,
+                            description: `Result: ${decryptedContent.substring(0, 40)}...`,
+                            duration: 2000,
+                        });
+                        
                         return { ...msg, content: decryptedContent };
                     } catch (e) {
+                        // This toast will appear if decryption fails.
+                        toast({
+                            variant: "destructive",
+                            title: `❌ FAILED to Decrypt ID ${msg.id}`,
+                            description: `The content was not valid ciphertext. Content was: "${msg.content}"`,
+                            duration: 10000, // Stay on screen longer
+                        });
                         return { ...msg, content: "[Unable to decrypt]" };
                     }
                 })
