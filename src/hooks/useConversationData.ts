@@ -24,6 +24,7 @@ export type MessageWithParent = DirectMessageWithDetails & {
 export const useConversationData = (conversationId: string | undefined, recipientId: string | undefined) => {
     const { user, profile, encryptionKey} = useAuth();
     const { toast } = useToast();
+    const [messages, setMessages] = useState<DirectMessageWithDetails[]>([]);
     const [displayMessages, setDisplayMessages] = useState<MessageWithParent[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [replyingTo, setReplyingTo] = useState<DirectMessageWithDetails | null>(null);
