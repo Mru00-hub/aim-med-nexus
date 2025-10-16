@@ -122,7 +122,6 @@ export default function SpaceDetailPage() {
               join_level: editedJoinLevel,
           });
           toast({ title: "Success!", description: "Space details updated." });
-          setIsEditing(false);
         // NOTE: Ensure your CommunityContext provides this refresh function
           refreshSpaces();
       } catch (error: any) {
