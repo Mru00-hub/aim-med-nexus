@@ -85,21 +85,29 @@ export default function ThreadDetailPage() {
   }, [threadDetails, user]);
 
   const handleSaveEdit = async () => {
-    if (!threadId || !editedTitle.trim()) {
+    if (!threadId || !threadDetails || !editedTitle.trim()) {
         toast({ title: "Title cannot be empty.", variant: "destructive" });
         return;
     }
-    setIsSaving(true);
+    const originalDetails = { ...threadDetails };
+    const optimisticDetails: ThreadDetails = {
+        ...threadDetails,
+        title: editedTitle,
+        description: editedDescription,
+    };
+    setThreadDetails(optimisticDetails);
+    setIsEditing(false); // Close the edit form right away
+    setIsSaving(true);  
     try {
         await updateThreadDetails(threadId, {
             title: editedTitle,
             description: editedDescription,
         });
         toast({ title: "Success!", description: "Thread updated." });
-        setIsEditing(false);
-        await fetchDetails(); // Refresh the details after saving
     } catch (error: any) {
         toast({ title: "Update Failed", description: error.message, variant: "destructive" });
+        setThreadDetails(originalDetails);
+        setIsEditing(true); // Re-open the form so the user can fix the issue or retry
     } finally {
         setIsSaving(false);
     }
