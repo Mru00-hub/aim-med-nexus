@@ -91,34 +91,22 @@ export const useConversationData = (conversationId: string | undefined, recipien
             if (!await canSendMessage(recipientId!)) throw new Error("You are no longer connected.");
 
             // STEP 2: Optimistic UI update.
-            const optimisticAttachments = files.map((file, index) => ({
-                id: `temp_att_${Date.now()}_${index}`,
-                message_id: -1,
-                file_name: file.name,
-                file_type: file.type,
-                file_url: URL.createObjectURL(file),
-                file_size_bytes: file.size,
-                created_at: new Date().toISOString(),
-                uploaded_by: user.id,
-                isUploading: true,
-            }));
-
-            const optimisticMessage: MessageWithParent = { // Use the updated type here
+            const optimisticMessage: MessageWithParent = {
                 id: tempMsgId,
-                conversation_id: conversationId!,
+                conversation_id: conversationId,
                 sender_id: user.id,
-                content: content, // The plaintext content
-                isOptimistic: true,
+                content: content,
+                isOptimistic: true, // Mark as temporary plaintext
                 parent_message_id: parentMessageId,
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString(),
                 is_edited: false,
-                author: {
-                    full_name: profile.full_name,
-                    profile_picture_url: profile.profile_picture_url,
-                },
+                author: { full_name: profile.full_name, profile_picture_url: profile.profile_picture_url },
                 reactions: [],
-                attachments: optimisticAttachments as any,
+                attachments: files.map((file, index) => ({
+                    id: `temp_att_${Date.now()}_${index}`,
+                    message_id: -1, file_name: file.name, file_type: file.type, file_url: URL.createObjectURL(file), file_size_bytes: file.size, created_at: new Date().toISOString(), uploaded_by: user.id, isUploading: true,
+                })) as any,
             };
 
             setMessages(current => [...current, optimisticMessage as DirectMessageWithDetails]);
@@ -170,11 +158,30 @@ export const useConversationData = (conversationId: string | undefined, recipien
     
     const handleEditMessage = useCallback(async (messageId: number, newContent: string) => {
         if (!encryptionKey) return;
-        const previousMessages = messages;
-        setMessages(current => current.map(m => m.id === messageId ? { ...m, content: newContent, is_edited: true } : m));
-        try { await editDirectMessage(messageId, newContent, encryptionKey); } 
-        catch (error: any) { setMessages(previousMessages);
+
+        const originalMessage = messages.find(m => m.id === messageId);
+        if (!originalMessage) return;
+
+        // Create an optimistic version of the edited message
+        const optimisticEditedMessage: MessageWithParent = {
+            ...originalMessage,
+            content: newContent, // Use the new plaintext content
+            is_edited: true,
+            isOptimistic: true, // 👈 THE CRITICAL FIX: Mark this as a temporary plaintext version
+        };
+
+        // Optimistically update the UI
+        setMessages(current => current.map(m => m.id === messageId ? optimisticEditedMessage as DirectMessageWithDetails : m));
+
+        try {
+            // Call the API which encrypts and saves the new content
+            const realEditedMessage = await editDirectMessage(messageId, newContent, encryptionKey);
+            // Replace the optimistic version with the real, encrypted version from the server
+            setMessages(current => current.map(m => m.id === messageId ? realEditedMessage : m));
+        } catch (error: any) {
             toast({ variant: 'destructive', title: 'Edit Failed', description: error.message });
+            // Revert to the original message on failure
+            setMessages(current => current.map(m => m.id === messageId ? originalMessage : m));
         }
     }, [messages, toast, encryptionKey]);
 
