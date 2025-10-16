@@ -41,42 +41,7 @@ export const ConversationView = ({ conversation, onConversationUpdate }: Convers
     handleEditMessage,
     handleReaction
   } = useConversationData(conversation.conversation_id, conversation.participant_id);
-
-  const [decryptedMessages, setDecryptedMessages] = useState<DirectMessageWithDetails[]>([]);
-
-  useEffect(() => {
-    // This function will run whenever the raw messages or the key changes.
-    const decryptAllMessages = async () => {
-      // Don't try to decrypt if there are no messages or the key is not yet available.
-      if (!messages || messages.length === 0 || !encryptionKey) {
-        setDecryptedMessages([]); // Ensure the view is cleared if no key
-        return;
-      }
-
-      console.log(`🛡️ Decrypting ${messages.length} messages...`);
-
-      // Use Promise.all to decrypt all messages concurrently for performance.
-      const decrypted = await Promise.all(
-        messages.map(async (msg) => {
-          try {
-            // Decrypt the content of each message.
-            const decryptedContent = await decryptMessage(msg.content, encryptionKey);
-            // Return a new message object with the plaintext content.
-            return { ...msg, content: decryptedContent };
-          } catch (error) {
-            console.error(`Failed to decrypt message ID ${msg.id}:`, error);
-            // If a single message fails, show an error but don't crash the app.
-            return { ...msg, content: "[Unable to decrypt this message]" };
-          }
-        })
-      );
-      
-      setDecryptedMessages(decrypted as DirectMessageWithDetails[]);
-    };
-
-    decryptAllMessages();
-  }, [messages, encryptionKey]);
-
+  
   useEffect(() => {
     // This effect runs whenever the user switches to a new conversation.
     const markAsRead = async () => {
@@ -185,7 +150,7 @@ export const ConversationView = ({ conversation, onConversationUpdate }: Convers
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
         ) : (
-          decryptedMessages.map((message) =>
+          messages.map((message) =>
             <DirectMessage
               key={message.id}
               message={message}
