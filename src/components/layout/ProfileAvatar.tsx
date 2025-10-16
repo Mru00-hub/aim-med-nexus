@@ -1,6 +1,6 @@
-// src/components/ProfileAvatar.tsx
+// src/components/layout/ProfileAvatar.tsx
 
-import React, { useMemo } from 'react'; // FIX 1: Added missing useMemo import
+import React, { useMemo } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import {
   DropdownMenu,
@@ -19,29 +19,19 @@ import { generateAvatarUrl } from '@/lib/utils';
 export const ProfileAvatar = () => {
   const { user, profile, signOut, loading } = useAuth();
 
-  const initials = useMemo(() => {
-    if (!profile?.full_name) return '??';
-    const names = profile.full_name.split(' ');
-    if (names.length > 1) {
-      return `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase();
-    }
-    return profile.full_name.substring(0, 2).toUpperCase();
-  }, [profile?.full_name]);
-
-  const formattedRole = useMemo(() => {
-    if (!profile?.user_role) return '';
-    return profile.user_role.charAt(0).toUpperCase() + profile.user_role.slice(1);
-  }, [profile?.user_role]);
+  // --- 1. HANDLE EXIT CASES FIRST ---
 
   // Handle loading state
   if (loading) {
     return <Skeleton className="h-10 w-10 rounded-full" />;
   }
 
+  // Handle logged-out users
   if (!user) {
     return null;
   }
-
+  
+  // Handle users who need to complete their profile
   if (!profile || !profile.full_name) {
     return (
       <Link to="/complete-profile" title="Complete your profile">
@@ -52,6 +42,9 @@ export const ProfileAvatar = () => {
     );
   }
 
+  // --- 2. IF WE REACH HERE, THE USER IS FULLY LOGGED IN WITH A PROFILE ---
+  // All memoized values and logic can now safely assume `profile` exists.
+
   const initials = useMemo(() => {
     const names = profile.full_name.split(' ');
     if (names.length > 1) {
@@ -60,26 +53,13 @@ export const ProfileAvatar = () => {
     return profile.full_name.substring(0, 2).toUpperCase();
   }, [profile.full_name]);
 
+  const formattedRole = useMemo(() => {
+    // No need for optional chaining '?' because we know `profile` exists
+    return profile.user_role.charAt(0).toUpperCase() + profile.user_role.slice(1);
+  }, [profile.user_role]);
+
   // The core logic: If a URL exists, use it. Otherwise, generate the default one.
   const finalAvatarUrl = profile.profile_picture_url || generateAvatarUrl(profile.full_name, user.id);
-
-  if (user && !profile) {
-    return (
-      <Link to="/complete-profile" title="Complete your profile">
-        <Avatar className="cursor-pointer bg-muted">
-          <AvatarFallback className="text-muted-foreground">?</AvatarFallback>
-        </Avatar>
-      </Link>
-    );
-  }
-
-  // FIX 2: Re-added the important check for logged-out users or missing profiles
-  if (!user || !profile) {
-    return null;
-  }
-  
-  // FIX 3: Removed the incorrect closing brace '}' that was here.
-  // The component function now continues correctly to the return statement.
 
   return (
     <DropdownMenu>
@@ -119,4 +99,4 @@ export const ProfileAvatar = () => {
       </DropdownMenuContent>
     </DropdownMenu>
   );
-}; // The component function correctly ends here.
+};
