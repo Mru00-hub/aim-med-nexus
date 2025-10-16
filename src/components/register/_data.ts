@@ -34,7 +34,7 @@ export const courses = [
   { value: "bsc-nursing", label: "B.Sc Nursing" },
   { value: "bpharm", label: "B.Pharm (Bachelor of Pharmacy)" },
   { value: "bpt", label: "BPT (Bachelor of Physiotherapy)" },
-  { value:-- "md", label: "MD (Doctor of Medicine)" },
+  { value: "md", label: "MD (Doctor of Medicine)" },
   { value: "ms", label: "MS (Master of Surgery)" },
   { value: "other", label: "Other" },
 ];
