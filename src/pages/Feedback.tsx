@@ -50,6 +50,14 @@ const Feedback = () => {
       });
       return;
     }
+    if (!formData.category) {
+      toast({
+        variant: "destructive",
+        title: "Missing Information",
+        description: "Please select a feedback category.",
+      });
+      return;
+    }
 
     setIsLoading(true);
     try {
@@ -201,6 +209,7 @@ const Feedback = () => {
                         key={star}
                         type="button"
                         onClick={() => handleRating(star)}
+                        aria-label={`Rate ${star} out of 5 stars`}
                         className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
                           star <= formData.rating 
                             ? 'bg-warning text-warning-foreground' 
@@ -261,7 +270,7 @@ const Feedback = () => {
                   </div>
                   {/* UPDATE THE CONTACT EMAIL AS PER PREVIOUS INSTRUCTIONS */}
                   <p className="text-sm text-muted-foreground text-center mt-4">
-                    For urgent issues, please contact us at: <a href="mailto:mrudulabhalke75917@gmail.com" className="text-primary hover:underline">Phone:8610475917</a>
+                    For urgent issues, email us at <a href="mailto:mrudulabhalke75917@gmail.com" className="text-primary hover:underline">mrudulabhalke75917@gmail.com</a> or call <a href="tel:+918610475917" className="text-primary hover:underline">8610475917</a>.
                   </p>
                 </div>
               </form>
