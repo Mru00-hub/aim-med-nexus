@@ -204,18 +204,6 @@ const Feedback = () => {
                       </SelectContent>
                     </Select>
                   </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Your Email</label>
-                    {/* Make this input read-only as it's tied to the logged-in user */}
-                    <Input 
-                      value={userEmail}
-                      placeholder="Loading your email..."
-                      type="email"
-                      readOnly
-                      className="bg-muted/50 cursor-not-allowed"
-                    />
-                  </div>
                 </div>
 
                 <div>
