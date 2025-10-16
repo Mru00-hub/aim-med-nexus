@@ -1,7 +1,6 @@
 // pages/feedback.tsx OR components/pages/Feedback.tsx
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useUser } from '@supabase/auth-helpers-react'; // Essential hook for user data
 import { submitFeedback, FeedbackFormInput } from '@/lib/api/feedback';
 
@@ -17,7 +16,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Loader2, MessageSquare, Star, Lightbulb, Bug, Heart, Send } from 'lucide-react';
 
 const Feedback = () => {
-  const navigate = useNavigate();
   const user = useUser(); // Get the authenticated user
   const { toast } = useToast(); // Initialize toast
 
