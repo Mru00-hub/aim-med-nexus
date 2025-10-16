@@ -31,3 +31,16 @@ export const generateAvatarUrl = (name: string, userId: string): string => {
     name
   )}&background=${color.substring(1)}&color=fff&size=256&bold=true`;
 };
+
+/**
+ * ✨ NEW ADDITION
+ * Generates a random hexadecimal string (salt) of a given length.
+ * This is used during registration to create a unique value for user data.
+ * @param length The number of bytes to generate, resulting in a hex string twice as long.
+ * @returns A hexadecimal salt string.
+ */
+export const generateSalt = (length = 16): string => {
+  return window.crypto.getRandomValues(new Uint8Array(length)).reduce((acc, byte) => {
+    return acc + ('0' + byte.toString(16)).slice(-2);
+  }, '');
+};
