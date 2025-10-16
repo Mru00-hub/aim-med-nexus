@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, ChangeEvent } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Header } from '@/components/layout/Header';
@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/components/ui/use-toast';
 import { 
   ArrowRight, 
   User, 
@@ -29,7 +30,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
+const generateSalt = (length = 16) => {
+  return window.crypto.getRandomValues(new Uint8Array(length)).reduce((acc, byte) => {
+    return acc + ('0' + byte.toString(16)).slice(-2);
+  }, '');
+};
 /**
  * Registration Page for AIMedNet
  * Multi-tier registration: Student, Professional, Premium
@@ -43,6 +50,8 @@ const Register = () => {
   const [registrationType, setRegistrationType] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string>('');
   const [formData, setFormData] = useState({
     // Personal Details
     firstName: '',
@@ -81,7 +90,60 @@ const Register = () => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  const handleAvatarChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) { // 2MB limit
+        toast({ title: "Image Too Large", description: "Please select an image smaller than 2MB.", variant: "destructive" });
+        return;
+      }
+      setAvatarFile(file);
+      setAvatarPreview(URL.createObjectURL(file));
+    }
+  };
+
+  const validateStep = () => {
+    if (step === 2) {
+      if (!formData.firstName || !formData.lastName || !formData.email || !formData.location || !formData.password || !formData.confirmPassword) {
+        return "Please fill in all required personal information fields.";
+      }
+      if (formData.password.length < 6) {
+        return "Password must be at least 6 characters long.";
+      }
+      if (formData.password !== formData.confirmPassword) {
+        return "Passwords do not match.";
+      }
+    }
+    if (step === 3) {
+      if (!formData.institution || !formData.course) {
+        return "Educational institution and course are required.";
+      }
+      if (registrationType === 'student' && !formData.yearOfStudy) {
+        return "Please select your year of study.";
+      }
+      if (registrationType === 'professional' && (!formData.currentPosition || !formData.organization || !formData.specialization || !formData.experience)) {
+        return "Please fill in all required professional fields.";
+      }
+      if (!formData.agreeToTerms) {
+        return "You must agree to the terms and conditions.";
+      }
+    }
+    return ''; // No errors
+  };
+
+  const removeAvatar = () => {
+    setAvatarFile(null);
+    setAvatarPreview('');
+  };
+
   const handleNext = () => {
+    const validationError = validateStep();
+    if (validationError) {
+      setError(validationError);
+      toast({ title: "Missing Information", description: validationError, variant: "destructive" });
+      return;
+    }
+    setError('');
     if (step < 3) setStep(step + 1);
   };
 
@@ -91,16 +153,41 @@ const Register = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
+    const validationError = validateStep();
+    if (validationError) {
+      setError(validationError);
+      toast({ title: "Submission Error", description: validationError, variant: "destructive" });
       return;
     }
-    if (!formData.agreeToTerms) {
-      setError('You must agree to the terms and conditions.');
-      return;
-    }
+    
     setIsLoading(true);
     setError('');
+    
+    let profilePictureUrl = `https://api.dicebear.com/8.x/initials/svg?seed=${formData.firstName} ${formData.lastName}`;
+    
+    if (avatarFile) {
+      const { data: userSession } = await supabase.auth.getSession();
+      // Temporary user ID for path, will be confirmed by RLS policy.
+      const tempUserId = userSession?.data.session?.user.id ?? crypto.randomUUID();
+      const filePath = `${tempUserId}/${avatarFile.name}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, avatarFile, { upsert: true }); // upsert allows overwriting
+
+      if (uploadError) {
+        setError('Failed to upload profile picture. Please try again.');
+        setIsLoading(false);
+        return;
+      }
+      
+      const { data: publicUrlData } = supabase.storage.from('avatars').getPublicUrl(filePath);
+      profilePictureUrl = publicUrlData.publicUrl;
+    }
+    
+    // --- CHANGE 1: Generate salt for encryption ---
+    const encryptionSalt = generateSalt();
+    
     // --- START OF DEBUGGING SECTION ---
     // 1. First, we construct the metadata object that we INTEND to send.
     const metadataForSupabase = {
@@ -117,6 +204,8 @@ const Register = () => {
       years_experience: formData.experience,
       medical_license: formData.medicalLicense,
       bio: formData.bio,
+      profile_picture_url: profilePictureUrl,
+      encryption_salt: encryptionSalt,
     };
     // 2. Now, we log everything to the console for inspection.
     console.group("--- DEBUG: Submitting Registration ---");
@@ -138,18 +227,8 @@ const Register = () => {
     if (signUpError) {
       setError(signUpError.message);
     } else if (data.user) {
-      // SUCCESS: On successful sign-up, check the registration type
-      if (registrationType === 'premium') {
-        // For premium users, navigate to the payment page
-        console.log("Premium registration successful, navigating to payment page.");
-        navigate('/payment', { replace: true }); // Or whatever your payment page route is
-      } else {
-        // For all other users, navigate to the verification page
-        console.log("Registration successful, navigating to /please-verify");
-        navigate('/please-verify', { replace: true, state: { email: formData.email } });
-      }
+      navigate('/please-verify', { replace: true, state: { email: formData.email } });
     }
-
   };
 
   return (
@@ -185,14 +264,6 @@ const Register = () => {
                   icon: Briefcase,
                   features: ['Unlimited forums access', 'Full networking capabilities', 'Job alerts & opportunities', 'Career upskilling resources'],
                   price: 'Free'
-                },
-                {
-                  type: 'premium',
-                  title: 'Premium Registration', 
-                  description: 'For practicing medical & allied healthcare professionals',
-                  icon: User,
-                  features: ['Priority access & listing', 'Enhanced profile visibility', 'Priority customer support', 'Special partner discounts'],
-                  price: '₹100/month'
                 }
               ].map((option) => (
                 <Card 
@@ -208,9 +279,6 @@ const Register = () => {
                     </div>
                     <CardTitle className="text-lg sm:text-xl">{option.title}</CardTitle>
                     <CardDescription className="text-sm sm:text-base">{option.description}</CardDescription>
-                    <Badge variant={option.type === 'premium' ? 'default' : 'secondary'} className="mx-auto">
-                      {option.price}
-                    </Badge>
                   </CardHeader>
                   <CardContent className="p-4 sm:p-6 pt-0">
                     <ul className="space-y-2">
@@ -224,6 +292,21 @@ const Register = () => {
                   </CardContent>
                 </Card>
               ))}
+              <Card className="card-medical bg-muted/50 border-dashed cursor-not-allowed">
+                <CardHeader className="text-center p-4 sm:p-6">
+                    <div className="w-12 h-12 sm:w-16 sm:h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                        <User className="h-6 w-6 sm:h-8 sm:w-8 text-muted-foreground" />
+                    </div>
+                    <CardTitle className="text-lg sm:text-xl text-muted-foreground">Premium Registration</CardTitle>
+                    <CardDescription className="text-sm sm:text-base">For practicing medical & allied healthcare professionals</CardDescription>
+                </CardHeader>
+                <CardContent className="p-4 sm:p-6 pt-0 text-center">
+                    <Badge variant="outline">Coming Soon</Badge>
+                    <p className="text-muted-foreground text-sm mt-4">
+                        We're preparing exclusive features for premium members. Stay tuned!
+                    </p>
+                </CardContent>
+              </Card>
             </div>
 
             <div className="text-center">
@@ -270,6 +353,33 @@ const Register = () => {
                 <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
                   {step === 2 && (
                     <>
+                      <div className="flex flex-col items-center gap-4">
+                        <div className="relative">
+                          <Avatar className="w-24 h-24 border-2 border-primary/20">
+                            <AvatarImage src={avatarPreview} alt="Profile preview" />
+                            <AvatarFallback className="text-3xl">
+                              {formData.firstName?.[0]}{formData.lastName?.[0]}
+                            </AvatarFallback>
+                          </Avatar>
+                          {avatarPreview && (
+                            <button 
+                              type="button" 
+                              onClick={removeAvatar} 
+                              className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full p-1 hover:bg-destructive/80 transition-colors"
+                            >
+                              <CircleX className="h-4 w-4" />
+                            </button>
+                          )}
+                        </div>
+                        <Button asChild variant="outline">
+                          <label htmlFor="avatar-upload" className="cursor-pointer">
+                            <Upload className="mr-2 h-4 w-4" /> Upload Picture
+                            <input id="avatar-upload" type="file" className="sr-only" accept="image/png, image/jpeg" onChange={handleAvatarChange} />
+                          </label>
+                        </Button>
+                        <p className="text-xs text-muted-foreground">PNG or JPG, max 2MB.</p>
+                      </div>
+                      
                       <div className="grid sm:grid-cols-2 gap-4">
                         <div>
                           <label className="block text-sm font-medium mb-2">First Name *</label>
@@ -779,23 +889,13 @@ const Register = () => {
                     )}
 
                     {step === 2 ? (
-                      <Button 
-                        type="button" 
-                        size="lg" 
-                        className="btn-medical order-1 sm:order-2 sm:ml-auto"
-                        onClick={handleNext}
-                      >
+                      <Button type="button" size="lg" className="btn-medical order-1 sm:order-2 sm:ml-auto" onClick={handleNext}>
                         Next: Educational Details
                         <ArrowRight className="ml-2 h-4 w-4" />
                       </Button>
                     ) : (
-                      <Button 
-                        type="submit" 
-                        size="lg" 
-                        className="btn-medical order-1 sm:order-2 sm:ml-auto"
-                        disabled={!formData.agreeToTerms}
-                      >
-                        {registrationType === 'premium' ? 'Proceed to Payment' : 'Create Account'}
+                      <Button type="submit" size="lg" className="btn-medical order-1 sm:order-2 sm:ml-auto" disabled={isLoading}>
+                        {isLoading ? 'Creating Account...' : 'Create Account'}
                         <ArrowRight className="ml-2 h-4 w-4" />
                       </Button>
                     )}
