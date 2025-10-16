@@ -6,7 +6,7 @@ import { Footer } from '@/components/layout/Footer';
 import { ThreadView } from '@/components/messaging/ThreadView'; // We will put all the logic here
 import AuthGuard from '@/components/AuthGuard'; // Protect this page
 import { useEffect, useState } from 'react';
-import { getThreadDetails, updateThreadDetails, Thread } from '@/integrations/supabase/community.api';
+import { getThreadDetails, updateThreadDetails, getViewerRoleForSpace, Thread, Enums } from '@/integrations/supabase/community.api';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/components/ui/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -19,6 +19,7 @@ type ThreadDetails = {
   title: string;
   description: string | null;
   spaceName: string | null;
+  spaceId: string | null;
   creator_id: string;
 };
 
@@ -28,6 +29,7 @@ export default function ThreadDetailPage() {
   const { toast } = useToast();
   const [threadDetails, setThreadDetails] = useState<ThreadDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [userRole, setUserRole] = useState<Enums<'membership_role'> | null>(null);
 
   const [isEditing, setIsEditing] = useState(false);
   const [editedTitle, setEditedTitle] = useState('');
@@ -44,6 +46,7 @@ export default function ThreadDetailPage() {
           title: data.title,
           description: data.description,
           spaceName: data.spaces?.name || 'Public Thread',
+          spaceId: data.space_id, 
           creator_id: data.creator_id,
         };
         setThreadDetails(details);
@@ -61,6 +64,25 @@ export default function ThreadDetailPage() {
   useEffect(() => {
     fetchDetails();
   }, [threadId]);
+
+  useEffect(() => {
+    const fetchUserRole = async () => {
+      // We only fetch if the thread is in a space
+      if (threadDetails?.spaceId && user) {
+        try {
+          const role = await getViewerRoleForSpace(threadDetails.spaceId);
+          setUserRole(role);
+        } catch (error) {
+          console.error("Failed to fetch user role:", error);
+          setUserRole(null); // Reset on error
+        }
+      }
+    };
+
+    if (threadDetails) {
+      fetchUserRole();
+    }
+  }, [threadDetails, user]);
 
   const handleSaveEdit = async () => {
     if (!threadId || !editedTitle.trim()) {
@@ -83,6 +105,12 @@ export default function ThreadDetailPage() {
     }
   };
 
+  const canEdit = threadDetails && user && (
+    user.id === threadDetails.creator_id || // User is the creator
+    userRole === 'ADMIN' ||                  // User is an Admin of the space
+    userRole === 'MODERATOR'                 // User is a Moderator of the space
+  );
+
   return (
     <AuthGuard>
       <div className="flex flex-col h-screen bg-background">
@@ -97,11 +125,11 @@ export default function ThreadDetailPage() {
               </div>
             ) : threadDetails ? (
               <>
-                {user?.id === threadDetails.creator_id && !isEditing && (
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="absolute top-2 right-2 h-8 w-8"
+                {canEdit && !isEditing && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="absolute top-4 right-4 h-8 w-8" // Positioned for better layout
                     onClick={() => setIsEditing(true)}
                   >
                     <Pencil className="h-4 w-4" />
@@ -131,7 +159,7 @@ export default function ThreadDetailPage() {
                   // --- DISPLAY VIEW ---
                   <>
                     <p className="text-sm text-muted-foreground">{threadDetails.spaceName}</p>
-                    <h1 className="text-3xl font-bold tracking-tight">{threadDetails.title}</h1>
+                    <h1 className="text-3xl font-bold tracking-tight pr-12">{threadDetails.title}</h1> {/* Added padding-right */}
                     {threadDetails.description && (
                       <p className="mt-2 text-lg text-muted-foreground">{threadDetails.description}</p>
                     )}
@@ -143,8 +171,8 @@ export default function ThreadDetailPage() {
             )}
           </header>
           
-          <div className="flex-1">
-            <ThreadView threadId={threadId!} />
+          <div className="flex-1 mt-4"> {/* Added margin-top */}
+            {threadId && <ThreadView threadId={threadId} />}
           </div>
         </main>
         <Footer />
