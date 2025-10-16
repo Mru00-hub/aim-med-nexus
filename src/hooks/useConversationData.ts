@@ -23,13 +23,18 @@ export type MessageWithParent = DirectMessageWithDetails & {
 };
 
 export const useConversationData = (conversationId: string | undefined, recipientId: string | undefined) => {
-    const { user, profile, encryptionKey} = useAuth();
+    const { user, profile, encryptionKey } = useAuth();
     const { toast } = useToast();
+    
+    // This state holds the raw messages (mostly encrypted) from the database
     const [messages, setMessages] = useState<DirectMessageWithDetails[]>([]);
+    // This state holds the final, decrypted messages ready for the UI
     const [displayMessages, setDisplayMessages] = useState<MessageWithParent[]>([]);
+
     const [isLoading, setIsLoading] = useState(true);
     const [replyingTo, setReplyingTo] = useState<DirectMessageWithDetails | null>(null);
-    
+
+    // --- (This function remains unchanged) ---
     const fetchMessages = useCallback(async () => {
       if (!conversationId) return;
       setIsLoading(true);
@@ -46,71 +51,32 @@ export const useConversationData = (conversationId: string | undefined, recipien
 
     useEffect(() => {
         const processMessages = async () => {
-            // If the key isn't ready or there are no messages, do nothing.
             if (!encryptionKey || !messages || messages.length === 0) {
                 setDisplayMessages([]);
                 return;
             }
 
-            toast({
-                title: "Debug Start",
-                description: `Processing ${messages.length} messages. Key is available.`,
-                duration: 2000,
-            });
-
             const decryptedList = await Promise.all(
                 messages.map(async (msg) => {
-                    // If it's an optimistic message, show its plaintext and skip decryption.
                     if ((msg as MessageWithParent).isOptimistic) {
-                        toast({
-                            title: `Debug: Skipping Message ID ${msg.id}`,
-                            description: "Reason: Optimistic message (plaintext).",
-                        });
-                        return msg; 
+                        return msg; // Return optimistic messages as-is (they are plaintext)
                     }
-
-                    // For all other messages, attempt decryption.
                     try {
-                        // THIS IS THE MOST IMPORTANT LOG
-                        toast({
-                            title: `Debug: Attempting Decrypt for ID ${msg.id}`,
-                            description: `Content before decrypt: ${msg.content.substring(0, 40)}...`,
-                            duration: 4000,
-                        });
-
                         const decryptedContent = await decryptMessage(msg.content, encryptionKey);
-                        
-                        toast({
-                            title: `✅ Success: Decrypted ID ${msg.id}`,
-                            description: `Result: ${decryptedContent.substring(0, 40)}...`,
-                            duration: 2000,
-                        });
-                        
                         return { ...msg, content: decryptedContent };
                     } catch (e) {
-                        // This toast will appear if decryption fails.
-                        toast({
-                            variant: "destructive",
-                            title: `❌ FAILED to Decrypt ID ${msg.id}`,
-                            description: `The content was not valid ciphertext. Content was: "${msg.content}"`,
-                            duration: 10000, // Stay on screen longer
-                        });
                         return { ...msg, content: "[Unable to decrypt]" };
                     }
                 })
             );
 
-            // Step B: Build the parent-child relationships from the DECRYPTED list.
             const messageMap = new Map(decryptedList.map(m => [m.id, m]));
             const flatList = decryptedList.map(message => ({
                 ...message,
                 parent_message_details: message.parent_message_id ? messageMap.get(message.parent_message_id) : undefined,
             }));
             
-            // Step C: Sort the final list by creation date.
             const sortedList = flatList.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-
-            // Step D: Set the final, display-ready state.
             setDisplayMessages(sortedList as MessageWithParent[]);
         };
 
@@ -118,25 +84,11 @@ export const useConversationData = (conversationId: string | undefined, recipien
     }, [messages, encryptionKey]);
     
     const handleSendMessage = useCallback(async (content: string, parentMessageId: number | null, files: File[]) => {
-        if (!user || !profile || !conversationId || !encryptionKey) {
-            toast({ variant: 'destructive', title: 'Cannot Send', description: 'Your secure session is not ready.' });
-            return;
-        }
+        if (!user || !profile || !conversationId || !encryptionKey) return;
 
-        if (!recipientId) {
-            toast({ variant: 'destructive', title: 'Error', description: 'Recipient not found.' });
-            return;
-        }
-        
-        // We need the temporary ID outside the try block for the catch block to access it.
         const tempMsgId = -Date.now();
-
         try {
-            // STEP 1: Check connection status first.
-            const isConnected = await canSendMessage(recipientId);
-            if (!isConnected) {
-                throw new Error("You are no longer connected with this user.");
-            }
+            if (!await canSendMessage(recipientId!)) throw new Error("You are no longer connected.");
 
             // STEP 2: Optimistic UI update.
             const optimisticAttachments = files.map((file, index) => ({
@@ -178,14 +130,8 @@ export const useConversationData = (conversationId: string | undefined, recipien
               encryptionKey, // Pass the key for encryption
               parentMessageId
             );
-            const decryptedContent = await decryptMessage(realMessage.content, encryptionKey);
-            const finalMessage = {
-              ...optimisticMessage, // Use the structure of our optimistic message
-              ...realMessage,       // Overwrite with real data from DB (like ID, created_at)
-              content: decryptedContent, // Use the decrypted content
-            };
             
-            setMessages(current => current.map(msg => msg.id === tempMsgId ? finalMessage : msg));
+            setMessages(current => current.map(msg => msg.id === tempMsgId ? realMessage : msg));
 
             // STEP 4: Handle Attachments.
             if (files.length > 0) {
@@ -216,11 +162,9 @@ export const useConversationData = (conversationId: string | undefined, recipien
     const handleDeleteMessage = useCallback(async (messageId: number) => {
         const previousMessages = messages;
         setMessages(current => current.filter(m => m.id !== messageId));
-        try {
-            await deleteDirectMessage(messageId);
-        } catch (error: any) {
+        try { await deleteDirectMessage(messageId); } 
+        catch (error: any) { setMessages(previousMessages);
             toast({ variant: 'destructive', title: 'Delete Failed', description: error.message });
-            setMessages(previousMessages);
         }
     }, [messages, toast]);
     
@@ -228,11 +172,9 @@ export const useConversationData = (conversationId: string | undefined, recipien
         if (!encryptionKey) return;
         const previousMessages = messages;
         setMessages(current => current.map(m => m.id === messageId ? { ...m, content: newContent, is_edited: true } : m));
-        try {
-            await editDirectMessage(messageId, newContent, encryptionKey);
-        } catch (error: any) {
+        try { await editDirectMessage(messageId, newContent, encryptionKey); } 
+        catch (error: any) { setMessages(previousMessages);
             toast({ variant: 'destructive', title: 'Edit Failed', description: error.message });
-            setMessages(previousMessages);
         }
     }, [messages, toast, encryptionKey]);
 
@@ -276,21 +218,12 @@ export const useConversationData = (conversationId: string | undefined, recipien
     
     useEffect(() => {
         fetchMessages();
-        const channel = supabase
-          .channel(`direct_messages:${conversationId}`)
+        const channel = supabase.channel(`direct_messages:${conversationId}`)
           .on('postgres_changes', { event: '*', schema: 'public', table: 'direct_messages', filter: `conversation_id=eq.${conversationId}` }, (payload) => {
-              if (payload.new && payload.new.sender_id === user?.id) {
-                  return; 
-              }
+              if (payload.new && payload.new.sender_id === user?.id) return;
               fetchMessages();
-          })
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'direct_message_reactions' }, () => {
-              fetchMessages();
-          })
-          .subscribe();
-        return () => {
-          supabase.removeChannel(channel);
-        };
+          }).subscribe();
+        return () => { supabase.removeChannel(channel) };
     }, [conversationId, fetchMessages, user?.id]);
 
     return { 
