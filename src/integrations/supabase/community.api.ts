@@ -169,6 +169,27 @@ export const getThreadsCountForSpace = async (spaceId: string): Promise<number> 
     return count || 0;
 };
 
+/** Fetches the current user's role for a specific space. */
+export const getViewerRoleForSpace = async (spaceId: string): Promise<Enums<'membership_role'> | null> => {
+    const session = await getSessionOrThrow();
+    const { data, error } = await supabase
+        .from('memberships')
+        .select('role')
+        .eq('space_id', spaceId)
+        .eq('user_id', session.user.id)
+        .single();
+
+    if (error) {
+        // .single() throws an error if no rows are found.
+        // In our case, no row just means the user is not a member, which is not an application error.
+        if (error.code === 'PGRST116') {
+            return null; 
+        }
+        throw error;
+    }
+    return data?.role || null;
+};
+
 /** Fetches the list of active members and their roles for a space. */
 export const getSpaceMemberList = async (spaceId: string): Promise<MemberProfile[]> => {
     const { data, error } = await supabase
