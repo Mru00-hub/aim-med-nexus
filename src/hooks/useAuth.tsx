@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
 import { Profile } from '@/integrations/supabase/community.api';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { deriveKey } from '@/lib/crypto';
 
 // --- UPDATED: AuthContextType now includes a loading message ---
 interface AuthContextType {
@@ -12,6 +13,8 @@ interface AuthContextType {
   profile: Profile | null;
   loading: boolean;
   loadingMessage: string;// For displaying messages like "Generating your profile..."
+  encryptionKey: CryptoKey | null; 
+  generateAndSetKey: (password: string, salt: string) => Promise<void>;
   refreshProfile: () => Promise<void>;
   signUp: (email: string, password: string, metadata?: any) => Promise<{ data: { user: User | null; }; error: any; }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
@@ -35,6 +38,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadingMessage, setLoadingMessage] = useState('Initializing session...'); // State for the loading message
+  const [encryptionKey, setEncryptionKey] = useState<CryptoKey | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
@@ -89,17 +93,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // This listener now only worries about *changes* after the initial load.
       setSession(newSession);
       setUser(newSession?.user ?? null);
-      // We call the async function here to re-fetch the profile when the user changes.
-      // This also handles the case where the user logs out (newSession becomes null).
-      initializeSession(); 
+      if (!newSession) {
+        setEncryptionKey(null);
+        setProfile(null);
+      } else {
+        // Re-fetch profile on sign-in
+        refreshProfile();
+      }
     });
 
-    // 4. Unsubscribe from the listener when the component unmounts.
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, []); 
 
+  const generateAndSetKey = async (password: string, salt: string) => {
+    if (!password || !salt) {
+      toast({ title: "Encryption Error", description: "Cannot generate key without password and salt.", variant: "destructive" });
+      return;
+    }
+    try {
+      const key = await deriveKey(password, salt);
+      setEncryptionKey(key);
+      console.log("✅ Encryption key derived and set in context.");
+    } catch (error) {
+      console.error("Failed to derive encryption key:", error);
+      toast({ title: "Critical Error", description: "Could not prepare secure session.", variant: "destructive" });
+    }
+  };
+  
   // --- No changes needed for the functions below ---
   const signUp = async (email: string, password: string, metadata?: any) => {
     setLoading(true);
@@ -198,6 +220,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     profile,
     loading,
     loadingMessage,
+    encryptionKey,
     refreshProfile,
     signUp,
     signIn,
