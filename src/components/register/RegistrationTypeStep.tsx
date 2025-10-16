@@ -28,6 +28,11 @@ const registrationOptions = [
 ];
 
 export const RegistrationTypeStep: React.FC<RegistrationTypeStepProps> = ({ registrationType, setRegistrationType, onNext }) => {
+  const handleCardClick = (type: string) => {
+    setRegistrationType(type);
+    onNext();
+  };
+  
   return (
     <div className="max-w-4xl mx-auto animate-slide-up">
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-8">
@@ -37,7 +42,7 @@ export const RegistrationTypeStep: React.FC<RegistrationTypeStepProps> = ({ regi
             className={`card-medical cursor-pointer transition-all hover:shadow-hover ${
               registrationType === option.type ? 'border-primary ring-2 ring-primary/20' : ''
             }`}
-            onClick={() => setRegistrationType(option.type)}
+            onClick={() => handleCardClick(option.type)}
           >
             <CardHeader className="text-center p-4 sm:p-6">
               <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-primary rounded-full flex items-center justify-center mx-auto mb-4">
@@ -73,18 +78,6 @@ export const RegistrationTypeStep: React.FC<RegistrationTypeStepProps> = ({ regi
               </p>
           </CardContent>
         </Card>
-      </div>
-
-      <div className="text-center">
-        <Button 
-          size="lg" 
-          className="btn-medical px-6 sm:px-8 text-sm sm:text-base"
-          disabled={!registrationType}
-          onClick={onNext}
-        >
-          Continue Registration
-          <ArrowRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
-        </Button>
       </div>
     </div>
   );
