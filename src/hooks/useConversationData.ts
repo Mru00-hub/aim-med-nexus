@@ -198,36 +198,67 @@ export const useConversationData = (conversationId: string | undefined, recipien
     }, [messages, user, toast, fetchMessages]);
 
     useEffect(() => {
-        fetchMessages();
-        // Setup Supabase real-time subscription
-        const channel = supabase
-          .channel(`direct_messages:${conversationId}`)
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'direct_messages', filter: `conversation_id=eq.${conversationId}` }, () => {
+      fetchMessages();
+      // Setup Supabase real-time subscription
+      const channel = supabase
+        .channel(`direct_messages:${conversationId}`)
+        .on('postgres_changes', 
+            { event: '*', schema: 'public', table: 'direct_messages', filter: `conversation_id=eq.${conversationId}` }, 
+            (payload) => {
+              // If the new message is from the current user, do nothing.
+              // The optimistic update has already handled it.
+                if (payload.new && payload.new.sender_id === user?.id) {
+                return; 
+                }
+                  // Otherwise, fetch messages because it's a new message from someone else.
+                fetchMessages();
+            })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'direct_message_reactions' }, () => {
               fetchMessages();
-          })
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'direct_message_reactions' }, () => {
-              fetchMessages();
-          })
-          .subscribe();
-        return () => {
-          supabase.removeChannel(channel);
-        };
-    }, [conversationId, fetchMessages]);
+        })
+        .subscribe();
+      
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }, [conversationId, fetchMessages, user?.id]);
     
-    // FIX: This memoized value creates the parent_message_details object.
-    // This is the fix for Problem #2.
-    const flatMessages = useMemo((): MessageWithParent[] => {
-        const messageMap = new Map(messages.map(m => [m.id, m]));
-        return messages
+    const decryptedAndFlatMessages = useMemo((): MessageWithParent[] => {
+        const [decrypted, setDecrypted] = useState<DirectMessageWithDetails[]>([]);
+
+        useEffect(() => {
+            const decryptAll = async () => {
+                if (!encryptionKey || messages.length === 0) {
+                    setDecrypted(messages); // Show raw (likely blank) if no key
+                    return;
+                }
+                const decryptedList = await Promise.all(
+                    messages.map(async msg => {
+                        try {
+                            const decryptedContent = await decryptMessage(msg.content, encryptionKey);
+                            return { ...msg, content: decryptedContent };
+                        } catch (e) {
+                            return { ...msg, content: "[Unable to decrypt]" };
+                        }
+                    })
+                );
+                setDecrypted(decryptedList as DirectMessageWithDetails[]);
+            };
+            decryptAll();
+        }, [messages, encryptionKey]);
+
+        // Now, build the parent details from the DECRYPTED list
+        const messageMap = new Map(decrypted.map(m => [m.id, m]));
+        return decrypted
             .map(message => ({
                 ...message,
                 parent_message_details: message.parent_message_id ? messageMap.get(message.parent_message_id) : null,
             }))
             .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-    }, [messages]);
+    }, [messages, encryptionKey]);
 
     return { 
-        messages: flatMessages, 
+        messages: decryptedAndFlatMessages,
         isLoading, 
         replyingTo,
         setReplyingTo,
