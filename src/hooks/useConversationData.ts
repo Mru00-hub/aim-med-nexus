@@ -55,6 +55,9 @@ export const useConversationData = (conversationId: string | undefined, recipien
             // Step A: Decrypt all messages concurrently.
             const decryptedList = await Promise.all(
                 messages.map(async (msg) => {
+                    if ((msg as MessageWithParent).isOptimistic) {
+                        return msg; // Return the plaintext version as is.
+                    }
                     try {
                         const decryptedContent = await decryptMessage(msg.content, encryptionKey);
                         return { ...msg, content: decryptedContent };
