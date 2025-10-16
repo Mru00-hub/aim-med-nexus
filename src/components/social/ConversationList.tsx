@@ -4,7 +4,6 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Search } from 'lucide-react';
-import { socialApi } from '@/integrations/supabase/social.api';
 import type { Tables } from '@/integrations/supabase/types';
 import TimeAgo from 'react-timeago';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -70,9 +69,6 @@ export const ConversationList = ({ conversations, loading, onSelectConversation,
                             </span>
                         </div>
                         <div className="flex items-center justify-between">
-                            <p className="text-xs text-muted-foreground truncate pr-2 flex-1">
-                                {convo.last_message_content}
-                            </p>
                             {convo.unread_count > 0 && (
                                 <Badge variant="destructive" className="h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs flex-shrink-0">
                                     {convo.unread_count}
