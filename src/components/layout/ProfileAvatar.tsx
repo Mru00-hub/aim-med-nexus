@@ -14,6 +14,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Link } from 'react-router-dom';
 import { Skeleton } from '@/components/ui/skeleton';
 import { LogOut, User, Settings } from 'lucide-react';
+import { generateAvatarUrl } from '@/lib/utils';
 
 export const ProfileAvatar = () => {
   const { user, profile, signOut, loading } = useAuth();
@@ -42,6 +43,8 @@ export const ProfileAvatar = () => {
     return null;
   }
 
+  const finalAvatarUrl = profile.profile_picture_url || generateAvatarUrl(profile.full_name, user.id);
+
   // FIX 3: Removed the incorrect closing brace '}' that was here.
   // The component function now continues correctly to the return statement.
 
@@ -49,7 +52,7 @@ export const ProfileAvatar = () => {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Avatar className="cursor-pointer">
-          <AvatarImage src={profile.profile_picture_url} alt={profile.full_name} />
+          <AvatarImage src={finalAvatarUrl} alt={profile.full_name} />
           <AvatarFallback>{initials}</AvatarFallback>
         </Avatar>
       </DropdownMenuTrigger>
