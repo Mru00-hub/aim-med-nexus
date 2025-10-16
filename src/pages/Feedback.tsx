@@ -277,6 +277,7 @@ const Feedback = () => {
             </CardContent>
           </Card>
         </div>
+      </main>
       <Footer />
     </div>
   );
