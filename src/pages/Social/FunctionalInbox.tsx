@@ -114,7 +114,7 @@ const FunctionalInbox = () => {
       const phantomConversation: Conversation = {
         conversation_id: navState.conversationId,
         last_message_at: new Date().toISOString(),
-        last_message_content: "Start the conversation!",
+        last_message_content: null,
         participant_avatar_url: navState.participant.profile_picture_url,
         participant_full_name: navState.participant.full_name,
         participant_id: navState.participant.id,
