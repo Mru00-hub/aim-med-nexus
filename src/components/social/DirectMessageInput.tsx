@@ -12,9 +12,10 @@ interface DirectMessageInputProps {
   onSendMessage: (content: string, parentMessageId: number | null, files: File[]) => Promise<void>;
   replyingTo: DirectMessageWithDetails | null;
   onCancelReply: () => void;
+  isKeyAvailable: boolean; // 👈 Add a prop to know if encryption is ready
 }
 
-export const DirectMessageInput = ({ onSendMessage, replyingTo, onCancelReply }: DirectMessageInputProps) => {
+export const DirectMessageInput = ({ onSendMessage, replyingTo, onCancelReply, isKeyAvailable }: DirectMessageInputProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   
@@ -97,10 +98,45 @@ export const DirectMessageInput = ({ onSendMessage, replyingTo, onCancelReply }:
         )}
 
         <div className="relative flex items-end gap-2">
-            <input key={fileInputKey} type="file" ref={fileInputRef} onChange={handleFileChange} className="sr-only" multiple />
-            <Button variant="outline" size="icon" className="self-end" title="Attach Files" onClick={() => fileInputRef.current?.click()} type="button"><Paperclip className="h-5 w-5" /></Button>
-            <Textarea ref={textareaRef} placeholder="Type your message..." value={body} onChange={(e) => setBody(e.target.value)} onKeyDown={handleKeyDown} className="flex-grow resize-none max-h-40 min-h-[40px] pt-2.5" disabled={isSending} rows={1} />
-            <Button onClick={handleSend} disabled={isSending || (!body.trim() && attachedFiles.length === 0)} className="self-end" size="icon">
+            <input 
+                key={fileInputKey} 
+                type="file" 
+                ref={fileInputRef} 
+                onChange={handleFileChange} 
+                className="sr-only" 
+                multiple 
+            />
+            <Button 
+                variant="outline" 
+                size="icon" 
+                className="self-end" 
+                title="Attach Files" 
+                onClick={() => fileInputRef.current?.click()} 
+                type="button"
+                // --- 1. Disable the attach button if the key is not available ---
+                disabled={isSending || !isKeyAvailable} 
+            >
+                <Paperclip className="h-5 w-5" />
+            </Button>
+            <Textarea 
+                ref={textareaRef} 
+                // --- 2. Change the placeholder based on key availability ---
+                placeholder={isKeyAvailable ? "Type your message..." : "Preparing secure session..."} 
+                value={body} 
+                onChange={(e) => setBody(e.target.value)} 
+                onKeyDown={handleKeyDown} 
+                className="flex-grow resize-none max-h-40 min-h-[40px] pt-2.5" 
+                // --- 3. Disable the textarea if sending or key is not available ---
+                disabled={isSending || !isKeyAvailable} 
+                rows={1} 
+            />
+            <Button 
+                onClick={handleSend} 
+                // --- 4. Disable the send button if key is not available ---
+                disabled={isSending || (!body.trim() && attachedFiles.length === 0) || !isKeyAvailable} 
+                className="self-end" 
+                size="icon"
+            >
                 {isSending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
             </Button>
         </div>
