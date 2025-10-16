@@ -126,9 +126,8 @@ const CompleteProfile = () => {
     setError('');
 
     try {
+      const metadata = user.user_metadata || {};
       const skillsArray = formData.skills.split(',').map(s => s.trim()).filter(Boolean);
-
-      // --- FIX: Ensure the final URL is the one already in state (which now has the correct priority) ---
       const finalAvatarUrl = avatarUrl; // The useEffect has already set this correctly.
 
       const rawExperienceValue = metadata.years_experience || null;
