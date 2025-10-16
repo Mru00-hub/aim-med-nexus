@@ -14,16 +14,20 @@ import type { Tables } from '@/integrations/supabase/types';
 
 import { ConversationList } from '@/components/social/ConversationList';
 import { ConversationView } from '@/components/social/ConversationView';
+import { useAuth } from '@/hooks/useAuth'; // 👈 We need the auth hook
+import { decryptMessage } from '@/lib/crypto';
 
 type DirectMessagePayload = Tables<'direct_messages'>;
 
 const FunctionalInbox = () => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [decryptedConversations, setDecryptedConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const { setUnreadInboxCount } = useSocialCounts();
   const { toast } = useToast(); // FIX: Initialize toast
   const location = useLocation();
+  const { encryptionKey } = useAuth(); 
 
   // FIX: Refactored to use the new API style with try...catch error handling
   const fetchAndSetConversations = async () => {
@@ -41,6 +45,39 @@ const FunctionalInbox = () => {
         setLoading(false);
     }
   };
+
+  useEffect(() => {
+    const decryptConversationPreviews = async () => {
+      // Don't run if we don't have the key or any conversations to decrypt
+      if (!encryptionKey || conversations.length === 0) {
+        setDecryptedConversations(conversations); // Use raw data if key isn't ready
+        return;
+      }
+
+      // Decrypt the last message for each conversation concurrently
+      const decryptedList = await Promise.all(
+        conversations.map(async (convo) => {
+          // If there's no message content, just return the conversation as is
+          if (!convo.last_message_content) {
+            return convo;
+          }
+
+          try {
+            const decryptedContent = await decryptMessage(convo.last_message_content, encryptionKey);
+            return { ...convo, last_message_content: decryptedContent };
+          } catch (error) {
+            // If decryption fails for one message, don't crash the app.
+            console.error(`Could not decrypt preview for conversation ${convo.conversation_id}`);
+            return { ...convo, last_message_content: "Encrypted message..." };
+          }
+        })
+      );
+
+      setDecryptedConversations(decryptedList);
+    };
+
+    decryptConversationPreviews();
+  }, [conversations, encryptionKey]);
 
   // This effect remains the same and is correct.
   useEffect(() => {
@@ -142,7 +179,7 @@ const FunctionalInbox = () => {
         <div className="grid lg:grid-cols-4 gap-6 min-h-[700px] animate-slide-up">
           <Card className="card-medical lg:col-span-1 flex flex-col max-h-[700px]">
             <ConversationList 
-              conversations={conversations}
+              conversations={decryptedConversations}
               loading={loading}
               onSelectConversation={setSelectedConversation}
               selectedConversationId={selectedConversation?.conversation_id || null}
