@@ -7,7 +7,7 @@ import { Footer } from '@/components/layout/Footer';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { Plus, Users, Hash, Trash2 } from 'lucide-react';
+import { Plus, Users, Hash, Trash2, Pencil, Loader2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/components/ui/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -20,6 +20,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { useCommunity } from '@/context/CommunityContext';
 import { useSpaceThreads, useSpaceMetrics, useSpaceMemberList } from '@/hooks/useSpaceData';
 import { CreateThreadForm } from './CreateThread'; 
+import { updateSpaceDetails, Enums } from '@/integrations/supabase/community.api';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export default function SpaceDetailPage() {
   const { user } = useAuth();
@@ -29,7 +33,7 @@ export default function SpaceDetailPage() {
 
   // --- DATA FETCHING ---
   // 1. Get GLOBAL data from the context for efficiency.
-  const { spaces, isLoadingSpaces, getMembershipStatus } = useCommunity();
+  const { spaces, isLoadingSpaces, getMembershipStatus, refreshSpaces } = useCommunity();
   // 2. Get LOCAL data for this page using dedicated hooks.
   const { threads, isLoadingThreads, refreshThreads } = useSpaceThreads(spaceId);
   const { memberCount, threadCount, isLoadingMetrics } = useSpaceMetrics(spaceId);
@@ -40,6 +44,11 @@ export default function SpaceDetailPage() {
 
   // --- UI STATE ---
   const [showCreateThread, setShowCreateThread] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [editedName, setEditedName] = useState('');
+  const [editedDescription, setEditedDescription] = useState('');
+  const [editedJoinLevel, setEditedJoinLevel] = useState<Enums<'space_join_level'>>('OPEN');
 
   // --- LOGIC & EFFECTS ---
   // The initial page load is dependent on fetching the list of all spaces.
@@ -72,7 +81,7 @@ export default function SpaceDetailPage() {
           default: return 'secondary';
       }
   };
-
+  
   // Effect to redirect if the space doesn't exist after loading is complete.
   useEffect(() => {
       if (!isLoadingSpaces && !space) {
@@ -81,7 +90,38 @@ export default function SpaceDetailPage() {
       }
   }, [isLoadingSpaces, space, navigate, toast]);
 
+  useEffect(() => {
+    if (space) {
+        setEditedName(space.name);
+        setEditedDescription(space.description || '');
+        setEditedJoinLevel(space.join_level);
+    }
+  }, [space]);
+
   // --- ASYNCHRONOUS ACTIONS ---
+
+  const handleSave = async () => {
+    if (!space || !editedName.trim()) {
+        toast({ title: "Name cannot be empty.", variant: "destructive" });
+        return;
+    }
+    setIsSaving(true);
+    try {
+        await updateSpaceDetails(space.id, {
+            name: editedName,
+            description: editedDescription,
+            join_level: editedJoinLevel,
+        });
+        toast({ title: "Success!", description: "Space details updated." });
+        setIsEditing(false);
+        // NOTE: Ensure your CommunityContext provides this refresh function
+        if(refreshSpaces) refreshSpaces();
+    } catch (error: any) {
+        toast({ title: "Update Failed", description: error.message, variant: "destructive" });
+    } finally {
+        setIsSaving(false);
+    }
+  };
 
   const handleDeleteSpace = async () => {
       if (!space) return;
@@ -192,19 +232,45 @@ export default function SpaceDetailPage() {
       <Header />
       <main className="container mx-auto py-8 px-4 flex-grow">
         {loading ? (
-          <>
-            <Skeleton className="h-12 w-3/4 mb-4" />
-            <Skeleton className="h-8 w-1/2 mb-8" />
-            <div className="space-y-4">
-                <Skeleton className="h-24 w-full" />
-                <Skeleton className="h-24 w-full" />
-            </div>
-          </>
+            <Skeleton className="h-40 w-full mb-8" />
         ) : space ? (
           <>
             <Card className="mb-8">
               <CardHeader>
-                <div className="flex justify-between items-start">
+                {isEditing ? (
+                  // --- EDITING VIEW ---
+                  <div className="space-y-4">
+                    <h3 className="text-xl font-semibold">Editing Space Details</h3>
+                    <div>
+                        <label htmlFor="edit-name" className="text-sm font-medium text-muted-foreground">Space Name</label>
+                        <Input id="edit-name" value={editedName} onChange={(e) => setEditedName(e.target.value)} className="text-2xl h-auto p-0 border-0 shadow-none focus-visible:ring-0" />
+                    </div>
+                    <div>
+                        <label htmlFor="edit-desc" className="text-sm font-medium text-muted-foreground">Description</label>
+                        <Textarea id="edit-desc" value={editedDescription} onChange={(e) => setEditedDescription(e.target.value)} placeholder="What is this space about?" className="mt-1" />
+                    </div>
+                    <div>
+                        <label htmlFor="edit-join" className="text-sm font-medium text-muted-foreground">Join Level</label>
+                        <Select value={editedJoinLevel} onValueChange={(v: Enums<'space_join_level'>) => setEditedJoinLevel(v)}>
+                          <SelectTrigger className="w-[180px] mt-1">
+                            <SelectValue placeholder="Select join level" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="OPEN">Open</SelectItem>
+                            <SelectItem value="INVITE_ONLY">Invite Only</SelectItem>
+                          </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="flex justify-end gap-2">
+                        <Button variant="ghost" onClick={() => setIsEditing(false)} disabled={isSaving}>Cancel</Button>
+                        <Button onClick={handleSave} disabled={isSaving}>
+                            {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Save Changes
+                        </Button>
+                    </div>
+                  </div>
+                ) : (
+                  // --- DISPLAY VIEW ---
+                  <div className="flex justify-between items-start">
                     <div>
                         <CardTitle className="text-3xl">{space.name}</CardTitle>
                         <div className="text-sm text-muted-foreground flex items-center gap-2 flex-wrap mt-2">
@@ -216,12 +282,12 @@ export default function SpaceDetailPage() {
                     </div>
                     {isUserAdminOrMod && (
                       <div className="flex items-center gap-2 flex-shrink-0 ml-4">
+                        {/* NEW: Edit Button */}
+                        <Button size="sm" variant="outline" onClick={() => setIsEditing(true)}>
+                            <Pencil className="h-4 w-4 mr-2" /> Edit
+                        </Button>
                         <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button size="sm" variant="destructive">
-                              <Trash2 className="h-4 w-4 mr-2" /> Delete Space
-                            </Button>
-                          </AlertDialogTrigger>
+                          <AlertDialogTrigger asChild><Button size="sm" variant="destructive"><Trash2 className="h-4 w-4 mr-2" /> Delete</Button></AlertDialogTrigger>
                           <AlertDialogContent>
                             <AlertDialogHeader>
                               <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
