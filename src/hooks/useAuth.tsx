@@ -4,9 +4,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
 import { Profile } from '@/integrations/supabase/community.api';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { deriveKey } from '@/lib/crypto';
+import { deriveKey, generateConversationKey, exportConversationKey } from '@/lib/crypto';
 
-const ENCRYPTION_KEY_STORAGE_KEY = 'aimednet-encryption-key';
+const PERSONAL_KEY_STORAGE_KEY = 'aimednet-personal-key';
 
 interface AuthContextType {
   user: User | null;
@@ -14,8 +14,9 @@ interface AuthContextType {
   profile: Profile | null;
   loading: boolean;
   loadingMessage: string;
-  encryptionKey: CryptoKey | null; 
-  generateAndSetKey: (password: string, salt: string) => Promise<void>;
+  personalKey: CryptoKey | null; // Renamed from encryptionKey
+  userMasterKey: CryptoKey | null;
+  generateAndSetKeys: (password: string, salt: string) => Promise<boolean>;
   refreshProfile: () => Promise<void>;
   signUp: (email: string, password: string, metadata?: any) => Promise<{ data: { user: User | null; }; error: any; }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
@@ -39,7 +40,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadingMessage, setLoadingMessage] = useState('Initializing session...');
-  const [encryptionKey, setEncryptionKey] = useState<CryptoKey | null>(null);
+  const [personalKey, setPersonalKey] = useState<CryptoKey | null>(null); // Renamed
+  const [userMasterKey, setUserMasterKey] = useState<CryptoKey | null>(null); 
   const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
@@ -199,31 +201,50 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [toast]);
 
-  const generateAndSetKey = async (password: string, salt: string) => {
-    if (!password || !salt) {
-      toast({ 
-        title: "Encryption Error", 
-        description: "Cannot generate key without password and salt.", 
-        variant: "destructive" 
-      });
-      return;
+  const generateAndSetKeys = async (password: string, salt: string): Promise<boolean> => {
+    if (!password || !salt || !profile) {
+      toast({ title: "Key Generation Failed", variant: "destructive" });
+      return false;
     }
-    
-    try {
-      const key = await deriveKey(password, salt);
-      setEncryptionKey(key);
-      
-      const jwk = await crypto.subtle.exportKey('jwk', key);
-      sessionStorage.setItem(ENCRYPTION_KEY_STORAGE_KEY, JSON.stringify(jwk));
 
-      console.log("✅ Encryption key derived and saved to session storage.");
+    try {
+      // Step 1: Derive the temporary personalKey from the password
+      const derivedPersonalKey = await deriveKey(password, salt);
+      setPersonalKey(derivedPersonalKey);
+
+      // Step 2: Check if the user has a permanent master key stored
+      if (profile.encrypted_user_master_key) {
+        // User exists, decrypt their master key
+        const masterKeyJwkString = await decryptMessage(profile.encrypted_user_master_key, derivedPersonalKey);
+        const masterKey = await importConversationKey(masterKeyJwkString); // You'll add this to crypto.ts
+        setUserMasterKey(masterKey);
+        console.log("✅ User master key unlocked.");
+
+      } else {
+        // First-time setup for this user. Generate, encrypt, and store their master key.
+        console.log("🔑 First-time setup: generating user master key...");
+        const newMasterKey = await generateConversationKey(); // Re-use the same generator
+        setUserMasterKey(newMasterKey);
+
+        const masterKeyJwkString = await exportConversationKey(newMasterKey);
+        const encryptedMasterKey = await encryptMessage(masterKeyJwkString, derivedPersonalKey);
+
+        // Store it in the database
+        const { error } = await supabase
+          .from('profiles')
+          .update({ encrypted_user_master_key: encryptedMasterKey })
+          .eq('id', profile.id);
+
+        if (error) throw error;
+        await refreshProfile(); // Refresh profile to get the new value
+        console.log("✅ New user master key generated and stored.");
+      }
+      return true;
+
     } catch (error) {
-      console.error("Failed to derive encryption key:", error);
-      toast({ 
-        title: "Critical Error", 
-        description: "Could not prepare secure session.", 
-        variant: "destructive" 
-      });
+      console.error("Failed to generate/unlock keys:", error);
+      // This catch block is important. It will catch decryption errors (wrong password).
+      return false;
     }
   };
 
@@ -366,8 +387,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     profile,
     loading,
     loadingMessage,
-    encryptionKey,
-    generateAndSetKey,
+    personalKey,
+    userMasterKey,
+    generateAndSetKeys, 
     refreshProfile, 
     signUp,
     signIn,
