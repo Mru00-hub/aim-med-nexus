@@ -10,18 +10,17 @@ import { MessageCircle } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast'; // FIX: Import useToast for error handling
 import { getInbox, Conversation } from '@/integrations/supabase/social.api'; // FIX: Import new standalone function and type
 import { supabase } from '@/integrations/supabase/client';
-import type { Tables } from '@/integrations/supabase/types';
+import type { Tables, Database } from '@/integrations/supabase/types';
 
 import { ConversationList } from '@/components/social/ConversationList';
 import { ConversationView } from '@/components/social/ConversationView';
 import { useAuth } from '@/hooks/useAuth'; // 👈 We need the auth hook
 import { decryptMessage } from '@/lib/crypto';
-
+type Conversation = Database['public']['Functions']['get_inbox_conversations']['Returns'][0];
 type DirectMessagePayload = Tables<'direct_messages'>;
 
 const FunctionalInbox = () => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [decryptedConversations, setDecryptedConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const { setUnreadInboxCount } = useSocialCounts();
@@ -31,54 +30,23 @@ const FunctionalInbox = () => {
 
   // FIX: Refactored to use the new API style with try...catch error handling
   const fetchAndSetConversations = async () => {
-    // Keep loading true at the start for subsequent fetches
     setLoading(true);
     try {
-      const data = await getInbox();
+      // The getInbox function is now correctly typed
+      const data = await supabase.rpc('get_inbox_conversations');
+      if (data.error) throw data.error;
+      
       // Sort conversations to show starred ones at the top
-      data.sort((a, b) => (b.is_starred ? 1 : 0) - (a.is_starred ? 1 : 0));
-      setConversations(data);
+      data.data.sort((a, b) => (b.is_starred ? 1 : 0) - (a.is_starred ? 1 : 0));
+      setConversations(data.data);
     } catch (error: any) {
-        console.error("Failed to fetch inbox:", error);
-        toast({ title: "Error", description: "Could not load your inbox.", variant: "destructive" });
+      console.error("Failed to fetch inbox:", error);
+      toast({ title: "Error", description: "Could not load your inbox.", variant: "destructive" });
     } finally {
-        setLoading(false);
+      setLoading(false);
     }
   };
-
-  useEffect(() => {
-    const decryptConversationPreviews = async () => {
-      // Don't run if we don't have the key or any conversations to decrypt
-      if (!encryptionKey || conversations.length === 0) {
-        setDecryptedConversations(conversations); // Use raw data if key isn't ready
-        return;
-      }
-
-      // Decrypt the last message for each conversation concurrently
-      const decryptedList = await Promise.all(
-        conversations.map(async (convo) => {
-          // If there's no message content, just return the conversation as is
-          if (!convo.last_message_content) {
-            return convo;
-          }
-
-          try {
-            const decryptedContent = await decryptMessage(convo.last_message_content, encryptionKey);
-            return { ...convo, last_message_content: decryptedContent };
-          } catch (error) {
-            // If decryption fails for one message, don't crash the app.
-            console.error(`Could not decrypt preview for conversation ${convo.conversation_id}`);
-            return { ...convo, last_message_content: "Encrypted message..." };
-          }
-        })
-      );
-
-      setDecryptedConversations(decryptedList);
-    };
-
-    decryptConversationPreviews();
-  }, [conversations, encryptionKey]);
-
+  
   // This effect remains the same and is correct.
   useEffect(() => {
     const totalUnread = conversations.reduce((acc, convo) => acc + (convo.unread_count || 0), 0);
@@ -101,40 +69,14 @@ const FunctionalInbox = () => {
       return () => { supabase.removeChannel(channel); };
   }, []);
 
-  const handleMarkAsRead = async (conversationId: string) => {
-    // 1. OPTIMISTIC UPDATE: Immediately update the local state.
-    setConversations(prevConvos =>
-      prevConvos.map(convo =>
-        convo.conversation_id === conversationId
-          ? { ...convo, unread_count: 0 } // Instantly set the count to zero
-          : convo
+  const handleSelectConversation = (conversation: Conversation) => {
+    setSelectedConversation(conversation);
+    // Optimistically mark as read in the UI immediately for a faster feel
+    setConversations(prev =>
+      prev.map(c =>
+        c.conversation_id === conversation.conversation_id ? { ...c, unread_count: 0 } : c
       )
     );
-
-    // 2. BACKGROUND TASK: Tell the database to make the change permanent.
-    // We don't need to wait for this to finish.
-    try {
-      await supabase.rpc('mark_conversation_as_read', { 
-        p_conversation_id: conversationId 
-      });
-      // We don't even need to refetch here, because our local state is already correct!
-    } catch (error) {
-      console.error("Failed to mark conversation as read in the background:", error);
-      toast({
-        title: "Error",
-        description: "Could not mark messages as read. Please try again.",
-        variant: "destructive",
-      });
-      
-      // Set the conversation's unread_count back to its original value.
-      setConversations(prevConvos =>
-        prevConvos.map(convo =>
-          convo.conversation_id === conversationId
-            ? { ...convo, unread_count: originalUnreadCount }
-            : convo
-        )
-      );
-    }
   };
   
   // This effect for handling navigation state is also correct.
@@ -145,24 +87,21 @@ const FunctionalInbox = () => {
     const convoInList = conversations.find(c => c.conversation_id === navState.conversationId);
 
     if (convoInList) {
-      setSelectedConversation(convoInList);
+      handleSelectConversation(convoInList);
     } else if (!loading && conversations.length > 0 && navState.participant) {
-      // Create a temporary "phantom" conversation to show in the UI until the real one loads
       const phantomConversation: Conversation = {
         conversation_id: navState.conversationId,
         last_message_at: new Date().toISOString(),
-        last_message_content: null,
+        last_message_content: "Starting new conversation...",
         participant_avatar_url: navState.participant.profile_picture_url,
         participant_full_name: navState.participant.full_name,
         participant_id: navState.participant.id,
         unread_count: 0,
-        updated_at: new Date().toISOString(),
         is_starred: false,
       };
       setConversations(prev => [phantomConversation, ...prev]);
       setSelectedConversation(phantomConversation);
     }
-    // Clear the location state after handling it
     window.history.replaceState({}, document.title);
   }, [location.state, conversations, loading]);
   
