@@ -43,20 +43,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
-  const refreshProfile = useCallback(async (userForProfile: User) => {
-    if (!userForProfile) {
-      setProfile(null); // Clear profile if user is null
-      return;
-    };
+  const refreshProfile = useCallback(async () => {
+    // This now safely uses the `user` state variable.
+    if (!user) return;
     try {
-      const { data } = await supabase.from('profiles').select('*').eq('id', userForProfile.id).single();
+      const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single();
       setProfile(data);
     } catch (error) {
       console.error("Failed to refresh profile:", error);
-      setProfile(null); // Ensure profile is cleared on error
     }
-  }, []);
-
+  }, [user]); 
+  
   useEffect(() => {
     const loadKeyFromSession = async () => {
       const storedKey = sessionStorage.getItem(ENCRYPTION_KEY_STORAGE_KEY);
@@ -82,35 +79,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []); 
 
   useEffect(() => {
-    const initializeSession = async () => {
-      const { data: { session: initialSession } } = await supabase.auth.getSession();
-      if (initialSession) {
-        // Fetch profile before setting initial user state to prevent flicker
-        await refreshProfile(initialSession.user);
-        setSession(initialSession);
-        setUser(initialSession.user);
-      }
-      setLoading(false);
-    };
-    initializeSession();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
-      // Fetch the new profile data
-      await refreshProfile(newSession?.user ?? null);
-      // Now set the session and user state together
-      setSession(newSession);
-      setUser(newSession?.user ?? null);
-
-      if (!newSession) {
+    setLoading(true);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (session?.user) {
+        const { data: userProfile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+        
+        setProfile(userProfile);
+        setSession(session);
+        setUser(session.user);
+      } else {
+        setUser(null);
+        setSession(null);
+        setProfile(null);
         setEncryptionKey(null);
         sessionStorage.removeItem(ENCRYPTION_KEY_STORAGE_KEY);
       }
+      setLoading(false);
     });
 
     return () => {
       subscription.unsubscribe();
     };
-  }, [refreshProfile]);
+  }, []);
 
   const generateAndSetKey = async (password: string, salt: string) => {
     if (!password || !salt) {
@@ -209,18 +203,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signOut = async () => {
     setLoading(true);
     sessionStorage.removeItem(ENCRYPTION_KEY_STORAGE_KEY);
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      toast({
-        title: "Sign Out Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    } else {
-      toast({
-        title: "Signed out successfully",
-      });
-    }
+    await supabase.auth.signOut();
     setLoading(false);
   };
 
@@ -232,7 +215,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     loadingMessage,
     encryptionKey,
     generateAndSetKey,
-    refreshProfile,
+    refreshProfile, 
     signUp,
     signIn,
     signOut,
