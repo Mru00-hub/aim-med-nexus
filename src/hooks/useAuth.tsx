@@ -48,7 +48,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const isAuthOperationInProgress = useRef(false);
 
   // Fetch profile helper with error handling
-  const fetchProfile = async (userId: string): Promise<Profile | null> => {
+  const fetchProfile = useCallback(async (userId: string): Promise<Profile | null> => {
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -71,7 +71,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error("Unexpected error fetching profile:", error);
       return null;
     }
-  };
+  }, [toast]); 
 
   // FIXED: Initialize auth state with getSession AND listen for changes
   useEffect(() => {
@@ -151,7 +151,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       mounted = false;
       subscription.unsubscribe();
     };
-  }, [toast]);
+  }, [fetchProfile]);
 
   // FIXED: refreshProfile no longer depends on user state
   const refreshProfile = useCallback(async () => {
@@ -172,7 +172,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         variant: "destructive",
       });
     }
-  }, [toast]);
+  }, [fetchProfile]);
 
   const generateAndSetKeys = async (password: string, salt: string): Promise<boolean> => {
     if (!password || !salt || !profile) {
