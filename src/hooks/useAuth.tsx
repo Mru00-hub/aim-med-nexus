@@ -49,31 +49,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Use ref to prevent race conditions with auth operations
   const isAuthOperationInProgress = useRef(false);
 
-  // Load encryption key from session storage on mount
-  useEffect(() => {
-    const loadKeyFromSession = async () => {
-      const storedKey = sessionStorage.getItem(ENCRYPTION_KEY_STORAGE_KEY);
-      if (storedKey) {
-        try {
-          const jwk = JSON.parse(storedKey);
-          const key = await crypto.subtle.importKey(
-            'jwk',
-            jwk,
-            { name: 'AES-GCM', length: 256 },
-            true,
-            ['encrypt', 'decrypt']
-          );
-          setEncryptionKey(key);
-          console.log("✅ Encryption key loaded from session storage.");
-        } catch (e) {
-          console.error("Failed to load encryption key from session:", e);
-          sessionStorage.removeItem(ENCRYPTION_KEY_STORAGE_KEY);
-        }
-      }
-    };
-    loadKeyFromSession();
-  }, []);
-
   // Fetch profile helper with error handling
   const fetchProfile = async (userId: string): Promise<Profile | null> => {
     try {
@@ -167,8 +142,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setUser(null);
           setSession(null);
           setProfile(null);
-          setEncryptionKey(null);
-          sessionStorage.removeItem(ENCRYPTION_KEY_STORAGE_KEY);
+          setPersonalKey(null);
+          setUserMasterKey(null);
+          sessionStorage.removeItem(PERSONAL_KEY_STORAGE_KEY);
           setLoadingMessage('');
         }
       }
