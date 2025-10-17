@@ -4,9 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
 import { Profile } from '@/integrations/supabase/community.api';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { deriveKey, generateConversationKey, exportConversationKey } from '@/lib/crypto';
-
-const PERSONAL_KEY_STORAGE_KEY = 'aimednet-personal-key';
+import { deriveKey, generateConversationKey, exportConversationKey, decryptMessage, importConversationKey } from '@/lib/crypto';
 
 interface AuthContextType {
   user: User | null;
@@ -144,7 +142,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setProfile(null);
           setPersonalKey(null);
           setUserMasterKey(null);
-          sessionStorage.removeItem(PERSONAL_KEY_STORAGE_KEY);
           setLoadingMessage('');
         }
       }
@@ -342,7 +339,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLoadingMessage('Signing out...');
     
     try {
-      sessionStorage.removeItem(ENCRYPTION_KEY_STORAGE_KEY);
       await supabase.auth.signOut();
     } catch (error) {
       console.error("Sign out error:", error);
