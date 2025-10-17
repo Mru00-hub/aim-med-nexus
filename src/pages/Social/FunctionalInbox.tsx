@@ -118,9 +118,9 @@ const FunctionalInbox = () => {
         <div className="grid lg:grid-cols-4 gap-6 min-h-[700px] animate-slide-up">
           <Card className="card-medical lg:col-span-1 flex flex-col max-h-[700px]">
             <ConversationList 
-              conversations={decryptedConversations}
+              conversations={conversations}
               loading={loading}
-              onSelectConversation={setSelectedConversation}
+              onSelectConversation={handleSelectConversation}
               selectedConversationId={selectedConversation?.conversation_id || null}
             />
           </Card>
@@ -128,7 +128,6 @@ const FunctionalInbox = () => {
             {selectedConversation ? (
               <ConversationView 
                 conversation={selectedConversation} 
-                onMarkAsRead={handleMarkAsRead}
                 onConversationUpdate={fetchAndSetConversations}
               />
             ) : (
