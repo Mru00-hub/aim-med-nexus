@@ -3,13 +3,13 @@ import { CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Search } from 'lucide-react';
-import type { Tables } from '@/integrations/supabase/types';
+import { Search, Lock } from 'lucide-react';
+import type { Tables, Database } from '@/integrations/supabase/types';
 import TimeAgo from 'react-timeago';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Star } from 'lucide-react';
 
-type Conversation = Tables<'inbox_conversations'> & { is_starred?: boolean };
+type Conversation = Database['public']['Functions']['get_inbox_conversations']['Returns'][0];
 
 interface ConversationListProps {
   conversations: Conversation[];
@@ -69,8 +69,15 @@ export const ConversationList = ({ conversations, loading, onSelectConversation,
                             </span>
                         </div>
                         <div className="flex items-center justify-between">
-                            <p className="text-xs text-muted-foreground truncate pr-2 flex-1">
-                                {convo.last_message_content}
+                            <p className="text-xs text-muted-foreground truncate pr-2 flex-1 flex items-center gap-1.5">
+                              {convo.last_message_content ? (
+                                <>
+                                  <Lock className="h-3 w-3 flex-shrink-0" />
+                                  <span>Encrypted Message</span>
+                                </>
+                              ) : (
+                                <span>No messages yet</span>
+                              )}
                             </p>
                             {convo.unread_count > 0 && (
                                 <Badge variant="destructive" className="h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs flex-shrink-0">
