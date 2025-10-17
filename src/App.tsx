@@ -10,7 +10,7 @@ import OnboardingGuard from "@/components/OnboardingGuard";
 import { CommunityProvider } from "./context/CommunityContext"; 
 import { SocialCountsProvider } from './context/SocialCountsContext'; // Import the provider
 import { SecureRouteGuard } from './components/SecureRouteGuard';
-
+import { Loader2 } from 'lucide-react';
 // --- Core Page Imports ---
 import Index from "./pages/Index";
 import Jobs from "./pages/Jobs";
@@ -43,7 +43,17 @@ const queryClient = new QueryClient();
 
 // Helper component to render a different component based on authentication status.
 const ConditionalRoute = ({ AuthComponent, PublicComponent }: { AuthComponent: React.ComponentType, PublicComponent: React.ComponentType }) => {
-  const { user } = useAuth();
+  // ✅ FIX: Get and check the `loading` state.
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-background">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      </div>
+    );
+  }
+  
   return user ? <AuthComponent /> : <PublicComponent />;
 };
 
