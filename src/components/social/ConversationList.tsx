@@ -9,7 +9,7 @@ import TimeAgo from 'react-timeago';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Star } from 'lucide-react';
 
-type Conversation = Database['public']['Functions']['get_inbox_conversations']['Returns'][0];
+type Conversation = Database['public']['Functions']['inbox_conversations']['Returns'][0];
 
 interface ConversationListProps {
   conversations: Conversation[];
