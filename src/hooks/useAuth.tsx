@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
@@ -43,11 +43,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
-  const refreshProfile = async (userForProfile: User) => {
-    if (!userForProfile) return;
-    const { data } = await supabase.from('profiles').select('*').eq('id', userForProfile.id).single();
-    setProfile(data);
-  };
+  const refreshProfile = useCallback(async (userForProfile: User) => {
+    if (!userForProfile) {
+      setProfile(null); // Clear profile if user is null
+      return;
+    };
+    try {
+      const { data } = await supabase.from('profiles').select('*').eq('id', userForProfile.id).single();
+      setProfile(data);
+    } catch (error) {
+      console.error("Failed to refresh profile:", error);
+      setProfile(null); // Ensure profile is cleared on error
+    }
+  }, []);
 
   useEffect(() => {
     const loadKeyFromSession = async () => {
@@ -74,65 +82,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []); 
 
   useEffect(() => {
-    // 1. Define an async function to get the initial session and profile.
     const initializeSession = async () => {
-      // Get the initial session data
-      const { data: { session: initialSession }, error: sessionError } = await supabase.auth.getSession();
-
-      if (sessionError) {
-        console.error("Error getting session:", sessionError);
-        toast({ title: "Error", description: "Could not initialize session.", variant: "destructive" });
-        setLoading(false);
-        return;
-      }
-
+      const { data: { session: initialSession } } = await supabase.auth.getSession();
       if (initialSession) {
-        // If a session exists, fetch the corresponding profile
-        const { data: userProfile, error: profileError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', initialSession.user.id)
-          .single();
-        
-        if (profileError && profileError.code !== 'PGRST116') {
-          console.error("Error fetching initial profile:", profileError);
-          toast({ title: "Could not load profile", description: profileError.message, variant: "destructive" });
-        } else {
-          setProfile(userProfile);
-        }
-        
-        // Set user and session state
-        setUser(initialSession.user);
+        // Fetch profile before setting initial user state to prevent flicker
+        await refreshProfile(initialSession.user);
         setSession(initialSession);
+        setUser(initialSession.user);
       }
-      
-      // We are done with the initial load
       setLoading(false);
     };
-
-    // 2. Call the initialization function.
     initializeSession();
 
-    // 3. Set up the listener for ANY SUBSEQUENT auth changes.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
+      // Fetch the new profile data
+      await refreshProfile(newSession?.user ?? null);
+      // Now set the session and user state together
+      setSession(newSession);
+      setUser(newSession?.user ?? null);
+
       if (!newSession) {
-        setSession(null);
-        setUser(null);
-        setProfile(null);
         setEncryptionKey(null);
         sessionStorage.removeItem(ENCRYPTION_KEY_STORAGE_KEY);
-      } else {
-        // Await the profile fetch BEFORE setting the user state
-        await refreshProfile(newSession.user);
-        setSession(newSession);
-        setUser(newSession.user);
       }
     });
 
     return () => {
       subscription.unsubscribe();
     };
-  }, []); 
+  }, [refreshProfile]);
 
   const generateAndSetKey = async (password: string, salt: string) => {
     if (!password || !salt) {
