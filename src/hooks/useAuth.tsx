@@ -209,7 +209,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .eq('id', profile.id);
 
         if (error) throw error;
-        await refreshProfile(); // Refresh profile to get the new value
+        await refreshProfile(); 
+        setUserMasterKey(newMasterKey);
         console.log("✅ New user master key generated and stored.");
       }
       return true;
