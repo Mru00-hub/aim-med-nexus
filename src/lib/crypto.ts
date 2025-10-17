@@ -100,3 +100,62 @@ export const decryptMessage = async (bundledCiphertext: string, key: CryptoKey):
   const decoder = new TextDecoder();
   return decoder.decode(decryptedBuffer);
 };
+
+/**
+ * Generates a new random conversation key or user master key.
+ */
+export const generateConversationKey = async (): Promise<CryptoKey> => {
+  return crypto.subtle.generateKey(
+    { name: "AES-GCM", length: 256 },
+    true, // Make the key exportable
+    ["encrypt", "decrypt"]
+  );
+};
+
+/**
+ * Exports a CryptoKey to a storable JSON Web Key (JWK) string format.
+ */
+export const exportConversationKey = async (key: CryptoKey): Promise<string> => {
+  const jwk = await crypto.subtle.exportKey('jwk', key);
+  return JSON.stringify(jwk);
+};
+
+/**
+ * Imports a CryptoKey from a JWK string.
+ */
+export const importConversationKey = async (jwkString: string): Promise<CryptoKey> => {
+  const jwk = JSON.parse(jwkString);
+  return crypto.subtle.importKey(
+    'jwk',
+    jwk,
+    { name: 'AES-GCM', length: 256 },
+    true,
+    ['encrypt', 'decrypt']
+  );
+};
+
+/**
+ * Encrypts a conversation key using a user's master key.
+ * This "wraps" the shared key so it can be stored securely for each user.
+ */
+export const encryptConversationKey = async (
+  conversationKey: CryptoKey,
+  userMasterKey: CryptoKey
+): Promise<string> => {
+  const jwkString = await exportConversationKey(conversationKey);
+  // We can reuse your robust encryptMessage function for this
+  return encryptMessage(jwkString, userMasterKey);
+};
+
+/**
+ * Decrypts a conversation key using a user's master key.
+ * This "unwraps" the shared key, making it usable for decrypting messages.
+ */
+export const decryptConversationKey = async (
+  encryptedKey: string,
+  userMasterKey: CryptoKey
+): Promise<CryptoKey> => {
+  // We reuse your robust decryptMessage function for this
+  const jwkString = await decryptMessage(encryptedKey, userMasterKey);
+  return importConversationKey(jwkString);
+};
