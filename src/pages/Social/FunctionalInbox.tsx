@@ -16,7 +16,7 @@ import { ConversationList } from '@/components/social/ConversationList';
 import { ConversationView } from '@/components/social/ConversationView';
 import { useAuth } from '@/hooks/useAuth'; // 👈 We need the auth hook
 import { decryptMessage } from '@/lib/crypto';
-type Conversation = Database['public']['Functions']['get_inbox_conversations']['Returns'][0];
+type Conversation = Database['public']['Functions']['inbox_conversations']['Returns'][0];
 type DirectMessagePayload = Tables<'direct_messages'>;
 
 const FunctionalInbox = () => {
@@ -33,7 +33,7 @@ const FunctionalInbox = () => {
     setLoading(true);
     try {
       // The getInbox function is now correctly typed
-      const data = await supabase.rpc('inbox_conversations');
+      const data = await supabase.from('inbox_conversations').select('*');
       if (data.error) throw data.error;
       
       // Sort conversations to show starred ones at the top
