@@ -181,7 +181,7 @@ export const useConversationData = (conversationId: string | undefined, recipien
     }, [messages, toast]);
     
     const handleEditMessage = useCallback(async (messageId: number, newContent: string) => {
-        if (!encryptionKey) return;
+        if (!conversationKey) return;
 
         const originalMessage = messages.find(m => m.id === messageId);
         if (!originalMessage) return;
@@ -199,7 +199,7 @@ export const useConversationData = (conversationId: string | undefined, recipien
 
         try {
             // Call the API which encrypts and saves the new content
-            const realEditedMessage = await editDirectMessage(messageId, newContent, encryptionKey);
+            const realEditedMessage = await editDirectMessage(messageId, newContent, conversationKey);
             // Replace the optimistic version with the real, encrypted version from the server
             setMessages(current => current.map(m => m.id === messageId ? realEditedMessage : m));
         } catch (error: any) {
@@ -207,7 +207,7 @@ export const useConversationData = (conversationId: string | undefined, recipien
             // Revert to the original message on failure
             setMessages(current => current.map(m => m.id === messageId ? originalMessage : m));
         }
-    }, [messages, toast, encryptionKey]);
+    }, [messages, toast, conversationKey]);
 
     const handleReaction = useCallback(async (messageId: number, emoji: string) => {
         if (!user) return;
