@@ -171,6 +171,52 @@ export const createOrGetConversation = async (otherUserId: string): Promise<stri
     return data;
 };
 
+export const setupConversationEncryption = async (
+  conversationId: string,
+  userMasterKey: CryptoKey
+): Promise<CryptoKey> => {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error("Not authenticated");
+  const myUserId = session.user.id;
+
+  // Step 1: Check if I already have an encrypted key for this conversation
+  const { data: participant } = await supabase
+    .from('conversation_participants')
+    .select('encrypted_conversation_key')
+    .eq('conversation_id', conversationId)
+    .eq('user_id', myUserId)
+    .single();
+
+  if (participant?.encrypted_conversation_key) {
+    // Yes, decrypt and return it.
+    return decryptConversationKey(participant.encrypted_conversation_key, userMasterKey);
+  }
+
+  // Step 2: No key for me. Let's establish the master key using our atomic RPC.
+  // We'll optimistically generate a key. The RPC function decides if we use this one or an existing one.
+  const newKeyCandidate = await generateConversationKey();
+  const newKeyJwk = await exportConversationKey(newKeyCandidate);
+
+  const { data: officialKeyJwk, error: rpcError } = await supabase.rpc(
+    'set_conversation_master_key_if_null',
+    { p_conversation_id: conversationId, p_new_key_jwk: newKeyJwk }
+  );
+
+  if (rpcError) throw rpcError;
+
+  const masterKey = await importConversationKey(officialKeyJwk);
+
+  // Step 3: Now that we have the official masterKey, encrypt a copy for myself and store it.
+  const myEncryptedCopy = await encryptConversationKey(masterKey, userMasterKey);
+  await supabase
+    .from('conversation_participants')
+    .update({ encrypted_conversation_key: myEncryptedCopy })
+    .eq('conversation_id', conversationId)
+    .eq('user_id', myUserId);
+
+  return masterKey;
+};
+
 /**
  * Marks all unread messages in a conversation as read.
  * @param conversationId - The ID of the conversation to mark as read.
@@ -219,14 +265,14 @@ export const canSendMessage = async (otherUserId: string): Promise<boolean> => {
 export const postDirectMessage = async (
     conversationId: string,
     plaintext: string, 
-    encryptionKey: CryptoKey,
+    conversationKey: CryptoKey,
     parentMessageId: number | null = null
 ): Promise<DirectMessage> => {
     await getSessionOrThrow();
     if (!encryptionKey) throw new Error("Encryption key is required to post a message.");
 
     // 4. Encrypt the message content
-    const encryptedContent = await encryptMessage(plaintext, encryptionKey);
+    const encryptedContent = await encryptMessage(plaintext, conversationKey);
 
     const { data, error } = await supabase.rpc('post_direct_message', {
         p_conversation_id: conversationId,
@@ -248,13 +294,13 @@ export const postDirectMessage = async (
 export const editDirectMessage = async (
     messageId: number, 
     newPlaintext: string, // 👈 6. Changed to 'newPlaintext'
-    encryptionKey: CryptoKey // 👈 7. Accept the encryption key
+    conversationKey: CryptoKey, // 👈 7. Accept the encryption key
 ): Promise<DirectMessage> => {
     await getSessionOrThrow();
     if (!encryptionKey) throw new Error("Encryption key is required to edit a message.");
     
     // 8. Encrypt the new content
-    const encryptedNewContent = await encryptMessage(newPlaintext, encryptionKey);
+    const encryptedNewContent = await encryptMessage(newPlaintext, conversationKey);
 
     const { data, error } = await supabase
         .from('direct_messages')
