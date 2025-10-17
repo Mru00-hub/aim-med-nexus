@@ -25,7 +25,7 @@ interface ConversationViewProps {
 }
 
 export const ConversationView = ({ conversation, onConversationUpdate }: ConversationViewProps) => {
-  const { user, encryptionKey } = useAuth();
+  const { user } = useAuth();
   const [isStarred, setIsStarred] = useState(conversation.is_starred ?? false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const prevMessagesLength = useRef<number | null>(null);
@@ -34,6 +34,7 @@ export const ConversationView = ({ conversation, onConversationUpdate }: Convers
   const {
     messages,
     isLoading,
+    conversationKey,
     replyingTo,
     setReplyingTo,
     handleSendMessage,
@@ -43,29 +44,22 @@ export const ConversationView = ({ conversation, onConversationUpdate }: Convers
   } = useConversationData(conversation.conversation_id, conversation.participant_id);
   
   useEffect(() => {
-    // This effect runs whenever the user switches to a new conversation.
     const markAsRead = async () => {
-      // Only make an API call if there are actually unread messages.
-      if (conversation && conversation.unread_count && conversation.unread_count > 0) {
+      if (conversation?.unread_count && conversation.unread_count > 0) {
         try {
-          // Call the RPC function to update the database.
           await supabase.rpc('mark_conversation_as_read', { 
             p_conversation_id: conversation.conversation_id 
           });
-          // After a brief moment, trigger a refetch of the conversation list
-          // to update the "unread" badge in the sidebar.
           setTimeout(() => {
             onConversationUpdate();
-          }, 500); // Small delay to ensure DB has time to update
+          }, 500);
         } catch (error) {
           console.error("Failed to mark conversation as read:", error);
         }
       }
     };
-
     markAsRead();
-
-  }, [conversation.conversation_id, conversation.unread_count, onConversationUpdate]); 
+  }, [conversation.conversation_id, conversation.unread_count, onConversationUpdate]);  
   
   useEffect(() => {
     // On the very first render, prevMessagesLength.current is null, so we set it.
@@ -168,7 +162,8 @@ export const ConversationView = ({ conversation, onConversationUpdate }: Convers
         onSendMessage={handleSendMessage}
         replyingTo={replyingTo}
         onCancelReply={() => setReplyingTo(null)}
-        isKeyAvailable={!!encryptionKey}
+        // ✅ FIX: Pass the correct key status to the input component
+        isKeyAvailable={!!conversationKey}
       />
     </>
   );
