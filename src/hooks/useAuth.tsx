@@ -43,9 +43,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
-  const refreshProfile = async () => {
-    if (!user) return;
-    const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+  const refreshProfile = async (userForProfile: User) => {
+    if (!userForProfile) return;
+    const { data } = await supabase.from('profiles').select('*').eq('id', userForProfile.id).single();
     setProfile(data);
   };
 
@@ -114,17 +114,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     initializeSession();
 
     // 3. Set up the listener for ANY SUBSEQUENT auth changes.
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
-      // This listener now only worries about *changes* after the initial load.
-      setSession(newSession);
-      setUser(newSession?.user ?? null);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
       if (!newSession) {
-        setEncryptionKey(null);
+        setSession(null);
+        setUser(null);
         setProfile(null);
+        setEncryptionKey(null);
         sessionStorage.removeItem(ENCRYPTION_KEY_STORAGE_KEY);
       } else {
-        // Re-fetch profile on sign-in
-        refreshProfile();
+        // Await the profile fetch BEFORE setting the user state
+        await refreshProfile(newSession.user);
+        setSession(newSession);
+        setUser(newSession.user);
       }
     });
 
