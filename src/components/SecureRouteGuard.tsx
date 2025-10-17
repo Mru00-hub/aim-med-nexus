@@ -17,7 +17,7 @@ interface SecureRouteGuardProps {
 }
 
 export const SecureRouteGuard: React.FC<SecureRouteGuardProps> = ({ children }) => {
-  const { user, profile, encryptionKey, generateAndSetKey } = useAuth();
+  const { user, profile, userMasterKey, generateAndSetKeys } = useAuth();
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -31,25 +31,19 @@ export const SecureRouteGuard: React.FC<SecureRouteGuardProps> = ({ children }) 
     setIsLoading(true);
     setError('');
 
-    // 1. Verify the password is correct by trying to sign in again.
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email: user.email!,
-      password: password,
-    });
+    // This single function call now handles everything.
+    const success = await generateAndSetKeys(password, profile.encryption_salt);
 
-    if (signInError) {
+    if (!success) {
       setError("Incorrect password. Please try again.");
-      setIsLoading(false);
-      return;
     }
-
-    // 2. If correct, generate the key. The component will then re-render.
-    await generateAndSetKey(password, profile.encryption_salt);
+    // Note: No need for an 'else' block. If successful, the component will
+    // re-render, `userMasterKey` will exist, and the children will be shown.
     setIsLoading(false);
   };
 
-  // If the key exists, the user is fully authenticated. Render the page.
-  if (encryptionKey) {
+  // 3. The condition is now based on the permanent userMasterKey
+  if (userMasterKey) {
     return <>{children}</>;
   }
 
