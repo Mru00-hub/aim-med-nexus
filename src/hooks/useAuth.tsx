@@ -79,32 +79,69 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLoading(true);
     setLoadingMessage('Initializing session...');
 
-    // onAuthStateChange is the single source of truth.
-    // It fires on initial load, login, logout, and token refresh.
+    const init = async () => {
+      try {
+        // Seed initial session synchronously on mount
+        const { data: { session: initialSession } } = await supabase.auth.getSession();
+        console.log('[Auth] initialSession:', initialSession);
+        if (!mounted) return;
+
+        if (initialSession?.user) {
+          setLoadingMessage('Loading profile...');
+          const userProfile = await fetchProfile(initialSession.user.id);
+          if (mounted) {
+            setProfile(userProfile);
+            setSession(initialSession);
+            setUser(initialSession.user);
+          }
+        } else {
+          // No session on initial getSession -> keep loading until onAuthStateChange resolves.
+          console.log('[Auth] no initial session from getSession, waiting for onAuthStateChange...');
+        }
+      } catch (err) {
+        console.error('[Auth] error during initial getSession:', err);
+      } finally {
+        if (mounted) {
+          // Do NOT set loading false here — wait for onAuthStateChange to definitely tell us auth status
+          // but set a short timeout fallback so app doesn't hang if callback never fires.
+          // However to keep behaviour predictable, we leave loading true until the subscription callback resolves.
+        }
+      }
+    };
+
+    init();
+
+    // Subscribe to auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('[Auth onAuthStateChange] event:', event, 'session:', !!session);
       if (!mounted) return;
 
+      // If we have a session -> load profile
       if (session?.user) {
         setLoadingMessage('Loading profile...');
-        // Fetch the profile ONLY when a valid session is confirmed.
         const userProfile = await fetchProfile(session.user.id);
-        
-        // This check is important in case the component unmounts during the async profile fetch
-        if (mounted) {
-          setProfile(userProfile);
-          setSession(session);
-          setUser(session.user);
-        }
+        if (!mounted) return;
+        setProfile(userProfile);
+        setSession(session);
+        setUser(session.user);
+        // leave keys as-is; key generation logic will set them when user performs it
       } else {
-        // If there's no session, clear everything.
-        setUser(null);
-        setSession(null);
-        setProfile(null);
-        setPersonalKey(null);
-        setUserMasterKey(null);
+        // Only treat certain events as a "real sign out".
+        // Avoid clearing profile on transient events (some clients emit transient nulls)
+        // Clear state on explicit sign-out or user deletion events.
+        if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
+          console.log('[Auth] explicit sign out: clearing auth state');
+          setUser(null);
+          setSession(null);
+          setProfile(null);
+          setPersonalKey(null);
+          setUserMasterKey(null);
+        } else {
+          // For other events where session is null, don't immediately wipe profile.
+          console.log('[Auth] session is null but event is', event, '- deferring clear to explicit sign out.');
+        }
       }
-      
-      // We know the auth state for sure now, so we can stop loading.
+
       if (mounted) {
         setLoading(false);
         setLoadingMessage('');
@@ -113,7 +150,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     return () => {
       mounted = false;
-      subscription.unsubscribe();
+      try {
+        subscription.unsubscribe();
+      } catch (err) {
+        console.warn('[Auth] subscription unsubscribe error', err);
+      }
     };
   }, [fetchProfile]);
     
