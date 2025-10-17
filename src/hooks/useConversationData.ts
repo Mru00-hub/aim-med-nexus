@@ -15,6 +15,7 @@ import {
     DirectMessageReaction,
     Profile
 } from '@/integrations/supabase/social.api';
+import { setupConversationEncryption } from '@/integrations/supabase/social.api';
 import { decryptMessage } from '@/lib/crypto';
 
 export type MessageWithParent = DirectMessageWithDetails & {
@@ -23,7 +24,7 @@ export type MessageWithParent = DirectMessageWithDetails & {
 };
 
 export const useConversationData = (conversationId: string | undefined, recipientId: string | undefined) => {
-    const { user, profile, encryptionKey } = useAuth();
+    const { user, profile, userMasterKey } = useAuth();
     const { toast } = useToast();
     
     // This state holds the raw messages (mostly encrypted) from the database
@@ -33,6 +34,32 @@ export const useConversationData = (conversationId: string | undefined, recipien
 
     const [isLoading, setIsLoading] = useState(true);
     const [replyingTo, setReplyingTo] = useState<DirectMessageWithDetails | null>(null);
+    const [conversationKey, setConversationKey] = useState<CryptoKey | null>(null);
+    const [isInitializingEncryption, setIsInitializingEncryption] = useState(true);
+
+    useEffect(() => {
+        const initConversationKey = async () => {
+            // We need the conversationId and the user's permanent key
+            if (!conversationId || !userMasterKey) {
+                setIsInitializingEncryption(false);
+                return;
+            }
+
+            setIsInitializingEncryption(true);
+            try {
+                const convKey = await setupConversationEncryption(conversationId, userMasterKey);
+                setConversationKey(convKey);
+                console.log("✅ Conversation encryption ready");
+            } catch (error) {
+                console.error("Failed to initialize conversation encryption:", error);
+                // ... show toast
+            } finally {
+                setIsInitializingEncryption(false);
+            }
+        };
+
+        initConversationKey();
+    }, [conversationId, userMasterKey]);
 
     // --- (This function remains unchanged) ---
     const fetchMessages = useCallback(async () => {
@@ -51,18 +78,16 @@ export const useConversationData = (conversationId: string | undefined, recipien
 
     useEffect(() => {
         const processMessages = async () => {
-            if (!encryptionKey || !messages || messages.length === 0) {
+            if (!conversationKey || !messages || messages.length === 0) {
                 setDisplayMessages([]);
                 return;
             }
 
             const decryptedList = await Promise.all(
                 messages.map(async (msg) => {
-                    if ((msg as MessageWithParent).isOptimistic) {
-                        return msg; // Return optimistic messages as-is (they are plaintext)
-                    }
                     try {
-                        const decryptedContent = await decryptMessage(msg.content, encryptionKey);
+                        // Use the SHARED conversation key!
+                        const decryptedContent = await decryptMessage(msg.content, conversationKey);
                         return { ...msg, content: decryptedContent };
                     } catch (e) {
                         return { ...msg, content: "[Unable to decrypt]" };
@@ -79,12 +104,11 @@ export const useConversationData = (conversationId: string | undefined, recipien
             const sortedList = flatList.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
             setDisplayMessages(sortedList as MessageWithParent[]);
         };
-
         processMessages();
-    }, [messages, encryptionKey]);
+    }, [messages, conversationKey]); 
     
     const handleSendMessage = useCallback(async (content: string, parentMessageId: number | null, files: File[]) => {
-        if (!user || !profile || !conversationId || !encryptionKey) return;
+        if (!user || !profile || !conversationId || !conversationKey) return;
 
         const tempMsgId = -Date.now();
         try {
@@ -115,7 +139,7 @@ export const useConversationData = (conversationId: string | undefined, recipien
             const realMessage = await postDirectMessage(
               conversationId, 
               content, 
-              encryptionKey, // Pass the key for encryption
+              conversationKey, // Pass the key for encryption
               parentMessageId
             );
             
@@ -145,7 +169,7 @@ export const useConversationData = (conversationId: string | undefined, recipien
             // We can re-throw the error if a parent component needs to know about it.
             // throw error; 
         }
-    }, [user, profile, conversationId, recipientId, toast, encryptionKey]);
+    }, [user, profile, conversationId, recipientId, toast, conversationKey]);
 
     const handleDeleteMessage = useCallback(async (messageId: number) => {
         const previousMessages = messages;
