@@ -12,7 +12,7 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ requireAuth = true, children }) =
   const { user, loading, loadingMessage } = useAuth();
   const location = useLocation();
 
-  if (loading && !user) {
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
