@@ -62,8 +62,8 @@ const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <BrowserRouter>
-          <AuthProvider>
+        <AuthProvider>
+          <BrowserRouter>
             {/* THIS WRAPPER MAKES THE COUNTS GLOBALLY AVAILABLE */}
             <SocialCountsProvider>
               <Toaster />
@@ -115,8 +115,8 @@ const App = () => {
                 </Routes>
               </CommunityProvider>
             </SocialCountsProvider>
-          </AuthProvider>
-        </BrowserRouter>
+          </BrowserRouter>
+        </AuthProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );            
