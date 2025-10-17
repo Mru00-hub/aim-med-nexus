@@ -33,7 +33,7 @@ const FunctionalInbox = () => {
     setLoading(true);
     try {
       // The getInbox function is now correctly typed
-      const data = await supabase.rpc('get_inbox_conversations');
+      const data = await supabase.rpc('inbox_conversations');
       if (data.error) throw data.error;
       
       // Sort conversations to show starred ones at the top
