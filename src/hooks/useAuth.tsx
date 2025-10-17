@@ -76,74 +76,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // FIXED: Initialize auth state with getSession AND listen for changes
   useEffect(() => {
     let mounted = true;
+    setLoading(true);
+    setLoadingMessage('Initializing session...');
 
-    const initializeAuth = async () => {
-      try {
-        setLoadingMessage('Checking authentication...');
-        
-        // Check for existing session first (CRITICAL FIX)
-        const { data: { session: initialSession }, error } = await supabase.auth.getSession();
-        
-        if (error) {
-          console.error("Session initialization error:", error);
-        }
-        
-        if (mounted && initialSession?.user) {
-          setLoadingMessage('Loading profile...');
-          const userProfile = await fetchProfile(initialSession.user.id);
-          
-          if (mounted) {
-            setProfile(userProfile);
-            setSession(initialSession);
-            setUser(initialSession.user);
-          }
-        }
-        
-        if (mounted) {
-          setLoading(false);
-          setLoadingMessage('');
-        }
-      } catch (error) {
-        console.error("Auth initialization error:", error);
-        if (mounted) {
-          setLoading(false);
-          setLoadingMessage('');
-        }
-      }
-    };
-
-    initializeAuth();
-
-    // Listen for auth changes
+    // onAuthStateChange is the single source of truth.
+    // It fires on initial load, login, logout, and token refresh.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!mounted) return;
 
-      console.log("Auth state change:", event);
-      
-      // Avoid race conditions with manual sign in/out operations
-      if (isAuthOperationInProgress.current && (event === 'SIGNED_IN' || event === 'SIGNED_OUT')) {
-        isAuthOperationInProgress.current = false;
-      }
-
       if (session?.user) {
         setLoadingMessage('Loading profile...');
+        // Fetch the profile ONLY when a valid session is confirmed.
         const userProfile = await fetchProfile(session.user.id);
         
+        // This check is important in case the component unmounts during the async profile fetch
         if (mounted) {
           setProfile(userProfile);
           setSession(session);
           setUser(session.user);
-          setLoadingMessage('');
         }
       } else {
-        if (mounted) {
-          setUser(null);
-          setSession(null);
-          setProfile(null);
-          setPersonalKey(null);
-          setUserMasterKey(null);
-          setLoadingMessage('');
-        }
+        // If there's no session, clear everything.
+        setUser(null);
+        setSession(null);
+        setProfile(null);
+        setPersonalKey(null);
+        setUserMasterKey(null);
+      }
+      
+      // We know the auth state for sure now, so we can stop loading.
+      if (mounted) {
+        setLoading(false);
+        setLoadingMessage('');
       }
     });
 
@@ -152,7 +116,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       subscription.unsubscribe();
     };
   }, [fetchProfile]);
-
+    
   // FIXED: refreshProfile no longer depends on user state
   const refreshProfile = useCallback(async () => {
     try {
