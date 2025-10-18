@@ -68,8 +68,8 @@ export default function Forums() {
     return publicThreads.filter(thread => {
       const searchLower = threadSearchQuery.toLowerCase();
       return (
-        thread.title.toLowerCase().includes(searchLower) ||
-        thread.creator_full_name.toLowerCase().includes(searchLower)
+        (thread.title || '').toLowerCase().includes(searchLower) ||
+        (thread.creator_full_name || '').toLowerCase().includes(searchLower)
       );
     });
   }, [publicThreads, threadSearchQuery]);
@@ -82,7 +82,23 @@ export default function Forums() {
     join_level: Enums<'space_join_level'>;
   }) => {
     if (!user) return;
-    toast({ title: 'Creating space...' });
+    const tempId = `optimistic-${crypto.randomUUID()}`;
+    const optimisticSpace: SpaceWithDetails = {
+      ...data,
+      id: tempId,
+      created_at: new Date().toISOString(),
+      creator_id: user.id,
+      creator_full_name: user.user_metadata.full_name || 'You',
+      // Add any other required fields from SpaceWithDetails with defaults
+      moderators: [], 
+      member_count: 1, 
+      thread_count: 0,
+      last_activity_at: new Date().toISOString(),
+    };
+
+    // --- 2. Add it to the UI immediately ---
+    addOptimisticSpace(optimisticSpace);
+    setShowSpaceCreator(false);
     try {
       await createSpace({
         name: data.name,
@@ -90,13 +106,12 @@ export default function Forums() {
         space_type: data.space_type,
         join_level: data.join_level,
       });
-      toast({ title: 'Success!', description: `The space "${data.name}" has been created.` });
       await refreshSpaces(); 
+      toast({ title: 'Success!', description: `The space "${data.name}" has been created.` });
     } catch (error: any) {
       toast({ variant: 'destructive', title: 'Creation Failed', description: error.message });
-    } finally {
-      setShowSpaceCreator(false);
-    }
+      removeOptimisticSpace(tempId);
+    } 
   };
 
   // --- FIX #3: UPDATE THE handleJoin FUNCTION ---
