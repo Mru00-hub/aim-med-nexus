@@ -247,6 +247,24 @@ export const getInbox = async (): Promise<Conversation[]> => {
 };
 
 /**
+ * Fetches the count of unread conversations for the
+ * currently logged-in user by querying the 'inbox_conversations' view.
+ */
+export const getUnreadInboxCount = async (): Promise<number> => {
+  const { count, error } = await supabase
+    .from('inbox_conversations')
+    .select('*', { count: 'exact', head: true }) // 1. Ask for the count
+    .eq('is_unread', true);                     // 2. Where unread is true
+
+  if (error) {
+    console.error('Error fetching unread inbox count:', error);
+    return 0;
+  }
+
+  return count || 0;
+};
+
+/**
  * Checks if the current user is allowed to send a message to another user (i.e., they are connected).
  * @param otherUserId - The UUID of the message recipient.
  */
