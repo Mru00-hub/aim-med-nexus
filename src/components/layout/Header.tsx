@@ -21,6 +21,17 @@ import {
 import { useSocialCounts } from '@/context/SocialCountsContext'; 
 import { deleteCurrentUser } from '@/integrations/supabase/user.api'; // 1. Import delete function
 import { toast } from 'sonner';
+import {
+  AlertDialog,
+  AlertDialogTrigger,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from "@/components/ui/alert-dialog";
 
 export const Header = () => {
   const { user, loading, signOut } = useAuth();
