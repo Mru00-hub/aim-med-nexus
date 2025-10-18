@@ -48,10 +48,12 @@ const FunctionalInbox = () => {
     }
   };
   
-  // This effect remains the same and is correct.
   useEffect(() => {
-    const totalUnread = conversations.reduce((acc, convo) => acc + (convo.unread_count || 0), 0);
-    setUnreadInboxCount(totalUnread);
+    const unreadConversationsCount = conversations.filter(convo => 
+      (convo.unread_count || 0) > 0
+    ).length;
+    
+    setUnreadInboxCount(unreadConversationsCount);
   }, [conversations, setUnreadInboxCount]);
 
   // This effect for real-time updates is also correct.
