@@ -1,15 +1,15 @@
-// src/App.tsx
+//// src/App.tsx
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import ScrollToTop from '@/lib/ScrollToTop';
+import ScrollToTop from '@/lib/ScrollToTop'; // <-- 1. IMPORTED
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import AuthGuard from "@/components/AuthGuard";
 import OnboardingGuard from "@/components/OnboardingGuard";
 import { CommunityProvider } from "./context/CommunityContext"; 
-import { SocialCountsProvider } from './context/SocialCountsContext'; // Import the provider
+import { SocialCountsProvider } from './context/SocialCountsContext';
 import { SecureRouteGuard } from './components/SecureRouteGuard';
 import { Loader2 } from 'lucide-react';
 // --- Core Page Imports ---
@@ -44,7 +44,6 @@ const queryClient = new QueryClient();
 
 // Helper component to render a different component based on authentication status.
 const ConditionalRoute = ({ AuthComponent, PublicComponent }: { AuthComponent: React.ComponentType, PublicComponent: React.ComponentType }) => {
-  // ✅ FIX: Get and check the `loading` state.
   const { user, loading } = useAuth();
 
   if (loading) {
@@ -64,6 +63,7 @@ const App = () => {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <BrowserRouter>
+          <ScrollToTop /> {/* <-- 2. (PROBLEM 4 FIX) ADDED HERE */}
           <AuthProvider>
             {/* THIS WRAPPER MAKES THE COUNTS GLOBALLY AVAILABLE */}
             <SocialCountsProvider>
@@ -99,8 +99,11 @@ const App = () => {
                     <Route path="/payment" element={<PaymentPage />} />
                     <Route path="/inbox" element={ <SecureRouteGuard> <FunctionalInbox /> </SecureRouteGuard> } />
 
-                    {/* Community Protected Routes */}
-                    <Route path="/community/create-thread" element={<CreateThread />} />
+                    {/* --- (PROBLEM 5 FIX) ---
+                      This route now correctly includes the :spaceId
+                    */}
+                    <Route path="/community/space/:spaceId/create-thread" element={<CreateThread />} />
+                    
                     <Route path="/community/space/:spaceId" element={<SpaceDetailPage />} />
                     <Route path="/community/space/:spaceId/members" element={<MembersPage />} />
                     <Route path="/community/thread/:threadId" element={<ThreadDetailPage />} />
