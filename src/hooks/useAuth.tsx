@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
 import { Profile } from '@/integrations/supabase/community.api';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { deriveKey, generateConversationKey, exportConversationKey, decryptMessage, importConversationKey } from '@/lib/crypto';
+import { deriveKey, generateConversationKey, exportConversationKey, decryptMessage, importConversationKey, encryptMessage } from '@/lib/crypto';
 
 interface AuthContextType {
   user: User | null;
@@ -155,7 +155,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUserMasterKey(newMasterKey);
 
         const masterKeyJwkString = await exportConversationKey(newMasterKey);
-        const encryptedMasterKey = await encryptMessage(masterKeyJwkString, derivedPersonalKey);
+        const encryptedMasterKey = await encryptMessage(masterKeyJwkString, derivedPersonalKey); 
 
         // Store it in the database
         const { error } = await supabase
