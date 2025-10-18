@@ -5,7 +5,7 @@ import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { ThreadView } from '@/components/messaging/ThreadView'; // We will put all the logic here
 import AuthGuard from '@/components/AuthGuard'; // Protect this page
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { getThreadDetails, updateThreadDetails, getViewerRoleForSpace, Thread, Enums } from '@/integrations/supabase/community.api';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/components/ui/use-toast';
@@ -25,7 +25,7 @@ type ThreadDetails = {
 
 export default function ThreadDetailPage() {
   const { threadId } = useParams<{ threadId: string }>();
-  const { user } = useAuth(); // Get the current user
+  const { user, profile } = useAuth(); // Get the current user
   const { toast } = useToast();
   const [threadDetails, setThreadDetails] = useState<ThreadDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -113,12 +113,29 @@ export default function ThreadDetailPage() {
     }
   };
 
-  const canEdit = threadDetails && user && (
-    user.id === threadDetails.creator_id || // User is the creator
-    userRole === 'ADMIN' ||                  // User is an Admin of the space
-    userRole === 'MODERATOR'                 // User is a Moderator of the space
-  );
+  const canEdit = useMemo(() => {
+    if (!user || !threadDetails) return false;
 
+    // 1. User is the creator
+    if (user.id === threadDetails.creator_id) {
+      return true;
+    }
+
+    // 2. User is a "global" admin/mod (from their profile)
+    //    This is the fix for public threads.
+    if (profile?.user_role === 'ADMIN' || profile?.user_role === 'MODERATOR') {
+      return true;
+    }
+
+    // 3. User is a space-specific Admin/Mod (from state)
+    //    This will be 'null' for public threads, which is fine.
+    if (userRole === 'ADMIN' || userRole === 'MODERATOR') {
+      return true;
+    }
+    
+    return false;
+  }, [user, profile, threadDetails, userRole]); 
+  
   return (
     <AuthGuard>
       <div className="flex flex-col h-screen bg-background">
