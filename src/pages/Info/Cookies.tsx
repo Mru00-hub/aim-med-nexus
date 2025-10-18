@@ -13,7 +13,7 @@ export default function CookiesPage() {
         Cookies are files with a small amount of data which may include an 
         anonymous unique identifier. They are sent to your browser from a website 
         and stored on your device.
-      </j>
+      </p>
 
       <h3 className="text-2xl font-semibold mt-8 mb-4">How We Use Cookies</h3>
       <p className="mb-4">We use cookies for essential purposes, such as:</p>
