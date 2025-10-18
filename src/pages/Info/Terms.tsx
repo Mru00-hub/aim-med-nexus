@@ -49,7 +49,7 @@ export default function TermsPage() {
       <p className="mb-4">
         All users are required to adhere to our 
         <a href="/info/code-of-conduct" className="text-primary hover:underline ml-1">Code of Conduct</a>.
-      </T>
+      </p>
 
       <h3 className="text-2xl font-semibold mt-8 mb-4">3. Disclaimers</h3>
       <p className="mb-4">
