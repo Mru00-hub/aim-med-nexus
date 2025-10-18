@@ -255,14 +255,6 @@ export const createSpace = async (
 
     if (error) throw error; 
 
-    const { error: memberError } = await supabase.from('memberships').insert({
-        user_id: session.user.id,
-        space_id: newSpace.id,
-        role: creatorRole,
-        status: 'ACTIVE'
-    });
-    if (memberError) throw memberError;
-
     return newSpace;
 }
 
