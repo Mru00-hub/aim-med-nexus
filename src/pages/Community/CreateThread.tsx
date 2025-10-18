@@ -16,6 +16,7 @@ import AuthGuard from '@/components/AuthGuard';
 
 // Import our new API function
 import { createThread } from '@/integrations/supabase/community.api';
+import { useCommunity } from '@/context/CommunityContext';
 
 // ----------------------------------------------------------------------
 // REVISED PROPS - Removed the redundant 'spaceType'
@@ -35,6 +36,8 @@ export const CreateThreadForm: React.FC<CreateThreadProps> = ({ spaceId = null, 
   const [error, setError] = useState('');
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  const { refreshSpaces } = useCommunity();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,6 +63,7 @@ export const CreateThreadForm: React.FC<CreateThreadProps> = ({ spaceId = null, 
         title: "Success!",
         description: "Your thread has been created.",
       });
+      await refreshSpaces();
 
       // If there's a callback (modal use-case), call it. Otherwise, navigate (page use-case).
       if (onThreadCreated) {
