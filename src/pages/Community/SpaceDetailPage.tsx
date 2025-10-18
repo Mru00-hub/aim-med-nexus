@@ -148,6 +148,7 @@ export default function SpaceDetailPage() {
           if (error) throw error;
 
           toast({ title: "Success", description: "Space has been deleted." });
+          await refreshSpaces(); 
           navigate('/community'); // Navigate away from the now-deleted page.
       } catch (error: any) {
           toast({
