@@ -72,9 +72,9 @@ export const Header = () => {
     setIsDeleting(true);
     try {
       await deleteCurrentUser();
-      toast.success('Account deleted successfully.');
       await signOut(); // Sign out the user
       navigate('/'); // Redirect to homepage
+      toast.success('Account deleted successfully.');
     } catch (error) {
       toast.error('Failed to delete account. Please try again.');
       console.error(error);
