@@ -260,6 +260,7 @@ export const useConversationData = (conversationId: string | undefined, recipien
     return { 
         messages: displayMessages,
         isLoading, 
+        conversationKey,
         replyingTo,
         setReplyingTo,
         handleSendMessage,
