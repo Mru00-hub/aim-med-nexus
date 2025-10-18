@@ -1,7 +1,7 @@
 // src/pages/Social/FunctionalInbox.tsx
 
 import React, { useState, useEffect} from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useSocialCounts } from '@/context/SocialCountsContext';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
@@ -27,6 +27,7 @@ const FunctionalInbox = () => {
   const { toast } = useToast(); // FIX: Initialize toast
   const location = useLocation();
   const { encryptionKey } = useAuth(); 
+  const navigate = useNavigate(); 
 
   // FIX: Refactored to use the new API style with try...catch error handling
   const fetchAndSetConversations = async () => {
@@ -83,7 +84,7 @@ const FunctionalInbox = () => {
   useEffect(() => {
     const navState = location.state as { conversationId?: string; participant?: any };
     if (!navState?.conversationId) return;
-
+    if (loading) return;
     const convoInList = conversations.find(c => c.conversation_id === navState.conversationId);
 
     if (convoInList) {
@@ -102,8 +103,8 @@ const FunctionalInbox = () => {
       setConversations(prev => [phantomConversation, ...prev]);
       setSelectedConversation(phantomConversation);
     }
-    window.history.replaceState({}, document.title);
-  }, [location.state, conversations, loading]);
+    navigate(location.pathname, { replace: true, state: null });
+  }, [location.state, conversations, loading, navigate]);
   
   return (
     <div className="min-h-screen bg-background">
