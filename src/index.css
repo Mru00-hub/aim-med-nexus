@@ -195,7 +195,7 @@
 
   /* Professional Layouts */
   .container-medical {
-    @apply container mx-auto px-4 md:px-6 lg:px-8;
+    @apply container mx-auto px-4 md:px-6 lg:px-8 w-full max-w-screen-xl box-border;
   }
 
   .section-medical {
