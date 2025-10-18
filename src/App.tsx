@@ -89,6 +89,14 @@ const App = () => {
                   <Route path="/partnerships" element={<Partnerships />} />
                   <Route path="/community" element={<Forums />} /> 
                   <Route path="/industryhub" element={<IndustryHub />} /> 
+
+                  <Route path="/info/help" element={<HelpPage />} />
+                  <Route path="/info/support" element={<SupportPage />} />
+                  <Route path="/info/report" element={<ReportPage />} />
+                  <Route path="/info/privacy" element={<PrivacyPage />} />
+                  <Route path="/info/terms" element={<TermsPage />} />
+                  <Route path="/info/cookies" element={<CookiesPage />} />
+                  <Route path="/info/code-of-conduct" element={<CodeOfConductPage />} />
                   
                   {/* --- Conditionally Rendered Social Route --- */}
                   <Route path="/social" element={<ConditionalRoute AuthComponent={FunctionalSocial} PublicComponent={Social} />} />
