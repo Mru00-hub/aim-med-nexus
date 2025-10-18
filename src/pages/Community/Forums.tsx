@@ -36,7 +36,7 @@ export default function Forums() {
     spaces, 
     publicThreads, 
     isLoadingSpaces: loading, 
-    fetchSpaces, 
+    refreshSpaces, 
     getMembershipStatus,
     setMemberships, 
   } = useCommunity();
@@ -91,7 +91,7 @@ export default function Forums() {
         join_level: data.join_level,
       });
       toast({ title: 'Success!', description: `The space "${data.name}" has been created.` });
-      await fetchSpaces();
+      await refreshSpaces(); 
     } catch (error: any) {
       toast({ variant: 'destructive', title: 'Creation Failed', description: error.message });
     } finally {
@@ -116,7 +116,7 @@ export default function Forums() {
           if (isOpenJoin) {
               await joinSpaceAsMember(space.id);
               toast({ title: 'Success!', description: `You have joined ${space.name}.` });
-              await fetchSpaces(); // Refetch everything for a full update
+              await refreshSpaces();  // Refetch everything for a full update
           } else { 
               await requestToJoinSpace(space.id);
               toast({ title: 'Request Sent', description: `Your request to join ${space.name} is pending approval.` });
