@@ -1,32 +1,64 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Building2, Handshake, Globe, ArrowRight } from 'lucide-react';
+import { Building2, Handshake, Globe, Users, ArrowRight, Loader2, BarChart3 } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { getPartnershipProposalsCount } from '@/integrations/supabase/metrics.api';
+import { getUsersCount } from '@/integrations/supabase/metrics.api'; // Re-using from Hero
+
+// Helper function to format large numbers
+const formatCount = (num: number): string => {
+  if (num < 1000) {
+    return `${num}+`;
+  }
+  return `${(num / 1000).toFixed(1).replace(/\.0$/, '')}k+`;
+};
+
+// Metric display component
+const MetricDisplay = ({ count, isLoading, fallback }: { count: number | undefined, isLoading: boolean, fallback: string }) => {
+  if (isLoading) {
+    return <Loader2 className="h-6 w-6 animate-spin text-primary" />;
+  }
+  return <div className="text-2xl font-bold text-primary">{count ? formatCount(count) : fallback}</div>;
+};
 
 /**
- * Partnership Section Component for AIMedNet
- * Showcases partnership opportunities with healthcare organizations
- * Includes call-to-action for partnership form submission
+ * Partnership Section Component for AIMedNet (Updated)
+ * Showcases partnership opportunities, linking to the main partnerships page.
+ * Displays real-time metrics for professionals and proposals.
  */
 export const PartnershipSection = () => {
+  const navigate = useNavigate();
+
+  // Fetch real-time metrics
+  const { data: userCount, isLoading: isLoadingUsers } = useQuery({
+    queryKey: ['userCount'], // Re-uses cached data from HeroSection if available
+    queryFn: getUsersCount,
+  });
+
+  const { data: proposalCount, isLoading: isLoadingProposals } = useQuery({
+    queryKey: ['partnershipProposalsCount'],
+    queryFn: getPartnershipProposalsCount,
+  });
+
+  // Synced with your main Partnerships.tsx page
   const partnershipTypes = [
     {
       icon: Building2,
       title: 'Healthcare Organizations',
-      description: 'AIMedNet provides a connecting platform for hospitals, clinics, and healthcare systems to offer their services to verified healthcare professionals. Premium members receive special discounts.',
-      benefits: ['Direct access to verified professionals', 'Premium member discounts', 'Enhanced service visibility']
     },
     {
       icon: Handshake,
-      title: 'Medical Education & Associations',
-      description: 'Medical colleges, associations, and clubs can connect with our community to offer conferences, CME programs, elections, and event management services through our platform.',
-      benefits: ['Conference & CME registration platform', 'Elections management system', 'Event organization support']
+      title: 'Medical Education Partners',
     },
     {
       icon: Globe,
-      title: 'Healthcare Technology & Services',
-      description: 'Healthcare technology companies and service providers can showcase their solutions to our verified professional community with special benefits for premium members.',
-      benefits: ['Verified professional reach', 'Premium member advantages', 'Product showcase opportunities']
+      title: 'Healthcare Technology',
+    },
+    {
+      icon: Users,
+      title: 'Medical Associations & Clubs',
     }
   ];
 
@@ -41,42 +73,25 @@ export const PartnershipSection = () => {
           </h2>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
             AIMedNet serves as your connecting platform to reach verified healthcare professionals 
-            and hospitals. Offer your services through our network and provide exclusive benefits 
-            to our premium members.
+            and hospitals. Offer your services through our network.
           </p>
         </div>
 
-        {/* Partnership Cards */}
-        <div className="grid md:grid-cols-3 gap-8 mb-16 animate-slide-up">
+        {/* Partnership Cards (Simplified) */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-16 animate-slide-up">
           {partnershipTypes.map((partnership, index) => (
-            <Card key={index} className="card-medical h-full">
+            <Card key={index} className="card-medical h-full text-center">
               <CardHeader>
-                <div className="w-12 h-12 bg-gradient-primary rounded-lg flex items-center justify-center mb-4">
+                <div className="w-12 h-12 bg-gradient-primary rounded-lg flex items-center justify-center mb-4 mx-auto">
                   <partnership.icon className="h-6 w-6 text-primary-foreground" />
                 </div>
-                <CardTitle className="text-xl">{partnership.title}</CardTitle>
-                <CardDescription className="text-base leading-relaxed">
-                  {partnership.description}
-                </CardDescription>
+                <CardTitle className="text-lg md:text-xl">{partnership.title}</CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <h4 className="font-semibold text-sm text-primary">Key Benefits:</h4>
-                  <ul className="space-y-2">
-                    {partnership.benefits.map((benefit, idx) => (
-                      <li key={idx} className="flex items-center text-sm text-muted-foreground">
-                        <div className="w-1.5 h-1.5 bg-primary rounded-full mr-3 flex-shrink-0"></div>
-                        {benefit}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </CardContent>
             </Card>
           ))}
         </div>
 
-        {/* Partnership CTA */}
+        {/* Partnership CTA (Updated) */}
         <div className="max-w-4xl mx-auto text-center animate-scale-in">
           <Card className="card-premium border-primary/20">
             <CardHeader className="pb-6">
@@ -84,42 +99,38 @@ export const PartnershipSection = () => {
                 Ready to Partner with AIMedNet?
               </CardTitle>
               <CardDescription className="text-lg">
-                Partner with AIMedNet to connect with verified healthcare professionals 
-                and offer your services through our platform with special premium member benefits.
+                Connect with our growing network of verified professionals.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="grid md:grid-cols-3 gap-6 text-center">
+              
+              {/* Real-time Metrics */}
+              <div className="grid grid-cols-2 gap-6 text-center">
                 <div>
-                  <div className="text-2xl font-bold text-primary">50,000+</div>
+                  <MetricDisplay count={userCount} isLoading={isLoadingUsers} fallback="50k+" />
                   <div className="text-sm text-muted-foreground">Verified Professionals</div>
                 </div>
                 <div>
-                  <div className="text-2xl font-bold text-accent">1,000+</div>
-                  <div className="text-sm text-muted-foreground">Healthcare Organizations</div>
-                </div>
-                <div>
-                  <div className="text-2xl font-bold text-success">95%</div>
-                  <div className="text-sm text-muted-foreground">Partnership Satisfaction</div>
+                  <MetricDisplay count={proposalCount} isLoading={isLoadingProposals} fallback="100+" />
+                  <div className="text-sm text-muted-foreground">Partnership Proposals</div>
                 </div>
               </div>
               
+              {/* Updated CTA Button */}
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Button size="lg" className="btn-medical px-8 py-6 group">
+                <Button 
+                  size="lg" 
+                  className="btn-medical px-8 py-6 group"
+                  onClick={() => navigate('/partnerships')}
+                >
                   Submit Partnership Proposal
                   <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
                 </Button>
-                <Button 
-                  variant="outline" 
-                  size="lg"
-                  className="px-8 py-6 border-primary text-primary hover:bg-primary/5"
-                >
-                  Schedule a Call
-                </Button>
+                {/* "Schedule a Call" button removed as requested */}
               </div>
               
               <p className="text-sm text-muted-foreground">
-                📧 For partnership inquiries: <a href="mailto:mrudulabhalke75917@gmail.com" className="text-primary hover:underline">mrudulabhalke75917@gmail.com</a>
+                📧 For inquiries: <a href="mailto:mrudulabhalke75917@gmail.com" className="text-primary hover:underline">mrudulabhalke75917@gmail.com</a>
               </p>
             </CardContent>
           </Card>
