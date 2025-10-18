@@ -12,6 +12,7 @@ interface AuthContextType {
   profile: Profile | null;
   loading: boolean;
   loadingMessage: string;
+  initialUnreadCount: number | null;
   personalKey: CryptoKey | null; // Renamed from encryptionKey
   userMasterKey: CryptoKey | null;
   generateAndSetKeys: (password: string, salt: string) => Promise<boolean>;
@@ -36,6 +37,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [initialUnreadCount, setInitialUnreadCount] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadingMessage, setLoadingMessage] = useState('Initializing session...');
   const [personalKey, setPersonalKey] = useState<CryptoKey | null>(null); // Renamed
@@ -76,37 +78,50 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // FIXED: Initialize auth state with getSession AND listen for changes
   useEffect(() => {
     let mounted = true;
-    const init = async () => {
-      const { data, error } = await supabase.auth.getSession();
-      if (mounted && data.session) {
-        setSession(data.session);
-        setUser(data.session.user);
-        const userProfile = await fetchProfile(data.session.user.id);
-        setProfile(userProfile);
+
+    const updateUserState = async (session: Session | null) => {
+      if (session) {
+        // Call our new, efficient RPC function
+        const { data, error } = await supabase.rpc('get_user_profile_and_social_counts');
+
+        if (mounted) {
+          if (error) {
+            console.error("Error fetching profile and counts:", error);
+            setProfile(null);
+            setInitialUnreadCount(0);
+          } else {
+            // Set everything at once from the single call
+            setProfile(data.profile);
+            setInitialUnreadCount(data.unread_inbox_count);
+          }
+          setSession(session);
+          setUser(session.user);
+        }
+      } else {
+        // Clear everything if the user logs out
+        if (mounted) {
+          setSession(null);
+          setUser(null);
+          setProfile(null);
+          setInitialUnreadCount(null);
+        }
       }
-      setLoading(false);
+      if (mounted) setLoading(false);
     };
 
-    init();
+    // Initial check on page load
+    supabase.auth.getSession().then(({ data }) => updateUserState(data.session));
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
-      if (!mounted) return;
-      if (newSession) {
-        setSession(newSession);
-        setUser(newSession.user);
-        fetchProfile(newSession.user.id).then(setProfile);
-      } else {
-        setSession(null);
-        setUser(null);
-        setProfile(null);
-      }
+    // Listen for auth changes (login/logout)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      updateUserState(session);
     });
 
     return () => {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, [fetchProfile]);
+  }, []);
     
   // FIXED: refreshProfile no longer depends on user state
   const refreshProfile = useCallback(async () => {
