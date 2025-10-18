@@ -5,6 +5,10 @@ import { deleteCurrentUser } from '@/integrations/supabase/user.api';
 import { toast } from 'sonner';
 import { Loader2, Trash2 } from 'lucide-react';
 
+// Layout Components
+import { Header } from '@/components/layout/Header';
+import { Footer } from '@/components/layout/Footer';
+
 // UI Components
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
@@ -121,28 +125,42 @@ const NotificationSettingsTab = () => {
  */
 export const SettingsPage = () => {
   return (
-    <main className="container mx-auto max-w-4xl py-10 px-4">
-      <h1 className="text-3xl font-bold tracking-tight mb-8">
-        Settings
-      </h1>
+    <div className="min-h-screen bg-background">
+      <Header />
       
-      <Tabs defaultValue="account" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 max-w-md">
-          <TabsTrigger value="account">Account</TabsTrigger>
-          <TabsTrigger value="notifications">Notifications</TabsTrigger>
-        </TabsList>
+      {/* Styled based on Feedback.tsx */}
+      <main className="container-medical py-8">
         
-        <TabsContent value="account" className="mt-6">
-          <AccountSettingsTab />
-        </TabsContent>
+        {/* Page Title (from Feedback.tsx) */}
+        <div className="text-center mb-12 animate-fade-in">
+          <h1 className="text-4xl font-bold mb-4">Settings</h1>
+          <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+            Manage your account preferences and notification settings.
+          </p>
+        </div>
         
-        <TabsContent value="notifications" className="mt-6">
-          <NotificationSettingsTab />
-        </TabsContent>
-      </Tabs>
-    </main>
+        {/* Tabs Wrapper (from Feedback.tsx) */}
+        <div className="max-w-4xl mx-auto animate-slide-up">
+          <Tabs defaultValue="account" className="w-full">
+            <TabsList className="grid w-full grid-cols-2 max-w-md mx-auto">
+              <TabsTrigger value="account">Account</TabsTrigger>
+              <TabsTrigger value="notifications">Notifications</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="account" className="mt-6">
+              <AccountSettingsTab />
+            </TabsContent>
+            
+            <TabsContent value="notifications" className="mt-6">
+              <NotificationSettingsTab />
+            </TabsContent>
+          </Tabs>
+        </div>
+      </main>
+      
+      <Footer />
+    </div>
   );
 };
 
-// Make sure to export it for your router
 export default SettingsPage;
