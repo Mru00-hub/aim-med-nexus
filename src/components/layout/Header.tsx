@@ -19,6 +19,10 @@ import {
     DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
 import { useSocialCounts } from '@/context/SocialCountsContext'; 
+import { 
+  getPendingRequests, 
+  getUnreadInboxCount 
+} from '@/integrations/supabase/social.api';
 import { deleteCurrentUser } from '@/integrations/supabase/user.api'; // 1. Import delete function
 import { toast } from 'sonner';
 import {
@@ -40,7 +44,12 @@ export const Header = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isAlertOpen, setIsAlertOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const { requestCount, unreadInboxCount } = useSocialCounts();
+    const { 
+    requestCount, 
+    unreadInboxCount, 
+    setRequestCount, 
+    setUnreadInboxCount 
+  } = useSocialCounts();
 
   // --- THIS ARRAY DEFINITION WAS ACCIDENTALLY OMITTED ---
   const headerIcons = [
@@ -62,6 +71,38 @@ export const Header = () => {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  useEffect(() => {
+    // Function to fetch and update social counts
+    const fetchSocialCounts = async () => {
+      try {
+        // Fetch both counts in parallel
+        const [inboxCount, requestsResponse] = await Promise.all([
+          getUnreadInboxCount(),
+          getPendingRequests()
+        ]);
+        
+        // Update the global context
+        setUnreadInboxCount(inboxCount || 0);
+        setRequestCount(requestsResponse.data?.length || 0);
+
+      } catch (error) {
+        console.error("Failed to fetch social counts:", error);
+        // Set to 0 on error
+        setUnreadInboxCount(0);
+        setRequestCount(0);
+      }
+    };
+
+    if (user) {
+      // If user is logged in, fetch the counts
+      fetchSocialCounts();
+    } else {
+      // If user logs out, reset counts to 0
+      setUnreadInboxCount(0);
+      setRequestCount(0);
+    }
+  }, [user, setRequestCount, setUnreadInboxCount]);
 
   const handleLovingItClick = async () => {
     setLovingItCount(prevCount => prevCount + 1);
