@@ -20,7 +20,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useCommunity } from '@/context/CommunityContext';
 import { useSpaceThreads, useSpaceMetrics, useSpaceMemberList } from '@/hooks/useSpaceData';
 import { CreateThreadForm } from './CreateThread'; 
-import { updateSpaceDetails, Enums } from '@/integrations/supabase/community.api';
+import { updateSpaceDetails, Enums, leaveSpace } from '@/integrations/supabase/community.api';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -176,6 +176,23 @@ export default function SpaceDetailPage() {
           });
       }
   };
+
+  const handleLeaveSpace = async () => {
+    if (!space) return;
+
+    try {
+        await leaveSpace(space.id);
+        toast({ title: "You have left the space", description: `You are no longer a member of ${space.name}.` });
+        await refreshSpaces(); // This will re-fetch memberships
+        navigate('/community'); // Navigate back to the main list
+    } catch (error: any) {
+        toast({
+            variant: "destructive",
+            title: "Failed to leave",
+            description: error.message || "An unexpected error occurred.",
+        });
+    }
+  };
   
   // --- RENDER LOGIC ---
 
@@ -313,9 +330,32 @@ export default function SpaceDetailPage() {
                             </AlertDialogFooter>
                           </AlertDialogContent>
                         </AlertDialog>
-                      </div>
-                    )}
-                </div>
+                      </>
+                      ) : isMember ? (
+                        // If they are a member BUT NOT an admin, show "Leave Space"
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button size="sm" variant="outline">Leave Space</Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Are you sure you want to leave?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                You will lose access to this space and its private threads. You may need to request to join again later.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={handleLeaveSpace}>
+                                Leave Space
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      ) : null} 
+                      {/* If not an admin/mod and not a member, no button shows (which is correct) */}
+                    </div>
+                  </div>
                 )}
               </CardHeader>
               <CardContent>
