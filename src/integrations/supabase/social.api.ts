@@ -10,7 +10,14 @@
  */
 
 import { supabase } from "./client";
-import { encryptMessage } from '@/lib/crypto';
+import {
+  encryptMessage,
+  decryptConversationKey,
+  generateConversationKey,
+  exportConversationKey,
+  importConversationKey,
+  encryptConversationKey
+} from '@/lib/crypto';
 import type { Database, Enums, Tables, TablesInsert } from "./types";
 
 //================================================================================
@@ -269,7 +276,7 @@ export const postDirectMessage = async (
     parentMessageId: number | null = null
 ): Promise<DirectMessage> => {
     await getSessionOrThrow();
-    if (!encryptionKey) throw new Error("Encryption key is required to post a message.");
+    if (!conversationKey) throw new Error("Encryption key is required to post a message.");
 
     // 4. Encrypt the message content
     const encryptedContent = await encryptMessage(plaintext, conversationKey);
@@ -297,8 +304,7 @@ export const editDirectMessage = async (
     conversationKey: CryptoKey, // 👈 7. Accept the encryption key
 ): Promise<DirectMessage> => {
     await getSessionOrThrow();
-    if (!encryptionKey) throw new Error("Encryption key is required to edit a message.");
-    
+    if (!conversationKey) throw new Error("Encryption key is required to edit a message."); 
     // 8. Encrypt the new content
     const encryptedNewContent = await encryptMessage(newPlaintext, conversationKey);
 
