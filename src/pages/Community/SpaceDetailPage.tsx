@@ -20,7 +20,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useCommunity } from '@/context/CommunityContext';
 import { useSpaceThreads, useSpaceMetrics, useSpaceMemberList } from '@/hooks/useSpaceData';
 import { CreateThreadForm } from './CreateThread'; 
-import { updateSpaceDetails, Enums, leaveSpace } from '@/integrations/supabase/community.api';
+import { updateSpaceDetails, Enums, leaveSpace, updateThreadDetails } from '@/integrations/supabase/community.api';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -49,6 +49,7 @@ export default function SpaceDetailPage() {
   const [editedName, setEditedName] = useState('');
   const [editedDescription, setEditedDescription] = useState('');
   const [editedJoinLevel, setEditedJoinLevel] = useState<Enums<'space_join_level'>>('OPEN');
+  const [editingThread, setEditingThread] = useState<any | null>(null);
 
   // --- LOGIC & EFFECTS ---
   // The initial page load is dependent on fetching the list of all spaces.
@@ -177,6 +178,37 @@ export default function SpaceDetailPage() {
       }
   };
 
+  const handleUpdateThread = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingThread) return;
+
+    // Get data from the form
+    const formData = new FormData(e.target as HTMLFormElement);
+    const title = formData.get('title') as string;
+    const description = formData.get('description') as string;
+    
+    if (!title) {
+        toast({ title: "Title cannot be empty", variant: "destructive" });
+        return;
+    }
+    
+    try {
+        await updateThreadDetails(editingThread.id, {
+            title,
+            description,
+        });
+        toast({ title: "Success", description: "Thread updated." });
+        refreshThreads(); // Refresh the list
+        setEditingThread(null); // Close the dialog
+    } catch (error: any) {
+        toast({
+            variant: "destructive",
+            title: "Update Failed",
+            description: error.message || "An unexpected error occurred.",
+        });
+    }
+  };
+
   const handleLeaveSpace = async () => {
     if (!space) return;
 
@@ -205,40 +237,62 @@ export default function SpaceDetailPage() {
         </>
       ) : threads.length > 0 ? (
         threads.map(thread => (
-          <Card key={thread.id} className="transition-all hover:shadow-md group">
-            <CardContent className="p-4 flex items-center justify-between">
-              <Link to={`/community/thread/${thread.id}`} className="flex-grow">
-                  <h3 className="font-semibold text-lg group-hover:text-primary">{thread.title}</h3>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {thread.message_count} messages • Started by {thread.creator_full_name}
-                  </p>
-              </Link>
-              {isUserAdminOrMod && (
-                <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                        <Button size="icon" variant="ghost" className="h-8 w-8 ml-4 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-                           <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
-                        </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                        <AlertDialogHeader>
-                            <AlertDialogTitle>Delete this thread?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                                This will permanently delete the thread "{thread.title}". This action cannot be undone.
-                            </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => handleDeleteThread(thread.id)}>
-                                Delete
-                            </AlertDialogAction>
-                        </AlertDialogFooter>
-                    </AlertDialogContent>
-                </AlertDialog>
-              )}
-            </CardContent>
-          </Card>
-        ))
+          const canManageThread = isUserAdminOrMod || user?.id === thread.creator_id;
+          
+          return (
+            <Card key={thread.id} className="transition-all hover:shadow-md group">
+              <CardContent className="p-4 flex items-center justify-between">
+                <Link to={`/community/thread/${thread.id}`} className="flex-grow">
+                    <h3 className="font-semibold text-lg group-hover:text-primary">{thread.title}</h3>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {thread.message_count} messages • Started by {thread.creator_full_name}
+                    </p>
+                </Link>
+
+                {/* This block now checks the correct permission */}
+                {canManageThread && (
+                  <div className="flex items-center ml-4 flex-shrink-0">
+                    {/* 1. NEW "Edit" BUTTON */}
+                    <Button 
+                      size="icon" 
+                      variant="ghost" 
+                      className="h-8 w-8" 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditingThread(thread); // Open the edit dialog
+                      }}
+                    >
+                       <Pencil className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                    </Button>
+
+                    {/* 2. EXISTING "Delete" BUTTON */}
+                    <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
+                               <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
+                            </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                                <AlertDialogTitle>Delete this thread?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    This will permanently delete the thread "{thread.title}". This action cannot be undone.
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleDeleteThread(thread.id)}>
+                                    Delete
+                                </AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          );
+        })
       ) : (
         <Card>
             <CardContent className="p-6 text-center text-muted-foreground">
@@ -439,6 +493,37 @@ export default function SpaceDetailPage() {
           </DialogContent>
         </Dialog>
       )}
+      <Dialog open={!!editingThread} onOpenChange={(isOpen) => !isOpen && setEditingThread(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Thread</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleUpdateThread} className="pt-4 space-y-4">
+            <div>
+              <label htmlFor="title" className="block text-sm font-medium mb-1">Title</label>
+              <Input 
+                id="title" 
+                name="title" 
+                defaultValue={editingThread?.title} 
+                required 
+              />
+            </div>
+            <div>
+              <label htmlFor="description" className="block text-sm font-medium mb-1">Description (Optional)</label>
+              <Textarea
+                id="description"
+                name="description"
+                defaultValue={editingThread?.description || ''}
+                placeholder="A brief description of this thread..."
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="ghost" onClick={() => setEditingThread(null)}>Cancel</Button>
+              <Button type="submit">Save Changes</Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
