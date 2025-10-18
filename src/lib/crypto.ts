@@ -160,3 +160,53 @@ export const decryptConversationKey = async (
   const jwkString = await decryptMessage(encryptedKey, userMasterKey);
   return importConversationKey(jwkString);
 };
+
+/**
+ * Encrypts a File object using AES-GCM.
+ * @param {File} file - The file to encrypt.
+ * @param {CryptoKey} key - The AES-GCM key.
+ * @returns {Promise<{encryptedBlob: Blob, ivString: string}>}
+ */
+export const encryptFile = async (
+  file: File, 
+  key: CryptoKey
+): Promise<{encryptedBlob: Blob, ivString: string}> => {
+  const fileBuffer = await file.arrayBuffer();
+  const iv = getCrypto().getRandomValues(new Uint8Array(12));
+
+  const encryptedBuffer = await getSubtle().encrypt(
+    { name: 'AES-GCM', iv: iv },
+    key,
+    fileBuffer
+  );
+
+  const encryptedBlob = new Blob([encryptedBuffer], { type: file.type });
+  const ivString = btoa(String.fromCharCode(...iv));
+
+  return { encryptedBlob, ivString };
+};
+
+/**
+ * Decrypts a file blob using AES-GCM.
+ * @param {Blob} encryptedBlob - The encrypted file data.
+ * @param {string} ivString - The base64-encoded IV.
+ * @param {CryptoKey} key - The AES-GCM key.
+ * @returns {Promise<Blob>} - The decrypted file as a Blob.
+ */
+export const decryptFile = async (
+  encryptedBlob: Blob, 
+  ivString: string, 
+  key: CryptoKey
+): Promise<Blob> => {
+  const encryptedBuffer = await encryptedBlob.arrayBuffer();
+  const iv = new Uint8Array(atob(ivString).split('').map(c => c.charCodeAt(0)));
+
+  const decryptedBuffer = await getSubtle().decrypt(
+    { name: 'AES-GCM', iv: iv },
+    key,
+    encryptedBuffer
+  );
+
+  // Reconstruct the file blob with its original type
+  return new Blob([decryptedBuffer], { type: encryptedBlob.type });
+};
