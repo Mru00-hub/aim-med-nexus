@@ -1,5 +1,33 @@
 // src/lib/crypto.ts
 
+// ===========================================================
+// Universal Crypto Resolver for Browser + Node.js
+// ===========================================================
+
+function getCrypto(): Crypto {
+  if (typeof window !== 'undefined' && window.crypto) {
+    return window.crypto; // Browser implementation
+  }
+  if (typeof globalThis !== 'undefined' && globalThis.crypto) {
+    return globalThis.crypto; // Node 18+ global crypto
+  }
+  try {
+    // Node-compatible import fallback
+    const { webcrypto } = require('crypto');
+    return webcrypto;
+  } catch (err) {
+    throw new Error('Web Crypto API is not available in this environment.');
+  }
+}
+
+function getSubtle(): SubtleCrypto {
+  return getCrypto().subtle;
+}
+
+// ===========================================================
+// Key Derivation (Password → AES-GCM derivation)
+// ===========================================================
+
 /**
  * Derives a strong, AES-GCM compatible encryption key from a user's password and salt.
  * Uses the PBKDF2 algorithm.
@@ -12,150 +40,123 @@ export const deriveKey = async (password: string, salt: string): Promise<CryptoK
   const passwordBuffer = encoder.encode(password);
   const saltBuffer = encoder.encode(salt);
 
-  // 1. Import the user's password as a base key for PBKDF2.
-  const baseKey = await crypto.subtle.importKey(
-    "raw",
+  const baseKey = await getSubtle().importKey(
+    'raw',
     passwordBuffer,
-    { name: "PBKDF2" },
+    { name: 'PBKDF2' },
     false,
-    ["deriveKey"]
+    ['deriveKey']
   );
 
-  // 2. Derive a 256-bit AES-GCM key.
-  // We use a high iteration count for security.
-  return crypto.subtle.deriveKey(
+  return getSubtle().deriveKey(
     {
-      name: "PBKDF2",
+      name: 'PBKDF2',
       salt: saltBuffer,
-      iterations: 250000, // A good, modern iteration count
-      hash: "SHA-256",
+      iterations: 250000,
+      hash: 'SHA-256',
     },
     baseKey,
-    { name: "AES-GCM", length: 256 }, // Key algorithm and length
-    true, // The key can be exported if needed (usually false is fine)
-    ["encrypt", "decrypt"] // Key can be used for both actions
-  );
-};
-
-
-/**
- * Encrypts a plaintext message using a derived AES-GCM CryptoKey.
- * @param {string} plaintext - The message to encrypt.
- * @param {CryptoKey} key - The CryptoKey derived from the user's password.
- * @returns {Promise<string>} - A base64 encoded string containing the IV and ciphertext.
- */
-export const encryptMessage = async (plaintext: string, key: CryptoKey): Promise<string> => {
-  const encoder = new TextEncoder();
-  const dataBuffer = encoder.encode(plaintext);
-
-  // 1. Generate a random 12-byte Initialization Vector (IV).
-  // The IV must be unique for every encryption with the same key.
-  const iv = crypto.getRandomValues(new Uint8Array(12));
-
-  // 2. Encrypt the data.
-  const encryptedBuffer = await crypto.subtle.encrypt(
-    {
-      name: "AES-GCM",
-      iv: iv,
-    },
-    key,
-    dataBuffer
-  );
-
-  // 3. Bundle the IV and the ciphertext together for storage.
-  // We store them as `iv.ciphertext` in a single string.
-  const ivString = btoa(String.fromCharCode.apply(null, Array.from(iv)));
-  const encryptedString = btoa(String.fromCharCode.apply(null, Array.from(new Uint8Array(encryptedBuffer))));
-  
-  return `${ivString}.${encryptedString}`;
-};
-
-/**
- * Decrypts a bundled (IV + ciphertext) message using a derived AES-GCM CryptoKey.
- * @param {string} bundledCiphertext - The base64 string from the database (e.g., "iv.ciphertext").
- * @param {CryptoKey} key - The CryptoKey derived from the user's password.
- * @returns {Promise<string>} - The original plaintext message.
- */
-export const decryptMessage = async (bundledCiphertext: string, key: CryptoKey): Promise<string> => {
-  // 1. Unbundle the IV and ciphertext from the stored string.
-  const [ivString, encryptedString] = bundledCiphertext.split('.');
-  if (!ivString || !encryptedString) {
-    throw new Error("Invalid encrypted message format.");
-  }
-
-  const iv = new Uint8Array(atob(ivString).split('').map(c => c.charCodeAt(0)));
-  const ciphertext = new Uint8Array(atob(encryptedString).split('').map(c => c.charCodeAt(0)));
-
-  // 2. Decrypt the data.
-  const decryptedBuffer = await crypto.subtle.decrypt(
-    {
-      name: "AES-GCM",
-      iv: iv,
-    },
-    key,
-    ciphertext
-  );
-
-  // 3. Decode the buffer back to a readable string.
-  const decoder = new TextDecoder();
-  return decoder.decode(decryptedBuffer);
-};
-
-/**
- * Generates a new random conversation key or user master key.
- */
-export const generateConversationKey = async (): Promise<CryptoKey> => {
-  return crypto.subtle.generateKey(
-    { name: "AES-GCM", length: 256 },
-    true, // Make the key exportable
-    ["encrypt", "decrypt"]
-  );
-};
-
-/**
- * Exports a CryptoKey to a storable JSON Web Key (JWK) string format.
- */
-export const exportConversationKey = async (key: CryptoKey): Promise<string> => {
-  const jwk = await crypto.subtle.exportKey('jwk', key);
-  return JSON.stringify(jwk);
-};
-
-/**
- * Imports a CryptoKey from a JWK string.
- */
-export const importConversationKey = async (jwkString: string): Promise<CryptoKey> => {
-  const jwk = JSON.parse(jwkString);
-  return crypto.subtle.importKey(
-    'jwk',
-    jwk,
     { name: 'AES-GCM', length: 256 },
     true,
     ['encrypt', 'decrypt']
   );
 };
 
+// ===========================================================
+// Message Encryption & Decryption
+// ===========================================================
+
 /**
- * Encrypts a conversation key using a user's master key.
- * This "wraps" the shared key so it can be stored securely for each user.
+ * Encrypts a plaintext message using AES-GCM.
+ * @param {string} plaintext - The message to encrypt.
+ * @param {CryptoKey} key - The AES-GCM key.
  */
+export const encryptMessage = async (plaintext: string, key: CryptoKey): Promise<string> => {
+  const encoder = new TextEncoder();
+  const dataBuffer = encoder.encode(plaintext);
+
+  const iv = getCrypto().getRandomValues(new Uint8Array(12));
+
+  const encryptedBuffer = await getSubtle().encrypt(
+    {
+      name: 'AES-GCM',
+      iv: iv,
+    },
+    key,
+    dataBuffer
+  );
+
+  const ivString = btoa(String.fromCharCode(...iv));
+  const encryptedString = btoa(String.fromCharCode(...new Uint8Array(encryptedBuffer)));
+
+  return `${ivString}.${encryptedString}`;
+};
+
+/**
+ * Decrypts a bundled (IV + ciphertext) message using AES-GCM.
+ * @param {string} bundledCiphertext - "iv.ciphertext" format.
+ * @param {CryptoKey} key - The AES-GCM key.
+ */
+export const decryptMessage = async (bundledCiphertext: string, key: CryptoKey): Promise<string> => {
+  const [ivString, encryptedString] = bundledCiphertext.split('.');
+  if (!ivString || !encryptedString) {
+    throw new Error('Invalid encrypted message format.');
+  }
+
+  const iv = new Uint8Array(atob(ivString).split('').map(c => c.charCodeAt(0)));
+  const ciphertext = new Uint8Array(atob(encryptedString).split('').map(c => c.charCodeAt(0)));
+
+  const decryptedBuffer = await getSubtle().decrypt(
+    {
+      name: 'AES-GCM',
+      iv: iv,
+    },
+    key,
+    ciphertext
+  );
+
+  const decoder = new TextDecoder();
+  return decoder.decode(decryptedBuffer);
+};
+
+// ===========================================================
+// Conversation Key Management
+// ===========================================================
+
+export const generateConversationKey = async (): Promise<CryptoKey> => {
+  return getSubtle().generateKey(
+    { name: 'AES-GCM', length: 256 },
+    true,
+    ['encrypt', 'decrypt']
+  );
+};
+
+export const exportConversationKey = async (key: CryptoKey): Promise<string> => {
+  const jwk = await getSubtle().exportKey('jwk', key);
+  return JSON.stringify(jwk);
+};
+
+export const importConversationKey = async (jwkString: string): Promise<CryptoKey> => {
+  const jwk = JSON.parse(jwkString);
+  return getSubtle().importKey('jwk', jwk, { name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt']);
+};
+
+// ===========================================================
+// Master-Key Encryption Wrappers
+// ===========================================================
+
 export const encryptConversationKey = async (
   conversationKey: CryptoKey,
   userMasterKey: CryptoKey
 ): Promise<string> => {
   const jwkString = await exportConversationKey(conversationKey);
-  // We can reuse your robust encryptMessage function for this
   return encryptMessage(jwkString, userMasterKey);
 };
 
-/**
- * Decrypts a conversation key using a user's master key.
- * This "unwraps" the shared key, making it usable for decrypting messages.
- */
 export const decryptConversationKey = async (
   encryptedKey: string,
   userMasterKey: CryptoKey
 ): Promise<CryptoKey> => {
-  // We reuse your robust decryptMessage function for this
   const jwkString = await decryptMessage(encryptedKey, userMasterKey);
   return importConversationKey(jwkString);
 };
