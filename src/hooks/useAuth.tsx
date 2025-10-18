@@ -296,6 +296,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     try {
       await supabase.auth.signOut();
+      // FIX: Add navigation to the home page after sign-out.
+      navigate('/'); 
     } catch (error) {
       console.error("Sign out error:", error);
       toast({
@@ -305,9 +307,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
     } finally {
       setLoadingMessage('');
-      // onAuthStateChange will reset the flag
+      // onAuthStateChange will still run and clear the user state
     }
   };
+
 
   const value = {
     user,
