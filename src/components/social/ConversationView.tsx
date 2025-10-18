@@ -149,6 +149,7 @@ export const ConversationView = ({ conversation, onConversationUpdate }: Convers
               key={message.id}
               message={message}
               currentUserId={user?.id || ''}
+              conversationKey={conversationKey}
               onReplyClick={handleReplyClick}
               onDelete={handleDeleteMessage}
               onEdit={handleEditMessage}
