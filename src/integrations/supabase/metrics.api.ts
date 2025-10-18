@@ -1,18 +1,19 @@
 import { supabase } from './client';
 
 /**
- * Fetches the total count of all users in the auth.users table.
+ * Fetches the total count of all users from auth.users via an RPC.
  */
 export const getUsersCount = async () => {
-  const { count, error } = await supabase
-    .from('users') // Note: Supabase RLS on 'profiles' might be slow. Counting 'users' is faster.
-    .select('*', { count: 'exact', head: true });
+  // Call the SQL function 'get_total_users_count'
+  const { data, error } = await supabase.rpc('get_total_users_count');
 
   if (error) {
     console.error('Error fetching user count:', error);
     throw new Error(error.message);
   }
-  return count || 0;
+  
+  // With RPC, the number is returned directly in 'data'
+  return data || 0; 
 };
 
 /**
