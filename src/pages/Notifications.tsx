@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { 
   Bell, 
   MessageSquare, 
@@ -154,6 +155,15 @@ const Notifications = () => {
       <Header />
       
       <main className="container-medical py-8">
+        <Alert className="mb-8 border-primary/50">
+          <Construction className="h-5 w-5" />
+          <AlertTitle className="font-bold text-lg">Feature Under Construction</AlertTitle>
+          <AlertDescription className="text-base">
+            We are actively building a powerful, real-time notification system for you. 
+            The content on this page is currently a placeholder. Thank you for your patience!
+          </AlertDescription>
+        </Alert>
+        
         {/* Page Header */}
         <div className="flex justify-between items-center mb-8 animate-fade-in">
           <div>
