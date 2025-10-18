@@ -2,8 +2,27 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Users, MessageSquare, Briefcase } from 'lucide-react';
+import { ArrowRight, Users, MessageSquare, Briefcase, Loader2 } from 'lucide-react';
 import heroImage from '@/assets/hero-image.jpg';
+import { useQuery } from '@tanstack/react-query';
+import { getUsersCount, getSpacesCount } from '@/integrations/supabase/metrics.api';
+
+const formatCount = (num: number): string => {
+  if (num < 1000) {
+    return `${num}+`;
+  }
+  if (num < 1000000) {
+    return `${(num / 1000).toFixed(1).replace(/\.0$/, '')}k+`;
+  }
+  return `${(num / 1000000).toFixed(1).replace(/\.0$/, '')}M+`;
+};
+
+const MetricDisplay = ({ count, isLoading, fallback }: { count: number | undefined, isLoading: boolean, fallback: string }) => {
+  if (isLoading) {
+    return <Loader2 className="h-4 w-4 animate-spin" />;
+  }
+  return <span>{count ? formatCount(count) : fallback}</span>;
+};
 
 /**
  * AIMedNet Hero Section Component
@@ -13,6 +32,16 @@ import heroImage from '@/assets/hero-image.jpg';
 export const HeroSection = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { data: userCount, isLoading: isLoadingUsers } = useQuery({
+    queryKey: ['userCount'],
+    queryFn: getUsersCount,
+  });
+
+  const { data: spacesCount, isLoading: isLoadingSpaces } = useQuery({
+    queryKey: ['spacesCount'],
+    queryFn: getSpacesCount,
+  });
+
   return (
     <section className="section-medical bg-gradient-hero relative overflow-hidden">
       {/* Background Image Overlay */}
@@ -66,11 +95,17 @@ export const HeroSection = () => {
             <div className="flex items-center gap-8 pt-8 border-t border-border">
               <div className="flex items-center gap-2">
                 <Users className="h-5 w-5 text-primary" />
-                <span className="text-sm text-muted-foreground">50,000+ Healthcare Professionals</span>
+                <span className="text-sm text-muted-foreground flex items-center gap-1.5">
+                  <MetricDisplay count={userCount} isLoading={isLoadingUsers} fallback="50k+" /> 
+                  Healthcare Professionals
+                </span>
               </div>
               <div className="flex items-center gap-2">
                 <MessageSquare className="h-5 w-5 text-accent" />
-                <span className="text-sm text-muted-foreground">Active Communities</span>
+                <span className="text-sm text-muted-foreground flex items-center gap-1.5">
+                  <MetricDisplay count={spacesCount} isLoading={isLoadingSpaces} fallback="1k+" /> 
+                  Active Communities
+                </span>
               </div>
               <div className="flex items-center gap-2">
                 <Briefcase className="h-5 w-5 text-success" />
@@ -98,7 +133,9 @@ export const HeroSection = () => {
                     <Users className="h-5 w-5 text-primary-foreground" />
                   </div>
                   <div>
-                    <div className="text-sm font-semibold">50,000+</div>
+                    <div className="text-sm font-semibold">
+                      <MetricDisplay count={userCount} isLoading={isLoadingUsers} fallback="50,000+" />
+                    </div>
                     <div className="text-xs text-muted-foreground">Members</div>
                   </div>
                 </div>
@@ -110,7 +147,9 @@ export const HeroSection = () => {
                     <MessageSquare className="h-5 w-5 text-accent-foreground" />
                   </div>
                   <div>
-                    <div className="text-sm font-semibold">1M+</div>
+                    <div className="text-sm font-semibold">
+                       <MetricDisplay count={spacesCount} isLoading={isLoadingSpaces} fallback="1,000+" />
+                    </div>
                     <div className="text-xs text-muted-foreground">Discussions</div>
                   </div>
                 </div>
