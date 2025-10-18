@@ -19,24 +19,20 @@ import {
     DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
 import { useSocialCounts } from '@/context/SocialCountsContext'; 
+import { deleteCurrentUser } from '@/integrations/supabase/user.api'; // 1. Import delete function
+import { toast } from 'sonner';
 
 export const Header = () => {
   const { user, loading, signOut } = useAuth();
   const navigate = useNavigate();
   const [lovingItCount, setLovingItCount] = useState(0);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isAlertOpen, setIsAlertOpen] = useState(false);
   const { requestCount, unreadInboxCount } = useSocialCounts();
-
-  // --- THIS DATA IS NEEDED FOR THE ICONS ---
-  const MOCK_DATA = {
-    notificationCount: 5,
-  };
-  const { notificationCount} = MOCK_DATA;
 
   // --- THIS ARRAY DEFINITION WAS ACCIDENTALLY OMITTED ---
   const headerIcons = [
-    { icon: Bell, label: 'Notifications', href: '/notifications', showBadge: true, badge: notificationCount, color: 'text-warning hover:text-warning/80' },
-    { icon: MessageSquare, label: 'Feedback', href: '/feedback', showBadge: false, color: 'text-success hover:text-success/80' },
+    { icon: Bell, label: 'Notifications', href: '/notifications', showBadge: false, badge: 0, color: 'text-warning hover:text-warning/80' },
     { icon: Users, label: 'Social', href: '/social', showBadge: true, badge: requestCount, color: 'text-primary hover:text-primary/80' },
     { icon: MessageCircle, label: 'Inbox', href: '/inbox', showBadge: true, badge: unreadInboxCount, color: 'text-premium hover:text-premium/80' }
   ];
@@ -58,6 +54,22 @@ export const Header = () => {
   const handleLovingItClick = async () => {
     setLovingItCount(prevCount => prevCount + 1);
     await incrementLoveCount();
+  };
+
+  const handleDeleteAccount = async () => {
+    setIsDeleting(true);
+    try {
+      await deleteCurrentUser();
+      toast.success('Account deleted successfully.');
+      await signOut(); // Sign out the user
+      navigate('/'); // Redirect to homepage
+    } catch (error) {
+      toast.error('Failed to delete account. Please try again.');
+      console.error(error);
+    } finally {
+      setIsDeleting(false);
+      setIsAlertOpen(false);
+    }
   };
 
   const renderAuthContent = () => {
@@ -104,12 +116,19 @@ export const Header = () => {
                   <UserIcon className="mr-2 h-4 w-4" />
                   <span>Profile</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate('/settings')}>
-                  <Settings className="mr-2 h-4 w-4" />
-                  <span>Settings</span>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem 
+                  className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+                  onSelect={(e) => {
+                    e.preventDefault(); // Prevents menu from closing
+                    setIsAlertOpen(true);
+                  }}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  <span>Delete Account</span>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={signOut} className="text-destructive">
+                <DropdownMenuItem onClick={signOut}>
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>Log out</span>
                 </DropdownMenuItem>
@@ -152,10 +171,17 @@ export const Header = () => {
              </Button>
           ))}
           <Separator />
-          <Button variant="ghost" className="justify-start" onClick={() => handleMobileNav('/settings')}>
-            <Settings className="mr-2 h-4 w-4" /> Settings
+          <Button 
+            variant="ghost" 
+            className="justify-start text-destructive hover:text-destructive" 
+            onClick={() => {
+              setMobileMenuOpen(false); // Close menu first
+              setIsAlertOpen(true);
+            }}
+          >
+            <Trash2 className="mr-2 h-4 w-4" /> Delete Account
           </Button>
-          <Button variant="ghost" className="justify-start text-destructive hover:text-destructive" onClick={signOut}>
+          <Button variant="ghost" className="justify-start" onClick={signOut}>
               <LogOut className="mr-2 h-4 w-4" /> Log Out
           </Button>
         </div>
@@ -221,5 +247,28 @@ export const Header = () => {
         )}
       </div>
     </header>
+    <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete your
+              account, profile, messages, and all associated data from our servers.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteAccount}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              {isDeleting ? 'Deleting...' : 'Yes, delete my account'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 };
