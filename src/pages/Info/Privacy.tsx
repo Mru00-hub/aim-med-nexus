@@ -6,7 +6,7 @@ export default function PrivacyPage() {
       <p className="text-sm text-muted-foreground mb-6">Last updated: October 18, 2025</p>
       
       <p className="mb-4">
-        Dr. Mrudula Bhalke ("us", "we", or "our") operates the AIMedNet website 
+        Dr. Mrudula Bhalke operates the AIMedNet website 
         (the "Service"). This page informs you of our policies regarding the 
         collection, use, and disclosure of personal data when you use our Service 
         and the choices you have associated with that data.
