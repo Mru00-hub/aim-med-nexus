@@ -11,6 +11,7 @@
 
 import { supabase } from "./client";
 import {
+  encryptFile,
   encryptMessage,
   decryptConversationKey,
   generateConversationKey,
@@ -380,17 +381,24 @@ export const removeDirectMessageReaction = async (messageId: number, emoji: stri
  */
 export const uploadDirectMessageAttachment = async (
   messageId: number,
-  file: File
+  file: File,
+  conversationKey: CryptoKey
 ): Promise<DirectMessageAttachment> => {
     const session = await getSessionOrThrow();
     const userId = session.user.id;
-    const filePath = `${userId}/${messageId}/${Date.now()}-${file.name}`;
+    const { encryptedBlob, ivString } = await encryptFile(file, conversationKey);
+    const encryptedFileName = await encryptMessage(file.name, conversationKey);
+
+    // 2. Create a unique path (file name is now anonymous)
+    const filePath = `${userId}/${messageId}/${Date.now()}-encrypted-file`;
 
     const { error: uploadError } = await supabase.storage
         .from('direct_message_attachments')
-        .upload(filePath, file);
+        .upload(filePath, encryptedBlob, {
+           contentType: file.type // Set content type for the encrypted blob
+        });
     if (uploadError) throw new Error(`Storage Error: ${uploadError.message}`);
-
+  
     const { data: { publicUrl } } = supabase.storage
         .from('direct_message_attachments')
         .getPublicUrl(filePath);
@@ -399,10 +407,11 @@ export const uploadDirectMessageAttachment = async (
     const attachmentRecord = {
         message_id: messageId,
         uploaded_by: userId,
-        file_name: file.name,
+        file_name: encryptedFileName, 
         file_url: publicUrl,
         file_type: file.type,
         file_size_bytes: file.size,
+        iv: ivString,
     };
 
     const { data: newAttachment, error: insertError } = await supabase
@@ -444,3 +453,5 @@ export const getDirectMessagesWithDetails = async (conversationId: string): Prom
     // Our custom `DirectMessageWithDetails` type ensures type safety in the app.
     return data as any as DirectMessageWithDetails[];
 };
+
+
