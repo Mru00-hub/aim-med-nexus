@@ -384,8 +384,8 @@ export default function SpaceDetailPage() {
                             </AlertDialogFooter>
                           </AlertDialogContent>
                         </AlertDialog>
-                      </>
-                      ) : isMember ? (
+                      </div>
+                      ) : isMember ? ( // <--- The extra '</>' tag was right before this line. I have removed it.
                         // If they are a member BUT NOT an admin, show "Leave Space"
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
