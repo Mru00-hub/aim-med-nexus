@@ -24,6 +24,8 @@ interface CommunityContextType {
   updateLocalThread: (updatedThread: Partial<ThreadWithDetails> & { id: string }) => void; 
   getMembershipStatus: (spaceId: string) => Enums<'membership_status'> | null;
   setMemberships: React.Dispatch<React.SetStateAction<Membership[]>>;
+  addOptimisticSpace: (space: SpaceWithDetails) => void;
+  removeOptimisticSpace: (spaceId: string) => void;
 }
 
 const CommunityContext = createContext<CommunityContextType | undefined>(undefined);
@@ -35,6 +37,14 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
   const [memberships, setMemberships] = useState<Membership[]>([]);
   const [publicThreads, setPublicThreads] = useState<ThreadWithDetails[]>([]); 
   const [isLoadingSpaces, setIsLoadingSpaces] = useState(true);
+
+  const addOptimisticSpace = useCallback((space: SpaceWithDetails) => {
+    setSpaces(currentSpaces => [space, ...currentSpaces]);
+  }, []);
+
+  const removeOptimisticSpace = useCallback((spaceId: string) => {
+    setSpaces(currentSpaces => currentSpaces.filter(s => s.id !== spaceId));
+  }, []);
 
   // This function is now named `refreshSpaces` but its logic is the same
   const refreshSpaces = useCallback(async () => {
@@ -112,6 +122,8 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
     updateLocalThread,
     getMembershipStatus,
     setMemberships, 
+    addOptimisticSpace,
+    removeOptimisticSpace,
   }), [spaces, memberships, publicThreads, isLoadingSpaces, refreshSpaces, updateLocalSpace, updateLocalThread, getMembershipStatus]);
 
   return (
