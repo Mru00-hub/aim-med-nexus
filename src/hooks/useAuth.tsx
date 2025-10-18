@@ -12,6 +12,7 @@ interface AuthContextType {
   profile: Profile | null;
   loading: boolean;
   loadingMessage: string;
+  initialUnreadCount: number | null;
   personalKey: CryptoKey | null; // Renamed from encryptionKey
   userMasterKey: CryptoKey | null;
   generateAndSetKeys: (password: string, salt: string) => Promise<boolean>;
@@ -37,6 +38,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [initialUnreadCount, setInitialUnreadCount] = useState<number | null>(null);
   const [loadingMessage, setLoadingMessage] = useState('Initializing session...');
   const [personalKey, setPersonalKey] = useState<CryptoKey | null>(null); // Renamed
   const [userMasterKey, setUserMasterKey] = useState<CryptoKey | null>(null); 
