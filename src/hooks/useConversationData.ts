@@ -155,7 +155,7 @@ export const useConversationData = (conversationId: string | undefined, recipien
                 const uploadedAttachments = await Promise.all(files.map(async (file, index) => {
                     try {
                         // Pass the real ID and file
-                        const realAttachment = await uploadDirectMessageAttachment(realMessage.id, file);
+                        const realAttachment = await uploadDirectMessageAttachment(realMessage.id, file, conversationKey);
                         return { 
                             tempId: optimisticAttachments[index].id, 
                             realAttachment: { ...realAttachment, isUploading: false } 
