@@ -236,7 +236,7 @@ export default function SpaceDetailPage() {
             <Skeleton className="h-20 w-full" />
         </>
       ) : threads.length > 0 ? (
-        threads.map(thread => (
+        threads.map(thread => {
           const canManageThread = isUserAdminOrMod || user?.id === thread.creator_id;
           
           return (
