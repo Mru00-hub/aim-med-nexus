@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import { 
   Mail, 
   Phone, 
-  MapPin, 
   Facebook, 
   Twitter, 
   Linkedin, 
@@ -14,29 +13,23 @@ import {
 import { Button } from '@/components/ui/button';
 
 /**
- * AIMedNet Footer Component
- * Professional footer with contact information, links, and social media
- * Includes copyright and creator attribution as requested
+ * AIMedNet Footer Component (Optimized)
+ * Streamlined footer with updated contact info, functional links, 
+ * and removed unnecessary sections.
  */
 export const Footer = () => {
   const footerLinks = {
-    platform: [
-      { label: 'Forums & Communities', href: '/forums' },
-      { label: 'Jobs & Networking', href: '/networking' },
-      { label: 'Partnerships', href: '/partnerships' },
-      { label: 'Premium Features', href: '/premium' }
-    ],
     support: [
-      { label: 'Help Center', href: '/help' },
-      { label: 'Contact Support', href: '/support' },
-      { label: 'Feedback', href: '/feedback' },
-      { label: 'Report Content', href: '/report' }
+      { label: 'Help Center', href: '/info/help' },
+      { label: 'Contact Support', href: '/info/support' },
+      { label: 'Feedback', href: '/feedback' }, // Links to existing page
+      { label: 'Report Content', href: '/info/report' }
     ],
     legal: [
-      { label: 'Privacy Policy', href: '/privacy' },
-      { label: 'Terms of Service', href: '/terms' },
-      { label: 'Cookie Policy', href: '/cookies' },
-      { label: 'Code of Conduct', href: '/code-of-conduct' }
+      { label: 'Privacy Policy', href: '/info/privacy' },
+      { label: 'Terms of Service', href: '/info/terms' },
+      { label: 'Cookie Policy', href: '/info/cookies' },
+      { label: 'Code of Conduct', href: '/info/code-of-conduct' }
     ]
   };
 
@@ -52,6 +45,7 @@ export const Footer = () => {
       {/* Main Footer Content */}
       <div className="container-medical py-16">
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+          
           {/* Brand Section */}
           <div className="space-y-4">
             <div className="flex items-center space-x-3">
@@ -66,48 +60,28 @@ export const Footer = () => {
               </div>
             </div>
             
-            <p className="text-sm opacity-90 leading-relaxed">
-              Where Healthcare Professionals Connect, Collaborate, and Grow. 
-              Your complete professional ecosystem for medical networking and career advancement.
-            </p>
-            
-            {/* Contact Info */}
+            {/* Updated Contact Info */}
             <div className="space-y-2 text-sm">
               <div className="flex items-center gap-2">
                 <Mail className="h-4 w-4" />
-                <a href="mailto:contact@aimednet.com" className="hover:underline">
-                  contact@aimednet.com
+                <a 
+                  href="mailto:mrudulabhalke75917@gmail.com" 
+                  className="hover:underline"
+                >
+                  mrudulabhalke75917@gmail.com
                 </a>
               </div>
               <div className="flex items-center gap-2">
                 <Phone className="h-4 w-4" />
-                <a href="tel:+917094800291" className="hover:underline">
-                  +91 7094800291
+                <a href="tel:8610475917" className="hover:underline">
+                  8610475917
                 </a>
-              </div>
-              <div className="flex items-center gap-2">
-                <MapPin className="h-4 w-4" />
-                <span>India</span>
               </div>
             </div>
           </div>
 
-          {/* Platform Links */}
-          <div>
-            <h3 className="font-semibold mb-4">Platform</h3>
-            <ul className="space-y-2">
-              {footerLinks.platform.map((link) => (
-                <li key={link.label}>
-                  <Link 
-                    to={link.href} 
-                    className="text-sm opacity-80 hover:opacity-100 hover:underline transition-opacity"
-                  >
-                    {link.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
+          {/* Empty div for spacing, aligns columns correctly since Platform was removed */}
+          <div></div>
 
           {/* Support Links */}
           <div>
@@ -166,7 +140,7 @@ export const Footer = () => {
               className="border-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/10"
               asChild
             >
-              <Link to="/report">
+              <Link to="/info/report"> {/* Updated link */}
                 <Flag className="h-4 w-4 mr-2" />
                 Report Content
               </Link>
@@ -178,7 +152,7 @@ export const Footer = () => {
               className="border-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/10"
               asChild
             >
-              <Link to="/feedback">
+              <Link to="/feedback"> {/* Correct existing link */}
                 <MessageSquare className="h-4 w-4 mr-2" />
                 Feedback
               </Link>
@@ -195,13 +169,7 @@ export const Footer = () => {
               © 2025 AIMedNet. All rights reserved. Created by Dr. Mrudula Bhalke
             </div>
             <div className="mt-2 md:mt-0">
-              <span>Contact: </span>
-              <a 
-                href="mailto:mrudulabhalke75917@gmail.com" 
-                className="hover:underline"
-              >
-                mrudulabhalke75917@gmail.com
-              </a>
+              {/* Removed duplicate contact info */}
             </div>
           </div>
         </div>
