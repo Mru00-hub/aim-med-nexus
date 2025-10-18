@@ -47,3 +47,86 @@
 .read-the-docs {
   color: #888;
 }
+
+/* --- Global Mobile & Responsive Fixes --- */
+
+/* 1. Universal box sizing */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* 2. Ensure all media scale properly */
+img, svg, video, canvas {
+  max-width: 100%;
+  height: auto;
+}
+
+/* 3. Mobile padding and safe area inside root container */
+#root, .container-medical {
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding-left: 1rem;
+  padding-right: 1rem;
+  box-sizing: border-box;
+}
+
+/* 4. Cards should wrap and never overflow */
+.card, .card-medical, .card-premium {
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+  max-width: 100%;
+}
+
+/* 5. Responsive grid defaults */
+.grid {
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+}
+
+/* Let Tailwind handle md/lg from utility classes, this ensures mobile fallback */
+@media (min-width: 768px) {
+  .grid-md-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (min-width: 1024px) {
+  .grid-lg-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* 6. Buttons and icon containers wrap properly */
+.flex {
+  flex-wrap: wrap;
+}
+
+/* 7. Prevent text from overflowing cards or buttons */
+h3, h4, h5, h6, p, span, a, button {
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+/* 8. Tabs and filters align nicely */
+.tabs-list, .filters-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+/* 9. Adjust padding for small screens */
+@media (max-width: 640px) {
+  .card, .card-medical {
+    padding: 1rem !important;
+  }
+  .container-medical {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+}
+
+/* 10. Fix horizontal scroll issues */
+body {
+  overflow-x: hidden;
+}
