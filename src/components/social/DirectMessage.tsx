@@ -23,7 +23,7 @@ const Attachment: React.FC<{
   // 1. Decrypt the file name as soon as the component loads
   useEffect(() => {
     const getFileName = async () => {
-      if (attachment.isUploading || attachment.file_url === 'upload-failed') return;
+      if (!conversationKey || attachment.isUploading || attachment.file_url === 'upload-failed') return;
       try {
         const name = await decryptMessage(attachment.file_name, conversationKey);
         setDecryptedName(name);
@@ -37,19 +37,21 @@ const Attachment: React.FC<{
   // 2. If it's an image, decrypt the blob to show a preview
   useEffect(() => {
     const decryptImage = async () => {
-      if (attachment.file_type?.startsWith('image/') && !attachment.isUploading) {
-        setIsDecrypting(true);
-        try {
-          const response = await fetch(attachment.file_url);
-          const encryptedBlob = await response.blob();
-          const decryptedBlob = await decryptFile(encryptedBlob, attachment.iv, conversationKey);
-          const url = URL.createObjectURL(decryptedBlob);
-          setDecryptedImgUrl(url);
-        } catch (e) {
-          console.error("Failed to decrypt image:", e);
-        } finally {
-          setIsDecrypting(false);
-        }
+      if (!conversationKey || !attachment.file_type?.startsWith('image/') || attachment.isUploading) {
+        return;
+      }
+
+      setIsDecrypting(true);
+      try {
+        const response = await fetch(attachment.file_url);
+        const encryptedBlob = await response.blob();
+        const decryptedBlob = await decryptFile(encryptedBlob, attachment.iv, conversationKey);
+        const url = URL.createObjectURL(decryptedBlob);
+        setDecryptedImgUrl(url);
+      } catch (e) {
+        console.error("Failed to decrypt image:", e);
+      } finally {
+        setIsDecrypting(false);
       }
     };
     decryptImage();
@@ -64,6 +66,7 @@ const Attachment: React.FC<{
   
   // 3. Handle downloads for non-image files
   const handleDownload = async () => {
+    if (!conversationKey) return; 
     setIsDecrypting(true);
     try {
       // 1. Fetch the encrypted blob
