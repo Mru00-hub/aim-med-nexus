@@ -363,7 +363,7 @@ export default function SpaceDetailPage() {
                           </Badge>
                         </div>
                     </div>
-                    {isUserAdminOrMod && (
+                    {isUserAdminOrMod ? (
                       <div className="flex items-center gap-2 flex-shrink-0 ml-4">
                         {/* NEW: Edit Button */}
                         <Button size="sm" variant="outline" onClick={() => setIsEditing(true)}>
@@ -385,28 +385,27 @@ export default function SpaceDetailPage() {
                           </AlertDialogContent>
                         </AlertDialog>
                       </div>
-                      ) : isMember ? ( // <--- The extra '</>' tag was right before this line. I have removed it.
-                        // If they are a member BUT NOT an admin, show "Leave Space"
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button size="sm" variant="outline">Leave Space</Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Are you sure you want to leave?</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                You will lose access to this space and its private threads. You may need to request to join again later.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction onClick={handleLeaveSpace}>
-                                Leave Space
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      ) : null} 
+                    ) : getMembershipStatus(space.id) === 'ACTIVE' ? (
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button size="sm" variant="outline">Leave Space</Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Are you sure you want to leave?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              You will lose access to this space and its private threads. You may need to request to join again later.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleLeaveSpace}>
+                              Leave Space
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                  ) : null}
                       {/* If not an admin/mod and not a member, no button shows (which is correct) */}
                     </div>
                   </div>
