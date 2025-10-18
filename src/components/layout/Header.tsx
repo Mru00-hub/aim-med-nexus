@@ -19,10 +19,7 @@ import {
     DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
 import { useSocialCounts } from '@/context/SocialCountsContext'; 
-import { 
-  getPendingRequests, 
-  getUnreadInboxCount 
-} from '@/integrations/supabase/social.api';
+import { getPendingRequests } from '@/integrations/supabase/social.api';
 import { deleteCurrentUser } from '@/integrations/supabase/user.api'; // 1. Import delete function
 import { toast } from 'sonner';
 import {
@@ -38,7 +35,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 export const Header = () => {
-  const { user, loading, signOut } = useAuth();
+  const { user, loading, signOut, initialUnreadCount} = useAuth();
   const navigate = useNavigate();
   const [lovingItCount, setLovingItCount] = useState(0);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -73,36 +70,36 @@ export const Header = () => {
   }, []);
 
   useEffect(() => {
-    // Function to fetch and update social counts
-    const fetchSocialCounts = async () => {
+    // initialUnreadCount will be null on load, then a number.
+    // We update the context when it's not null.
+    // useAuth already handles setting it to 0 on logout.
+    if (initialUnreadCount !== null) {
+      setUnreadInboxCount(initialUnreadCount);
+    } else if (!user) {
+      // Explicitly set to 0 if there's no user
+      setUnreadInboxCount(0);
+    }
+  }, [initialUnreadCount, user, setUnreadInboxCount]); 
+
+  useEffect(() => {
+    const fetchPendingRequests = async () => {
       try {
-        // Fetch both counts in parallel
-        const [inboxCount, requestsResponse] = await Promise.all([
-          getUnreadInboxCount(),
-          getPendingRequests()
-        ]);
-        
-        // Update the global context
-        setUnreadInboxCount(inboxCount || 0);
+        const requestsResponse = await getPendingRequests();
         setRequestCount(requestsResponse.data?.length || 0);
 
       } catch (error) {
-        console.error("Failed to fetch social counts:", error);
-        // Set to 0 on error
-        setUnreadInboxCount(0);
+        console.error("Failed to fetch pending requests:", error);
         setRequestCount(0);
       }
     };
 
     if (user) {
-      // If user is logged in, fetch the counts
-      fetchSocialCounts();
+      fetchPendingRequests();
     } else {
-      // If user logs out, reset counts to 0
-      setUnreadInboxCount(0);
+      // If user logs out, reset request count
       setRequestCount(0);
     }
-  }, [user, setRequestCount, setUnreadInboxCount]);
+  }, [user, setRequestCount]);
 
   const handleLovingItClick = async () => {
     setLovingItCount(prevCount => prevCount + 1);
