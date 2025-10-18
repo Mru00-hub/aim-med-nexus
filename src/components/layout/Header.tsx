@@ -166,16 +166,9 @@ export const Header = () => {
                   <UserIcon className="mr-2 h-4 w-4" />
                   <span>Profile</span>
                 </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem 
-                  className="text-destructive focus:bg-destructive/10 focus:text-destructive"
-                  onSelect={(e) => {
-                    e.preventDefault(); // Prevents menu from closing
-                    setIsAlertOpen(true);
-                  }}
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  <span>Delete Account</span>
+                <DropdownMenuItem onClick={() => navigate('/settings')}>
+                  <Settings className="mr-2 h-4 w-4" />
+                  <span>Settings</span>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={signOut}>
@@ -221,15 +214,8 @@ export const Header = () => {
              </Button>
           ))}
           <Separator />
-          <Button 
-            variant="ghost" 
-            className="justify-start text-destructive hover:text-destructive" 
-            onClick={() => {
-              setMobileMenuOpen(false); // Close menu first
-              setIsAlertOpen(true);
-            }}
-          >
-            <Trash2 className="mr-2 h-4 w-4" /> Delete Account
+          <Button variant="ghost" className="justify-start" onClick={() => handleMobileNav('/settings')}>
+            <Settings className="mr-2 h-4 w-4" /> Settings
           </Button>
           <Button variant="ghost" className="justify-start" onClick={signOut}>
               <LogOut className="mr-2 h-4 w-4" /> Log Out
