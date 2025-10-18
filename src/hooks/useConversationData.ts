@@ -111,6 +111,10 @@ export const useConversationData = (conversationId: string | undefined, recipien
         if (!user || !profile || !conversationId || !conversationKey) return;
 
         const tempMsgId = -Date.now();
+        const optimisticAttachments = files.map((file, index) => ({
+            id: `temp_att_${Date.now()}_${index}`,
+            message_id: -1, file_name: file.name, file_type: file.type, file_url: URL.createObjectURL(file), file_size_bytes: file.size, created_at: new Date().toISOString(), uploaded_by: user.id, isUploading: true,
+        })) as any;
         try {
             if (!await canSendMessage(recipientId!)) throw new Error("You are no longer connected.");
 
@@ -127,10 +131,7 @@ export const useConversationData = (conversationId: string | undefined, recipien
                 is_edited: false,
                 author: { full_name: profile.full_name, profile_picture_url: profile.profile_picture_url },
                 reactions: [],
-                attachments: files.map((file, index) => ({
-                    id: `temp_att_${Date.now()}_${index}`,
-                    message_id: -1, file_name: file.name, file_type: file.type, file_url: URL.createObjectURL(file), file_size_bytes: file.size, created_at: new Date().toISOString(), uploaded_by: user.id, isUploading: true,
-                })) as any,
+                attachments: optimisticAttachments,
             };
 
             setMessages(current => [...current, optimisticMessage as DirectMessageWithDetails]);
@@ -143,22 +144,39 @@ export const useConversationData = (conversationId: string | undefined, recipien
               parentMessageId
             );
             
-            setMessages(current => current.map(msg => msg.id === tempMsgId ? realMessage : msg));
-
+            setMessages(current => current.map(msg => 
+                msg.id === tempMsgId 
+                ? { ...optimisticMessage, ...realMessage, id: realMessage.id, created_at: realMessage.created_at, isOptimistic: false } 
+                : msg
+            ));
+            
             // STEP 4: Handle Attachments.
             if (files.length > 0) {
-                await Promise.all(files.map(async (file, index) => {
+                const uploadedAttachments = await Promise.all(files.map(async (file, index) => {
                     try {
+                        // Pass the real ID and file
                         const realAttachment = await uploadDirectMessageAttachment(realMessage.id, file);
-                        setMessages(current => current.map(msg =>
-                            msg.id === realMessage.id ? { ...msg, attachments: msg.attachments.map(att => att.id === optimisticAttachments[index].id ? { ...realAttachment, isUploading: false } : att) } : msg
-                        ));
+                        return { 
+                            tempId: optimisticAttachments[index].id, 
+                            realAttachment: { ...realAttachment, isUploading: false } 
+                        };
                     } catch (uploadError) {
                         console.error(`Upload failed for ${file.name}:`, uploadError);
-                        setMessages(current => current.map(msg =>
-                            msg.id === realMessage.id ? { ...msg, attachments: msg.attachments.map(att => att.id === optimisticAttachments[index].id ? { ...att, isUploading: false, file_url: 'upload-failed' } : att) } : msg
-                        ));
+                        return { 
+                            tempId: optimisticAttachments[index].id, 
+                            realAttachment: { ...optimisticAttachments[index], isUploading: false, file_url: 'upload-failed' } 
+                        };
                     }
+                }));
+                setMessages(current => current.map(msg => {
+                    if (msg.id === realMessage.id) {
+                        // Create a map of temp IDs to real attachment data
+                        const attachmentMap = new Map(uploadedAttachments.map(ua => [ua.tempId, ua.realAttachment]));
+                        // Replace temp attachments with real ones
+                        const newAttachments = msg.attachments.map(att => attachmentMap.get(att.id) || att);
+                        return { ...msg, attachments: newAttachments };
+                    }
+                    return msg;
                 }));
             }
         } catch (error: any) {
