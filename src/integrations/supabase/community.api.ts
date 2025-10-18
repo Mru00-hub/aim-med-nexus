@@ -550,3 +550,26 @@ export const updateMembershipStatus = async (membershipId: string, newStatus: En
     }
     return data;
 };
+
+/** Allows a user to leave a space. */
+export const leaveSpace = async (spaceId: string): Promise<void> => {
+    const session = await getSessionOrThrow();
+    
+    // Deletes the membership row where user_id and space_id match.
+    // This assumes you have RLS policies that allow a user to delete their own membership.
+    const { error } = await supabase
+        .from('memberships')
+        .delete()
+        .match({
+            user_id: session.user.id,
+            space_id: spaceId
+        });
+
+    if (error) {
+        // Handle cases where the user might be the creator (if you have backend rules)
+        if (error.code === '23503') { // Foreign key violation
+             throw new Error("Cannot leave space. You might be the creator or last admin.");
+        }
+        throw error;
+    }
+};
