@@ -230,7 +230,7 @@ export const Header = () => {
             <div className="flex items-center gap-1 sm:gap-2">
               <Button variant="ghost" size="sm" onClick={handleLovingItClick} className="relative p-2 sm:p-3 text-destructive hover:text-destructive/80" title="Loving it">
                 <Heart className="h-5 w-5" />
-                {lovingItCount > 0 && <Badge variant="destructive" className="absolute -top-1 -right-1 h-4 w-4 sm:h-5 sm:w-5 rounded-full p-0 flex items-center justify-center text-xs">{lovingTCount > 99 ? '99+' : lovingItCount}</Badge>}
+                {lovingItCount > 0 && <Badge variant="destructive" className="absolute -top-1 -right-1 h-4 w-4 sm:h-5 sm:w-5 rounded-full p-0 flex items-center justify-center text-xs">{lovingItCount > 99 ? '99+' : lovingItCount}</Badge>}
               </Button>
               
               <Link to="/partnerships">
