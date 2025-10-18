@@ -406,8 +406,6 @@ export default function SpaceDetailPage() {
                         </AlertDialogContent>
                       </AlertDialog>
                   ) : null}
-                      {/* If not an admin/mod and not a member, no button shows (which is correct) */}
-                    </div>
                   </div>
                 )}
               </CardHeader>
