@@ -27,6 +27,15 @@ import ProfilePage from './pages/ProfilePage';
 import CompleteProfile from "./pages/CompleteProfile";
 import AuthCallback from './pages/AuthCallback'; 
 
+//--FOOTER Imports--
+import HelpPage from './pages/Info/Help';
+import SupportPage from './pages/Info/Support';
+import ReportPage from './pages/Info/Report';
+import PrivacyPage from './pages/Info/Privacy';
+import TermsPage from './pages/Info/Terms';
+import CookiesPage from './pages/Info/Cookies';
+import CodeOfConductPage from './pages/Info/CodeOfConduct';
+
 // --- SOCIAL PAGE IMPORTS ---
 import Social from "./pages/Social/Social";
 import IndustryHub from "./pages/Social/IndustryHub";
