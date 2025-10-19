@@ -1,4 +1,4 @@
-import React, { ChangeEvent } from 'react';
+import React, { useState, useEffect, ChangeEvent } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -63,7 +63,13 @@ export const PersonalDetailsStep: React.FC<PersonalDetailsStepProps> = ({
         <Button asChild variant="outline">
           <label htmlFor="avatar-upload" className="cursor-pointer">
             <Upload className="mr-2 h-4 w-4" /> Upload Picture
-            <input id="avatar-upload" type="file" className="sr-only" accept="image/png, image/jpeg" onChange={handleAvatarChange} />
+            <input 
+              id="avatar-upload" 
+              type="file" 
+              className="sr-only" 
+              accept="image/png, image/jpeg" 
+              onChange={handleAvatarChange} 
+            />
           </label>
         </Button>
         <p className="text-xs text-muted-foreground">PNG or JPG, max 2MB.</p>
@@ -112,36 +118,40 @@ export const PersonalDetailsStep: React.FC<PersonalDetailsStepProps> = ({
           />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-2">Date of Birth</label>
+          <label className="block text-sm font-medium mb-2">Date of Birth *</label>
           <Input 
             type="date"
             value={formData.date_of_birth}
             onChange={(e) => handleInputChange('date_of_birth', e.target.value)}
+            required
           />
         </div>
-       </div>
-        <div>
-          <label className="block text-sm font-medium mb-2">Current Location *</label>
-          <Select value={formData.location_id} onValueChange={(value) => handleInputChange('location_id', value)}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select your city/town" />
-            </SelectTrigger>
-            <SelectContent className="max-h-48 overflow-y-auto">
-              {locations.map(loc => <SelectItem key={loc.id} value={loc.id}>{loc.name}</SelectItem>)}
-              <SelectItem value="other">Other</SelectItem>
-            </SelectContent>
-          </Select>
-          {formData.location_id === 'other' && (
-            <div className="mt-2">
-              <Input
-                value={formData.location_other}
-                onChange={(e) => handleInputChange('location_other', e.target.value)}
-                placeholder="Please specify your location"
-                required
-              />
-            </div>
-          )}
-        </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium mb-2">Current Location *</label>
+        <Select value={formData.location_id} onValueChange={(value) => handleInputChange('location_id', value)}>
+          <SelectTrigger>
+            <SelectValue placeholder="Select your city/town" />
+          </SelectTrigger>
+          <SelectContent className="max-h-48 overflow-y-auto">
+            {locations.map(loc => (
+              <SelectItem key={loc.id} value={loc.id}>{loc.name}</SelectItem>
+            ))}
+            <SelectItem value="other">Other</SelectItem>
+          </SelectContent>
+        </Select>
+        {formData.location_id === 'other' && (
+          <div className="mt-2">
+            <Input
+              value={formData.location_other || ''}
+              onChange={(e) => handleInputChange('location_other', e.target.value)}
+              placeholder="Please specify your location"
+              required
+            />
+          </div>
+        )}
+      </div>
 
       <div className="grid sm:grid-cols-2 gap-4">
         <div>
@@ -152,6 +162,7 @@ export const PersonalDetailsStep: React.FC<PersonalDetailsStepProps> = ({
             onChange={(e) => handleInputChange('password', e.target.value)}
             placeholder="Create a strong password"
             required
+            minLength={6}
           />
         </div>
         <div>
@@ -162,6 +173,7 @@ export const PersonalDetailsStep: React.FC<PersonalDetailsStepProps> = ({
             onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
             placeholder="Confirm your password"
             required
+            minLength={6}
           />
         </div>
       </div>
