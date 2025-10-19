@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import { supabase } from '@/integrations/supabase/client';
 
 type Institution = { id: string; label: string; };
@@ -54,15 +55,14 @@ export const ProfessionalDetailsStep: React.FC<ProfessionalDetailsStepProps> = (
 
       <div>
         <label className="block text-sm font-medium mb-2">Educational Institution *</label>
-        <Select value={formData.institution_id} onValueChange={(value) => handleInputChange('institution_id', value)}>
-          <SelectTrigger>
-            <SelectValue placeholder="Select your college/university" />
-          </SelectTrigger>
-          <SelectContent className="max-h-48 overflow-y-auto">
-            {institutions.map(inst => <SelectItem key={inst.id} value={inst.id}>{inst.label}</SelectItem>)}
-            <SelectItem value="other">Other</SelectItem>
-          </SelectContent>
-        </Select>
+        <SearchableSelect
+          options={institutionOptions}
+          value={formData.institution_id}
+          onValueChange={(value) => handleInputChange('institution_id', value)}
+          placeholder="Select your college/university"
+          searchPlaceholder="Search institutions..."
+          emptyMessage="No institution found."
+        />
         {formData.institution_id === 'other' && (
           <div className="mt-2">
             <Input
@@ -78,15 +78,14 @@ export const ProfessionalDetailsStep: React.FC<ProfessionalDetailsStepProps> = (
       <div className="grid sm:grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium mb-2">Course/Program *</label>
-          <Select value={formData.course_id} onValueChange={(value) => handleInputChange('course_id', value)}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select your course" />
-            </SelectTrigger>
-            <SelectContent className="max-h-48 overflow-y-auto">
-              {courses.map(course => <SelectItem key={course.id} value={course.id}>{course.label}</SelectItem>)}
-              <SelectItem value="other">Other</SelectItem>
-            </SelectContent>
-          </Select>
+          <SearchableSelect
+            options={courseOptions}
+            value={formData.course_id}
+            onValueChange={(value) => handleInputChange('course_id', value)}
+            placeholder="Select your course"
+            searchPlaceholder="Search courses..."
+            emptyMessage="No course found."
+          />
           {formData.course_id === 'other' && (
             <div className="mt-2">
               <Input
@@ -146,15 +145,14 @@ export const ProfessionalDetailsStep: React.FC<ProfessionalDetailsStepProps> = (
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium mb-2"> Industry Field/Domain *</label>
-              <Select value={formData.specialization_id} onValueChange={(value) => handleInputChange('specialization_id', value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select your field" />
-                </SelectTrigger>
-                <SelectContent className="max-h-48 overflow-y-auto">
-                  {specializations.map(spec => <SelectItem key={spec.id} value={spec.id}>{spec.label}</SelectItem>)}
-                  <SelectItem value="other">Other</SelectItem>
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                options={specializationOptions}
+                value={formData.specialization_id}
+                onValueChange={(value) => handleInputChange('specialization_id', value)}
+                placeholder="Select your field"
+                searchPlaceholder="Search specializations..."
+                emptyMessage="No specialization found."
+              />
               {formData.specialization_id === 'other' && (
                 <div className="mt-2">
                   <Input
