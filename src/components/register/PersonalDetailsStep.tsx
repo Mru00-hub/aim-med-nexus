@@ -2,6 +2,7 @@ import React, { useState, useEffect, ChangeEvent } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CircleX, Upload } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -131,17 +132,14 @@ export const PersonalDetailsStep: React.FC<PersonalDetailsStepProps> = ({
 
       <div>
         <label className="block text-sm font-medium mb-2">Current Location *</label>
-        <Select value={formData.location_id} onValueChange={(value) => handleInputChange('location_id', value)}>
-          <SelectTrigger>
-            <SelectValue placeholder="Select your city/town" />
-          </SelectTrigger>
-          <SelectContent className="max-h-48 overflow-y-auto">
-            {locations.map(loc => (
-              <SelectItem key={loc.id} value={loc.id}>{loc.label}</SelectItem>
-            ))}
-            <SelectItem value="other">Other</SelectItem>
-          </SelectContent>
-        </Select>
+        <SearchableSelect
+          options={locationOptions}
+          value={formData.location_id}
+          onValueChange={(value) => handleInputChange('location_id', value)}
+          placeholder="Select your city/town"
+          searchPlaceholder="Search locations..."
+          emptyMessage="No location found."
+        />
         {formData.location_id === 'other' && (
           <div className="mt-2">
             <Input
