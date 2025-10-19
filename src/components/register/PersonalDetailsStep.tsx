@@ -41,6 +41,8 @@ export const PersonalDetailsStep: React.FC<PersonalDetailsStepProps> = ({
     };
     fetchLocations();
   }, []);
+
+  const locationOptions = locations.map(loc => ({ value: loc.id, label: loc.label }));
   
   return (
     <>
