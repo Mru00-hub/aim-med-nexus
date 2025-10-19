@@ -7,7 +7,7 @@ import { Footer } from '@/components/layout/Footer';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { Plus, Users, Hash, Trash2, Pencil, Loader2 } from 'lucide-react';
+import { Plus, Users, Hash, Trash2, Pencil, Loader2, UserSwitch } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/components/ui/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -20,10 +20,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { useCommunity } from '@/context/CommunityContext';
 import { useSpaceThreads, useSpaceMetrics, useSpaceMemberList } from '@/hooks/useSpaceData';
 import { CreateThreadForm } from './CreateThread'; 
-import { updateSpaceDetails, Enums, leaveSpace, updateThreadDetails } from '@/integrations/supabase/community.api';
+import { updateSpaceDetails, Enums, leaveSpace, updateThreadDetails, transferSpaceOwnership } from '@/integrations/supabase/community.api';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 
 export default function SpaceDetailPage() {
   const { user } = useAuth();
@@ -37,7 +38,7 @@ export default function SpaceDetailPage() {
   // 2. Get LOCAL data for this page using dedicated hooks.
   const { threads, isLoadingThreads, refreshThreads } = useSpaceThreads(spaceId);
   const { memberCount, threadCount, isLoadingMetrics } = useSpaceMetrics(spaceId);
-  const { memberList, isLoadingList } = useSpaceMemberList(spaceId);
+  const { memberList, isLoadingList, refreshList } = useSpaceMemberList(spaceId);
 
   // Find the specific space details from the global list.
   const space = useMemo(() => spaces.find(s => s.id === spaceId), [spaces, spaceId]);
@@ -50,6 +51,9 @@ export default function SpaceDetailPage() {
   const [editedDescription, setEditedDescription] = useState('');
   const [editedJoinLevel, setEditedJoinLevel] = useState<Enums<'space_join_level'>>('OPEN');
   const [editingThread, setEditingThread] = useState<any | null>(null);
+  const [showTransferDialog, setShowTransferDialog] = useState(false);
+  const [selectedNewOwnerId, setSelectedNewOwnerId] = useState<string>('');
+  const [isTransferring, setIsTransferring] = useState(false);
 
   // --- LOGIC & EFFECTS ---
   // The initial page load is dependent on fetching the list of all spaces.
@@ -74,6 +78,15 @@ export default function SpaceDetailPage() {
   const isUserAdminOrMod = useMemo(() => {
     return currentUserMembership?.role === 'ADMIN' || currentUserMembership?.role === 'MODERATOR';
   }, [currentUserMembership]);
+
+  const isUserCreator = useMemo(() => {
+      return user && space && user.id === space.creator_id;
+  }, [user, space]);
+
+  const potentialNewOwners = useMemo(() => {
+    if (!user) return [];
+    return memberList.filter(member => member.id !== user.id);
+  }, [memberList, user]);
 
   const getRoleBadgeVariant = (role: 'ADMIN' | 'MODERATOR' | 'MEMBER') => {
       switch (role) {
@@ -226,6 +239,29 @@ export default function SpaceDetailPage() {
         });
     }
   };
+
+  const handleTransferOwnership = async () => {
+      if (!space || !selectedNewOwnerId) {
+          toast({ title: "Please select a new owner.", variant: "destructive" });
+          return;
+      }
+      setIsTransferring(true);
+      try {
+          await transferSpaceOwnership(space.id, selectedNewOwnerId);
+          toast({ title: "Success!", description: "Ownership transferred." });
+          setShowTransferDialog(false);
+          setSelectedNewOwnerId('');
+          // Refresh data - owner role will change
+          await refreshSpaces(); 
+          await refreshList(); 
+          // Optionally navigate away or update UI state further if needed
+          // navigate('/community'); // Or stay on page, user is now likely just an admin/member
+      } catch (error: any) {
+          toast({ title: "Transfer Failed", description: error.message, variant: "destructive" });
+      } finally {
+          setIsTransferring(false);
+      }
+  };
   
   // --- RENDER LOGIC ---
 
@@ -362,51 +398,60 @@ export default function SpaceDetailPage() {
                           <Badge variant={space.join_level === 'INVITE_ONLY' ? 'secondary' : 'default'}>
                             {space.join_level.replace('_', ' ')}
                           </Badge>
-                        </div>
+                        </div> 
                     </div>
-                    {isUserAdminOrMod ? (
-                      <div className="flex items-center gap-2 flex-shrink-0 ml-4">
-                        {/* NEW: Edit Button */}
-                        <Button size="sm" variant="outline" onClick={() => setIsEditing(true)}>
-                            <Pencil className="h-4 w-4 mr-2" /> Edit
-                        </Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild><Button size="sm" variant="destructive"><Trash2 className="h-4 w-4 mr-2" /> Delete</Button></AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                This action cannot be undone. This will permanently delete the <strong>{` ${space.name} `}</strong> space and all of its threads and messages.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction onClick={handleDeleteSpace}>Continue</AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
-                    ) : getMembershipStatus(space.id) === 'ACTIVE' ? (
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button size="sm" variant="outline">Leave Space</Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Are you sure you want to leave?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              You will lose access to this space and its private threads. You may need to request to join again later.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={handleLeaveSpace}>
-                              Leave Space
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                  ) : null}
+                    <div className="flex items-center gap-2 flex-shrink-0 ml-4">
+                        {isUserCreator ? (
+                            <>
+                                <Button size="sm" variant="outline" onClick={() => setShowTransferDialog(true)}>
+                                    <UserSwitch className="h-4 w-4 mr-2" /> Transfer Ownership
+                                </Button>
+                                <Button size="sm" variant="outline" onClick={() => setIsEditing(true)}>
+                                    <Pencil className="h-4 w-4 mr-2" /> Edit
+                                </Button>
+                                <AlertDialog>
+                                    <AlertDialogTrigger asChild><Button size="sm" variant="destructive"><Trash2 className="h-4 w-4 mr-2" /> Delete</Button></AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader><AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle><AlertDialogDescription>This action cannot be undone. This will permanently delete the <strong>{` ${space.name} `}</strong> space and all of its threads and messages.</AlertDialogDescription></AlertDialogHeader>
+                                        <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleDeleteSpace}>Continue</AlertDialogAction></AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
+                            </>
+                        ) : isUserAdminOrMod ? (
+                           <>
+                              <Button size="sm" variant="outline" onClick={() => setIsEditing(true)}>
+                                <Pencil className="h-4 w-4 mr-2" /> Edit
+                              </Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild><Button size="sm" variant="destructive"><Trash2 className="h-4 w-4 mr-2" /> Delete</Button></AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader><AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle><AlertDialogDescription>This action cannot be undone. This will permanently delete the <strong>{` ${space.name} `}</strong> space and all of its threads and messages.</AlertDialogDescription></AlertDialogHeader>
+                                    <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleDeleteSpace}>Continue</AlertDialogAction></AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                           </>
+                        ) : getMembershipStatus(space.id) === 'ACTIVE' ? (
+                            <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <Button size="sm" variant="outline">Leave Space</Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Are you sure you want to leave?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            You will lose access to this space and its private threads. You may need to request to join again later.
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction onClick={handleLeaveSpace}>
+                                            Leave Space
+                                        </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+                        ) : null}
+                    </div>
                   </div>
                 )}
               </CardHeader>
@@ -522,6 +567,41 @@ export default function SpaceDetailPage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {space && (
+        <Dialog open={showTransferDialog} onOpenChange={setShowTransferDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Transfer Ownership of "{space.name}"</DialogTitle>
+              <DialogDescription>
+                Select a member to become the new owner. You will become an admin. This action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4 space-y-2">
+              <Label htmlFor="new-owner-select">Select New Owner</Label>
+              <Select value={selectedNewOwnerId} onValueChange={setSelectedNewOwnerId}>
+                <SelectTrigger id="new-owner-select">
+                  <SelectValue placeholder="Select a member..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {potentialNewOwners.map(member => (
+                    <SelectItem key={member.id} value={member.id}>
+                      {member.full_name} ({member.role})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <DialogFooter>
+              <Button variant="ghost" onClick={() => setShowTransferDialog(false)} disabled={isTransferring}>Cancel</Button>
+              <Button onClick={handleTransferOwnership} disabled={!selectedNewOwnerId || isTransferring}>
+                {isTransferring && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Transfer Ownership
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
