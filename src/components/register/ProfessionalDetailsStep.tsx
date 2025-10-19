@@ -6,8 +6,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from '@/integrations/supabase/client';
 
-type Institution = { id: string; name: string; };
-type Course = { id: string; name: string; };
+type Institution = { id: string; label: string; };
+type Course = { id: string; label: string; };
 type Specialization = { id: string; label: string; };
 type StudentYear = { value: string; label: string; };
 type ExperienceLevel = { value: string; label: string; };
@@ -28,8 +28,8 @@ export const ProfessionalDetailsStep: React.FC<ProfessionalDetailsStepProps> = (
   useEffect(() => {
     const fetchData = async () => {
       const [instRes, courseRes, specRes, yearRes, expRes] = await Promise.all([
-        supabase.from('institutions').select('id, name').order('name'),
-        supabase.from('courses').select('id, name').order('name'),
+        supabase.from('institutions').select('id, label').order('label'),
+        supabase.from('courses').select('id, label').order('label'),
         supabase.from('specializations').select('id, label').order('label'),
         supabase.from('student_years').select('value, label').order('sort_order'),
         supabase.from('experience_levels').select('value, label').order('sort_order')
@@ -59,7 +59,7 @@ export const ProfessionalDetailsStep: React.FC<ProfessionalDetailsStepProps> = (
             <SelectValue placeholder="Select your college/university" />
           </SelectTrigger>
           <SelectContent className="max-h-48 overflow-y-auto">
-            {institutions.map(inst => <SelectItem key={inst.id} value={inst.id}>{inst.name}</SelectItem>)}
+            {institutions.map(inst => <SelectItem key={inst.id} value={inst.id}>{inst.label}</SelectItem>)}
             <SelectItem value="other">Other</SelectItem>
           </SelectContent>
         </Select>
@@ -83,7 +83,7 @@ export const ProfessionalDetailsStep: React.FC<ProfessionalDetailsStepProps> = (
               <SelectValue placeholder="Select your course" />
             </SelectTrigger>
             <SelectContent className="max-h-48 overflow-y-auto">
-              {courses.map(course => <SelectItem key={course.id} value={course.id}>{course.name}</SelectItem>)}
+              {courses.map(course => <SelectItem key={course.id} value={course.id}>{course.label}</SelectItem>)}
               <SelectItem value="other">Other</SelectItem>
             </SelectContent>
           </Select>
