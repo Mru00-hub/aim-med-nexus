@@ -40,6 +40,7 @@ export const HeroSection = () => {
   const { data: spacesCount, isLoading: isLoadingSpaces } = useQuery({
     queryKey: ['spacesCount'],
     queryFn: getSpacesCount,
+    staleTime: 5 * 60 * 1000,
   });
 
   return (
