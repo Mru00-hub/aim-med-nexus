@@ -318,7 +318,7 @@ const CompleteProfile = () => {
           <CardHeader>
             <CardTitle className="text-2xl sm:text-3xl">
               Edit Your Profile
-            </Title>
+            </CardTitle>
             <CardDescription>
               Keep your professional information up to date.
             </CardDescription>
