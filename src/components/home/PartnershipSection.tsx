@@ -40,6 +40,7 @@ export const PartnershipSection = () => {
   const { data: proposalCount, isLoading: isLoadingProposals } = useQuery({
     queryKey: ['partnershipProposalsCount'],
     queryFn: getPartnershipProposalsCount,
+    staleTime: 5 * 60 * 1000,
   });
 
   // Synced with your main Partnerships.tsx page
