@@ -78,7 +78,6 @@ export function SearchableSelect({
             placeholder={searchPlaceholder} 
             // This is the key: call onSearchChange when user types
             onValueChange={onSearchChange} 
-            isLoading={isLoading} // Show loader in input if supported (else use custom)
           />
           <CommandEmpty>
             {isLoading ? ( // Show custom loading message if input doesn't
