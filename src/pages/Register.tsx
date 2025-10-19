@@ -22,23 +22,24 @@ const initialFormData = {
   firstName: '',
   lastName: '',
   email: '',
+  date_of_birth: '',
   phone: '',
   password: '',
   confirmPassword: '',
-  location: '',
-  institution: '',
-  course: '',
-  yearOfStudy: '',
+  location_id: '',
+  institution_id: '',
+  course_id: '',
+  student_year_value: '',
   currentPosition: '',
   organization: '',
-  specialization: '',
-  experience: '',
+  specialization_id: '',
+  experience_level_value: '',
   medicalLicense: '',
   bio: '',
-  otherLocation: '',
-  otherInstitution: '',
-  otherCourse: '',
-  otherSpecialization: '',
+  location_other: '',
+  institution_other: '',
+  course_other: '',
+  specialization_other: '',
   agreeToTerms: false,
   receiveUpdates: true,
 };
@@ -81,16 +82,16 @@ const Register = () => {
 
   const validateStep = () => {
     if (step === 2) {
-      const { firstName, lastName, email, location, password, confirmPassword } = formData;
-      if (!firstName || !lastName || !email || !location || !password || !confirmPassword) return "Please fill in all required personal information fields.";
+      const { firstName, lastName, email, date_of_birth, location_id, password, confirmPassword } = formData;
+      if (!firstName || !lastName || !email || !date_of_birth || !location_id || !password || !confirmPassword) return "Please fill in all required personal information fields.";
       if (password.length < 6) return "Password must be at least 6 characters long.";
       if (password !== confirmPassword) return "Passwords do not match.";
     }
     if (step === 3) {
-      const { institution, course, yearOfStudy, currentPosition, organization, specialization, experience, agreeToTerms } = formData;
-      if (!institution || !course) return "Educational institution and course are required.";
-      if (registrationType === 'student' && !yearOfStudy) return "Please select your year of study.";
-      if (registrationType === 'professional' && (!currentPosition || !organization || !specialization || !experience)) return "Please fill in all required professional fields.";
+      const { institution_id, course_id, student_year_value, currentPosition, organization, specialization_id, experience_level_value, agreeToTerms } = formData;
+      if (!institution_id || !course_id) return "Educational institution and course are required.";
+      if (registrationType === 'student' && !student_year_value) return "Please select your year of study.";
+      if (registrationType === 'professional' && (!currentPosition || !organization || !specialization_id || !experience_level_value)) return "Please fill in all required professional fields.";
       if (!agreeToTerms) return "You must agree to the terms and conditions.";
     }
     return ''; // No errors
@@ -143,16 +144,21 @@ const Register = () => {
     
     const metadataForSupabase = {
       full_name: `${formData.firstName} ${formData.lastName}`.trim(),
+      date_of_birth: formData.date_of_birth || null,
       phone: formData.phone,
       user_role: registrationType,
-      current_location: formData.location === 'other' ? formData.otherLocation : formData.location,
-      institution: formData.institution === 'other' ? formData.otherInstitution : formData.institution,
-      course: formData.course === 'other' ? formData.otherCourse : formData.course,
-      year_of_study: formData.yearOfStudy,
+      location_id: formData.location_id === 'other' ? null : formData.location_id,
+      location_other: formData.location_id === 'other' ? formData.location_other : null,
+      institution_id: formData.institution_id === 'other' ? null : formData.institution_id,
+      institution_other: formData.institution_id === 'other' ? formData.institution_other : null,
+      course_id: formData.course_id === 'other' ? null : formData.course_id,
+      course_other: formData.course_id === 'other' ? formData.course_other : null,
+      student_year_value: formData.student_year_value,
       current_position: formData.currentPosition,
       organization: formData.organization,
-      specialization: formData.specialization === 'other' ? formData.otherSpecialization : formData.specialization,
-      years_experience: formData.experience,
+      specialization_id: formData.specialization_id === 'other' ? null : formData.specialization_id,
+      specialization_other: formData.specialization_id === 'other' ? formData.specialization_other : null,
+      experience_level_value: formData.experience_level_value,
       medical_license: formData.medicalLicense,
       bio: formData.bio,
       profile_picture_url: profilePictureUrl,
