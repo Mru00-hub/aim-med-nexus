@@ -29,9 +29,9 @@ export const ProfessionalDetailsStep: React.FC<ProfessionalDetailsStepProps> = (
   useEffect(() => {
     const fetchData = async () => {
       const [instRes, courseRes, specRes, yearRes, expRes] = await Promise.all([
-        supabase.from('institutions').select('id, label').neq('id', 'other').order('label'),
-        supabase.from('courses').select('id, label').neq('id', 'other').order('label'),
-        supabase.from('specializations').select('id, label').neq('id', 'other').order('label'),
+        supabase.from('institutions').select('id, label').neq('value', 'other').order('label'),
+        supabase.from('courses').select('id, label').neq('value', 'other').order('label'),
+        supabase.from('specializations').select('id, label').neq('value', 'other').order('label'),
         supabase.from('student_years').select('value, label').order('sort_order'),
         supabase.from('experience_levels').select('value, label').order('sort_order')
       ]);
