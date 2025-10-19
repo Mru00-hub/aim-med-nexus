@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+//src/components/register/ProfessionalDetailsStep.tsx
+import React, { useEffect, useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -20,33 +21,133 @@ type ProfessionalDetailsStepProps = {
 };
 
 export const ProfessionalDetailsStep: React.FC<ProfessionalDetailsStepProps> = ({ formData, handleInputChange, registrationType }) => {
+  // Data states
   const [institutions, setInstitutions] = useState<Institution[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
   const [specializations, setSpecializations] = useState<Specialization[]>([]);
   const [studentYears, setStudentYears] = useState<StudentYear[]>([]);
   const [experiences, setExperiences] = useState<ExperienceLevel[]>([]);
 
+  // Search term states
+  const [institutionSearch, setInstitutionSearch] = useState("");
+  const [courseSearch, setCourseSearch] = useState("");
+  const [specializationSearch, setSpecializationSearch] = useState("");
+
+  // Loading states
+  const [isInstLoading, setIsInstLoading] = useState(false);
+  const [isCourseLoading, setIsCourseLoading] = useState(false);
+  const [isSpecLoading, setIsSpecLoading] = useState(false);
+
+  // --- Data Fetching Effects ---
+
+  // Effect for Institution search (debounced)
   useEffect(() => {
-    const fetchData = async () => {
-      const [instRes, courseRes, specRes, yearRes, expRes] = await Promise.all([
-        supabase.from('institutions').select('id, label').neq('value', 'other').order('label'),
-        supabase.from('courses').select('id, label').neq('value', 'other').order('label'),
-        supabase.from('specializations').select('id, label').neq('value', 'other').order('label'),
+    setIsInstLoading(true);
+    const searchTimer = setTimeout(() => {
+      const fetchInstitutions = async () => {
+        if (institutionSearch.length < 2) {
+          setInstitutions([]);
+          setIsInstLoading(false);
+          return;
+        }
+        const { data, error } = await supabase
+          .from('institutions')
+          .select('id, label')
+          .neq('id', 'other')
+          .or(`label.ilike.%${institutionSearch}%,id.ilike.%${institutionSearch}%`)
+          .order('label')
+          .limit(50);
+        
+        if (data) setInstitutions(data);
+        if (error) console.error('Error fetching institutions:', error);
+        setIsInstLoading(false);
+      };
+      fetchInstitutions();
+    }, 500); // 500ms debounce
+    return () => clearTimeout(searchTimer);
+  }, [institutionSearch]);
+
+  // Effect for Course search (debounced)
+  useEffect(() => {
+    setIsCourseLoading(true);
+    const searchTimer = setTimeout(() => {
+      const fetchCourses = async () => {
+        if (courseSearch.length < 2) {
+          setCourses([]);
+          setIsCourseLoading(false);
+          return;
+        }
+        const { data, error } = await supabase
+          .from('courses')
+          .select('id, label')
+          .neq('id', 'other')
+          .or(`label.ilike.%${courseSearch}%,id.ilike.%${courseSearch}%`)
+          .order('label')
+          .limit(50);
+        
+        if (data) setCourses(data);
+        if (error) console.error('Error fetching courses:', error);
+        setIsCourseLoading(false);
+      };
+      fetchCourses();
+    }, 500); // 500ms debounce
+    return () => clearTimeout(searchTimer);
+  }, [courseSearch]);
+
+  // Effect for Specialization search (debounced)
+  useEffect(() => {
+    setIsSpecLoading(true);
+    const searchTimer = setTimeout(() => {
+      const fetchSpecializations = async () => {
+        if (specializationSearch.length < 2) {
+          setSpecializations([]);
+          setIsSpecLoading(false);
+          return;
+        }
+        const { data, error } = await supabase
+          .from('specializations')
+          .select('id, label')
+          .neq('id', 'other')
+          .or(`label.ilike.%${specializationSearch}%,id.ilike.%${specializationSearch}%`)
+          .order('label')
+          .limit(50);
+        
+        if (data) setSpecializations(data);
+        if (error) console.error('Error fetching specializations:', error);
+        setIsSpecLoading(false);
+      };
+      fetchSpecializations();
+    }, 500); // 500ms debounce
+    return () => clearTimeout(searchTimer);
+  }, [specializationSearch]);
+
+  // Effect for static (non-searchable) data
+  useEffect(() => {
+    const fetchStaticData = async () => {
+      const [yearRes, expRes] = await Promise.all([
         supabase.from('student_years').select('value, label').order('sort_order'),
         supabase.from('experience_levels').select('value, label').order('sort_order')
       ]);
-      if (instRes.data) setInstitutions(instRes.data);
-      if (courseRes.data) setCourses(courseRes.data);
-      if (specRes.data) setSpecializations(specRes.data);
       if (yearRes.data) setStudentYears(yearRes.data);
       if (expRes.data) setExperiences(expRes.data);
     };
-    fetchData();
-  }, []);
+    fetchStaticData();
+  }, []); // Runs once on mount
 
-  const institutionOptions = institutions.map(inst => ({ value: inst.id, label: inst.label }));
-  const courseOptions = courses.map(course => ({ value: course.id, label: course.label }));
-  const specializationOptions = specializations.map(spec => ({ value: spec.id, label: spec.label }));
+  // --- Memoized Options ---
+
+  const institutionOptions = useMemo(() => 
+    institutions.map(inst => ({ value: inst.id, label: inst.label })),
+    [institutions]
+  );
+  const courseOptions = useMemo(() =>
+    courses.map(course => ({ value: course.id, label: course.label })),
+    [courses]
+  );
+  const specializationOptions = useMemo(() =>
+    specializations.map(spec => ({ value: spec.id, label: spec.label })),
+    [specializations]
+  );
   
   return (
     <>
@@ -63,8 +164,10 @@ export const ProfessionalDetailsStep: React.FC<ProfessionalDetailsStepProps> = (
           options={institutionOptions}
           value={formData.institution_id}
           onValueChange={(value) => handleInputChange('institution_id', value)}
+          onSearchChange={setInstitutionSearch}
+          isLoading={isInstLoading}
           placeholder="Select your college/university"
-          searchPlaceholder="Search institutions..."
+          searchPlaceholder="Search institutions... (min 2 chars)"
           emptyMessage="No institution found."
         />
         {formData.institution_id === 'other' && (
@@ -86,8 +189,10 @@ export const ProfessionalDetailsStep: React.FC<ProfessionalDetailsStepProps> = (
             options={courseOptions}
             value={formData.course_id}
             onValueChange={(value) => handleInputChange('course_id', value)}
+            onSearchChange={setCourseSearch}
+            isLoading={isCourseLoading}
             placeholder="Select your course"
-            searchPlaceholder="Search courses..."
+            searchPlaceholder="Search courses... (min 2 chars)"
             emptyMessage="No course found."
           />
           {formData.course_id === 'other' && (
@@ -153,8 +258,10 @@ export const ProfessionalDetailsStep: React.FC<ProfessionalDetailsStepProps> = (
                 options={specializationOptions}
                 value={formData.specialization_id}
                 onValueChange={(value) => handleInputChange('specialization_id', value)}
+                onSearchChange={setSpecializationSearch}
+                isLoading={isSpecLoading}
                 placeholder="Select your field"
-                searchPlaceholder="Search specializations..."
+                searchPlaceholder="Search specializations... (min 2 chars)"
                 emptyMessage="No specialization found."
               />
               {formData.specialization_id === 'other' && (
