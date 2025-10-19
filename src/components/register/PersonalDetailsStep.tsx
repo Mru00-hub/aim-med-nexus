@@ -28,21 +28,49 @@ export const PersonalDetailsStep: React.FC<PersonalDetailsStepProps> = ({
   removeAvatar,
 }) => {
   const [locations, setLocations] = useState<Location[]>([]);
+  const [locationSearch, setLocationSearch] = useState("");
+  const [isLocLoading, setIsLocLoading] = useState(false);
 
   useEffect(() => {
-    const fetchLocations = async () => {
-      const { data, error } = await supabase
-        .from('locations')
-        .select('id, label')
-        .neq('value', 'other')
-        .order('label');
-      if (data) setLocations(data);
-      if (error) console.error('Error fetching locations:', error);
-    };
-    fetchLocations();
-  }, []);
+    setIsLocLoading(true);
+    const searchTimer = setTimeout(() => {
+      const fetchLocations = async () => {
+        if (locationSearch.length < 2) {
+          // Don't search if the query is too short
+          setLocations([]);
+          setIsLocLoading(false);
+          return;
+        }
+        const { data, error } = await supabase
+          .from('locations')
+          .select('id, label')
+          .neq('id', 'other')
+          // .or() searches multiple columns
+          // .ilike() is a case-insensitive "contains" search
+          .or(`label.ilike.%${locationSearch}%,id.ilike.%${locationSearch}%`)
+          .order('label')
+          .limit(50); // Limit results to keep it fast
 
-  const locationOptions = locations.map(loc => ({ value: loc.id, label: loc.label }));
+        if (data) setLocations(data);
+        if (error) console.error('Error fetching locations:', error);
+        
+        // We're done loading
+        setIsLocLoading(false);
+      };
+
+      fetchLocations();
+    }, 500); // 500ms debounce
+
+    // This is the cleanup function. It clears the timer
+    // if the user types again before 500ms is up.
+    return () => clearTimeout(searchTimer);
+
+  }, [locationSearch]);
+
+  const locationOptions = useMemo(() => 
+    locations.map(loc => ({ value: loc.id, label: loc.label })),
+    [locations] // Only re-run when the 'locations' state changes
+  );
   
   return (
     <>
@@ -138,6 +166,8 @@ export const PersonalDetailsStep: React.FC<PersonalDetailsStepProps> = ({
           options={locationOptions}
           value={formData.location_id}
           onValueChange={(value) => handleInputChange('location_id', value)}
+          onSearchChange={setLocationSearch}
+          isLoading={isLocLoading}
           placeholder="Select your city/town"
           searchPlaceholder="Search locations..."
           emptyMessage="No location found."
