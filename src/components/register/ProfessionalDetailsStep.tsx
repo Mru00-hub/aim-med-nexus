@@ -43,6 +43,10 @@ export const ProfessionalDetailsStep: React.FC<ProfessionalDetailsStepProps> = (
     };
     fetchData();
   }, []);
+
+  const institutionOptions = institutions.map(inst => ({ value: inst.id, label: inst.label }));
+  const courseOptions = courses.map(course => ({ value: course.id, label: course.label }));
+  const specializationOptions = specializations.map(spec => ({ value: spec.id, label: spec.label }));
   
   return (
     <>
