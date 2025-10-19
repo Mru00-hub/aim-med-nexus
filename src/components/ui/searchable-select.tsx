@@ -28,6 +28,7 @@ type SearchableSelectProps = {
   searchPlaceholder?: string;
   emptyMessage?: string;
   className?: string;
+  showOther?: boolean;
 };
 
 export function SearchableSelect({
@@ -38,10 +39,13 @@ export function SearchableSelect({
   searchPlaceholder = "Search...",
   emptyMessage = "No results found.",
   className,
+  showOther = true,
 }: SearchableSelectProps) {
   const [open, setOpen] = React.useState(false);
 
-  const selectedOption = options.find((option) => option.value === value);
+  const selectedOption = value === "other" 
+    ? { value: "other", label: "Other" }
+    : options.find((option) => option.value === value);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -79,22 +83,23 @@ export function SearchableSelect({
                 {option.label}
               </CommandItem>
             ))}
-            {/* Always show "Other" option at the end */}
-            <CommandItem
-              value="Other"
-              onSelect={() => {
-                onValueChange("other");
-                setOpen(false);
-              }}
-            >
-              <Check
-                className={cn(
-                  "mr-2 h-4 w-4",
-                  value === "other" ? "opacity-100" : "opacity-0"
-                )}
-              />
-              Other
-            </CommandItem>
+            {showOther && (
+              <CommandItem
+                value="Other"
+                onSelect={() => {
+                  onValueChange("other");
+                  setOpen(false);
+                }}
+              >
+                <Check
+                  className={cn(
+                    "mr-2 h-4 w-4",
+                    value === "other" ? "opacity-100" : "opacity-0"
+                  )}
+                />
+                Other
+              </CommandItem>
+            )}
           </CommandGroup>
         </Command>
       </PopoverContent>
