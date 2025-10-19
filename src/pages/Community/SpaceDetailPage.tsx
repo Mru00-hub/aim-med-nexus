@@ -275,14 +275,20 @@ export default function SpaceDetailPage() {
       ) : threads.length > 0 ? (
         threads.map(thread => {
           const canManageThread = isUserAdminOrMod || user?.id === thread.creator_id;
+          const creatorDetails = [thread.creator_position, thread.creator_specialization]
+              .filter(Boolean)
+              .join(' • ');
           
           return (
             <Card key={thread.id} className="transition-all hover:shadow-md group">
               <CardContent className="p-4 flex items-center justify-between">
-                <Link to={`/community/thread/${thread.id}`} className="flex-grow">
+                <Link to={`/community/thread/${thread.id}`} className="flex-grow min-w-0">
                     <h3 className="font-semibold text-lg group-hover:text-primary">{thread.title}</h3>
                     <p className="text-sm text-muted-foreground mt-1">
-                      {thread.message_count} messages • Started by {thread.creator_full_name}
+                      {thread.message_count} messages • Started by{' '}
+                      <span className="font-medium">{thread.creator_full_name}</span>
+                      {/* --- 1. Display creator details --- */}
+                      {creatorDetails && <span className="text-xs block sm:inline sm:ml-2 opacity-80">{creatorDetails}</span>}
                     </p>
                 </Link>
 
