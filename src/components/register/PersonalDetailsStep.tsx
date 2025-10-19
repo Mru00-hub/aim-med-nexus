@@ -33,6 +33,7 @@ export const PersonalDetailsStep: React.FC<PersonalDetailsStepProps> = ({
       const { data, error } = await supabase
         .from('locations')
         .select('id, label')
+        .neq('id', 'other')
         .order('label');
       if (data) setLocations(data);
       if (error) console.error('Error fetching locations:', error);
