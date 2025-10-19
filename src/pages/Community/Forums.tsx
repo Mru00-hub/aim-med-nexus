@@ -15,7 +15,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from '@/components/ui/use-toast';
 import { useCommunity } from '@/context/CommunityContext';
 import { Enums } from '@/integrations/supabase/types';
-
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 // --- FIX #1: IMPORT API FUNCTIONS DIRECTLY ---
 import {
   SpaceWithDetails, 
@@ -160,6 +165,9 @@ export default function Forums() {
   const renderSpaceCard = (space: SpaceWithDetails) => {
       const isPrivate = space.join_level === 'INVITE_ONLY';
       const membershipStatus = getMembershipStatus(space.id);
+      const creatorDetails = [space.creator_position, space.creator_organization]
+          .filter(Boolean) // Remove null or empty strings
+          .join(' @ ');
 
       const cardContent = (
         <Card className="h-full transition-all duration-300 hover:border-primary/50 hover:shadow-lg flex flex-col">
@@ -176,23 +184,41 @@ export default function Forums() {
             <CardContent className="p-6 pt-0 flex-grow flex flex-col justify-between">
               <div className="text-xs text-muted-foreground space-y-2">
                   {space.creator_full_name && (
-                      <p>Created by: <span className="font-semibold text-foreground">{space.creator_full_name}</span></p>
+                      <div>
+                          <p>Created by: <span className="font-semibold text-foreground">{space.creator_full_name}</span></p>
+                          {/* --- 2. Display creator details --- */}
+                          {creatorDetails && <p className="text-xs">{creatorDetails}</p>}
+                      </div>
                   )}
                   {space.moderators && space.moderators.length > 0 && (
                       <div>
-                          <p>Admin/Mods:</p>
-                          <div className="flex flex-wrap gap-1 mt-1">
-                              {space.moderators.slice(0, 3).map(mod => (
-                                  <Badge key={mod.full_name} variant="outline">{mod.full_name}</Badge>
-                              ))}
-                              {space.moderators.length > 3 && (
-                                  <Badge variant="outline">+{space.moderators.length - 3} more</Badge>
-                              )}
+                          {/* --- 3. Wrap badges in TooltipProvider --- */}
+                          <TooltipProvider delayDuration={100}>
+                            <div className="flex flex-wrap gap-1 mt-1">
+                                {space.moderators.slice(0, 3).map(mod => (
+                                    // --- 3. Add Tooltip wrapper ---
+                                    <Tooltip key={mod.full_name}>
+                                        <TooltipTrigger asChild>
+                                            <Badge variant="outline" className="cursor-default">{mod.full_name}</Badge>
+                                        </TooltipTrigger>
+                                        {/* Display specialization in tooltip */}
+                                        {mod.specialization && (
+                                            <TooltipContent>
+                                                <p>{mod.specialization}</p>
+                                            </TooltipContent>
+                                        )}
+                                    </Tooltip>
+                                ))}
+                                {space.moderators.length > 3 && (
+                                    <Badge variant="outline">+{space.moderators.length - 3} more</Badge>
+                                )}
+                            </div>
+                          </TooltipProvider>
                           </div>
                       </div>
                   )}
               </div>
-              <div className="mt-4 pt-4 border-t flex justify-end">
+              <div className="mt-4 pt-4 border-t flex justify-end items-center">
                 {membershipStatus === 'ACTIVE' ? (
                     <Button asChild variant="outline" size="sm">
                       <Link to={`/community/space/${space.id}`}>Go to Space</Link>
@@ -211,17 +237,9 @@ export default function Forums() {
         </Card>
       );
 
-      const clickHandler = () => {
-          if (getMembershipStatus(space.id) === 'ACTIVE') {
-              navigate(`/community/space/${space.id}`);
-          } else if (!user) {
-              navigate('/login');
-          }
-          // If status is PENDING or null, clicking the card body does nothing
-      };
 
       return (
-          <div key={space.id} className="cursor-pointer" onClick={clickHandler}>
+          <div key={space.id} className="cursor-pointer" onClick={() => getMembershipStatus(space.id) === 'ACTIVE' && navigate(`/community/space/${space.id}`)}>
               {cardContent}
           </div>
       );
@@ -233,7 +251,12 @@ export default function Forums() {
         <CardContent className="p-6">
           <h3 className="font-semibold text-lg mb-2">{thread.title}</h3>
           <div className="flex items-center gap-4 text-xs text-muted-foreground">
-            <span className="font-medium text-foreground">{thread.creator_full_name}</span>
+            {/* --- Display Creator Name (Could add position/org here too if desired) --- */}
+            <div>
+              <span className="font-medium text-foreground">{thread.creator_full_name}</span>
+              {/* Optional: Add creator details like position/spec */}
+              <p className="text-xs">{(thread.creator_position || thread.creator_specialization || '').substring(0, 30)}</p>
+            </div>
             <div className="flex items-center gap-1"><MessageSquare className="h-3 w-3" /><span>{thread.message_count} messages</span></div>
             <span>Last activity: {new Date(thread.last_activity_at).toLocaleDateString()}</span>
           </div>
@@ -247,7 +270,7 @@ export default function Forums() {
       <Header />
       <main className="container mx-auto py-8 px-4">
         <div className="mb-8 text-center">
-          <h1 className="text-4xl font-bold tracking-tight mb-2">Community Hub</h1>
+          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight mb-2">Community Hub</h1>
           <p className="text-lg text-muted-foreground">Discover spaces, join discussions, and engage with your peers.</p>
         </div>
 
@@ -255,7 +278,7 @@ export default function Forums() {
           <CardContent className="pt-6">
             <div className="flex flex-col md:flex-row gap-4">
               <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input placeholder="Search spaces..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-10" />
               </div>
               <Select value={selectedFilter} onValueChange={setSelectedFilter}>
@@ -278,7 +301,7 @@ export default function Forums() {
                 <Plus className="h-4 w-4 mr-2" /> Create Space
             </Button>
           </div>
-          {loading ? ( <p>Loading spaces...</p> ) : (
+          {loading ? ( <p className="text-center text-muted-foreground py-4">Loading spaces...</p> ) : filteredSpaces.length === 0 ? (<p className="text-center text-muted-foreground py-4">No spaces match your criteria.</p>) : (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredSpaces.map(renderSpaceCard)}
             </div>
@@ -295,10 +318,10 @@ export default function Forums() {
             )}
           </div>
           <div className="relative mb-4">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input placeholder="Search public threads..." value={threadSearchQuery} onChange={(e) => setThreadSearchQuery(e.target.value)} className="pl-10" />
           </div>
-          {loading ? ( <p>Loading threads...</p> ) : (
+          {loading ? ( <p className="text-center text-muted-foreground py-4">Loading threads...</p> ) : filteredPublicThreads.length === 0 ? (<p className="text-center text-muted-foreground py-4">No public threads match your search.</p>) : (
             <div className="space-y-4">
               {filteredPublicThreads.map(renderPublicThreadCard)}
             </div>
@@ -306,11 +329,11 @@ export default function Forums() {
         </section>
       </main>
       <Footer />
-      <SpaceCreator
-        isOpen={showSpaceCreator}
-        onClose={() => setShowSpaceCreator(false)}
-        onSubmit={handleCreateSpace}
-      />
+      {user && <SpaceCreator
+         isOpen={showSpaceCreator}
+         onClose={() => setShowSpaceCreator(false)}
+         onSubmit={handleCreateSpace}
+      />}
     </div>
   );
 };
