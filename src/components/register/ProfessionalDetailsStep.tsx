@@ -52,9 +52,9 @@ export const ProfessionalDetailsStep: React.FC<ProfessionalDetailsStepProps> = (
         }
         const { data, error } = await supabase
           .from('institutions')
-          .select('id, label')
-          .neq('id', 'other')
-          .or(`label.ilike.%${institutionSearch}%,id.ilike.%${institutionSearch}%`)
+          .select('id, label, value')
+          .neq('value', 'other')
+          .or(`label.ilike.%${institutionSearch}%,value.ilike.%${institutionSearch}%`)
           .order('label')
           .limit(50);
         
@@ -79,9 +79,9 @@ export const ProfessionalDetailsStep: React.FC<ProfessionalDetailsStepProps> = (
         }
         const { data, error } = await supabase
           .from('courses')
-          .select('id, label')
-          .neq('id', 'other')
-          .or(`label.ilike.%${courseSearch}%,id.ilike.%${courseSearch}%`)
+          .select('id, label, value')
+          .neq('value', 'other')
+          .or(`label.ilike.%${courseSearch}%,value.ilike.%${courseSearch}%`)
           .order('label')
           .limit(50);
         
@@ -106,9 +106,9 @@ export const ProfessionalDetailsStep: React.FC<ProfessionalDetailsStepProps> = (
         }
         const { data, error } = await supabase
           .from('specializations')
-          .select('id, label')
-          .neq('id', 'other')
-          .or(`label.ilike.%${specializationSearch}%,id.ilike.%${specializationSearch}%`)
+          .select('id, label, value')
+          .neq('value', 'other')
+          .or(`label.ilike.%${specializationSearch}%,value.ilike.%${specializationSearch}%`)
           .order('label')
           .limit(50);
         
