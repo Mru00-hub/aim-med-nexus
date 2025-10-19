@@ -48,6 +48,9 @@ const CompleteProfile = () => {
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string>('');
   
+  // --- ADDED ---: State to hold user role for conditional fields
+  const [userRole, setUserRole] = useState(''); 
+
   // --- Form State ---
   const [formData, setFormData] = useState({
     full_name: '',
@@ -97,7 +100,8 @@ const CompleteProfile = () => {
     const searchTimer = setTimeout(() => {
       const fetchLocations = async () => {
         if (locationSearch.length < 2) {
-          setLocations([]);
+          // --- MODIFIED ---: Keep existing values if search is empty
+          setLocations(prev => prev.filter(l => l.id === formData.location_id));
           setIsLocLoading(false);
           return;
         }
@@ -109,14 +113,21 @@ const CompleteProfile = () => {
           .order('label')
           .limit(50);
         
-        if (data) setLocations(data);
+        if (data) {
+          // --- MODIFIED ---: Add results, but keep the current selected one
+          setLocations(prev => {
+            const current = prev.find(l => l.id === formData.location_id);
+            const newData = data.filter(l => l.id !== formData.location_id);
+            return current ? [current, ...newData] : newData;
+          });
+        }
         if (error) console.error('Error fetching locations:', error);
         setIsLocLoading(false);
       };
       fetchLocations();
     }, 500);
     return () => clearTimeout(searchTimer);
-  }, [locationSearch]);
+  }, [locationSearch, formData.location_id]);
 
   // --- Fetch Institution with Search ---
   useEffect(() => {
@@ -124,7 +135,7 @@ const CompleteProfile = () => {
     const searchTimer = setTimeout(() => {
       const fetchInstitutions = async () => {
         if (institutionSearch.length < 2) {
-          setInstitutions([]);
+          setInstitutions(prev => prev.filter(i => i.id === formData.institution_id));
           setIsInstLoading(false);
           return;
         }
@@ -136,14 +147,20 @@ const CompleteProfile = () => {
           .order('label')
           .limit(50);
         
-        if (data) setInstitutions(data);
+        if (data) {
+          setInstitutions(prev => {
+            const current = prev.find(i => i.id === formData.institution_id);
+            const newData = data.filter(i => i.id !== formData.institution_id);
+            return current ? [current, ...newData] : newData;
+          });
+        }
         if (error) console.error('Error fetching institutions:', error);
         setIsInstLoading(false);
       };
       fetchInstitutions();
     }, 500);
     return () => clearTimeout(searchTimer);
-  }, [institutionSearch]);
+  }, [institutionSearch, formData.institution_id]);
 
   // --- Fetch Course with Search ---
   useEffect(() => {
@@ -151,7 +168,7 @@ const CompleteProfile = () => {
     const searchTimer = setTimeout(() => {
       const fetchCourses = async () => {
         if (courseSearch.length < 2) {
-          setCourses([]);
+          setCourses(prev => prev.filter(c => c.id === formData.course_id));
           setIsCourseLoading(false);
           return;
         }
@@ -163,14 +180,20 @@ const CompleteProfile = () => {
           .order('label')
           .limit(50);
         
-        if (data) setCourses(data);
+        if (data) {
+          setCourses(prev => {
+            const current = prev.find(c => c.id === formData.course_id);
+            const newData = data.filter(c => c.id !== formData.course_id);
+            return current ? [current, ...newData] : newData;
+          });
+        }
         if (error) console.error('Error fetching courses:', error);
         setIsCourseLoading(false);
       };
       fetchCourses();
     }, 500);
     return () => clearTimeout(searchTimer);
-  }, [courseSearch]);
+  }, [courseSearch, formData.course_id]);
 
   // --- Fetch Specialization with Search ---
   useEffect(() => {
@@ -178,7 +201,7 @@ const CompleteProfile = () => {
     const searchTimer = setTimeout(() => {
       const fetchSpecializations = async () => {
         if (specializationSearch.length < 2) {
-          setSpecializations([]);
+          setSpecializations(prev => prev.filter(s => s.id === formData.specialization_id));
           setIsSpecLoading(false);
           return;
         }
@@ -190,14 +213,21 @@ const CompleteProfile = () => {
           .order('label')
           .limit(50);
         
-        if (data) setSpecializations(data);
+        if (data) {
+          setSpecializations(prev => {
+            const current = prev.find(s => s.id === formData.specialization_id);
+            const newData = data.filter(s => s.id !== formData.specialization_id);
+            return current ? [current, ...newData] : newData;
+          });
+        }
         if (error) console.error('Error fetching specializations:', error);
         setIsSpecLoading(false);
       };
       fetchSpecializations();
     }, 500);
     return () => clearTimeout(searchTimer);
-  }, [specializationSearch]);
+  }, [specializationSearch, formData.specialization_id]);
+
 
   // --- Fetch Static Data (Student Years, Experience Levels) ---
   useEffect(() => {
@@ -234,14 +264,21 @@ const CompleteProfile = () => {
   useEffect(() => {
     if (!authLoading && user) {
       const fetchProfileData = async () => {
+        // --- MODIFIED ---: Changed select query to join related tables
         const { data, error } = await supabase
           .from('profiles')
-          .select('*')
+          .select(`
+            *,
+            locations(id, label, value),
+            institutions(id, label, value),
+            courses(id, label, value),
+            specializations(id, label, value)
+          `)
           .eq('id', user.id)
           .single();
 
-        console.log('📊 Profile data:', data); // ✅ ADD
-        console.log('❌ Profile error:', error); // ✅ ADD
+        console.log('📊 Profile data (joined):', data); // MODIFIED Log
+        console.log('❌ Profile error:', error);
 
         if (error) {
           console.error("Error fetching profile:", error);
@@ -251,32 +288,45 @@ const CompleteProfile = () => {
 
         if (data) {
           console.log('✅ Setting form data...');
-          // ✅ FIXED: Properly determine if "other" should be selected
+          
+          // --- ADDED ---: Seed dropdowns with current selected values
+          if (data.locations) {
+            setLocations(prev => [data.locations, ...prev.filter(l => l.id !== data.locations.id)]);
+          }
+          if (data.institutions) {
+            setInstitutions(prev => [data.institutions, ...prev.filter(i => i.id !== data.institutions.id)]);
+          }
+          if (data.courses) {
+            setCourses(prev => [data.courses, ...prev.filter(c => c.id !== data.courses.id)]);
+          }
+          if (data.specializations) {
+            setSpecializations(prev => [data.specializations, ...prev.filter(s => s.id !== data.specializations.id)]);
+          }
+          
+          // --- ADDED ---: Set user role
+          setUserRole(data.user_role || '');
+
+          // This logic was already correct
           const determineLocationId = () => {
             if (data.location_id) return data.location_id;
             if (data.location_other) return 'other';
             return '';
           };
-
           const determineInstitutionId = () => {
             if (data.institution_id) return data.institution_id;
             if (data.institution_other) return 'other';
             return '';
           };
-
           const determineCourseId = () => {
             if (data.course_id) return data.course_id;
             if (data.course_other) return 'other';
             return '';
           };
-
           const determineSpecializationId = () => {
             if (data.specialization_id) return data.specialization_id;
             if (data.specialization_other) return 'other';
             return '';
           };
-
-          // ✅ FIXED: Handle skills properly (can be array, string, or null)
           const skillsString = Array.isArray(data.skills) 
             ? data.skills.join(', ') 
             : (data.skills || '');
@@ -303,7 +353,7 @@ const CompleteProfile = () => {
             experience_level_value: data.experience_level_value || '',
           });
 
-          // Set Avatar
+          // Set Avatar (logic was fine)
           if (data.profile_picture_url) {
             setAvatarUrl(data.profile_picture_url);
           } else if (data.full_name) {
@@ -343,6 +393,52 @@ const CompleteProfile = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
+
+    // --- ADDED ---: Required field validation
+    const requiredFields: { [key: string]: string } = {
+      full_name: "Full Name",
+      date_of_birth: "Date of Birth",
+      location_id: "Location",
+      institution_id: "Educational Institution",
+      course_id: "Course/Program",
+    };
+    
+    if (userRole === 'student') {
+      requiredFields.student_year_value = "Year/Status";
+    }
+    
+    if (userRole !== 'student') {
+      requiredFields.current_position = "Current Position";
+      requiredFields.organization = "Organization";
+      requiredFields.specialization_id = "Specialization";
+      requiredFields.experience_level_value = "Experience Level";
+    }
+
+    const missingFields: string[] = [];
+    (Object.keys(requiredFields) as Array<keyof typeof formData>).forEach((field) => {
+      if (!formData[field]) {
+        // Special check for 'other' fields
+        if (field === 'location_id' && formData.location_other) return;
+        if (field === 'institution_id' && formData.institution_other) return;
+        if (field === 'course_id' && formData.course_other) return;
+        if (field === 'specialization_id' && formData.specialization_other) return;
+
+        missingFields.push(requiredFields[field]);
+      }
+    });
+
+    if (missingFields.length > 0) {
+      const errorMsg = `Please fill in all required fields: ${missingFields.join(', ')}`;
+      setError(errorMsg);
+      toast({
+        title: "Missing Information",
+        description: errorMsg,
+        variant: "destructive",
+      });
+      return; // Stop submission
+    }
+    // --- END ---: Validation
+
     setIsSubmitting(true);
     setError('');
 
@@ -453,6 +549,11 @@ const CompleteProfile = () => {
     return <PageSkeleton />;
   }
 
+  // --- MODIFIED ---: Show skeleton if user exists but role isn't loaded yet
+  if (!user || (user && !userRole)) {
+    return <PageSkeleton />;
+  }
+
   if (error && !formData.full_name) {
     return (
       <div className="min-h-screen bg-background">
@@ -469,10 +570,6 @@ const CompleteProfile = () => {
     );
   }
 
-  if (!user) {
-    return <PageSkeleton />;
-  }
-
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -487,6 +584,7 @@ const CompleteProfile = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
+            {/* ... Avatar section (no changes) ... */}
             <div className="flex flex-col items-center mb-8 gap-4">
               <div className="relative">
                 <Avatar className="w-24 h-24 border-2 border-primary/20">
@@ -511,7 +609,17 @@ const CompleteProfile = () => {
               </Button>
             </div>
 
+
             <form onSubmit={handleSubmit} className="space-y-6">
+              {/* --- ADDED ---: Show error message from validation */}
+              {error && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Error</AlertTitle>
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+
               <div className="font-semibold text-lg">Basic Information</div>
               <div className="grid sm:grid-cols-2 gap-4">
                 <div>
@@ -519,8 +627,9 @@ const CompleteProfile = () => {
                   <Input value={formData.full_name} onChange={(e) => handleInputChange('full_name', e.target.value)} required />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-2">Date of Birth</label>
-                  <Input type="date" value={formData.date_of_birth} onChange={(e) => handleInputChange('date_of_birth', e.target.value)} />
+                  {/* --- MODIFIED ---: Added * and required */}
+                  <label className="block text-sm font-medium mb-2">Date of Birth *</label>
+                  <Input type="date" value={formData.date_of_birth} onChange={(e) => handleInputChange('date_of_birth', e.target.value)} required />
                 </div>
               </div>
               
@@ -530,7 +639,8 @@ const CompleteProfile = () => {
                   <Input value={formData.phone} onChange={(e) => handleInputChange('phone', e.target.value)} placeholder="+91 XXXXX XXXXX" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-2">Location</label>
+                  {/* --- MODIFIED ---: Added * */}
+                  <label className="block text-sm font-medium mb-2">Location *</label>
                   <SearchableSelect
                     options={locationOptions}
                     value={formData.location_id}
@@ -542,62 +652,76 @@ const CompleteProfile = () => {
                     emptyMessage="No location found."
                   />
                   {formData.location_id === 'other' && (
-                    <Input className="mt-2" value={formData.location_other} onChange={(e) => handleInputChange('location_other', e.target.value)} placeholder="Please specify location" />
+                    <Input className="mt-2" value={formData.location_other} onChange={(e) => handleInputChange('location_other', e.target.value)} placeholder="Please specify location" required />
                   )}
                 </div>
               </div>
 
               <Separator />
-              <div className="font-semibold text-lg">Professional Details</div>
 
-              <div className="grid sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2">Current Position</label>
-                  <Input value={formData.current_position} onChange={(e) => handleInputChange('current_position', e.target.value)} placeholder="e.g., Resident Doctor" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2">Organization</label>
-                  <Input value={formData.organization} onChange={(e) => handleInputChange('organization', e.target.value)} placeholder="e.g., City Hospital" />
-                </div>
-              </div>
+              {/* --- ADDED ---: Conditional rendering for Professional section */}
+              {userRole !== 'student' && (
+                <>
+                  <div className="font-semibold text-lg">Professional Details</div>
 
-              <div>
-                <label className="block text-sm font-medium mb-2">Field/Domain (Specialization)</label>
-                <SearchableSelect
-                  options={specializationOptions}
-                  value={formData.specialization_id}
-                  onValueChange={(v) => handleInputChange('specialization_id', v)}
-                  onSearchChange={setSpecializationSearch}
-                  isLoading={isSpecLoading}
-                  placeholder="Select your specialization"
-                  searchPlaceholder="Search specializations... (min 2 chars)"
-                  emptyMessage="No specialization found."
-                />
-                {formData.specialization_id === 'other' && (
-                  <Input className="mt-2" value={formData.specialization_other} onChange={(e) => handleInputChange('specialization_other', e.target.value)} placeholder="Please specify specialization" />
-                )}
-              </div>
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <div>
+                      {/* --- MODIFIED ---: Added * and required */}
+                      <label className="block text-sm font-medium mb-2">Current Position *</label>
+                      <Input value={formData.current_position} onChange={(e) => handleInputChange('current_position', e.target.value)} placeholder="e.g., Resident Doctor" required />
+                    </div>
+                    <div>
+                      {/* --- MODIFIED ---: Added * and required */}
+                      <label className="block text-sm font-medium mb-2">Organization *</label>
+                      <Input value={formData.organization} onChange={(e) => handleInputChange('organization', e.target.value)} placeholder="e.g., City Hospital" required />
+                    </div>
+                  </div>
 
-              <div>
-                <label className="block text-sm font-medium mb-2">Experience Level</label>
-                <Select value={formData.experience_level_value} onValueChange={(v) => handleInputChange('experience_level_value', v)}>
-                  <SelectTrigger><SelectValue placeholder="Select your experience" /></SelectTrigger>
-                  <SelectContent>
-                    {experiences.map(e => <SelectItem key={e.value} value={e.value}>{e.label}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
+                  <div>
+                    {/* --- MODIFIED ---: Added * */}
+                    <label className="block text-sm font-medium mb-2">Field/Domain (Specialization) *</label>
+                    <SearchableSelect
+                      options={specializationOptions}
+                      value={formData.specialization_id}
+                      onValueChange={(v) => handleInputChange('specialization_id', v)}
+                      onSearchChange={setSpecializationSearch}
+                      isLoading={isSpecLoading}
+                      placeholder="Select your specialization"
+                      searchPlaceholder="Search specializations... (min 2 chars)"
+                      emptyMessage="No specialization found."
+                    />
+                    {formData.specialization_id === 'other' && (
+                      <Input className="mt-2" value={formData.specialization_other} onChange={(e) => handleInputChange('specialization_other', e.target.value)} placeholder="Please specify specialization" required />
+                    )}
+                  </div>
 
-              <div>
-                <label className="block text-sm font-medium mb-2">Medical License</label>
-                <Input value={formData.medical_license} onChange={(e) => handleInputChange('medical_license', e.target.value)} placeholder="Your license number (if applicable)" />
-              </div>
+                  <div>
+                    {/* --- MODIFIED ---: Added * */}
+                    <label className="block text-sm font-medium mb-2">Experience Level *</label>
+                    <Select value={formData.experience_level_value} onValueChange={(v) => handleInputChange('experience_level_value', v)}>
+                      <SelectTrigger><SelectValue placeholder="Select your experience" /></SelectTrigger>
+                      <SelectContent>
+                        {experiences.map(e => <SelectItem key={e.value} value={e.value}>{e.label}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-              <Separator />
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Medical License</label>
+                    <Input value={formData.medical_license} onChange={(e) => handleInputChange('medical_license', e.target.value)} placeholder="Your license number (if applicable)" />
+                  </div>
+
+                  <Separator />
+                </>
+              )}
+              {/* --- END ---: Conditional Professional section */}
+
+
               <div className="font-semibold text-lg">Educational Details</div>
 
               <div>
-                <label className="block text-sm font-medium mb-2">Educational Institution</label>
+                {/* --- MODIFIED ---: Added * */}
+                <label className="block text-sm font-medium mb-2">Educational Institution *</label>
                 <SearchableSelect
                   options={institutionOptions}
                   value={formData.institution_id}
@@ -609,13 +733,14 @@ const CompleteProfile = () => {
                   emptyMessage="No institution found."
                 />
                 {formData.institution_id === 'other' && (
-                  <Input className="mt-2" value={formData.institution_other} onChange={(e) => handleInputChange('institution_other', e.target.value)} placeholder="Please specify institution" />
+                  <Input className="mt-2" value={formData.institution_other} onChange={(e) => handleInputChange('institution_other', e.target.value)} placeholder="Please specify institution" required />
                 )}
               </div>
 
               <div className="grid sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium mb-2">Course/Program</label>
+                  {/* --- MODIFIED ---: Added * */}
+                  <label className="block text-sm font-medium mb-2">Course/Program *</label>
                   <SearchableSelect
                     options={courseOptions}
                     value={formData.course_id}
@@ -627,11 +752,12 @@ const CompleteProfile = () => {
                     emptyMessage="No course found."
                   />
                   {formData.course_id === 'other' && (
-                    <Input className="mt-2" value={formData.course_other} onChange={(e) => handleInputChange('course_other', e.target.value)} placeholder="Please specify course" />
+                    <Input className="mt-2" value={formData.course_other} onChange={(e) => handleInputChange('course_other', e.target.value)} placeholder="Please specify course" required />
                   )}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-2">Year/Status (if student)</label>
+                  {/* --- MODIFIED ---: Added conditional * */}
+                  <label className="block text-sm font-medium mb-2">Year/Status (if student) {userRole === 'student' && '*'}</label>
                   <Select value={formData.student_year_value} onValueChange={(v) => handleInputChange('student_year_value', v)}>
                     <SelectTrigger><SelectValue placeholder="Select your year of study" /></SelectTrigger>
                     <SelectContent>
@@ -641,6 +767,7 @@ const CompleteProfile = () => {
                 </div>
               </div>
 
+              {/* ... Rest of the form (About & Links, Buttons) ... */}
               <Separator />
               <div className="font-semibold text-lg">About & Links</div>
 
@@ -682,6 +809,7 @@ const CompleteProfile = () => {
   );
 };
 
+// --- PageSkeleton (no changes) ---
 const PageSkeleton = () => (
   <div className="min-h-screen bg-background">
     <Header />
