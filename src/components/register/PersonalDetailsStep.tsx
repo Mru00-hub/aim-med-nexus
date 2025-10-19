@@ -1,183 +1,181 @@
-import React, { useState, useEffect, useMemo ChangeEvent } from 'react';
+//src/components/register/ProfessionalDetailsStep.tsx
+import React, { useEffect, useState, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { SearchableSelect } from '@/components/ui/searchable-select';
+import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CircleX, Upload } from 'lucide-react';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import { supabase } from '@/integrations/supabase/client';
 
-type Location = {
-  id: string;
-  label: string;
-};
-
-type PersonalDetailsStepProps = {
+type Institution = { id: string; label: string; };
+type Course = { id: string; label: string; };
+type Specialization = { id: string; label: string; };
+type StudentYear = { value: string; label: string; };
+type ExperienceLevel = { value: string; label: string; };
+ 
+type ProfessionalDetailsStepProps = {
   formData: any;
-  handleInputChange: (field: string, value: string) => void;
-  avatarPreview: string;
-  handleAvatarChange: (e: ChangeEvent<HTMLInputElement>) => void;
-  removeAvatar: () => void;
+  handleInputChange: (field: string, value: string | boolean) => void;
+  registrationType: string;
 };
 
-export const PersonalDetailsStep: React.FC<PersonalDetailsStepProps> = ({
-  formData,
-  handleInputChange,
-  avatarPreview,
-  handleAvatarChange,
-  removeAvatar,
-}) => {
-  const [locations, setLocations] = useState<Location[]>([]);
-  const [locationSearch, setLocationSearch] = useState("");
-  const [isLocLoading, setIsLocLoading] = useState(false);
+export const ProfessionalDetailsStep: React.FC<ProfessionalDetailsStepProps> = ({ formData, handleInputChange, registrationType }) => {
+  // Data states
+  const [institutions, setInstitutions] = useState<Institution[]>([]);
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [specializations, setSpecializations] = useState<Specialization[]>([]);
+  const [studentYears, setStudentYears] = useState<StudentYear[]>([]);
+  const [experiences, setExperiences] = useState<ExperienceLevel[]>([]);
 
+  // Search term states
+  const [institutionSearch, setInstitutionSearch] = useState("");
+  const [courseSearch, setCourseSearch] = useState("");
+  const [specializationSearch, setSpecializationSearch] = useState("");
+
+  // Loading states
+  const [isInstLoading, setIsInstLoading] = useState(false);
+  const [isCourseLoading, setIsCourseLoading] = useState(false);
+  const [isSpecLoading, setIsSpecLoading] = useState(false);
+
+  // --- Data Fetching Effects ---
+
+  // Effect for Institution search (debounced)
   useEffect(() => {
-    setIsLocLoading(true);
+    setIsInstLoading(true);
     const searchTimer = setTimeout(() => {
-      const fetchLocations = async () => {
-        if (locationSearch.length < 2) {
-          // Don't search if the query is too short
-          setLocations([]);
-          setIsLocLoading(false);
+      const fetchInstitutions = async () => {
+        if (institutionSearch.length < 2) {
+          setInstitutions([]);
+          setIsInstLoading(false);
           return;
         }
         const { data, error } = await supabase
-          .from('locations')
+          .from('institutions')
           .select('id, label')
           .neq('id', 'other')
-          // .or() searches multiple columns
-          // .ilike() is a case-insensitive "contains" search
-          .or(`label.ilike.%${locationSearch}%,id.ilike.%${locationSearch}%`)
+          .or(`label.ilike.%${institutionSearch}%,id.ilike.%${institutionSearch}%`)
           .order('label')
-          .limit(50); // Limit results to keep it fast
-
-        if (data) setLocations(data);
-        if (error) console.error('Error fetching locations:', error);
+          .limit(50);
         
-        // We're done loading
-        setIsLocLoading(false);
+        if (data) setInstitutions(data);
+        if (error) console.error('Error fetching institutions:', error);
+        setIsInstLoading(false);
       };
-
-      fetchLocations();
+      fetchInstitutions();
     }, 500); // 500ms debounce
-
-    // This is the cleanup function. It clears the timer
-    // if the user types again before 500ms is up.
     return () => clearTimeout(searchTimer);
+  }, [institutionSearch]);
 
-  }, [locationSearch]);
+  // Effect for Course search (debounced)
+  useEffect(() => {
+    setIsCourseLoading(true);
+    const searchTimer = setTimeout(() => {
+      const fetchCourses = async () => {
+        if (courseSearch.length < 2) {
+          setCourses([]);
+          setIsCourseLoading(false);
+          return;
+        }
+        const { data, error } = await supabase
+          .from('courses')
+          .select('id, label')
+          .neq('id', 'other')
+          .or(`label.ilike.%${courseSearch}%,id.ilike.%${courseSearch}%`)
+          .order('label')
+          .limit(50);
+        
+        if (data) setCourses(data);
+        if (error) console.error('Error fetching courses:', error);
+        setIsCourseLoading(false);
+      };
+      fetchCourses();
+    }, 500); // 500ms debounce
+    return () => clearTimeout(searchTimer);
+  }, [courseSearch]);
 
-  const locationOptions = useMemo(() => 
-    locations.map(loc => ({ value: loc.id, label: loc.label })),
-    [locations] // Only re-run when the 'locations' state changes
+  // Effect for Specialization search (debounced)
+  useEffect(() => {
+    setIsSpecLoading(true);
+    const searchTimer = setTimeout(() => {
+      const fetchSpecializations = async () => {
+        if (specializationSearch.length < 2) {
+          setSpecializations([]);
+          setIsSpecLoading(false);
+          return;
+        }
+        const { data, error } = await supabase
+          .from('specializations')
+          .select('id, label')
+          .neq('id', 'other')
+          .or(`label.ilike.%${specializationSearch}%,id.ilike.%${specializationSearch}%`)
+          .order('label')
+          .limit(50);
+        
+        if (data) setSpecializations(data);
+        if (error) console.error('Error fetching specializations:', error);
+        setIsSpecLoading(false);
+      };
+      fetchSpecializations();
+    }, 500); // 500ms debounce
+    return () => clearTimeout(searchTimer);
+  }, [specializationSearch]);
+
+  // Effect for static (non-searchable) data
+  useEffect(() => {
+    const fetchStaticData = async () => {
+      const [yearRes, expRes] = await Promise.all([
+        supabase.from('student_years').select('value, label').order('sort_order'),
+        supabase.from('experience_levels').select('value, label').order('sort_order')
+      ]);
+      if (yearRes.data) setStudentYears(yearRes.data);
+      if (expRes.data) setExperiences(expRes.data);
+    };
+    fetchStaticData();
+  }, []); // Runs once on mount
+
+  // --- Memoized Options ---
+
+  const institutionOptions = useMemo(() => 
+    institutions.map(inst => ({ value: inst.id, label: inst.label })),
+    [institutions]
+  );
+  const courseOptions = useMemo(() =>
+    courses.map(course => ({ value: course.id, label: course.label })),
+    [courses]
+  );
+  const specializationOptions = useMemo(() =>
+    specializations.map(spec => ({ value: spec.id, label: spec.label })),
+    [specializations]
   );
   
   return (
     <>
-      <div className="flex flex-col items-center gap-4">
-        <div className="relative">
-          <Avatar className="w-24 h-24 border-2 border-primary/20">
-            <AvatarImage src={avatarPreview} alt="Profile preview" />
-            <AvatarFallback className="text-3xl">
-              {formData.firstName?.[0]}{formData.lastName?.[0]}
-            </AvatarFallback>
-          </Avatar>
-          {avatarPreview && (
-            <button 
-              type="button" 
-              onClick={removeAvatar} 
-              className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full p-1 hover:bg-destructive/80 transition-colors"
-            >
-              <CircleX className="h-4 w-4" />
-            </button>
-          )}
-        </div>
-        <Button asChild variant="outline">
-          <label htmlFor="avatar-upload" className="cursor-pointer">
-            <Upload className="mr-2 h-4 w-4" /> Upload Picture
-            <input 
-              id="avatar-upload" 
-              type="file" 
-              className="sr-only" 
-              accept="image/png, image/jpeg" 
-              onChange={handleAvatarChange} 
-            />
-          </label>
-        </Button>
-        <p className="text-xs text-muted-foreground">PNG or JPG, max 2MB.</p>
-      </div>
-      
-      <div className="grid sm:grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium mb-2">First Name *</label>
-          <Input 
-            value={formData.firstName}
-            onChange={(e) => handleInputChange('firstName', e.target.value)}
-            placeholder="Enter your first name"
-            required
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-2">Last Name *</label>
-          <Input 
-            value={formData.lastName}
-            onChange={(e) => handleInputChange('lastName', e.target.value)}
-            placeholder="Enter your last name"
-            required
-          />
-        </div>
+      <div className="bg-muted/30 p-4 rounded-lg mb-6">
+        <h4 className="font-semibold text-primary mb-2">Educational Background (Required)</h4>
+        <p className="text-sm text-muted-foreground">
+          All members must provide educational details to maintain our professional community standards.
+        </p>
       </div>
 
       <div>
-        <label className="block text-sm font-medium mb-2">Email Address *</label>
-        <Input 
-          type="email"
-          value={formData.email}
-          onChange={(e) => handleInputChange('email', e.target.value)}
-          placeholder="your.email@example.com"
-          required
-        />
-      </div>
-
-      <div className="grid sm:grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium mb-2">Phone Number</label>
-          <Input 
-            type="tel"
-            value={formData.phone}
-            onChange={(e) => handleInputChange('phone', e.target.value)}
-            placeholder="+91 XXXXX XXXXX"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-2">Date of Birth *</label>
-          <Input 
-            type="date"
-            value={formData.date_of_birth}
-            onChange={(e) => handleInputChange('date_of_birth', e.target.value)}
-            required
-          />
-        </div>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium mb-2">Current Location *</label>
+        <label className="block text-sm font-medium mb-2">Educational Institution *</label>
         <SearchableSelect
-          options={locationOptions}
-          value={formData.location_id}
-          onValueChange={(value) => handleInputChange('location_id', value)}
-          onSearchChange={setLocationSearch}
-          isLoading={isLocLoading}
-          placeholder="Select your city/town"
-          searchPlaceholder="Search locations..."
-          emptyMessage="No location found."
+          options={institutionOptions}
+          value={formData.institution_id}
+          onValueChange={(value) => handleInputChange('institution_id', value)}
+          onSearchChange={setInstitutionSearch}
+          isLoading={isInstLoading}
+          placeholder="Select your college/university"
+          searchPlaceholder="Search institutions... (min 2 chars)"
+          emptyMessage="No institution found."
         />
-        {formData.location_id === 'other' && (
+        {formData.institution_id === 'other' && (
           <div className="mt-2">
             <Input
-              value={formData.location_other || ''}
-              onChange={(e) => handleInputChange('location_other', e.target.value)}
-              placeholder="Please specify your location"
+              value={formData.institution_other}
+              onChange={(e) => handleInputChange('institution_other', e.target.value)}
+              placeholder="Please specify your institution"
               required
             />
           </div>
@@ -186,26 +184,143 @@ export const PersonalDetailsStep: React.FC<PersonalDetailsStepProps> = ({
 
       <div className="grid sm:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium mb-2">Password *</label>
-          <Input 
-            type="password"
-            value={formData.password}
-            onChange={(e) => handleInputChange('password', e.target.value)}
-            placeholder="Create a strong password"
-            required
-            minLength={6}
+          <label className="block text-sm font-medium mb-2">Course/Program *</label>
+          <SearchableSelect
+            options={courseOptions}
+            value={formData.course_id}
+            onValueChange={(value) => handleInputChange('course_id', value)}
+            onSearchChange={setCourseSearch}
+            isLoading={isCourseLoading}
+            placeholder="Select your course"
+            searchPlaceholder="Search courses... (min 2 chars)"
+            emptyMessage="No course found."
           />
+          {formData.course_id === 'other' && (
+            <div className="mt-2">
+              <Input
+                value={formData.course_other}
+                onChange={(e) => handleInputChange('course_other', e.target.value)}
+                placeholder="Please specify your course"
+                required
+              />
+            </div>
+          )}
         </div>
-        <div>
-          <label className="block text-sm font-medium mb-2">Confirm Password *</label>
-          <Input 
-            type="password"
-            value={formData.confirmPassword}
-            onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
-            placeholder="Confirm your password"
-            required
-            minLength={6}
+        {registrationType === 'student' && (
+          <div>
+            <label className="block text-sm font-medium mb-2">Year/Status *</label>
+            <Select value={formData.student_year_value} onValueChange={(value) => handleInputChange('student_year_value', value)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Current year/status" />
+              </SelectTrigger>
+              <SelectContent>
+                {studentYears.map(year => <SelectItem key={year.value} value={year.value}>{year.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+      </div>
+
+      {registrationType === 'professional' && (
+        <>
+          <div className="bg-muted/30 p-4 rounded-lg my-4">
+            <h4 className="font-semibold text-primary mb-2">Professional Information</h4>
+            <p className="text-sm text-muted-foreground">
+              Details about your current role in the healthcare industry.
+            </p>
+          </div>
+
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">Current Position *</label>
+              <Input 
+                value={formData.currentPosition}
+                onChange={(e) => handleInputChange('currentPosition', e.target.value)}
+                placeholder="e.g., Business Analyst"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Organization *</label>
+              <Input 
+                value={formData.organization}
+                onChange={(e) => handleInputChange('organization', e.target.value)}
+                placeholder="Company/Organization name"
+                required
+              />
+            </div>
+          </div>
+
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-2"> Industry Field/Domain *</label>
+              <SearchableSelect
+                options={specializationOptions}
+                value={formData.specialization_id}
+                onValueChange={(value) => handleInputChange('specialization_id', value)}
+                onSearchChange={setSpecializationSearch}
+                isLoading={isSpecLoading}
+                placeholder="Select your field"
+                searchPlaceholder="Search specializations... (min 2 chars)"
+                emptyMessage="No specialization found."
+              />
+              {formData.specialization_id === 'other' && (
+                <div className="mt-2">
+                  <Input
+                    value={formData.specialization_other}
+                    onChange={(e) => handleInputChange('specialization_other', e.target.value)}
+                    placeholder="Please specify your specialization"
+                    required
+                  />
+                </div>
+              )}
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Experience*</label>
+              <Select value={formData.experience_level_value} onValueChange={(value) => handleInputChange('experience_level_value', value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Years of experience" />
+                </SelectTrigger>
+                <SelectContent>
+                  {experiences.map(exp => <SelectItem key={exp.value} value={exp.value}>{exp.label}</SelectItem>)}
+                </SelectContent>
+               </Select>
+             </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">Professional Bio</label>
+            <Textarea 
+              value={formData.bio}
+              onChange={(e) => handleInputChange('bio', e.target.value)}
+              placeholder="Brief description of your professional background..."
+              rows={3}
+            />
+          </div>
+        </>
+      )}
+
+      <div className="space-y-4 pt-4">
+        <div className="flex items-start space-x-2">
+          <Checkbox 
+            id="terms"
+            checked={formData.agreeToTerms}
+            onCheckedChange={(checked) => handleInputChange('agreeToTerms', checked as boolean)}
           />
+          <label htmlFor="terms" className="text-sm text-muted-foreground leading-5">
+            I agree to the <Link to="/terms" className="text-primary hover:underline">Terms of Service</Link> and{' '}
+            <Link to="/privacy" className="text-primary hover:underline">Privacy Policy</Link>
+          </label>
+        </div>
+        <div className="flex items-start space-x-2">
+          <Checkbox 
+            id="updates"
+            checked={formData.receiveUpdates}
+            onCheckedChange={(checked) => handleInputChange('receiveUpdates', checked as boolean)}
+          />
+          <label htmlFor="updates" className="text-sm text-muted-foreground leading-5">
+            I want to receive updates about new features and opportunities
+          </label>
         </div>
       </div>
     </>
