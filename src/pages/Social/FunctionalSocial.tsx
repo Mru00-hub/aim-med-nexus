@@ -1,5 +1,3 @@
-// src/pages/Social/FunctionalSocial.tsx
-
 import React, { useState, useEffect } from 'react';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
@@ -8,7 +6,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSocialCounts } from '@/context/SocialCountsContext';
 
-// FIX: Import the new standalone functions and types from the refactored API
+// Import the new standalone functions and types from the refactored API
 import {
     getUserRecommendations,
     getMutualConnections, 
@@ -47,7 +45,7 @@ const FunctionalSocial = () => {
   
   // State for all social data
   const [requests, setRequests] = useState<ConnectionRequest[]>([]);
-  const [sentRequests, setSentRequests] = useState<SentRequest[]>([]); // Assuming type
+  const [sentRequests, setSentRequests] = useState<SentRequest[]>([]);
   const [recommendations, setRecommendations] = useState<RecommendationWithMutuals[]>([]);
   const [myConnections, setMyConnections] = useState<Connection[]>([]);
   const [blockedUsers, setBlockedUsers] = useState<BlockedUser[]>([]);
@@ -56,52 +54,63 @@ const FunctionalSocial = () => {
     setRequestCount(requests.length);
   }, [requests, setRequestCount]);
   
-  // FIX: Refactored to use new API functions and a single try...catch block
   const fetchData = async () => {
     if (!user) return;
     setLoading(true);
-    const [
-      requestsRes,
-      connectionsRes,
-      blockedRes,
-      sentRequestsRes,
-      recommendationsRes,
-    ] = await Promise.all([
-      getPendingRequests(),
-      getMyConnections(),
-      getBlockedUsers(),
-      getSentPendingRequests(),
-      getUserRecommendations(user.id),
-    ]);
-
-    // Check each response individually and set state if data exists
-    if (requestsRes.data) setRequests(requestsRes.data);
-    if (connectionsRes.data) setMyConnections(connectionsRes.data);
-    if (blockedRes.data) setBlockedUsers(blockedRes.data);
-    if (sentRequestsRes.data) setSentRequests(sentRequestsRes.data);
     
-    // Handle recommendations and their mutual connections
-    if (recommendationsRes.data) {
-      const initialRecommendations = recommendationsRes.data;
-      try {
-        const mutualsPromises = initialRecommendations.map(rec => getMutualConnections(rec.id));
-        const mutualsResults = await Promise.all(mutualsPromises);
-        const recommendationsWithMutuals = initialRecommendations.map((rec, index) => ({
-          ...rec,
-          mutuals: mutualsResults[index] || [],
-        }));
-        setRecommendations(recommendationsWithMutuals);
-      } catch (error) {
-        console.error("Failed to fetch mutual connections:", error);
-        // If mutuals fail, still show the recommendations
-        setRecommendations(initialRecommendations.map(rec => ({ ...rec, mutuals: [] })));
+    try {
+      const [
+        requestsRes,       // Returns Promise<ConnectionRequest[]>
+        connectionsRes,    // Returns Promise<Connection[]>
+        blockedRes,        // Returns Promise<BlockedUser[]>
+        sentRequestsRes,   // Returns Promise<ApiResponse<...>>
+        recommendationsRes, // Returns Promise<ApiResponse<...>>
+      ] = await Promise.all([
+        getPendingRequests(),
+        getMyConnections(),
+        getBlockedUsers(),
+        getSentPendingRequests(),
+        getUserRecommendations(user.id),
+      ]);
+
+      // --- REFACTORED: Handle the new mixed response types ---
+      
+      // Functions that return data directly
+      setRequests(requestsRes || []);
+      setMyConnections(connectionsRes || []);
+      setBlockedUsers(blockedRes || []);
+
+      // Functions that still return an ApiResponse object
+      if (sentRequestsRes.data) setSentRequests(sentRequestsRes.data);
+      
+      // Handle recommendations and their mutual connections
+      if (recommendationsRes.data) {
+        const initialRecommendations = recommendationsRes.data;
+        try {
+          const mutualsPromises = initialRecommendations.map(rec => getMutualConnections(rec.id));
+          const mutualsResults = await Promise.all(mutualsPromises);
+          const recommendationsWithMutuals = initialRecommendations.map((rec, index) => ({
+            ...rec,
+            mutuals: mutualsResults[index] || [],
+          }));
+          setRecommendations(recommendationsWithMutuals);
+        } catch (error) {
+          console.error("Failed to fetch mutual connections:", error);
+          setRecommendations(initialRecommendations.map(rec => ({ ...rec, mutuals: [] })));
+        }
+      } else {
+        setRecommendations([]);
       }
+    } catch (error: any) {
+      console.error("Failed to fetch social data:", error);
+      toast({ title: "Error", description: `Could not load social data: ${error.message}`, variant: "destructive" });
     }
     setLoading(false);
   };
+  
   useEffect(() => { fetchData(); }, [user]);
 
-  // FIX: Refactored `handleAction` to be much simpler with the new API style.
+  // This handleAction function is robust and works with the refactored API
   const handleAction = async (action: () => Promise<any>, successMessage: string) => {
     try {
         await action();
@@ -112,7 +121,7 @@ const FunctionalSocial = () => {
     }
   };
 
-  // FIX: These handlers now call the new standalone functions.
+  // These handlers correctly call the new standalone functions
   const handleSendRequest = (addresseeId: string) => handleAction(() => sendConnectionRequest(addresseeId), "Connection request sent.");
   const handleRespondRequest = (requesterId: string, response: 'accepted' | 'ignored') => handleAction(() => respondToRequest(requesterId, response), `Request ${response}.`);
   const handleRemoveConnection = (userId: string) => handleAction(() => removeConnection(userId), "Connection removed.");
