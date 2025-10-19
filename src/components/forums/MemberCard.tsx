@@ -1,5 +1,3 @@
-// src/components/forums/MemberCard.tsx
-
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
@@ -18,6 +16,11 @@ export type DisplayMember = {
     full_name: string;
     profile_picture_url: string | null;
     role: 'ADMIN' | 'MODERATOR' | 'MEMBER';
+    // --- REFACTORED: Add new fields for richer data ---
+    current_position?: string | null;
+    organization?: string | null;
+    location_name?: string | null;
+    specialization_name?: string | null;
 };
 
 interface MemberCardProps {
@@ -29,7 +32,6 @@ interface MemberCardProps {
   onBan?: (membershipId: string) => void;
 }
 
-// Your helper functions are great, let's keep them!
 const getInitials = (name: string) => {
   const names = name.split(' ');
   return names.length > 1
@@ -45,8 +47,8 @@ const getBadgeVariant = (role: DisplayMember['role']) => {
     }
 };
 
-export const MemberCard: React.FC<MemberCardProps> = ({ member, isCurrentUserAdmin, onRoleChange, onApprove, onReject }) => {
-    // This handler now only handles Approve/Reject for pending requests.
+export const MemberCard: React.FC<MemberCardProps> = ({ member, isCurrentUserAdmin, onRoleChange, onApprove, onReject, onBan }) => {
+    
     const handleAction = (e: React.MouseEvent, action?: (id: string) => void) => {
         e.stopPropagation();
         e.preventDefault();
@@ -54,27 +56,45 @@ export const MemberCard: React.FC<MemberCardProps> = ({ member, isCurrentUserAdm
             action(member.membership_id);
         }
     };
+
+    // --- REFACTORED: Create details array to cleanly render available info ---
+    const userDetails = [
+        member.current_position,
+        member.specialization_name,
+        member.organization,
+        member.location_name,
+    ].filter(Boolean); // Filter out any null or empty strings
     
     return (
         <Card className="transition-all hover:shadow-md group">
             <CardContent className="p-4 flex items-center justify-between space-x-4">
-                {/* The main user info is wrapped in a Link for navigation */}
-                <Link to={`/profile/${member.user_id}`} className="flex items-center space-x-4 flex-grow">
+                <Link to={`/profile/${member.user_id}`} className="flex items-center space-x-4 flex-grow min-w-0"> {/* Added min-w-0 for flex truncation */}
                     <Avatar className="h-12 w-12">
                         <AvatarImage src={member.profile_picture_url || ''} alt={member.full_name} />
                         <AvatarFallback>{getInitials(member.full_name)}</AvatarFallback>
                     </Avatar>
-                    <div className="flex-1">
-                        <p className="font-semibold text-lg group-hover:text-primary">{member.full_name}</p>
+                    <div className="flex-1 min-w-0"> {/* Added min-w-0 for flex truncation */}
+                        <p className="font-semibold text-lg group-hover:text-primary truncate">{member.full_name}</p>
+                        
+                        {/* --- REFACTORED: Display richer profile details --- */}
+                        {userDetails.length > 0 && (
+                          <p className="text-sm text-muted-foreground flex items-center flex-wrap truncate">
+                            {userDetails.map((detail, index) => (
+                              <React.Fragment key={index}>
+                                <span>{detail}</span>
+                                {index < userDetails.length - 1 && <span className="mx-1.5">&bull;</span>}
+                              </React.Fragment>
+                            ))}
+                          </p>
+                        )}
                     </div>
-                    <Badge variant={getBadgeVariant(member.role)} className="capitalize">
+                    <Badge variant={getBadgeVariant(member.role)} className="capitalize ml-auto sm:ml-0 flex-shrink-0">
                         {member.role.toLowerCase()}
                     </Badge>
                 </Link>
 
-                {/* --- UPDATED ADMIN CONTROLS SECTION --- */}
-                <div className="flex items-center gap-2">
-                    {/* A) Buttons for Pending Requests (Approve/Reject) */}
+                {/* Admin controls remain unchanged */}
+                <div className="flex items-center gap-2 flex-shrink-0">
                     {isCurrentUserAdmin && onApprove && onReject && (
                         <>
                             <Button size="icon" variant="outline" onClick={(e) => handleAction(e, onApprove)} title="Approve">
@@ -86,8 +106,7 @@ export const MemberCard: React.FC<MemberCardProps> = ({ member, isCurrentUserAdm
                         </>
                     )}
 
-                    {/* B) Dropdown Menu for Active Members (Role Change/Ban) */}
-                    {isCurrentUserAdmin && onRoleChange && member.membership_id && (
+                    {isCurrentUserAdmin && onRoleChange && member.membership_id && onBan && (
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Button size="icon" variant="ghost" onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
@@ -105,7 +124,7 @@ export const MemberCard: React.FC<MemberCardProps> = ({ member, isCurrentUserAdm
                                     <UserX className="mr-2 h-4 w-4" /> Make Member
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem className="text-red-600" onClick={() => onBan && onBan(member.membership_id!)}>
+                                <DropdownMenuItem className="text-red-600" onClick={() => onBan(member.membership_id!)}>
                                     <ShieldX className="mr-2 h-4 w-4" /> Ban User
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
