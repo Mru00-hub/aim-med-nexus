@@ -44,7 +44,7 @@ export const PersonalDetailsStep: React.FC<PersonalDetailsStepProps> = ({
         const { data, error } = await supabase
           .from('locations')
           .select('id, label')
-          .neq('id', 'other')
+          .neq('value', 'other')
           // .or() searches multiple columns
           // .ilike() is a case-insensitive "contains" search
           .or(`label.ilike.%${locationSearch}%,id.ilike.%${locationSearch}%`)
@@ -169,7 +169,7 @@ export const PersonalDetailsStep: React.FC<PersonalDetailsStepProps> = ({
           onSearchChange={setLocationSearch}
           isLoading={isLocLoading}
           placeholder="Select your city/town"
-          searchPlaceholder="Search locations..."
+          searchPlaceholder="Search locations... (min 2 chars)"
           emptyMessage="No location found."
         />
         {formData.location_id === 'other' && (
