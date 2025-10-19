@@ -1,5 +1,5 @@
 import * as React from "react"
-import { Check, ChevronsUpDown } from "lucide-react"
+import { Check, ChevronsUpDown, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import {
@@ -24,11 +24,13 @@ type SearchableSelectProps = {
   options: Option[];
   value: string;
   onValueChange: (value: string) => void;
+  onSearchChange: (search: string) => void; 
   placeholder?: string;
   searchPlaceholder?: string;
   emptyMessage?: string;
   className?: string;
   showOther?: boolean;
+  isLoading?: boolean; 
 };
 
 export function SearchableSelect({
@@ -40,6 +42,7 @@ export function SearchableSelect({
   emptyMessage = "No results found.",
   className,
   showOther = true,
+  isLoading = false,
 }: SearchableSelectProps) {
   const [open, setOpen] = React.useState(false);
 
@@ -61,13 +64,30 @@ export function SearchableSelect({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-full p-0" align="start">
-        <Command>
-          <CommandInput placeholder={searchPlaceholder} />
-          <CommandEmpty>{emptyMessage}</CommandEmpty>
+        <Command
+          filter={() => 1}
+        >
+          <CommandInput 
+            placeholder={searchPlaceholder} 
+            // This is the key: call onSearchChange when user types
+            onValueChange={onSearchChange} 
+            isLoading={isLoading} // Show loader in input if supported (else use custom)
+          />
+          <CommandEmpty>
+            {isLoading ? ( // Show custom loading message if input doesn't
+              <div className="flex items-center justify-center p-2">
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Loading...
+              </div>
+            ) : (
+              emptyMessage
+            )}
+          </CommandEmpty>
           <CommandGroup className="max-h-64 overflow-auto">
             {options.map((option) => (
               <CommandItem
                 key={option.value}
+                // We use option.label here, but filtering is disabled
                 value={option.label}
                 onSelect={() => {
                   onValueChange(option.value);
