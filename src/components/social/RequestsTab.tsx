@@ -18,14 +18,15 @@ export const RequestsTab = ({ requests, sentRequests, loading, onRespondRequest,
         {loading ? <Skeleton className="h-24 w-full" /> : requests.length > 0 ? requests.map(req => (
           <UserActionCard 
             key={req.requester_id} 
-            // CHANGED: Passing more details from the 'req' object
+            // --- REFACTORED: Use new fields from get_pending_connection_requests() ---
             user={{ 
               id: req.requester_id, 
               full_name: req.full_name, 
               profile_picture_url: req.profile_picture_url, 
-              title: req.course, // The pending_connection_requests view has 'course'[span_1](end_span)
+              // Use current_position or specialization as the title
+              title: req.current_position || req.specialization_name, 
               organization: req.organization, 
-              location: req.current_location 
+              location: req.location_name // Use the new location_name field
             }}
           >
             <Button size="sm" onClick={() => onRespondRequest(req.requester_id, 'accepted')}>Accept</Button>
@@ -40,15 +41,15 @@ export const RequestsTab = ({ requests, sentRequests, loading, onRespondRequest,
         )) : <p className="text-center text-muted-foreground py-8">No incoming requests.</p>}
       </TabsContent>
       <TabsContent value="sent" className="mt-4 space-y-2">
+        {/* The 'sent' tab logic was already correct as it used the right fields */}
         {loading ? <Skeleton className="h-24 w-full" /> : sentRequests.length > 0 ? sentRequests.map(req => (
           <UserActionCard 
             key={req.addressee_id} 
-            // CHANGED: Passing more details from the 'req' object
             user={{ 
               id: req.addressee_id, 
               full_name: req.full_name, 
               profile_picture_url: req.profile_picture_url, 
-              title: req.current_position, // The sent_pending_requests view has 'current_position'
+              title: req.current_position, 
               organization: req.organization, 
               location: null // This view doesn't have location
             }}
