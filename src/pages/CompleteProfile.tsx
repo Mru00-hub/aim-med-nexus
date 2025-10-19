@@ -473,24 +473,13 @@ const CompleteProfile = () => {
         p_specialization_other: formData.specialization_id === 'other' ? formData.specialization_other : null,
         p_student_year_value: formData.student_year_value || null,
         p_experience_level_value: formData.experience_level_value || null,
+        p_resume_url: formData.resume_url || null,
+        p_profile_picture_url: finalAvatarUrl,
+        p_is_onboarded: true,
       };
 
       const { error: rpcError } = await supabase.rpc('update_profile', rpcArgs);
       if (rpcError) throw rpcError;
-
-      // 3. Update remaining fields
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({
-          resume_url: formData.resume_url || null,
-          profile_picture_url: finalAvatarUrl,
-          is_onboarded: true,
-        })
-        .eq('id', user.id);
-
-      if (updateError) {
-        console.warn("RPC succeeded, but profile update failed:", updateError.message);
-      }
 
       toast({
         title: "Profile Saved!",
