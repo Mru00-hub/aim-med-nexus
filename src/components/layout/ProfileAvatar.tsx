@@ -57,7 +57,7 @@ export const ProfileAvatar = () => {
   
   if (!profile || !profile.full_name) {
     return (
-      <Link to="/complete-profile" title="Complete your profile">
+      <Link to="/profile" title="Complete your profile"> 
         <Avatar className="cursor-pointer bg-muted">
           <AvatarFallback className="text-muted-foreground">?</AvatarFallback>
         </Avatar>
