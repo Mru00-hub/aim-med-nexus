@@ -1,79 +1,64 @@
-// src/components/social/NetworkTab.tsx
-
-import React, { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
+import React from 'react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from '@/components/ui/button';
-import { Search, UserX, MessageSquare } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { MoreHorizontal, Ban } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { UserActionCard } from './UserActionCard';
-// FIX: Import the specific, standalone function we need.
-import { createOrGetConversation } from '@/integrations/supabase/social.api';
-import { useToast } from '@/components/ui/use-toast';
 
-// The props are passed correctly from FunctionalSocial.tsx
-export const NetworkTab = ({ myConnections, loading, onRemoveConnection }) => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const navigate = useNavigate();
-  const { toast } = useToast();
-
-  // FIX: This function now uses the new standalone API function and a try...catch block.
-  const handleStartConversation = async (connection) => {
-    toast({ title: "Opening conversation..." });
-    try {
-      const conversationId = await createOrGetConversation(connection.id);
-      // Navigate to the inbox and pass the conversationId and participant details in the state
-      navigate('/inbox', {
-        state: {
-          conversationId: conversationId,
-          participant: {
-            id: connection.id,
-            full_name: connection.full_name,
-            profile_picture_url: connection.profile_picture_url,
-          }
-        }
-      });
-    } catch (error: any) {
-      toast({ title: "Error", description: "Could not start conversation.", variant: "destructive" });
-    }
-  };
-
-  const filteredConnections = useMemo(() => {
-    if (!searchTerm) return myConnections;
-    return myConnections.filter(conn => conn.full_name?.toLowerCase().includes(searchTerm.toLowerCase()));
-  }, [myConnections, searchTerm]);
-
+export const RequestsTab = ({ requests, sentRequests, loading, onRespondRequest, onBlockUser, onWithdrawRequest }) => {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>My Connections</CardTitle>
-        <div className="relative pt-4">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Filter by name..." className="pl-10" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-2">
-        {loading ? <Skeleton className="h-20 w-full" /> : filteredConnections.map(conn => (
-          <UserActionCard
-            key={conn.id}
-            user={{
-              id: conn.id,
-              full_name: conn.full_name,
-              profile_picture_url: conn.profile_picture_url,
-              title: conn.course,
-              organization: conn.organization,
-              location: conn.current_location
+    <Tabs defaultValue="incoming" className="w-full">
+      <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="incoming">Incoming ({requests.length})</TabsTrigger>
+          <TabsTrigger value="sent">Sent ({sentRequests.length})</TabsTrigger>
+      </TabsList>
+      <TabsContent value="incoming" className="mt-4 space-y-2">
+        {loading ? <Skeleton className="h-24 w-full" /> : requests.length > 0 ? requests.map(req => (
+          <UserActionCard 
+            key={req.requester_id} 
+            // --- REFACTORED: Use new fields from get_pending_connection_requests() ---
+            user={{ 
+              id: req.requester_id, 
+              full_name: req.full_name, 
+              profile_picture_url: req.profile_picture_url, 
+              // Use current_position or specialization as the title
+              title: req.current_position || req.specialization_name, 
+              organization: req.organization, 
+              location: req.location_name // Use the new location_name field
             }}
           >
-            <Button variant="ghost" size="icon" onClick={() => handleStartConversation(conn)}>
-                <MessageSquare className="h-5 w-5" />
-            </Button>
-            {/* This correctly uses the prop passed down from FunctionalSocial.tsx */}
-            <Button variant="outline" size="sm" onClick={() => onRemoveConnection(conn.id)}><UserX className="h-4 w-4 mr-2" />Remove</Button>
+            <Button size="sm" onClick={() => onRespondRequest(req.requester_id, 'accepted')}>Accept</Button>
+            <Button size="sm" variant="outline" onClick={() => onRespondRequest(req.requester_id, 'ignored')}>Ignore</Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal /></Button></DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem onSelect={() => onBlockUser(req.requester_id)} className="text-destructive focus:bg-destructive/10 focus:text-destructive"><Ban className="h-4 w-4 mr-2" />Block</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </UserActionCard>
-        ))}
-      </CardContent>
-    </Card>
+        )) : <p className="text-center text-muted-foreground py-8">No incoming requests.</p>}
+      </TabsContent>
+      <TabsContent value="sent" className="mt-4 space-y-2">
+        {/* The 'sent' tab logic was already correct as it used the right fields */}
+        {loading ? <Skeleton className="h-24 w-full" /> : sentRequests.length > 0 ? sentRequests.map(req => (
+          <UserActionCard 
+            key={req.addressee_id} 
+            user={{ 
+              id: req.addressee_id, 
+              full_name: req.full_name, 
+              profile_picture_url: req.profile_picture_url, 
+              title: req.current_position, 
+              organization: req.organization, 
+              location: null // This view doesn't have location
+            }}
+          >
+            <Badge variant="outline">Pending</Badge>
+            <Button size="sm" variant="ghost" onClick={() => onWithdrawRequest(req.addressee_id)}>Withdraw</Button>
+          </UserActionCard>
+        )) : <p className="text-center text-muted-foreground py-8">No pending sent requests.</p>}
+      </TabsContent>
+    </Tabs>
   );
 };
