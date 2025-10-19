@@ -42,14 +42,20 @@ export type Database = {
       conversation_participants: {
         Row: {
           conversation_id: string
+          encrypted_conversation_key: string | null
+          is_starred: boolean
           user_id: string
         }
         Insert: {
           conversation_id: string
+          encrypted_conversation_key?: string | null
+          is_starred?: boolean
           user_id: string
         }
         Update: {
           conversation_id?: string
+          encrypted_conversation_key?: string | null
+          is_starred?: boolean
           user_id?: string
         }
         Relationships: [
@@ -78,13 +84,6 @@ export type Database = {
             foreignKeyName: "conversation_participants_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
-            referencedRelation: "my_connections"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "conversation_participants_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -94,41 +93,38 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          master_encryption_key: string | null
           updated_at: string
         }
         Insert: {
           created_at?: string
           id?: string
+          master_encryption_key?: string | null
           updated_at?: string
         }
         Update: {
           created_at?: string
           id?: string
+          master_encryption_key?: string | null
           updated_at?: string
         }
         Relationships: []
       }
-      courses_programs: {
+      courses: {
         Row: {
-          created_at: string | null
-          degree_type: string | null
-          duration_years: number | null
           id: string
-          name: string
+          label: string
+          value: string
         }
         Insert: {
-          created_at?: string | null
-          degree_type?: string | null
-          duration_years?: number | null
           id?: string
-          name: string
+          label: string
+          value: string
         }
         Update: {
-          created_at?: string | null
-          degree_type?: string | null
-          duration_years?: number | null
           id?: string
-          name?: string
+          label?: string
+          value?: string
         }
         Relationships: []
       }
@@ -140,6 +136,7 @@ export type Database = {
           file_type: string | null
           file_url: string
           id: string
+          iv: string | null
           message_id: number
           uploaded_by: string
         }
@@ -150,6 +147,7 @@ export type Database = {
           file_type?: string | null
           file_url: string
           id?: string
+          iv?: string | null
           message_id: number
           uploaded_by: string
         }
@@ -160,6 +158,7 @@ export type Database = {
           file_type?: string | null
           file_url?: string
           id?: string
+          iv?: string | null
           message_id?: number
           uploaded_by?: string
         }
@@ -184,13 +183,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "inbox_conversations"
             referencedColumns: ["participant_id"]
-          },
-          {
-            foreignKeyName: "direct_message_attachments_uploaded_by_fkey"
-            columns: ["uploaded_by"]
-            isOneToOne: false
-            referencedRelation: "my_connections"
-            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "direct_message_attachments_uploaded_by_fkey"
@@ -249,13 +241,6 @@ export type Database = {
             foreignKeyName: "direct_message_reactions_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
-            referencedRelation: "my_connections"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "direct_message_reactions_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -263,32 +248,35 @@ export type Database = {
       }
       direct_messages: {
         Row: {
-          content: string
+          content: string | null
           conversation_id: string
           created_at: string
           id: number
           is_edited: boolean
           is_read: boolean
+          parent_message_id: number | null
           sender_id: string
           updated_at: string | null
         }
         Insert: {
-          content: string
+          content?: string | null
           conversation_id: string
           created_at?: string
           id?: number
           is_edited?: boolean
           is_read?: boolean
+          parent_message_id?: number | null
           sender_id: string
           updated_at?: string | null
         }
         Update: {
-          content?: string
+          content?: string | null
           conversation_id?: string
           created_at?: string
           id?: number
           is_edited?: boolean
           is_read?: boolean
+          parent_message_id?: number | null
           sender_id?: string
           updated_at?: string | null
         }
@@ -298,6 +286,13 @@ export type Database = {
             columns: ["conversation_id"]
             isOneToOne: false
             referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "direct_messages_parent_message_id_fkey"
+            columns: ["parent_message_id"]
+            isOneToOne: false
+            referencedRelation: "direct_messages"
             referencedColumns: ["id"]
           },
           {
@@ -313,13 +308,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "inbox_conversations"
             referencedColumns: ["participant_id"]
-          },
-          {
-            foreignKeyName: "direct_messages_sender_id_fkey"
-            columns: ["sender_id"]
-            isOneToOne: false
-            referencedRelation: "my_connections"
-            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "direct_messages_sender_id_fkey"
@@ -363,6 +351,57 @@ export type Database = {
         }
         Relationships: []
       }
+      experience_levels: {
+        Row: {
+          label: string
+          sort_order: number | null
+          value: string
+        }
+        Insert: {
+          label: string
+          sort_order?: number | null
+          value: string
+        }
+        Update: {
+          label?: string
+          sort_order?: number | null
+          value?: string
+        }
+        Relationships: []
+      }
+      feedback: {
+        Row: {
+          category: string
+          created_at: string
+          description: string
+          id: number
+          rating: number
+          status: string
+          subject: string
+          user_id: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          description: string
+          id?: number
+          rating: number
+          status?: string
+          subject: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string
+          id?: number
+          rating?: number
+          status?: string
+          subject?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       global_engagement: {
         Row: {
           counter_name: string
@@ -386,28 +425,19 @@ export type Database = {
       }
       institutions: {
         Row: {
-          created_at: string | null
-          established_year: number | null
           id: string
-          location: string | null
-          name: string
-          value: string | null
+          label: string
+          value: string
         }
         Insert: {
-          created_at?: string | null
-          established_year?: number | null
           id?: string
-          location?: string | null
-          name: string
-          value?: string | null
+          label: string
+          value: string
         }
         Update: {
-          created_at?: string | null
-          established_year?: number | null
           id?: string
-          location?: string | null
-          name?: string
-          value?: string | null
+          label?: string
+          value?: string
         }
         Relationships: []
       }
@@ -456,13 +486,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "inbox_conversations"
             referencedColumns: ["participant_id"]
-          },
-          {
-            foreignKeyName: "job_applications_applicant_id_fkey"
-            columns: ["applicant_id"]
-            isOneToOne: false
-            referencedRelation: "my_connections"
-            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "job_applications_applicant_id_fkey"
@@ -597,17 +620,51 @@ export type Database = {
             foreignKeyName: "job_postings_posted_by_fkey"
             columns: ["posted_by"]
             isOneToOne: false
-            referencedRelation: "my_connections"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "job_postings_posted_by_fkey"
-            columns: ["posted_by"]
-            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
+      }
+      location_aliases: {
+        Row: {
+          alias: string
+          location_id: string | null
+        }
+        Insert: {
+          alias: string
+          location_id?: string | null
+        }
+        Update: {
+          alias?: string
+          location_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "location_aliases_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      locations: {
+        Row: {
+          id: string
+          label: string
+          value: string
+        }
+        Insert: {
+          id?: string
+          label: string
+          value: string
+        }
+        Update: {
+          id?: string
+          label?: string
+          value?: string
+        }
+        Relationships: []
       }
       memberships: {
         Row: {
@@ -658,13 +715,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "inbox_conversations"
             referencedColumns: ["participant_id"]
-          },
-          {
-            foreignKeyName: "memberships_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "my_connections"
-            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "memberships_user_id_fkey"
@@ -727,13 +777,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "inbox_conversations"
             referencedColumns: ["participant_id"]
-          },
-          {
-            foreignKeyName: "message_attachments_uploaded_by_fkey"
-            columns: ["uploaded_by"]
-            isOneToOne: false
-            referencedRelation: "my_connections"
-            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "message_attachments_uploaded_by_fkey"
@@ -840,13 +883,6 @@ export type Database = {
             foreignKeyName: "messages_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
-            referencedRelation: "my_connections"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "messages_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -935,13 +971,6 @@ export type Database = {
             foreignKeyName: "notifications_actor_id_fkey"
             columns: ["actor_id"]
             isOneToOne: false
-            referencedRelation: "my_connections"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "notifications_actor_id_fkey"
-            columns: ["actor_id"]
-            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -958,13 +987,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "inbox_conversations"
             referencedColumns: ["participant_id"]
-          },
-          {
-            foreignKeyName: "notifications_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "my_connections"
-            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "notifications_user_id_fkey"
@@ -1075,17 +1097,58 @@ export type Database = {
             foreignKeyName: "partners_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
-            referencedRelation: "my_connections"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "partners_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
+      }
+      partnership_proposals: {
+        Row: {
+          contact_name: string
+          created_at: string
+          description: string
+          email: string
+          id: string
+          organization_name: string
+          organization_type: string
+          organization_type_other: string | null
+          partnership_type: string
+          partnership_type_other: string | null
+          phone: string | null
+          status: string
+          website: string | null
+        }
+        Insert: {
+          contact_name: string
+          created_at?: string
+          description: string
+          email: string
+          id?: string
+          organization_name: string
+          organization_type: string
+          organization_type_other?: string | null
+          partnership_type: string
+          partnership_type_other?: string | null
+          phone?: string | null
+          status?: string
+          website?: string | null
+        }
+        Update: {
+          contact_name?: string
+          created_at?: string
+          description?: string
+          email?: string
+          id?: string
+          organization_name?: string
+          organization_type?: string
+          organization_type_other?: string | null
+          partnership_type?: string
+          partnership_type_other?: string | null
+          phone?: string | null
+          status?: string
+          website?: string | null
+        }
+        Relationships: []
       }
       payment_transactions: {
         Row: {
@@ -1147,13 +1210,6 @@ export type Database = {
             foreignKeyName: "payment_transactions_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
-            referencedRelation: "my_connections"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "payment_transactions_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -1164,22 +1220,36 @@ export type Database = {
           bio: string | null
           connection_count: number
           course: string | null
+          course_id: string | null
+          course_other: string | null
           created_at: string | null
           current_location: string | null
           current_position: string | null
+          date_of_birth: string | null
           email: string
+          encrypted_user_master_key: string | null
+          encryption_salt: string | null
+          experience_level_value: string | null
           full_name: string | null
           id: string
           institution: string | null
+          institution_id: string | null
+          institution_other: string | null
           is_onboarded: boolean | null
           is_verified: boolean | null
+          location_id: string | null
+          location_other: string | null
           medical_license: string | null
           organization: string | null
           phone: string | null
+          privacy_settings: Json | null
           profile_picture_url: string | null
           resume_url: string | null
           skills: string[] | null
           specialization: string | null
+          specialization_id: string | null
+          specialization_other: string | null
+          student_year_value: string | null
           updated_at: string | null
           user_role: Database["public"]["Enums"]["user_role"] | null
           work_experience: Json | null
@@ -1192,22 +1262,36 @@ export type Database = {
           bio?: string | null
           connection_count?: number
           course?: string | null
+          course_id?: string | null
+          course_other?: string | null
           created_at?: string | null
           current_location?: string | null
           current_position?: string | null
+          date_of_birth?: string | null
           email: string
+          encrypted_user_master_key?: string | null
+          encryption_salt?: string | null
+          experience_level_value?: string | null
           full_name?: string | null
           id?: string
           institution?: string | null
+          institution_id?: string | null
+          institution_other?: string | null
           is_onboarded?: boolean | null
           is_verified?: boolean | null
+          location_id?: string | null
+          location_other?: string | null
           medical_license?: string | null
           organization?: string | null
           phone?: string | null
+          privacy_settings?: Json | null
           profile_picture_url?: string | null
           resume_url?: string | null
           skills?: string[] | null
           specialization?: string | null
+          specialization_id?: string | null
+          specialization_other?: string | null
+          student_year_value?: string | null
           updated_at?: string | null
           user_role?: Database["public"]["Enums"]["user_role"] | null
           work_experience?: Json | null
@@ -1220,22 +1304,36 @@ export type Database = {
           bio?: string | null
           connection_count?: number
           course?: string | null
+          course_id?: string | null
+          course_other?: string | null
           created_at?: string | null
           current_location?: string | null
           current_position?: string | null
+          date_of_birth?: string | null
           email?: string
+          encrypted_user_master_key?: string | null
+          encryption_salt?: string | null
+          experience_level_value?: string | null
           full_name?: string | null
           id?: string
           institution?: string | null
+          institution_id?: string | null
+          institution_other?: string | null
           is_onboarded?: boolean | null
           is_verified?: boolean | null
+          location_id?: string | null
+          location_other?: string | null
           medical_license?: string | null
           organization?: string | null
           phone?: string | null
+          privacy_settings?: Json | null
           profile_picture_url?: string | null
           resume_url?: string | null
           skills?: string[] | null
           specialization?: string | null
+          specialization_id?: string | null
+          specialization_other?: string | null
+          student_year_value?: string | null
           updated_at?: string | null
           user_role?: Database["public"]["Enums"]["user_role"] | null
           work_experience?: Json | null
@@ -1244,7 +1342,22 @@ export type Database = {
             | Database["public"]["Enums"]["experience_level"]
             | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_profiles_experience_level"
+            columns: ["experience_level_value"]
+            isOneToOne: false
+            referencedRelation: "experience_levels"
+            referencedColumns: ["value"]
+          },
+          {
+            foreignKeyName: "fk_profiles_student_year"
+            columns: ["student_year_value"]
+            isOneToOne: false
+            referencedRelation: "student_years"
+            referencedColumns: ["value"]
+          },
+        ]
       }
       spaces: {
         Row: {
@@ -1255,6 +1368,7 @@ export type Database = {
           join_level: Database["public"]["Enums"]["space_join_level"] | null
           name: string
           space_type: Database["public"]["Enums"]["space_type"]
+          updated_at: string
         }
         Insert: {
           created_at?: string
@@ -1264,6 +1378,7 @@ export type Database = {
           join_level?: Database["public"]["Enums"]["space_join_level"] | null
           name: string
           space_type: Database["public"]["Enums"]["space_type"]
+          updated_at?: string
         }
         Update: {
           created_at?: string
@@ -1273,6 +1388,7 @@ export type Database = {
           join_level?: Database["public"]["Enums"]["space_join_level"] | null
           name?: string
           space_type?: Database["public"]["Enums"]["space_type"]
+          updated_at?: string
         }
         Relationships: [
           {
@@ -1293,17 +1409,46 @@ export type Database = {
             foreignKeyName: "spaces_creator_id_fkey"
             columns: ["creator_id"]
             isOneToOne: false
-            referencedRelation: "my_connections"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "spaces_creator_id_fkey"
-            columns: ["creator_id"]
-            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
+      }
+      specializations: {
+        Row: {
+          id: string
+          label: string
+          value: string
+        }
+        Insert: {
+          id?: string
+          label: string
+          value: string
+        }
+        Update: {
+          id?: string
+          label?: string
+          value?: string
+        }
+        Relationships: []
+      }
+      student_years: {
+        Row: {
+          label: string
+          sort_order: number | null
+          value: string
+        }
+        Insert: {
+          label: string
+          sort_order?: number | null
+          value: string
+        }
+        Update: {
+          label?: string
+          sort_order?: number | null
+          value?: string
+        }
+        Relationships: []
       }
       subscription_plans: {
         Row: {
@@ -1423,13 +1568,6 @@ export type Database = {
             foreignKeyName: "fk_addressee"
             columns: ["addressee_id"]
             isOneToOne: false
-            referencedRelation: "my_connections"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_addressee"
-            columns: ["addressee_id"]
-            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -1446,13 +1584,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "inbox_conversations"
             referencedColumns: ["participant_id"]
-          },
-          {
-            foreignKeyName: "fk_requester"
-            columns: ["requester_id"]
-            isOneToOne: false
-            referencedRelation: "my_connections"
-            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "fk_requester"
@@ -1479,13 +1610,6 @@ export type Database = {
             foreignKeyName: "user_connections_addressee_id_fkey"
             columns: ["addressee_id"]
             isOneToOne: false
-            referencedRelation: "my_connections"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "user_connections_addressee_id_fkey"
-            columns: ["addressee_id"]
-            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -1502,13 +1626,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "inbox_conversations"
             referencedColumns: ["participant_id"]
-          },
-          {
-            foreignKeyName: "user_connections_requester_id_fkey"
-            columns: ["requester_id"]
-            isOneToOne: false
-            referencedRelation: "my_connections"
-            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "user_connections_requester_id_fkey"
@@ -1552,20 +1669,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "user_education_college_id_fkey"
-            columns: ["college_id"]
-            isOneToOne: false
-            referencedRelation: "institutions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "user_education_course_id_fkey"
-            columns: ["course_id"]
-            isOneToOne: false
-            referencedRelation: "courses_programs"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "user_education_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
@@ -1578,13 +1681,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "inbox_conversations"
             referencedColumns: ["participant_id"]
-          },
-          {
-            foreignKeyName: "user_education_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "my_connections"
-            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "user_education_user_id_fkey"
@@ -1666,13 +1762,6 @@ export type Database = {
             foreignKeyName: "user_professional_details_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
-            referencedRelation: "my_connections"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "user_professional_details_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -1725,13 +1814,6 @@ export type Database = {
             foreignKeyName: "user_recommendations_recommended_user_id_fkey"
             columns: ["recommender_id"]
             isOneToOne: false
-            referencedRelation: "my_connections"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "user_recommendations_recommended_user_id_fkey"
-            columns: ["recommender_id"]
-            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -1753,13 +1835,6 @@ export type Database = {
             foreignKeyName: "user_recommendations_recommender_id_fkey"
             columns: ["recommender_id"]
             isOneToOne: false
-            referencedRelation: "my_connections"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "user_recommendations_recommender_id_fkey"
-            columns: ["recommender_id"]
-            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -1776,13 +1851,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "inbox_conversations"
             referencedColumns: ["participant_id"]
-          },
-          {
-            foreignKeyName: "user_recommendations_user_id_fkey"
-            columns: ["recommendee_id"]
-            isOneToOne: false
-            referencedRelation: "my_connections"
-            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "user_recommendations_user_id_fkey"
@@ -1850,13 +1918,6 @@ export type Database = {
             foreignKeyName: "user_subscriptions_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
-            referencedRelation: "my_connections"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "user_subscriptions_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -1876,8 +1937,11 @@ export type Database = {
       inbox_conversations: {
         Row: {
           conversation_id: string | null
+          encrypted_conversation_key: string | null
+          is_starred: boolean | null
           last_message_at: string | null
           last_message_content: string | null
+          master_encryption_key: string | null
           participant_avatar_url: string | null
           participant_full_name: string | null
           participant_id: string | null
@@ -1896,6 +1960,7 @@ export type Database = {
       }
       my_connections: {
         Row: {
+          connected_at: string | null
           course: string | null
           current_location: string | null
           full_name: string | null
@@ -1936,13 +2001,6 @@ export type Database = {
             foreignKeyName: "fk_requester"
             columns: ["requester_id"]
             isOneToOne: false
-            referencedRelation: "my_connections"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_requester"
-            columns: ["requester_id"]
-            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -1964,12 +2022,59 @@ export type Database = {
             foreignKeyName: "user_connections_requester_id_fkey"
             columns: ["requester_id"]
             isOneToOne: false
-            referencedRelation: "my_connections"
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sent_pending_requests: {
+        Row: {
+          addressee_id: string | null
+          current_position: string | null
+          full_name: string | null
+          organization: string | null
+          profile_picture_url: string | null
+          request_date: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_addressee"
+            columns: ["addressee_id"]
+            isOneToOne: false
+            referencedRelation: "blocked_members"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "user_connections_requester_id_fkey"
-            columns: ["requester_id"]
+            foreignKeyName: "fk_addressee"
+            columns: ["addressee_id"]
+            isOneToOne: false
+            referencedRelation: "inbox_conversations"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "fk_addressee"
+            columns: ["addressee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_connections_addressee_id_fkey"
+            columns: ["addressee_id"]
+            isOneToOne: false
+            referencedRelation: "blocked_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_connections_addressee_id_fkey"
+            columns: ["addressee_id"]
+            isOneToOne: false
+            referencedRelation: "inbox_conversations"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "user_connections_addressee_id_fkey"
+            columns: ["addressee_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -1978,9 +2083,25 @@ export type Database = {
       }
     }
     Functions: {
+      are_users_connected: {
+        Args: { user_a: string; user_b: string }
+        Returns: boolean
+      }
       block_user: {
         Args: { blocked_user_id: string }
         Returns: undefined
+      }
+      calculate_age: {
+        Args: { birth_date: string }
+        Returns: number
+      }
+      can_send_direct_message: {
+        Args: { other_user_id: string }
+        Returns: boolean
+      }
+      can_view_field: {
+        Args: { field_name: string; profile_id: string; viewer_id: string }
+        Returns: boolean
       }
       can_view_thread: {
         Args: { p_thread_id: string }
@@ -1998,6 +2119,22 @@ export type Database = {
           p_title: string
         }
         Returns: string
+      }
+      delete_message: {
+        Args: { p_message_id: number }
+        Returns: undefined
+      }
+      delete_own_user: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      delete_space: {
+        Args: { p_space_id: string }
+        Returns: undefined
+      }
+      delete_thread: {
+        Args: { p_thread_id: string }
+        Returns: undefined
       }
       get_job_recommendations: {
         Args: { target_user_id: string }
@@ -2026,18 +2163,66 @@ export type Database = {
       get_mutual_connections: {
         Args: { other_user_id: string }
         Returns: {
+          current_position: string
           full_name: string
           id: string
+          location_name: string
+          organization: string
           profile_picture_url: string
+          specialization_name: string
+        }[]
+      }
+      get_my_blocked_users: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          blocked_user_id: string
+          connection_id: string
+          current_position: string
+          full_name: string
+          profile_picture_url: string
+        }[]
+      }
+      get_my_connections: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          current_position: string
+          full_name: string
+          id: string
+          location_name: string
+          organization: string
+          profile_picture_url: string
+          specialization_name: string
+        }[]
+      }
+      get_my_unread_inbox_count: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
+      get_pending_connection_requests: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          connection_id: string
+          current_position: string
+          full_name: string
+          location_name: string
+          organization: string
+          profile_picture_url: string
+          requested_at: string
+          requester_id: string
+          specialization_name: string
         }[]
       }
       get_pending_requests: {
         Args: { p_space_id: string }
         Returns: {
+          current_position: string
           full_name: string
+          location_name: string
           membership_id: string
+          organization: string
           profile_picture_url: string
           requested_at: string
+          specialization_name: string
           user_id: string
         }[]
       }
@@ -2055,6 +2240,9 @@ export type Database = {
           created_at: string
           creator_full_name: string
           creator_id: string
+          creator_organization: string
+          creator_position: string
+          creator_specialization: string
           description: string
           id: string
           join_level: Database["public"]["Enums"]["space_join_level"]
@@ -2067,13 +2255,21 @@ export type Database = {
         Args: { p_space_id?: string }
         Returns: {
           created_at: string
-          creator_email: string
+          creator_full_name: string
           creator_id: string
+          creator_organization: string
+          creator_position: string
+          creator_specialization: string
           id: string
           last_activity_at: string
           message_count: number
+          space_id: string
           title: string
         }[]
+      }
+      get_total_users_count: {
+        Args: Record<PropertyKey, never>
+        Returns: number
       }
       get_user_recommendations: {
         Args: { target_user_id: string }
@@ -2117,9 +2313,31 @@ export type Database = {
           user_id: string
         }[]
       }
+      leave_space: {
+        Args: { p_space_id: string }
+        Returns: undefined
+      }
       mark_conversation_as_read: {
         Args: { p_conversation_id: string }
         Returns: undefined
+      }
+      post_direct_message: {
+        Args: {
+          p_content: string
+          p_conversation_id: string
+          p_parent_message_id?: number
+        }
+        Returns: {
+          content: string | null
+          conversation_id: string
+          created_at: string
+          id: number
+          is_edited: boolean
+          is_read: boolean
+          parent_message_id: number | null
+          sender_id: string
+          updated_at: string | null
+        }
       }
       post_message_with_reply: {
         Args: {
@@ -2157,9 +2375,17 @@ export type Database = {
         Args: { addressee_uuid: string }
         Returns: undefined
       }
+      set_conversation_master_key_if_null: {
+        Args: { p_conversation_id: string; p_new_key_jwk: string }
+        Returns: string
+      }
       toggle_reaction_dm: {
         Args: { p_emoji: string; p_message_id: number }
         Returns: Json
+      }
+      transfer_space_ownership: {
+        Args: { p_new_owner_id: string; p_space_id: string }
+        Returns: undefined
       }
       unblock_user: {
         Args: { unblocked_user_id: string }
@@ -2194,6 +2420,41 @@ export type Database = {
           updated_at: string
           user_id: string
         }[]
+      }
+      update_message: {
+        Args: { p_message_id: number; p_new_body: string }
+        Returns: undefined
+      }
+      update_profile: {
+        Args: {
+          p_bio?: string
+          p_course_id?: string
+          p_course_other?: string
+          p_current_position?: string
+          p_date_of_birth?: string
+          p_experience_level_value?: string
+          p_full_name?: string
+          p_institution_id?: string
+          p_institution_other?: string
+          p_location_id?: string
+          p_location_other?: string
+          p_medical_license?: string
+          p_organization?: string
+          p_phone?: string
+          p_skills?: string[]
+          p_specialization_id?: string
+          p_specialization_other?: string
+          p_student_year_value?: string
+        }
+        Returns: undefined
+      }
+      update_thread: {
+        Args: {
+          p_new_description?: string
+          p_new_title: string
+          p_thread_id: string
+        }
+        Returns: undefined
       }
     }
     Enums: {
