@@ -19,6 +19,7 @@ import {
     DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
 import { useSocialCounts } from '@/context/SocialCountsContext'; 
+import { getPendingRequests } from '@/integrations/supabase/social.api';
 import { deleteCurrentUser } from '@/integrations/supabase/user.api'; // 1. Import delete function
 import { toast } from 'sonner';
 import {
@@ -34,13 +35,18 @@ import {
 } from "@/components/ui/alert-dialog";
 
 export const Header = () => {
-  const { user, loading, signOut } = useAuth();
+  const { user, loading, signOut, initialUnreadCount} = useAuth();
   const navigate = useNavigate();
   const [lovingItCount, setLovingItCount] = useState(0);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isAlertOpen, setIsAlertOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const { requestCount, unreadInboxCount } = useSocialCounts();
+    const { 
+    requestCount, 
+    unreadInboxCount, 
+    setRequestCount, 
+    setUnreadInboxCount 
+  } = useSocialCounts();
 
   // --- THIS ARRAY DEFINITION WAS ACCIDENTALLY OMITTED ---
   const headerIcons = [
@@ -63,6 +69,38 @@ export const Header = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  useEffect(() => {
+    // initialUnreadCount will be null on load, then a number.
+    // We update the context when it's not null.
+    // useAuth already handles setting it to 0 on logout.
+    if (initialUnreadCount !== null) {
+      setUnreadInboxCount(initialUnreadCount);
+    } else if (!user) {
+      // Explicitly set to 0 if there's no user
+      setUnreadInboxCount(0);
+    }
+  }, [initialUnreadCount, user, setUnreadInboxCount]); 
+
+  useEffect(() => {
+    const fetchPendingRequests = async () => {
+      try {
+        const requestsResponse = await getPendingRequests();
+        setRequestCount(requestsResponse.data?.length || 0);
+
+      } catch (error) {
+        console.error("Failed to fetch pending requests:", error);
+        setRequestCount(0);
+      }
+    };
+
+    if (user) {
+      fetchPendingRequests();
+    } else {
+      // If user logs out, reset request count
+      setRequestCount(0);
+    }
+  }, [user, setRequestCount]);
+
   const handleLovingItClick = async () => {
     setLovingItCount(prevCount => prevCount + 1);
     await incrementLoveCount();
@@ -72,9 +110,9 @@ export const Header = () => {
     setIsDeleting(true);
     try {
       await deleteCurrentUser();
-      toast.success('Account deleted successfully.');
       await signOut(); // Sign out the user
       navigate('/'); // Redirect to homepage
+      toast.success('Account deleted successfully.');
     } catch (error) {
       toast.error('Failed to delete account. Please try again.');
       console.error(error);
@@ -128,16 +166,9 @@ export const Header = () => {
                   <UserIcon className="mr-2 h-4 w-4" />
                   <span>Profile</span>
                 </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem 
-                  className="text-destructive focus:bg-destructive/10 focus:text-destructive"
-                  onSelect={(e) => {
-                    e.preventDefault(); // Prevents menu from closing
-                    setIsAlertOpen(true);
-                  }}
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  <span>Delete Account</span>
+                <DropdownMenuItem onClick={() => navigate('/settings')}>
+                  <Settings className="mr-2 h-4 w-4" />
+                  <span>Settings</span>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={signOut}>
@@ -183,15 +214,8 @@ export const Header = () => {
              </Button>
           ))}
           <Separator />
-          <Button 
-            variant="ghost" 
-            className="justify-start text-destructive hover:text-destructive" 
-            onClick={() => {
-              setMobileMenuOpen(false); // Close menu first
-              setIsAlertOpen(true);
-            }}
-          >
-            <Trash2 className="mr-2 h-4 w-4" /> Delete Account
+          <Button variant="ghost" className="justify-start" onClick={() => handleMobileNav('/settings')}>
+            <Settings className="mr-2 h-4 w-4" /> Settings
           </Button>
           <Button variant="ghost" className="justify-start" onClick={signOut}>
               <LogOut className="mr-2 h-4 w-4" /> Log Out
@@ -230,7 +254,7 @@ export const Header = () => {
             <div className="flex items-center gap-1 sm:gap-2">
               <Button variant="ghost" size="sm" onClick={handleLovingItClick} className="relative p-2 sm:p-3 text-destructive hover:text-destructive/80" title="Loving it">
                 <Heart className="h-5 w-5" />
-                {lovingItCount > 0 && <Badge variant="destructive" className="absolute -top-1 -right-1 h-4 w-4 sm:h-5 sm:w-5 rounded-full p-0 flex items-center justify-center text-xs">{lovingTCount > 99 ? '99+' : lovingItCount}</Badge>}
+                {lovingItCount > 0 && <Badge variant="destructive" className="absolute -top-1 -right-1 h-4 w-4 sm:h-5 sm:w-5 rounded-full p-0 flex items-center justify-center text-xs">{lovingItCount > 99 ? '99+' : lovingItCount}</Badge>}
               </Button>
               
               <Link to="/partnerships">

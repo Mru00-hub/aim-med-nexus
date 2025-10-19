@@ -11,6 +11,7 @@ import OnboardingGuard from "@/components/OnboardingGuard";
 import { CommunityProvider } from "./context/CommunityContext"; 
 import { SocialCountsProvider } from './context/SocialCountsContext';
 import { SecureRouteGuard } from './components/SecureRouteGuard';
+import SettingsPage from './pages/SettingsPage';
 import { Loader2 } from 'lucide-react';
 // --- Core Page Imports ---
 import Index from "./pages/Index";
@@ -115,6 +116,7 @@ const App = () => {
                     <Route path="/notifications" element={<Notifications />} />
                     <Route path="/payment" element={<PaymentPage />} />
                     <Route path="/inbox" element={ <SecureRouteGuard> <FunctionalInbox /> </SecureRouteGuard> } />
+                    <Route path="/settings" element={<SettingsPage />} />
 
                     {/* --- (PROBLEM 5 FIX) ---
                       This route now correctly includes the :spaceId

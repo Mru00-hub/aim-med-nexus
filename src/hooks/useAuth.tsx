@@ -12,10 +12,12 @@ interface AuthContextType {
   profile: Profile | null;
   loading: boolean;
   loadingMessage: string;
+  initialUnreadCount: number | null;
   personalKey: CryptoKey | null; // Renamed from encryptionKey
   userMasterKey: CryptoKey | null;
   generateAndSetKeys: (password: string, salt: string) => Promise<boolean>;
   refreshProfile: () => Promise<void>;
+  fetchUnreadCount: () => Promise<void>;
   signUp: (email: string, password: string, metadata?: any) => Promise<{ data: { user: User | null; }; error: any; }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
@@ -37,6 +39,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [initialUnreadCount, setInitialUnreadCount] = useState<number | null>(null);
   const [loadingMessage, setLoadingMessage] = useState('Initializing session...');
   const [personalKey, setPersonalKey] = useState<CryptoKey | null>(null); // Renamed
   const [userMasterKey, setUserMasterKey] = useState<CryptoKey | null>(null); 
@@ -73,6 +76,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [toast]); 
 
+  const fetchUnreadCount = useCallback(async () => {
+    try {
+      // Use supabase.rpc to call your PostgreSQL function
+      const { data, error } = await supabase.rpc('get_my_unread_inbox_count');
+      
+      if (error) {
+        console.error("Error fetching unread count:", error.message);
+        setInitialUnreadCount(null); // Set to null on error
+      } else {
+        // The 'data' variable will hold the integer returned by your function
+        setInitialUnreadCount(data);
+      }
+    } catch (rpcError: any) {
+      console.error("RPC call failed:", rpcError.message);
+      setInitialUnreadCount(null);
+    }
+  }, []);
+
   // FIXED: Initialize auth state with getSession AND listen for changes
   useEffect(() => {
     let mounted = true;
@@ -83,6 +104,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(data.session.user);
         const userProfile = await fetchProfile(data.session.user.id);
         setProfile(userProfile);
+        if (userProfile) {
+          await fetchUnreadCount();
+        }
       }
       setLoading(false);
     };
@@ -94,11 +118,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (newSession) {
         setSession(newSession);
         setUser(newSession.user);
-        fetchProfile(newSession.user.id).then(setProfile);
+        fetchProfile(newSession.user.id).then(async (userProfile) => {
+          setProfile(userProfile);
+          if (userProfile) {
+            await fetchUnreadCount();
+          }
+        });
       } else {
         setSession(null);
         setUser(null);
         setProfile(null);
+        setInitialUnreadCount(null); 
       }
     });
 
@@ -106,7 +136,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       mounted = false;
       subscription.unsubscribe();
     };
-  }, [fetchProfile]);
+  }, [fetchProfile, fetchUnreadCount]);
     
   // FIXED: refreshProfile no longer depends on user state
   const refreshProfile = useCallback(async () => {
@@ -296,6 +326,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     try {
       await supabase.auth.signOut();
+      // FIX: Add navigation to the home page after sign-out.
+      navigate('/'); 
     } catch (error) {
       console.error("Sign out error:", error);
       toast({
@@ -305,9 +337,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
     } finally {
       setLoadingMessage('');
-      // onAuthStateChange will reset the flag
+      // onAuthStateChange will still run and clear the user state
     }
   };
+
 
   const value = {
     user,
@@ -315,10 +348,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     profile,
     loading,
     loadingMessage,
+    initialUnreadCount,
     personalKey,
     userMasterKey,
     generateAndSetKeys, 
     refreshProfile, 
+    fetchUnreadCount,
     signUp,
     signIn,
     signOut,
