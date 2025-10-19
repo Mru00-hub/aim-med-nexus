@@ -21,13 +21,12 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-// --- FIX #1: IMPORT API FUNCTIONS DIRECTLY ---
 import {
   SpaceWithDetails, 
   createSpace,
   ThreadWithDetails,
   requestToJoinSpace,
-  joinSpaceAsMember // <-- Import the function directly
+  joinSpaceAsMember
 } from '@/integrations/supabase/community.api';
 
 export default function Forums() {
@@ -35,8 +34,6 @@ export default function Forums() {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // --- FIX #2: UPDATE CONTEXT CONSUMPTION ---
-  // We no longer ask for joinSpaceAsMember or publicSpaceId from the context.
   const { 
     spaces, 
     publicThreads, 
@@ -50,10 +47,23 @@ export default function Forums() {
   const [searchQuery, setSearchQuery] = useState('');
   const [threadSearchQuery, setThreadSearchQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState<string>('ALL');
+  // Add state for optimistic updates
+  const [optimisticSpaces, setOptimisticSpaces] = useState<SpaceWithDetails[]>([]);
+
+  // Define the missing functions
+  const addOptimisticSpace = (space: SpaceWithDetails) => {
+    setOptimisticSpaces(prev => [...prev, space]);
+  };
+
+  const removeOptimisticSpace = (spaceId: string) => {
+    setOptimisticSpaces(prev => prev.filter(s => s.id !== spaceId));
+  };
 
   const filteredSpaces = useMemo(() => {
-    if (!spaces) return []; // Safety check
-    return spaces
+    if (!spaces) return optimisticSpaces;
+    // Combine real spaces with optimistic ones
+    const allSpaces = [...spaces, ...optimisticSpaces];
+    return allSpaces
       .filter(space => space.space_type !== 'PUBLIC')
       .filter(space => {
         if (selectedFilter === 'ALL') return true;
@@ -66,10 +76,10 @@ export default function Forums() {
           (space.description && space.description.toLowerCase().includes(searchLower))
         );
       });
-  }, [spaces, searchQuery, selectedFilter]);
+  }, [spaces, optimisticSpaces, searchQuery, selectedFilter]);
 
   const filteredPublicThreads = useMemo(() => {
-    if (!publicThreads) return []; // Safety check
+    if (!publicThreads) return [];
     return publicThreads.filter(thread => {
       const searchLower = threadSearchQuery.toLowerCase();
       return (
@@ -78,7 +88,6 @@ export default function Forums() {
       );
     });
   }, [publicThreads, threadSearchQuery]);
-
 
   const handleCreateSpace = async (data: {
     name: string;
@@ -94,16 +103,18 @@ export default function Forums() {
       created_at: new Date().toISOString(),
       creator_id: user.id,
       creator_full_name: user.user_metadata.full_name || 'You',
-      // Add any other required fields from SpaceWithDetails with defaults
       moderators: [], 
       member_count: 1, 
       thread_count: 0,
       last_activity_at: new Date().toISOString(),
+      creator_position: null,
+      creator_organization: null,
+      creator_specialization: null,
     };
 
-    // --- 2. Add it to the UI immediately ---
     addOptimisticSpace(optimisticSpace);
     setShowSpaceCreator(false);
+    
     try {
       await createSpace({
         name: data.name,
@@ -111,6 +122,7 @@ export default function Forums() {
         space_type: data.space_type,
         join_level: data.join_level,
       });
+      removeOptimisticSpace(tempId);
       await refreshSpaces(); 
       toast({ title: 'Success!', description: `The space "${data.name}" has been created.` });
     } catch (error: any) {
@@ -119,145 +131,143 @@ export default function Forums() {
     } 
   };
 
-  // --- FIX #3: UPDATE THE handleJoin FUNCTION ---
-  // It now correctly uses the directly imported API functions for all cases.
   const handleJoin = async (e: React.MouseEvent, space: SpaceWithDetails) => {
-      e.preventDefault();
-      e.stopPropagation();
-      if (!user) {
-          navigate('/login');
-          return;
-      }
+    e.preventDefault();
+    e.stopPropagation();
+    if (!user) {
+      navigate('/login');
+      return;
+    }
 
-      toast({ title: 'Processing...', description: `Requesting to join ${space.name}.` });
-      try {
-          const isOpenJoin = space.join_level === 'OPEN';
-          
-          if (isOpenJoin) {
-              await joinSpaceAsMember(space.id);
-              toast({ title: 'Success!', description: `You have joined ${space.name}.` });
-              await refreshSpaces();  // Refetch everything for a full update
-          } else { 
-              await requestToJoinSpace(space.id);
-              toast({ title: 'Request Sent', description: `Your request to join ${space.name} is pending approval.` });
-              
-              // --- OPTIMISTIC UI UPDATE ---
-              // Manually add a 'PENDING' membership to the local state for instant feedback
-              setMemberships(prevMemberships => [
-                  ...prevMemberships,
-                  {
-                      space_id: space.id,
-                      user_id: user.id,
-                      status: 'PENDING',
-                      // Add other required fields from your Membership type with dummy/default values
-                      id: crypto.randomUUID(), // A temporary client-side ID
-                      created_at: new Date().toISOString(),
-                      updated_at: new Date().toISOString(),
-                      role: 'MEMBER',
-                  }
-              ]);
+    toast({ title: 'Processing...', description: `Requesting to join ${space.name}.` });
+    try {
+      const isOpenJoin = space.join_level === 'OPEN';
+      
+      if (isOpenJoin) {
+        await joinSpaceAsMember(space.id);
+        toast({ title: 'Success!', description: `You have joined ${space.name}.` });
+        await refreshSpaces();
+      } else { 
+        await requestToJoinSpace(space.id);
+        toast({ title: 'Request Sent', description: `Your request to join ${space.name} is pending approval.` });
+        
+        setMemberships(prevMemberships => [
+          ...prevMemberships,
+          {
+            space_id: space.id,
+            user_id: user.id,
+            status: 'PENDING',
+            id: crypto.randomUUID(),
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            role: 'MEMBER',
           }
-      } catch (error: any) {
-          toast({ variant: 'destructive', title: 'Error', description: error.message });
+        ]);
       }
+    } catch (error: any) {
+      toast({ variant: 'destructive', title: 'Error', description: error.message });
+    }
   };
 
   const renderSpaceCard = (space: SpaceWithDetails) => {
-      const isPrivate = space.join_level === 'INVITE_ONLY';
-      const membershipStatus = getMembershipStatus(space.id);
-      const creatorDetails = [space.creator_position, space.creator_organization]
-          .filter(Boolean) // Remove null or empty strings
-          .join(' @ ');
+    const isPrivate = space.join_level === 'INVITE_ONLY';
+    const membershipStatus = getMembershipStatus(space.id);
+    const creatorDetails = [space.creator_position, space.creator_organization]
+      .filter(Boolean)
+      .join(' @ ');
 
-      const cardContent = (
-        <Card className="h-full transition-all duration-300 hover:border-primary/50 hover:shadow-lg flex flex-col">
-            <CardHeader>
-                <div className="flex justify-between items-start mb-2">
-                    <Badge variant={space.space_type === 'FORUM' ? 'secondary' : 'outline'}>
-                        {space.space_type === 'FORUM' ? 'Forum' : 'Community Space'}
-                    </Badge>
-                    {isPrivate && <Badge variant="destructive">Private</Badge>}
-                </div>
-                <CardTitle className="text-xl">{space.name}</CardTitle>
-                <CardDescription className="text-sm">{space.description}</CardDescription>
-            </CardHeader>
-            <CardContent className="p-6 pt-0 flex-grow flex flex-col justify-between">
-              <div className="text-xs text-muted-foreground space-y-2">
-                  {space.creator_full_name && (
-                      <div>
-                          <p>Created by: <span className="font-semibold text-foreground">{space.creator_full_name}</span></p>
-                          {/* --- 2. Display creator details --- */}
-                          {creatorDetails && <p className="text-xs">{creatorDetails}</p>}
-                      </div>
-                  )}
-                  {space.moderators && space.moderators.length > 0 && (
-                      <div>
-                          {/* --- 3. Wrap badges in TooltipProvider --- */}
-                          <TooltipProvider delayDuration={100}>
-                            <div className="flex flex-wrap gap-1 mt-1">
-                                {space.moderators.slice(0, 3).map(mod => (
-                                    // --- 3. Add Tooltip wrapper ---
-                                    <Tooltip key={mod.full_name}>
-                                        <TooltipTrigger asChild>
-                                            <Badge variant="outline" className="cursor-default">{mod.full_name}</Badge>
-                                        </TooltipTrigger>
-                                        {/* Display specialization in tooltip */}
-                                        {mod.specialization && (
-                                            <TooltipContent>
-                                                <p>{mod.specialization}</p>
-                                            </TooltipContent>
-                                        )}
-                                    </Tooltip>
-                                ))}
-                                {space.moderators.length > 3 && (
-                                    <Badge variant="outline">+{space.moderators.length - 3} more</Badge>
-                                )}
-                            </div>
-                          </TooltipProvider>
-                          </div>
-                      </div>
-                  )}
-              </div>
-              <div className="mt-4 pt-4 border-t flex justify-end items-center">
-                {membershipStatus === 'ACTIVE' ? (
-                    <Button asChild variant="outline" size="sm">
-                      <Link to={`/community/space/${space.id}`}>Go to Space</Link>
-                    </Button>
-                ) : membershipStatus === 'PENDING' ? (
-                    <Button variant="secondary" size="sm" disabled>
-                        Requested
-                    </Button>
-                ) : (
-                    <Button variant="default" size="sm" onClick={(e) => handleJoin(e, space)}>
-                        {isPrivate ? 'Request to Join' : 'Join'}
-                    </Button>
-                )}
-              </div>
-            </CardContent>
-        </Card>
-      );
-
-
-      return (
-          <div key={space.id} className="cursor-pointer" onClick={() => getMembershipStatus(space.id) === 'ACTIVE' && navigate(`/community/space/${space.id}`)}>
-              {cardContent}
+    const cardContent = (
+      <Card className="h-full transition-all duration-300 hover:border-primary/50 hover:shadow-lg flex flex-col">
+        <CardHeader>
+          <div className="flex justify-between items-start mb-2">
+            <Badge variant={space.space_type === 'FORUM' ? 'secondary' : 'outline'}>
+              {space.space_type === 'FORUM' ? 'Forum' : 'Community Space'}
+            </Badge>
+            {isPrivate && <Badge variant="destructive">Private</Badge>}
           </div>
-      );
+          <CardTitle className="text-xl">{space.name}</CardTitle>
+          <CardDescription className="text-sm">{space.description}</CardDescription>
+        </CardHeader>
+        <CardContent className="p-6 pt-0 flex-grow flex flex-col justify-between">
+          <div className="text-xs text-muted-foreground space-y-2">
+            {space.creator_full_name && (
+              <div>
+                <p>Created by: <span className="font-semibold text-foreground">{space.creator_full_name}</span></p>
+                {creatorDetails && <p className="text-xs">{creatorDetails}</p>}
+              </div>
+            )}
+            {space.moderators && space.moderators.length > 0 && (
+              <div>
+                <TooltipProvider delayDuration={100}>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {space.moderators.slice(0, 3).map(mod => (
+                      <Tooltip key={mod.full_name}>
+                        <TooltipTrigger asChild>
+                          <Badge variant="outline" className="cursor-default">{mod.full_name}</Badge>
+                        </TooltipTrigger>
+                        {mod.specialization && (
+                          <TooltipContent>
+                            <p>{mod.specialization}</p>
+                          </TooltipContent>
+                        )}
+                      </Tooltip>
+                    ))}
+                    {space.moderators.length > 3 && (
+                      <Badge variant="outline">+{space.moderators.length - 3} more</Badge>
+                    )}
+                  </div>
+                </TooltipProvider>
+              </div>
+            )}
+          </div>
+          <div className="mt-4 pt-4 border-t flex justify-end items-center">
+            {membershipStatus === 'ACTIVE' ? (
+              <Button asChild variant="outline" size="sm">
+                <Link to={`/community/space/${space.id}`}>Go to Space</Link>
+              </Button>
+            ) : membershipStatus === 'PENDING' ? (
+              <Button variant="secondary" size="sm" disabled>
+                Requested
+              </Button>
+            ) : (
+              <Button variant="default" size="sm" onClick={(e) => handleJoin(e, space)}>
+                {isPrivate ? 'Request to Join' : 'Join'}
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    );
+
+    return (
+      <div 
+        key={space.id} 
+        className="cursor-pointer" 
+        onClick={() => membershipStatus === 'ACTIVE' && navigate(`/community/space/${space.id}`)}
+      >
+        {cardContent}
+      </div>
+    );
   };
   
   const renderPublicThreadCard = (thread: ThreadWithDetails) => (
     <Card key={thread.id} className="transition-all duration-300 hover:border-primary/50 hover:shadow-lg">
-       <Link to={user ? `/community/thread/${thread.id}` : '/login'}>
+      <Link to={user ? `/community/thread/${thread.id}` : '/login'}>
         <CardContent className="p-6">
           <h3 className="font-semibold text-lg mb-2">{thread.title}</h3>
           <div className="flex items-center gap-4 text-xs text-muted-foreground">
-            {/* --- Display Creator Name (Could add position/org here too if desired) --- */}
             <div>
               <span className="font-medium text-foreground">{thread.creator_full_name}</span>
-              {/* Optional: Add creator details like position/spec */}
-              <p className="text-xs">{(thread.creator_position || thread.creator_specialization || '').substring(0, 30)}</p>
+              {(thread.creator_position || thread.creator_specialization) && (
+                <p className="text-xs">
+                  {[thread.creator_position, thread.creator_specialization].filter(Boolean).join(' • ')}
+                </p>
+              )}
             </div>
-            <div className="flex items-center gap-1"><MessageSquare className="h-3 w-3" /><span>{thread.message_count} messages</span></div>
+            <div className="flex items-center gap-1">
+              <MessageSquare className="h-3 w-3" />
+              <span>{thread.message_count} messages</span>
+            </div>
             <span>Last activity: {new Date(thread.last_activity_at).toLocaleDateString()}</span>
           </div>
         </CardContent>
@@ -279,7 +289,12 @@ export default function Forums() {
             <div className="flex flex-col md:flex-row gap-4">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input placeholder="Search spaces..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-10" />
+                <Input 
+                  placeholder="Search spaces..." 
+                  value={searchQuery} 
+                  onChange={(e) => setSearchQuery(e.target.value)} 
+                  className="pl-10" 
+                />
               </div>
               <Select value={selectedFilter} onValueChange={setSelectedFilter}>
                 <SelectTrigger className="md:w-56">
@@ -294,14 +309,22 @@ export default function Forums() {
             </div>
           </CardContent>
         </Card>
+
         <section className="mb-12">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-2xl font-semibold">Discover Spaces</h2>
-            <Button size="sm" onClick={() => user ? setShowSpaceCreator(true) : navigate('/login')}>
-                <Plus className="h-4 w-4 mr-2" /> Create Space
+            <Button 
+              size="sm" 
+              onClick={() => user ? setShowSpaceCreator(true) : navigate('/login')}
+            >
+              <Plus className="h-4 w-4 mr-2" /> Create Space
             </Button>
           </div>
-          {loading ? ( <p className="text-center text-muted-foreground py-4">Loading spaces...</p> ) : filteredSpaces.length === 0 ? (<p className="text-center text-muted-foreground py-4">No spaces match your criteria.</p>) : (
+          {loading ? (
+            <p className="text-center text-muted-foreground py-4">Loading spaces...</p>
+          ) : filteredSpaces.length === 0 ? (
+            <p className="text-center text-muted-foreground py-4">No spaces match your criteria.</p>
+          ) : (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredSpaces.map(renderSpaceCard)}
             </div>
@@ -312,16 +335,28 @@ export default function Forums() {
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-2xl font-semibold">Public Threads</h2>
             {publicThreads && publicThreads.length > 0 && (
-                <Button size="sm" onClick={() => user ? navigate(`/community/space/${publicThreads[0].space_id}/create-thread`) : navigate('/login')}>
-                    <Plus className="h-4 w-4 mr-2" /> Start a Thread
-                </Button>
+              <Button 
+                size="sm" 
+                onClick={() => user ? navigate(`/community/space/${publicThreads[0].space_id}/create-thread`) : navigate('/login')}
+              >
+                <Plus className="h-4 w-4 mr-2" /> Start a Thread
+              </Button>
             )}
           </div>
           <div className="relative mb-4">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input placeholder="Search public threads..." value={threadSearchQuery} onChange={(e) => setThreadSearchQuery(e.target.value)} className="pl-10" />
+            <Input 
+              placeholder="Search public threads..." 
+              value={threadSearchQuery} 
+              onChange={(e) => setThreadSearchQuery(e.target.value)} 
+              className="pl-10" 
+            />
           </div>
-          {loading ? ( <p className="text-center text-muted-foreground py-4">Loading threads...</p> ) : filteredPublicThreads.length === 0 ? (<p className="text-center text-muted-foreground py-4">No public threads match your search.</p>) : (
+          {loading ? (
+            <p className="text-center text-muted-foreground py-4">Loading threads...</p>
+          ) : filteredPublicThreads.length === 0 ? (
+            <p className="text-center text-muted-foreground py-4">No public threads match your search.</p>
+          ) : (
             <div className="space-y-4">
               {filteredPublicThreads.map(renderPublicThreadCard)}
             </div>
@@ -329,11 +364,13 @@ export default function Forums() {
         </section>
       </main>
       <Footer />
-      {user && <SpaceCreator
-         isOpen={showSpaceCreator}
-         onClose={() => setShowSpaceCreator(false)}
-         onSubmit={handleCreateSpace}
-      />}
+      {user && (
+        <SpaceCreator
+          isOpen={showSpaceCreator}
+          onClose={() => setShowSpaceCreator(false)}
+          onSubmit={handleCreateSpace}
+        />
+      )}
     </div>
   );
-};
+}
