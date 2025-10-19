@@ -134,8 +134,6 @@ export const PersonalDetailsStep: React.FC<PersonalDetailsStepProps> = ({
           {formData.location_id === 'other' && (
             <div className="mt-2">
               <Input
-                value={formData.otherLocation}
-                onChange={(e) => handleInputChange('otherLocation', e.target.value)}
                 value={formData.location_other}
                 onChange={(e) => handleInputChange('location_other', e.target.value)}
                 placeholder="Please specify your location"
