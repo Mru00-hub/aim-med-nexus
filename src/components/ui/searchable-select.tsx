@@ -37,6 +37,7 @@ export function SearchableSelect({
   options,
   value,
   onValueChange,
+  onSearchChange,
   placeholder = "Select an option...",
   searchPlaceholder = "Search...",
   emptyMessage = "No results found.",
