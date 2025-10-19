@@ -4,7 +4,12 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CircleX, Upload } from 'lucide-react';
-import { locations } from './_data'; // We'll create this file next
+import { supabase } from '@/integrations/supabase/client';
+
+type Location = {
+  id: string;
+  name: string;
+};
 
 type PersonalDetailsStepProps = {
   formData: any;
@@ -21,6 +26,20 @@ export const PersonalDetailsStep: React.FC<PersonalDetailsStepProps> = ({
   handleAvatarChange,
   removeAvatar,
 }) => {
+  const [locations, setLocations] = useState<Location[]>([]);
+
+  useEffect(() => {
+    const fetchLocations = async () => {
+      const { data, error } = await supabase
+        .from('locations')
+        .select('id, name')
+        .order('name');
+      if (data) setLocations(data);
+      if (error) console.error('Error fetching locations:', error);
+    };
+    fetchLocations();
+  }, []);
+  
   return (
     <>
       <div className="flex flex-col items-center gap-4">
@@ -93,27 +112,38 @@ export const PersonalDetailsStep: React.FC<PersonalDetailsStepProps> = ({
           />
         </div>
         <div>
+          <label className="block text-sm font-medium mb-2">Date of Birth</label>
+          <Input 
+            type="date"
+            value={formData.date_of_birth}
+            onChange={(e) => handleInputChange('date_of_birth', e.target.value)}
+          />
+        </div>
+       </div>
+        <div>
           <label className="block text-sm font-medium mb-2">Current Location *</label>
-          <Select value={formData.location} onValueChange={(value) => handleInputChange('location', value)}>
+          <Select value={formData.location_id} onValueChange={(value) => handleInputChange('location_id', value)}>
             <SelectTrigger>
               <SelectValue placeholder="Select your city/town" />
             </SelectTrigger>
             <SelectContent className="max-h-48 overflow-y-auto">
-              {locations.map(loc => <SelectItem key={loc.value} value={loc.value}>{loc.label}</SelectItem>)}
+              {locations.map(loc => <SelectItem key={loc.id} value={loc.id}>{loc.name}</SelectItem>)}
+              <SelectItem value="other">Other</SelectItem>
             </SelectContent>
           </Select>
-          {formData.location === 'other' && (
+          {formData.location_id === 'other' && (
             <div className="mt-2">
               <Input
                 value={formData.otherLocation}
                 onChange={(e) => handleInputChange('otherLocation', e.target.value)}
+                value={formData.location_other}
+                onChange={(e) => handleInputChange('location_other', e.target.value)}
                 placeholder="Please specify your location"
                 required
               />
             </div>
           )}
         </div>
-      </div>
 
       <div className="grid sm:grid-cols-2 gap-4">
         <div>
