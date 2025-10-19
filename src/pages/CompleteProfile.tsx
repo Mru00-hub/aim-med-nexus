@@ -240,6 +240,9 @@ const CompleteProfile = () => {
           .eq('id', user.id)
           .single();
 
+        console.log('📊 Profile data:', data); // ✅ ADD
+        console.log('❌ Profile error:', error); // ✅ ADD
+
         if (error) {
           console.error("Error fetching profile:", error);
           setError("Could not load your profile data.");
@@ -247,6 +250,7 @@ const CompleteProfile = () => {
         }
 
         if (data) {
+          console.log('✅ Setting form data...');
           // ✅ FIXED: Properly determine if "other" should be selected
           const determineLocationId = () => {
             if (data.location_id) return data.location_id;
