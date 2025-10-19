@@ -7,7 +7,7 @@ import { Footer } from '@/components/layout/Footer';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { Plus, Users, Hash, Trash2, Pencil, Loader2, UserSwitch } from 'lucide-react';
+import { Plus, Users, Hash, Trash2, Pencil, Loader2, Crown } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/components/ui/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -403,7 +403,7 @@ export default function SpaceDetailPage() {
                       {isUserCreator ? (
                         <>
                           <Button size="sm" variant="outline" onClick={() => setShowTransferDialog(true)}>
-                            <UserSwitch className="h-4 w-4 mr-2" /> Transfer Ownership
+                            <Crown className="h-4 w-4 mr-2" /> Transfer Ownership
                           </Button>
                           <Button size="sm" variant="outline" onClick={() => setIsEditing(true)}>
                             <Pencil className="h-4 w-4 mr-2" /> Edit
