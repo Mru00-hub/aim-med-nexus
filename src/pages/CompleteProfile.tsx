@@ -1,5 +1,5 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import React, { useState, useEffect, ChangeEvent } from 'react';
+import React, { useState, useEffect, useMemo, ChangeEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Header } from '@/components/layout/Header';
@@ -13,14 +13,15 @@ import { supabase } from '@/integrations/supabase/client';
 import { Save, AlertCircle, Upload, CircleX } from 'lucide-react';
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 
-// --- Data Types for Fetched Dropdowns ---
-type Location = { id: string; name: string };
-type Institution = { id: string; name: string };
-type Course = { id: string; name: string };
-type Specialization = { id: string; label: string };
+// --- Data Types ---
+type Location = { id: string; label: string; value: string };
+type Institution = { id: string; label: string; value: string };
+type Course = { id: string; label: string; value: string };
+type Specialization = { id: string; label: string; value: string };
 type StudentYear = { value: string; label: string };
 type ExperienceLevel = { value: string; label: string };
 
@@ -47,7 +48,7 @@ const CompleteProfile = () => {
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string>('');
   
-  // --- Full form state for all profile fields ---
+  // --- Form State ---
   const [formData, setFormData] = useState({
     full_name: '',
     phone: '',
@@ -70,7 +71,7 @@ const CompleteProfile = () => {
     experience_level_value: '',
   });
 
-  // --- State for dynamic dropdown data ---
+  // --- Dropdown Data States ---
   const [locations, setLocations] = useState<Location[]>([]);
   const [institutions, setInstitutions] = useState<Institution[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
@@ -78,34 +79,164 @@ const CompleteProfile = () => {
   const [studentYears, setStudentYears] = useState<StudentYear[]>([]);
   const [experiences, setExperiences] = useState<ExperienceLevel[]>([]);
 
-  // --- Effect to fetch all dropdown data on mount ---
+  // --- Search States ---
+  const [locationSearch, setLocationSearch] = useState("");
+  const [institutionSearch, setInstitutionSearch] = useState("");
+  const [courseSearch, setCourseSearch] = useState("");
+  const [specializationSearch, setSpecializationSearch] = useState("");
+
+  // --- Loading States ---
+  const [isLocLoading, setIsLocLoading] = useState(false);
+  const [isInstLoading, setIsInstLoading] = useState(false);
+  const [isCourseLoading, setIsCourseLoading] = useState(false);
+  const [isSpecLoading, setIsSpecLoading] = useState(false);
+
+  // --- Fetch Location with Search ---
   useEffect(() => {
-    const fetchDropdownData = async () => {
-      const [instRes, courseRes, specRes, yearRes, expRes, locRes] = await Promise.all([
-        supabase.from('institutions').select('id, name').order('name'),
-        supabase.from('courses').select('id, name').order('name'),
-        supabase.from('specializations').select('id, label').order('label'),
+    setIsLocLoading(true);
+    const searchTimer = setTimeout(() => {
+      const fetchLocations = async () => {
+        if (locationSearch.length < 2) {
+          setLocations([]);
+          setIsLocLoading(false);
+          return;
+        }
+        const { data, error } = await supabase
+          .from('locations')
+          .select('id, label, value')
+          .neq('value', 'other')
+          .or(`label.ilike.%${locationSearch}%,value.ilike.%${locationSearch}%`)
+          .order('label')
+          .limit(50);
+        
+        if (data) setLocations(data);
+        if (error) console.error('Error fetching locations:', error);
+        setIsLocLoading(false);
+      };
+      fetchLocations();
+    }, 500);
+    return () => clearTimeout(searchTimer);
+  }, [locationSearch]);
+
+  // --- Fetch Institution with Search ---
+  useEffect(() => {
+    setIsInstLoading(true);
+    const searchTimer = setTimeout(() => {
+      const fetchInstitutions = async () => {
+        if (institutionSearch.length < 2) {
+          setInstitutions([]);
+          setIsInstLoading(false);
+          return;
+        }
+        const { data, error } = await supabase
+          .from('institutions')
+          .select('id, label, value')
+          .neq('value', 'other')
+          .or(`label.ilike.%${institutionSearch}%,value.ilike.%${institutionSearch}%`)
+          .order('label')
+          .limit(50);
+        
+        if (data) setInstitutions(data);
+        if (error) console.error('Error fetching institutions:', error);
+        setIsInstLoading(false);
+      };
+      fetchInstitutions();
+    }, 500);
+    return () => clearTimeout(searchTimer);
+  }, [institutionSearch]);
+
+  // --- Fetch Course with Search ---
+  useEffect(() => {
+    setIsCourseLoading(true);
+    const searchTimer = setTimeout(() => {
+      const fetchCourses = async () => {
+        if (courseSearch.length < 2) {
+          setCourses([]);
+          setIsCourseLoading(false);
+          return;
+        }
+        const { data, error } = await supabase
+          .from('courses')
+          .select('id, label, value')
+          .neq('value', 'other')
+          .or(`label.ilike.%${courseSearch}%,value.ilike.%${courseSearch}%`)
+          .order('label')
+          .limit(50);
+        
+        if (data) setCourses(data);
+        if (error) console.error('Error fetching courses:', error);
+        setIsCourseLoading(false);
+      };
+      fetchCourses();
+    }, 500);
+    return () => clearTimeout(searchTimer);
+  }, [courseSearch]);
+
+  // --- Fetch Specialization with Search ---
+  useEffect(() => {
+    setIsSpecLoading(true);
+    const searchTimer = setTimeout(() => {
+      const fetchSpecializations = async () => {
+        if (specializationSearch.length < 2) {
+          setSpecializations([]);
+          setIsSpecLoading(false);
+          return;
+        }
+        const { data, error } = await supabase
+          .from('specializations')
+          .select('id, label, value')
+          .neq('value', 'other')
+          .or(`label.ilike.%${specializationSearch}%,value.ilike.%${specializationSearch}%`)
+          .order('label')
+          .limit(50);
+        
+        if (data) setSpecializations(data);
+        if (error) console.error('Error fetching specializations:', error);
+        setIsSpecLoading(false);
+      };
+      fetchSpecializations();
+    }, 500);
+    return () => clearTimeout(searchTimer);
+  }, [specializationSearch]);
+
+  // --- Fetch Static Data (Student Years, Experience Levels) ---
+  useEffect(() => {
+    const fetchStaticData = async () => {
+      const [yearRes, expRes] = await Promise.all([
         supabase.from('student_years').select('value, label').order('sort_order'),
-        supabase.from('experience_levels').select('value, label').order('sort_order'),
-        supabase.from('locations').select('id, name').order('name')
+        supabase.from('experience_levels').select('value, label').order('sort_order')
       ]);
-      if (instRes.data) setInstitutions(instRes.data);
-      if (courseRes.data) setCourses(courseRes.data);
-      if (specRes.data) setSpecializations(specRes.data);
       if (yearRes.data) setStudentYears(yearRes.data);
       if (expRes.data) setExperiences(expRes.data);
-      if (locRes.data) setLocations(locRes.data);
     };
-    fetchDropdownData();
+    fetchStaticData();
   }, []);
 
-  // --- Effect to fetch and populate the user's existing profile data ---
+  // --- Memoized Options ---
+  const locationOptions = useMemo(() => 
+    locations.map(loc => ({ value: loc.id, label: loc.label })),
+    [locations]
+  );
+  const institutionOptions = useMemo(() => 
+    institutions.map(inst => ({ value: inst.id, label: inst.label })),
+    [institutions]
+  );
+  const courseOptions = useMemo(() =>
+    courses.map(course => ({ value: course.id, label: course.label })),
+    [courses]
+  );
+  const specializationOptions = useMemo(() =>
+    specializations.map(spec => ({ value: spec.id, label: spec.label })),
+    [specializations]
+  );
+
+  // --- Fetch Profile Data ---
   useEffect(() => {
     if (!authLoading && user) {
       const fetchProfileData = async () => {
         const { data, error } = await supabase
           .from('profiles')
-          .select('*') // We need all raw _id and _other fields
+          .select('*')
           .eq('id', user.id)
           .single();
 
@@ -116,7 +247,36 @@ const CompleteProfile = () => {
         }
 
         if (data) {
-          // Populate the form, handling 'other' logic
+          // ✅ FIXED: Properly determine if "other" should be selected
+          const determineLocationId = () => {
+            if (data.location_id) return data.location_id;
+            if (data.location_other) return 'other';
+            return '';
+          };
+
+          const determineInstitutionId = () => {
+            if (data.institution_id) return data.institution_id;
+            if (data.institution_other) return 'other';
+            return '';
+          };
+
+          const determineCourseId = () => {
+            if (data.course_id) return data.course_id;
+            if (data.course_other) return 'other';
+            return '';
+          };
+
+          const determineSpecializationId = () => {
+            if (data.specialization_id) return data.specialization_id;
+            if (data.specialization_other) return 'other';
+            return '';
+          };
+
+          // ✅ FIXED: Handle skills properly (can be array, string, or null)
+          const skillsString = Array.isArray(data.skills) 
+            ? data.skills.join(', ') 
+            : (data.skills || '');
+
           setFormData({
             full_name: data.full_name || '',
             phone: data.phone || '',
@@ -125,15 +285,15 @@ const CompleteProfile = () => {
             organization: data.organization || '',
             bio: data.bio || '',
             resume_url: data.resume_url || '',
-            skills: (data.skills || []).join(', '),
+            skills: skillsString,
             medical_license: data.medical_license || '',
-            location_id: data.location_id || (data.location_other ? 'other' : ''),
+            location_id: determineLocationId(),
             location_other: data.location_other || '',
-            institution_id: data.institution_id || (data.institution_other ? 'other' : ''),
+            institution_id: determineInstitutionId(),
             institution_other: data.institution_other || '',
-            course_id: data.course_id || (data.course_other ? 'other' : ''),
+            course_id: determineCourseId(),
             course_other: data.course_other || '',
-            specialization_id: data.specialization_id || (data.specialization_other ? 'other' : ''),
+            specialization_id: determineSpecializationId(),
             specialization_other: data.specialization_other || '',
             student_year_value: data.student_year_value || '',
             experience_level_value: data.experience_level_value || '',
@@ -145,12 +305,12 @@ const CompleteProfile = () => {
           } else if (data.full_name) {
             const uniqueColor = generateUniqueColor(user.id);
             const generatedUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                data.full_name
+              data.full_name
             )}&background=${uniqueColor.substring(1)}&color=fff&size=256`;
             setAvatarUrl(generatedUrl);
           }
         }
-      }
+      };
       fetchProfileData();
     }
   }, [user, authLoading]);
@@ -162,7 +322,7 @@ const CompleteProfile = () => {
   const handleAvatarChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 2 * 1024 * 1024) { // 2MB limit
+      if (file.size > 2 * 1024 * 1024) {
         toast({ title: "Image Too Large", description: "Please select an image smaller than 2MB.", variant: "destructive" });
         return;
       }
@@ -183,9 +343,9 @@ const CompleteProfile = () => {
     setError('');
 
     try {
-      let finalAvatarUrl = avatarUrl; 
+      let finalAvatarUrl = avatarUrl;
 
-      // 1. Upload new avatar if one was selected
+      // 1. Upload new avatar if selected
       if (avatarFile) {
         const fileExt = avatarFile.name.split('.').pop();
         const fileName = `${crypto.randomUUID()}.${fileExt}`;
@@ -193,17 +353,17 @@ const CompleteProfile = () => {
 
         const { error: uploadError } = await supabase.storage
           .from('avatars')
-          .upload(filePath, avatarFile, { upsert: true }); 
+          .upload(filePath, avatarFile, { upsert: true });
 
         if (uploadError) throw uploadError;
 
         const { data: publicUrlData } = supabase.storage.from('avatars').getPublicUrl(filePath);
         finalAvatarUrl = publicUrlData.publicUrl;
       }
-      
+
       const skillsArray = formData.skills.split(',').map(s => s.trim()).filter(Boolean);
 
-      // 2. Call the new 'update_profile' RPC function
+      // 2. Call update_profile RPC
       const rpcArgs = {
         p_full_name: formData.full_name,
         p_phone: formData.phone || null,
@@ -213,13 +373,13 @@ const CompleteProfile = () => {
         p_organization: formData.organization || null,
         p_skills: skillsArray,
         p_medical_license: formData.medical_license || null,
-        p_location_id: formData.location_id === 'other' ? null : formData.location_id,
+        p_location_id: formData.location_id === 'other' ? null : (formData.location_id || null),
         p_location_other: formData.location_id === 'other' ? formData.location_other : null,
-        p_institution_id: formData.institution_id === 'other' ? null : formData.institution_id,
+        p_institution_id: formData.institution_id === 'other' ? null : (formData.institution_id || null),
         p_institution_other: formData.institution_id === 'other' ? formData.institution_other : null,
-        p_course_id: formData.course_id === 'other' ? null : formData.course_id,
+        p_course_id: formData.course_id === 'other' ? null : (formData.course_id || null),
         p_course_other: formData.course_id === 'other' ? formData.course_other : null,
-        p_specialization_id: formData.specialization_id === 'other' ? null : formData.specialization_id,
+        p_specialization_id: formData.specialization_id === 'other' ? null : (formData.specialization_id || null),
         p_specialization_other: formData.specialization_id === 'other' ? formData.specialization_other : null,
         p_student_year_value: formData.student_year_value || null,
         p_experience_level_value: formData.experience_level_value || null,
@@ -228,23 +388,23 @@ const CompleteProfile = () => {
       const { error: rpcError } = await supabase.rpc('update_profile', rpcArgs);
       if (rpcError) throw rpcError;
 
-      // 3. Update fields NOT handled by the RPC (avatar, resume, onboarding)
+      // 3. Update avatar, resume, onboarding status
       const { error: updateError } = await supabase
         .from('profiles')
         .update({
           resume_url: formData.resume_url || null,
           profile_picture_url: finalAvatarUrl,
-          is_onboarded: true, // Mark as onboarded on first save
+          is_onboarded: true,
         })
         .eq('id', user.id);
 
       if (updateError) {
         console.warn("RPC succeeded, but profile update failed:", updateError.message);
       }
-      
+
       toast({
-          title: "Profile Saved!",
-          description: "Your profile has been updated successfully.",
+        title: "Profile Saved!",
+        description: "Your profile has been updated successfully.",
       });
 
       await refreshProfile();
@@ -266,22 +426,22 @@ const CompleteProfile = () => {
 
   const handleSkip = async () => {
     if (!user) {
-        toast({ title: "Error", description: "User not found.", variant: "destructive" });
-        return;
+      toast({ title: "Error", description: "User not found.", variant: "destructive" });
+      return;
     }
     setIsSubmitting(true);
-    
+
     const { error: skipError } = await supabase
-        .from('profiles')
-        .update({ is_onboarded: true })
-        .eq('id', user.id);
+      .from('profiles')
+      .update({ is_onboarded: true })
+      .eq('id', user.id);
 
     if (skipError) {
-        toast({ title: "Error", description: "Could not process request. Please try again.", variant: "destructive" });
-        setIsSubmitting(false);
+      toast({ title: "Error", description: "Could not process request. Please try again.", variant: "destructive" });
+      setIsSubmitting(false);
     } else {
-        await refreshProfile(); 
-        navigate('/community', { replace: true });
+      await refreshProfile();
+      navigate('/community', { replace: true });
     }
   };
 
@@ -289,7 +449,7 @@ const CompleteProfile = () => {
     return <PageSkeleton />;
   }
 
-  if (error && !formData.full_name) { // Only show full-page error if data never loaded
+  if (error && !formData.full_name) {
     return (
       <div className="min-h-screen bg-background">
         <Header />
@@ -304,9 +464,8 @@ const CompleteProfile = () => {
       </div>
     );
   }
-  
+
   if (!user) {
-    // This shouldn't be reached if AuthGuard is set up, but it's good practice.
     return <PageSkeleton />;
   }
 
@@ -347,8 +506,8 @@ const CompleteProfile = () => {
                 </label>
               </Button>
             </div>
+
             <form onSubmit={handleSubmit} className="space-y-6">
-              
               <div className="font-semibold text-lg">Basic Information</div>
               <div className="grid sm:grid-cols-2 gap-4">
                 <div>
@@ -360,20 +519,24 @@ const CompleteProfile = () => {
                   <Input type="date" value={formData.date_of_birth} onChange={(e) => handleInputChange('date_of_birth', e.target.value)} />
                 </div>
               </div>
+              
               <div className="grid sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium mb-2">Phone</label>
                   <Input value={formData.phone} onChange={(e) => handleInputChange('phone', e.target.value)} placeholder="+91 XXXXX XXXXX" />
                 </div>
-                 <div>
+                <div>
                   <label className="block text-sm font-medium mb-2">Location</label>
-                  <Select value={formData.location_id} onValueChange={(v) => handleInputChange('location_id', v)}>
-                    <SelectTrigger><SelectValue placeholder="Select your location" /></SelectTrigger>
-                    <SelectContent>
-                      {locations.map(l => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}
-                      <SelectItem value="other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <SearchableSelect
+                    options={locationOptions}
+                    value={formData.location_id}
+                    onValueChange={(v) => handleInputChange('location_id', v)}
+                    onSearchChange={setLocationSearch}
+                    isLoading={isLocLoading}
+                    placeholder="Select your location"
+                    searchPlaceholder="Search locations... (min 2 chars)"
+                    emptyMessage="No location found."
+                  />
                   {formData.location_id === 'other' && (
                     <Input className="mt-2" value={formData.location_other} onChange={(e) => handleInputChange('location_other', e.target.value)} placeholder="Please specify location" />
                   )}
@@ -388,7 +551,7 @@ const CompleteProfile = () => {
                   <label className="block text-sm font-medium mb-2">Current Position</label>
                   <Input value={formData.current_position} onChange={(e) => handleInputChange('current_position', e.target.value)} placeholder="e.g., Resident Doctor" />
                 </div>
-                 <div>
+                <div>
                   <label className="block text-sm font-medium mb-2">Organization</label>
                   <Input value={formData.organization} onChange={(e) => handleInputChange('organization', e.target.value)} placeholder="e.g., City Hospital" />
                 </div>
@@ -396,18 +559,21 @@ const CompleteProfile = () => {
 
               <div>
                 <label className="block text-sm font-medium mb-2">Field/Domain (Specialization)</label>
-                <Select value={formData.specialization_id} onValueChange={(v) => handleInputChange('specialization_id', v)}>
-                  <SelectTrigger><SelectValue placeholder="Select your specialization" /></SelectTrigger>
-                  <SelectContent>
-                    {specializations.map(s => <SelectItem key={s.id} value={s.id}>{s.label}</SelectItem>)}
-                    <SelectItem value="other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
+                <SearchableSelect
+                  options={specializationOptions}
+                  value={formData.specialization_id}
+                  onValueChange={(v) => handleInputChange('specialization_id', v)}
+                  onSearchChange={setSpecializationSearch}
+                  isLoading={isSpecLoading}
+                  placeholder="Select your specialization"
+                  searchPlaceholder="Search specializations... (min 2 chars)"
+                  emptyMessage="No specialization found."
+                />
                 {formData.specialization_id === 'other' && (
                   <Input className="mt-2" value={formData.specialization_other} onChange={(e) => handleInputChange('specialization_other', e.target.value)} placeholder="Please specify specialization" />
                 )}
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium mb-2">Experience Level</label>
                 <Select value={formData.experience_level_value} onValueChange={(v) => handleInputChange('experience_level_value', v)}>
@@ -428,13 +594,16 @@ const CompleteProfile = () => {
 
               <div>
                 <label className="block text-sm font-medium mb-2">Educational Institution</label>
-                <Select value={formData.institution_id} onValueChange={(v) => handleInputChange('institution_id', v)}>
-                  <SelectTrigger><SelectValue placeholder="Select your institution" /></SelectTrigger>
-                  <SelectContent>
-                    {institutions.map(i => <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>)}
-                    <SelectItem value="other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
+                <SearchableSelect
+                  options={institutionOptions}
+                  value={formData.institution_id}
+                  onValueChange={(v) => handleInputChange('institution_id', v)}
+                  onSearchChange={setInstitutionSearch}
+                  isLoading={isInstLoading}
+                  placeholder="Select your institution"
+                  searchPlaceholder="Search institutions... (min 2 chars)"
+                  emptyMessage="No institution found."
+                />
                 {formData.institution_id === 'other' && (
                   <Input className="mt-2" value={formData.institution_other} onChange={(e) => handleInputChange('institution_other', e.target.value)} placeholder="Please specify institution" />
                 )}
@@ -443,13 +612,16 @@ const CompleteProfile = () => {
               <div className="grid sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium mb-2">Course/Program</label>
-                  <Select value={formData.course_id} onValueChange={(v) => handleInputChange('course_id', v)}>
-                    <SelectTrigger><SelectValue placeholder="Select your course" /></SelectTrigger>
-                    <SelectContent>
-                      {courses.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                      <SelectItem value="other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <SearchableSelect
+                    options={courseOptions}
+                    value={formData.course_id}
+                    onValueChange={(v) => handleInputChange('course_id', v)}
+                    onSearchChange={setCourseSearch}
+                    isLoading={isCourseLoading}
+                    placeholder="Select your course"
+                    searchPlaceholder="Search courses... (min 2 chars)"
+                    emptyMessage="No course found."
+                  />
                   {formData.course_id === 'other' && (
                     <Input className="mt-2" value={formData.course_other} onChange={(e) => handleInputChange('course_other', e.target.value)} placeholder="Please specify course" />
                   )}
@@ -467,7 +639,7 @@ const CompleteProfile = () => {
 
               <Separator />
               <div className="font-semibold text-lg">About & Links</div>
-               
+
               <div>
                 <label className="block text-sm font-medium mb-2">Professional Bio</label>
                 <Textarea value={formData.bio} onChange={(e) => handleInputChange('bio', e.target.value)} placeholder="A brief summary..." rows={4} />
@@ -480,13 +652,13 @@ const CompleteProfile = () => {
                 <label className="block text-sm font-medium mb-2">Resume/CV URL</label>
                 <Input type="url" value={formData.resume_url} onChange={(e) => handleInputChange('resume_url', e.target.value)} placeholder="https://linkedin.com/in/..." />
               </div>
-              
+
               <div className="flex gap-4 pt-4">
                 <Button type="submit" size="lg" className="btn-medical flex-1" disabled={isSubmitting}>
                   {isSubmitting ? 'Saving...' : 'Save Profile'}
                   <Save className="ml-2 h-5 w-5" />
                 </Button>
-                
+
                 <Button 
                   type="button"
                   variant="outline"
