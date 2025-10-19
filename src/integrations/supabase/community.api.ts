@@ -17,9 +17,13 @@ export type Profile = Tables<'profiles'>;
 
 export type SpaceWithDetails = Space & {
   creator_full_name: string | null;
+  creator_position: string | null;
+  creator_organization: string | null;
+  creator_specialization: string | null;
   moderators: {
     full_name: string;
     role: Enums<'membership_role'>;
+    specialization: string | null;
   }[] | null;
 };
 
@@ -37,6 +41,9 @@ export type ThreadWithDetails = {
   title: string;
   creator_id: string;
   creator_full_name: string;
+  creator_position: string | null;
+  creator_organization: string | null;
+  creator_specialization: string | null;
   created_at: string;
   last_activity_at: string;
   message_count: number;
@@ -59,6 +66,10 @@ export type PendingRequest = {
   full_name: string;
   profile_picture_url: string | null;
   requested_at: string;
+  current_position: string | null;
+  organization: string | null;
+  location_name: string | null;
+  specialization_name: string | null;
 };
 
 
@@ -322,20 +333,26 @@ export const updateThreadDetails = async (
   payload: { title: string; description?: string | null }
 ): Promise<Thread> => {
     await getSessionOrThrow();
-    const { data, error } = await supabase
-      .from('threads')
-      .update({
-        title: payload.title,
-        description: payload.description,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', threadId)
-      .select()
-      .single();
-      
-    if (error) throw error;
+    const { error: rpcError } = await supabase.rpc('update_thread', {
+        p_thread_id: threadId,
+        p_new_title: payload.title,
+        p_new_description: payload.description || null
+    });
+
+    if (rpcError) throw rpcError;
+
+    // 2. Select the updated row to maintain the function's return signature
+    const { data, error: selectError } = await supabase
+        .from('threads')
+        .select('*')
+        .eq('id', threadId)
+        .single();
+
+    if (selectError) throw selectError;
+    if (!data) throw new Error("Could not find thread after update.");
     return data;
 };
+
 /** Fetches messages, including author profile, reactions, and attachments. */
 export const getMessagesWithDetails = async (threadId: string): Promise<MessageWithDetails[]> => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -387,24 +404,35 @@ export const postMessage = async (
 
 export const deleteMessage = async (messageId: number): Promise<void> => {
     await getSessionOrThrow();
-    const { error } = await supabase.from('messages').delete().eq('id', messageId);
+    const { error } = await supabase.rpc('delete_message', {
+        p_message_id: messageId 
+    });
     if (error) throw error;
 };
 
 export const editMessage = async (messageId: number, newBody: string): Promise<Message> => {
     await getSessionOrThrow();
-    const { data, error } = await supabase
+    const { error: rpcError } = await supabase.rpc('update_message', {
+        p_message_id: messageId,
+        p_new_body: newBody
+    });
+
+    if (rpcError) throw rpcError;
+
+    // 2. Select the updated row to maintain the function's return signature
+    const { data, error: selectError } = await supabase
       .from('messages')
-      .update({ body: newBody, is_edited: true, updated_at: new Date().toISOString() })
+      .select('*')
       .eq('id', messageId)
-      .select()
       .single();
-    if (error) throw error;
+
+    if (selectError) throw selectError;
     if (!data) {
-        throw new Error("Failed to post message: No data returned.");
+        throw new Error("Failed to find message after edit.");
     }
     return data;
 };
+
 /** Adds a reaction to a message. */
 export const addReaction = async (messageId: number, emoji: string): Promise<MessageReaction> => {
     const session = await getSessionOrThrow();
@@ -545,23 +573,37 @@ export const updateMembershipStatus = async (membershipId: string, newStatus: En
 
 /** Allows a user to leave a space. */
 export const leaveSpace = async (spaceId: string): Promise<void> => {
-    const session = await getSessionOrThrow();
-    
-    // Deletes the membership row where user_id and space_id match.
-    // This assumes you have RLS policies that allow a user to delete their own membership.
-    const { error } = await supabase
-        .from('memberships')
-        .delete()
-        .match({
-            user_id: session.user.id,
-            space_id: spaceId
-        });
+    await getSessionOrThrow();
+    const { error } = await supabase.rpc('leave_space', { 
+        p_space_id: spaceId 
+    });
+    if (error) throw error;
+};
 
-    if (error) {
-        // Handle cases where the user might be the creator (if you have backend rules)
-        if (error.code === '23503') { // Foreign key violation
-             throw new Error("Cannot leave space. You might be the creator or last admin.");
-        }
-        throw error;
-    }
+/** Deletes a space. Must be admin/creator. */
+export const deleteSpace = async (spaceId: string): Promise<void> => {
+    await getSessionOrThrow();
+    const { error } = await supabase.rpc('delete_space', { 
+        p_space_id: spaceId 
+    });
+    if (error) throw error;
+};
+
+/** Transfers space ownership. Must be creator. */
+export const transferSpaceOwnership = async (spaceId: string, newOwnerId: string): Promise<void> => {
+    await getSessionOrThrow();
+    const { error } = await supabase.rpc('transfer_space_ownership', {
+        p_space_id: spaceId,
+        p_new_owner_id: newOwnerId
+    });
+    if (error) throw error;
+};
+
+/** Deletes a thread. Must be creator or mod/admin. */
+export const deleteThread = async (threadId: string): Promise<void> => {
+    await getSessionOrThrow();
+    const { error } = await supabase.rpc('delete_thread', { 
+        p_thread_id: threadId 
+    });
+    if (error) throw error;
 };
