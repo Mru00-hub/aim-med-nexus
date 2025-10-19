@@ -203,7 +203,11 @@ export default function Forums() {
                     {space.moderators.slice(0, 3).map(mod => (
                       <Tooltip key={mod.full_name}>
                         <TooltipTrigger asChild>
-                          <Badge variant="outline" className="cursor-default">{mod.full_name}</Badge>
+                          <span className="inline-block"> {/* ✅ Add wrapper */}
+                            <Badge variant="outline" className="cursor-default">
+                              {mod.full_name}
+                            </Badge>
+                          </span>
                         </TooltipTrigger>
                         {mod.specialization && (
                           <TooltipContent>
