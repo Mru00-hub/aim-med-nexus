@@ -126,11 +126,6 @@ const App = () => {
                     <Route path="/community/space/:spaceId" element={<SpaceDetailPage />} />
                     <Route path="/community/space/:spaceId/members" element={<MembersPage />} />
                     <Route path="/community/thread/:threadId" element={<ThreadDetailPage />} />
-                    
-                    {/* Routes that ALSO require the user to be fully onboarded */}
-                    <Route element={<OnboardingGuard />}>
-                      <Route path="/profile" element={<ProfilePage />} />
-                    </Route>
                   </Route>
                   
                   {/* CATCH-ALL "*" ROUTE - MUST BE LAST */}
