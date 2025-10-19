@@ -8,7 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 type Location = {
   id: string;
-  name: string;
+  label: string;
 };
 
 type PersonalDetailsStepProps = {
@@ -32,8 +32,8 @@ export const PersonalDetailsStep: React.FC<PersonalDetailsStepProps> = ({
     const fetchLocations = async () => {
       const { data, error } = await supabase
         .from('locations')
-        .select('id, name')
-        .order('name');
+        .select('id, label')
+        .order('label');
       if (data) setLocations(data);
       if (error) console.error('Error fetching locations:', error);
     };
@@ -136,7 +136,7 @@ export const PersonalDetailsStep: React.FC<PersonalDetailsStepProps> = ({
           </SelectTrigger>
           <SelectContent className="max-h-48 overflow-y-auto">
             {locations.map(loc => (
-              <SelectItem key={loc.id} value={loc.id}>{loc.name}</SelectItem>
+              <SelectItem key={loc.id} value={loc.id}>{loc.label}</SelectItem>
             ))}
             <SelectItem value="other">Other</SelectItem>
           </SelectContent>
