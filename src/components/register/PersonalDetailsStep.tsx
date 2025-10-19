@@ -43,11 +43,11 @@ export const PersonalDetailsStep: React.FC<PersonalDetailsStepProps> = ({
         }
         const { data, error } = await supabase
           .from('locations')
-          .select('id, label')
+          .select('id, label, value')
           .neq('value', 'other')
           // .or() searches multiple columns
           // .ilike() is a case-insensitive "contains" search
-          .or(`label.ilike.%${locationSearch}%,id.ilike.%${locationSearch}%`)
+          .or(`label.ilike.%${locationSearch}%,value.ilike.%${locationSearch}%`)
           .order('label')
           .limit(50); // Limit results to keep it fast
 
