@@ -1,11 +1,17 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { institutions, courses, specializations, experiences, studentYears } from './_data'; // We'll create this file next
+import { supabase } from '@/integrations/supabase/client';
 
+type Institution = { id: string; name: string; };
+type Course = { id: string; name: string; };
+type Specialization = { id: string; label: string; };
+type StudentYear = { value: string; label: string; };
+type ExperienceLevel = { value: string; label: string; };
+ 
 type ProfessionalDetailsStepProps = {
   formData: any;
   handleInputChange: (field: string, value: string | boolean) => void;
@@ -13,6 +19,30 @@ type ProfessionalDetailsStepProps = {
 };
 
 export const ProfessionalDetailsStep: React.FC<ProfessionalDetailsStepProps> = ({ formData, handleInputChange, registrationType }) => {
+  const [institutions, setInstitutions] = useState<Institution[]>([]);
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [specializations, setSpecializations] = useState<Specialization[]>([]);
+  const [studentYears, setStudentYears] = useState<StudentYear[]>([]);
+  const [experiences, setExperiences] = useState<ExperienceLevel[]>([]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const [instRes, courseRes, specRes, yearRes, expRes] = await Promise.all([
+        supabase.from('institutions').select('id, name').order('name'),
+        supabase.from('courses').select('id, name').order('name'),
+        supabase.from('specializations').select('id, label').order('label'),
+        supabase.from('student_years').select('value, label').order('sort_order'),
+        supabase.from('experience_levels').select('value, label').order('sort_order')
+      ]);
+      if (instRes.data) setInstitutions(instRes.data);
+      if (courseRes.data) setCourses(courseRes.data);
+      if (specRes.data) setSpecializations(specRes.data);
+      if (yearRes.data) setStudentYears(yearRes.data);
+      if (expRes.data) setExperiences(expRes.data);
+    };
+    fetchData();
+  }, []);
+  
   return (
     <>
       <div className="bg-muted/30 p-4 rounded-lg mb-6">
@@ -24,19 +54,20 @@ export const ProfessionalDetailsStep: React.FC<ProfessionalDetailsStepProps> = (
 
       <div>
         <label className="block text-sm font-medium mb-2">Educational Institution *</label>
-        <Select value={formData.institution} onValueChange={(value) => handleInputChange('institution', value)}>
+        <Select value={formData.institution_id} onValueChange={(value) => handleInputChange('institution_id', value)}>
           <SelectTrigger>
             <SelectValue placeholder="Select your college/university" />
           </SelectTrigger>
           <SelectContent className="max-h-48 overflow-y-auto">
-            {institutions.map(inst => <SelectItem key={inst.value} value={inst.value}>{inst.label}</SelectItem>)}
+            {institutions.map(inst => <SelectItem key={inst.id} value={inst.id}>{inst.name}</SelectItem>)}
+            <SelectItem value="other">Other</SelectItem>
           </SelectContent>
         </Select>
-        {formData.institution === 'other' && (
+        {formData.institution_id === 'other' && (
           <div className="mt-2">
             <Input
-              value={formData.otherInstitution}
-              onChange={(e) => handleInputChange('otherInstitution', e.target.value)}
+              value={formData.institution_other}
+              onChange={(e) => handleInputChange('institution_other', e.target.value)}
               placeholder="Please specify your institution"
               required
             />
@@ -47,19 +78,20 @@ export const ProfessionalDetailsStep: React.FC<ProfessionalDetailsStepProps> = (
       <div className="grid sm:grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium mb-2">Course/Program *</label>
-          <Select value={formData.course} onValueChange={(value) => handleInputChange('course', value)}>
+          <Select value={formData.course_id} onValueChange={(value) => handleInputChange('course_id', value)}>
             <SelectTrigger>
               <SelectValue placeholder="Select your course" />
             </SelectTrigger>
             <SelectContent className="max-h-48 overflow-y-auto">
-              {courses.map(course => <SelectItem key={course.value} value={course.value}>{course.label}</SelectItem>)}
+              {courses.map(course => <SelectItem key={course.id} value={course.id}>{course.name}</SelectItem>)}
+              <SelectItem value="other">Other</SelectItem>
             </SelectContent>
           </Select>
-          {formData.course === 'other' && (
+          {formData.course_id === 'other' && (
             <div className="mt-2">
               <Input
-                value={formData.otherCourse}
-                onChange={(e) => handleInputChange('otherCourse', e.target.value)}
+                value={formData.course_other}
+                onChange={(e) => handleInputChange('course_other', e.target.value)}
                 placeholder="Please specify your course"
                 required
               />
@@ -69,7 +101,7 @@ export const ProfessionalDetailsStep: React.FC<ProfessionalDetailsStepProps> = (
         {registrationType === 'student' && (
           <div>
             <label className="block text-sm font-medium mb-2">Year/Status *</label>
-            <Select value={formData.yearOfStudy} onValueChange={(value) => handleInputChange('yearOfStudy', value)}>
+            <Select value={formData.student_year_value} onValueChange={(value) => handleInputChange('student_year_value', value)}>
               <SelectTrigger>
                 <SelectValue placeholder="Current year/status" />
               </SelectTrigger>
@@ -113,20 +145,21 @@ export const ProfessionalDetailsStep: React.FC<ProfessionalDetailsStepProps> = (
 
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium mb-2">Field/Domain *</label>
-              <Select value={formData.specialization} onValueChange={(value) => handleInputChange('specialization', value)}>
+              <label className="block text-sm font-medium mb-2"> Industry Field/Domain *</label>
+              <Select value={formData.specialization_id} onValueChange={(value) => handleInputChange('specialization_id', value)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select your field" />
                 </SelectTrigger>
                 <SelectContent className="max-h-48 overflow-y-auto">
-                  {specializations.map(spec => <SelectItem key={spec.value} value={spec.value}>{spec.label}</SelectItem>)}
+                  {specializations.map(spec => <SelectItem key={spec.id} value={spec.id}>{spec.label}</SelectItem>)}
+                  <SelectItem value="other">Other</SelectItem>
                 </SelectContent>
               </Select>
-              {formData.specialization === 'other' && (
+              {formData.specialization_id === 'other' && (
                 <div className="mt-2">
                   <Input
-                    value={formData.otherSpecialization}
-                    onChange={(e) => handleInputChange('otherSpecialization', e.target.value)}
+                    value={formData.specialization_other}
+                    onChange={(e) => handleInputChange('specialization_other', e.target.value)}
                     placeholder="Please specify your specialization"
                     required
                   />
@@ -135,7 +168,7 @@ export const ProfessionalDetailsStep: React.FC<ProfessionalDetailsStepProps> = (
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">Experience*</label>
-              <Select value={formData.experience} onValueChange={(value) => handleInputChange('experience', value)}>
+              <Select value={formData.experience_level_value} onValueChange={(value) => handleInputChange('experience_level_value', value)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Years of experience" />
                 </SelectTrigger>
