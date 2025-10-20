@@ -68,7 +68,14 @@ export const getNotificationPreferences = async (): Promise<NotificationPreferen
     throw new Error('No notification preferences found for this user.');
   }
 
-  return data;
+  if (!data || data.length === 0) {
+    // This should not happen if the trigger is working,
+    // but it protects against old users.
+    console.warn(`No preferences row found for user: ${user.id}. This might be an old account.`);
+    throw new Error('No notification preferences found for this user. Please contact support if this issue persists.');
+  }
+
+  return data [0];
 };
 
 /**
