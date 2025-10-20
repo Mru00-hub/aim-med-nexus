@@ -3,18 +3,18 @@
 import React, { createContext, useState, useContext, ReactNode, useEffect, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { getPendingRequests } from '@/integrations/supabase/social.api'; // 1. REMOVE getUnreadInboxCount
+import { getPendingRequests } from '@/integrations/supabase/social.api';
 import { getNotifications } from '@/integrations/supabase/notifications.api';
 
 interface SocialCountsContextType {
   requestCount: number;
-  setRequestCount,
+  setRequestCount: React.Dispatch<React.SetStateAction<number>>;
   unreadInboxCount: number;
   unreadNotifCount: number;
-  setUnreadNotifCount,
-  setUnreadInboxCount: (count: number) => void; // 2. ADD setter for inbox back
-  refetchNotifCount: () => void; // [!code ++]
-  refetchRequestCount: () => void; // [!code ++]
+  setUnreadNotifCount: React.Dispatch<React.SetStateAction<number>>;
+  setUnreadInboxCount: (count: number) => void;
+  refetchNotifCount: () => void;
+  refetchRequestCount: () => void;
 }
 
 const SocialCountsContext = createContext<SocialCountsContextType | undefined>(undefined);
@@ -22,26 +22,29 @@ const SocialCountsContext = createContext<SocialCountsContextType | undefined>(u
 export const SocialCountsProvider = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
   const [requestCount, setRequestCount] = useState(0);
-  const [unreadInboxCount, setUnreadInboxCount] = useState(0); // This will be set from Header
+  const [unreadInboxCount, setUnreadInboxCount] = useState(0);
   const [unreadNotifCount, setUnreadNotifCount] = useState(0);
 
-  const fetchPendingRequests = useCallback(async () => { // [!code focus]
-    if (!user) return; // [!code focus]
+  const fetchPendingRequests = useCallback(async () => {
+    if (!user) return;
     try {
       const requests = await getPendingRequests();
       setRequestCount(requests.length || 0);
-    } catch (error) { console.error("Failed to fetch pending requests:", error); }
-  }, [user]); // [!code focus]
+    } catch (error) {
+      console.error("Failed to fetch pending requests:", error);
+    }
+  }, [user]);
 
-  const fetchUnreadNotifCount = useCallback(async () => { // [!code focus]
-    if (!user) return; // [!code focus]
+  const fetchUnreadNotifCount = useCallback(async () => {
+    if (!user) return;
     try {
       const allNotifications = await getNotifications();
       setUnreadNotifCount(allNotifications.filter(n => !n.is_read).length);
-    } catch (error) { console.error("Failed to fetch notification count:", error); }
-  }, [user]); // [!code focus]
+    } catch (error) {
+      console.error("Failed to fetch notification count:", error);
+    }
+  }, [user]);
 
-  // This useEffect now *only* manages Social and Notifications
   useEffect(() => {
     if (!user) {
       setRequestCount(0);
@@ -52,37 +55,39 @@ export const SocialCountsProvider = ({ children }: { children: ReactNode }) => {
     fetchPendingRequests();
     fetchUnreadNotifCount();
 
-    // --- 3. Set Up Realtime Subscriptions ---
     const notifChannel = supabase.channel('social-counts-notifications')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` },
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` },
         () => fetchUnreadNotifCount()
-      ).subscribe();
+      )
+      .subscribe();
 
     const socialChannel = supabase.channel('social-counts-connections')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'connections', filter: `addressee_id=eq.${user.id}` },
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'connections', filter: `addressee_id=eq.${user.id}` },
         () => fetchPendingRequests()
-      ).subscribe();
-      
-    // 4. REMOVE inboxChannel
+      )
+      .subscribe();
 
-    // --- 4. Cleanup ---
     return () => {
       supabase.removeChannel(notifChannel);
       supabase.removeChannel(socialChannel);
-      // 5. REMOVE inboxChannel cleanup
     };
-
   }, [user, fetchPendingRequests, fetchUnreadNotifCount]);
 
   return (
     <SocialCountsContext.Provider 
       value={{ 
-        requestCount, 
-        unreadInboxCount, 
-        unreadNotifCount, 
-        setUnreadInboxCount, // 6. Pass the setter
-        refetchNotifCount: fetchUnreadNotifCount, // [!code ++]
-        refetchRequestCount: fetchPendingRequests, // [!code ++]
+        requestCount,
+        setRequestCount,
+        unreadInboxCount,
+        unreadNotifCount,
+        setUnreadNotifCount,
+        setUnreadInboxCount,
+        refetchNotifCount: fetchUnreadNotifCount,
+        refetchRequestCount: fetchPendingRequests,
       }}
     >
       {children}
