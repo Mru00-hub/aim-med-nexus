@@ -63,9 +63,7 @@ const FunctionalInbox = () => {
   }, [conversations, setUnreadInboxCount]);
 
   useEffect(() => {
-    if (authLoading || !user) return; // Wait for auth ready before subscribing/fetching
-
-    fetchAndSetConversations();
+    if (authLoading || !user) return;
 
     const subscription = supabase
       .channel('public:direct_messages_inbox')
@@ -73,25 +71,25 @@ const FunctionalInbox = () => {
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'direct_messages' },
         () => {
-          console.log('Realtime insert received');
           debouncedFetch();
         }
       )
-      .subscribe(async (status) => {
-        console.log('Subscription status:', status);
+      .subscribe((status) => {
+        console.log('Supabase subscription status:', status);
         if (status === 'SUBSCRIBED') {
-          // Subscription ready
-        } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
-          console.error('Subscription closed or error occurred');
-          // You can try to resubscribe here if needed
+          // Load initial data only once on successful connection
+          fetchAndSetConversations();
+        }
+        else if (status === 'CHANNEL_ERROR' || status === 'CLOSED') {
+          console.error('Supabase subscription error or closed, consider resubscribing or alerting user');
         }
       });
 
     return () => {
       subscription.unsubscribe();
-      console.log('Subscription unsubscribed');
+      console.log('Supabase subscription cleaned up.');
     };
-  }, [authLoading, user, fetchAndSetConversations, debouncedFetch]);
+  }, [authLoading, user, debouncedFetch, fetchAndSetConversations]);
 
   const handleSelectConversation = (conversation: Conversation) => {
     setOptimisticUpdateInProgress(true);
