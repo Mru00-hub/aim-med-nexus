@@ -40,11 +40,12 @@ async function summarizeLastMessages(
 
   const messageCount = data?.length ?? 0;
 
+  console.log(`Thread ${threadId}: Found ${messageCount} messages`);
+
   if (messageCount < MIN_MESSAGES) {
-    throw new AppError(
-      `At least ${MIN_MESSAGES} messages are required to generate a summary. This thread only has ${messageCount}.`,
-      400
-    );
+    const errorMsg = `At least ${MIN_MESSAGES} messages are required to generate a summary. This thread only has ${messageCount} message${messageCount === 1 ? '' : 's'}.`;
+    console.error(errorMsg);
+    throw new AppError(errorMsg, 400);
   }
 
   let messages = (data || []).map((m) => m.body).join("\n").trim();
@@ -93,9 +94,13 @@ Summary:`,
 }
 
 Deno.serve(async (req) => {
+  const startTime = Date.now();
+  console.log(`[${new Date().toISOString()}] Request received: ${req.method} ${req.url}`);
+  
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
+      console.error("Missing Authorization header");
       throw new AppError("Missing Authorization header. Please log in.", 401);
     }
 
@@ -103,6 +108,7 @@ Deno.serve(async (req) => {
     const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
 
     if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+      console.error("Missing environment variables");
       throw new AppError("Missing environment variables", 500);
     }
 
@@ -119,25 +125,45 @@ Deno.serve(async (req) => {
     const threadId = url.searchParams.get("thread_id");
     const limit = Number(url.searchParams.get("limit")) || 50;
 
+    console.log(`Processing summary request for thread: ${threadId}, limit: ${limit}`);
+
     if (!threadId) {
       throw new AppError("thread_id is required", 400);
     }
 
     const summary = await summarizeLastMessages(userSupabase, threadId, limit);
     
+    const duration = Date.now() - startTime;
+    console.log(`[SUCCESS] Summary generated in ${duration}ms`);
+    
     return new Response(JSON.stringify(summary), {
       status: 200,
-      headers: { "Content-Type": "application/json" },
+      headers: { 
+        "Content-Type": "application/json",
+        "X-Response-Time": `${duration}ms`
+      },
     });
   } catch (err) {
-    console.error("summarize-last error:", err);
+    const duration = Date.now() - startTime;
+    console.error(`[ERROR] Failed after ${duration}ms:`, err);
+    
     if (err instanceof AppError) {
-      return new Response(JSON.stringify({ error: err.message }), {
+      console.error(`AppError [${err.status}]: ${err.message}`);
+      return new Response(JSON.stringify({ 
+        error: err.message,
+        status: err.status 
+      }), {
         status: err.status,
         headers: { "Content-Type": "application/json" },
       });
     }
-    return new Response(JSON.stringify({ error: "internal_error", details: String(err) }), {
+    
+    console.error("Unexpected error:", err);
+    return new Response(JSON.stringify({ 
+      error: "internal_error", 
+      details: String(err),
+      message: err instanceof Error ? err.message : "Unknown error"
+    }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
     });
