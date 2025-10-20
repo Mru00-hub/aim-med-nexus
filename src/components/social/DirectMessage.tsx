@@ -4,10 +4,11 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
-import { SmilePlus, Trash2, Pencil, Reply, Loader2, AlertCircle, Download, File as FileIcon } from 'lucide-react';
+// REMOVED: SmilePlus
+import { Trash2, Pencil, Reply, Loader2, AlertCircle, Download, File as FileIcon } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { EmojiPicker } from './EmojiPicker';
+// REMOVED: EmojiPicker import
 import { DirectMessageAttachment, DirectMessageWithDetails } from '@/integrations/supabase/social.api';
 import { MessageWithParent } from '@/hooks/useConversationData'; // NEW: Import the rich type
 import { decryptFile, decryptMessage } from '@/lib/crypto';
@@ -113,6 +114,7 @@ const Attachment: React.FC<{
       </a>
     );
   }
+  // Render for OTHER files
   return (
     <Button 
       variant="outline" 
@@ -143,7 +145,7 @@ export const DirectMessage = ({ message, currentUserId, conversationKey, onReply
     const [isEditing, setIsEditing] = useState(false);
     const [editedContent, setEditedContent] = useState(message.content);
     const [showActions, setShowActions] = useState(false);
-    const [showPicker, setShowPicker] = useState(false);
+    // REMOVED: showPicker state
 
     const isMe = message.sender_id === currentUserId;
     const displayName = message.author?.full_name || 'User';
@@ -166,7 +168,7 @@ export const DirectMessage = ({ message, currentUserId, conversationKey, onReply
 
     const handleReactionClick = (emoji: string) => {
         onReaction(message.id, emoji);
-        setShowPicker(false);
+        // REMOVED: setShowPicker(false);
         setShowActions(false);
     }
     
@@ -240,16 +242,12 @@ export const DirectMessage = ({ message, currentUserId, conversationKey, onReply
                 {showActions && (
                     <div className={cn("absolute z-10 flex items-center bg-card border rounded-full shadow-md", "top-[-16px]", isMe ? "right-12" : "left-12")}>
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { onReplyClick(message); setShowActions(false); }} title="Reply"><Reply className="h-4 w-4" /></Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setShowPicker(p => !p)} title="Add Reaction"><SmilePlus className="h-4 w-4" /></Button>
+                        {/* REMOVED: Add Reaction Button */}
                         {isMe && <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setIsEditing(true); setShowActions(false); }} title="Edit"><Pencil className="h-4 w-4" /></Button>}
                         {isMe && <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onDelete(message.id)} title="Delete"><Trash2 className="h-4 w-4 text-destructive" /></Button>}
                     </div>
                 )}
-                {showPicker && (
-                     <div className="absolute z-20 top-[-20px] left-1/2 -translate-x-1/2">
-                        <EmojiPicker onSelect={handleReactionClick} />
-                    </div>
-                )}
+                {/* REMOVED: showPicker conditional block */}
             </div>
 
             {isMe && <Avatar className="h-8 w-8 flex-shrink-0"><AvatarImage src={message.author?.profile_picture_url || undefined} /><AvatarFallback>{displayName.charAt(0)}</AvatarFallback></Avatar>}
