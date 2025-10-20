@@ -76,7 +76,7 @@ export const Header = () => {
       // Explicitly set to 0 if there's no user
       setUnreadInboxCount(0);
     }
-  }, [initialUnreadCount, user, setUnreadInboxCount]);
+  }, [initialUnreadCount, user]);
 
   const handleLovingItClick = async () => {
     setLovingItCount(prevCount => prevCount + 1);
