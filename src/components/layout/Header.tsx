@@ -41,16 +41,15 @@ export const Header = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isAlertOpen, setIsAlertOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-    const { 
+  const { 
     requestCount, 
     unreadInboxCount, 
-    setRequestCount, 
-    setUnreadInboxCount 
+    unreadNotifCount // Get the new count
   } = useSocialCounts();
 
   // --- THIS ARRAY DEFINITION WAS ACCIDENTALLY OMITTED ---
   const headerIcons = [
-    { icon: Bell, label: 'Notifications', href: '/notifications', showBadge: false, badge: 0, color: 'text-warning hover:text-warning/80' },
+    { icon: Bell, label: 'Notifications', href: '/notifications', showBadge: true, badge: unreadNotifCount, color: 'text-warning hover:text-warning/80' }, // Uses context
     { icon: Users, label: 'Social', href: '/social', showBadge: true, badge: requestCount, color: 'text-primary hover:text-primary/80' },
     { icon: MessageCircle, label: 'Inbox', href: '/inbox', showBadge: true, badge: unreadInboxCount, color: 'text-premium hover:text-premium/80' }
   ];
@@ -68,38 +67,6 @@ export const Header = () => {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
-
-  useEffect(() => {
-    // initialUnreadCount will be null on load, then a number.
-    // We update the context when it's not null.
-    // useAuth already handles setting it to 0 on logout.
-    if (initialUnreadCount !== null) {
-      setUnreadInboxCount(initialUnreadCount);
-    } else if (!user) {
-      // Explicitly set to 0 if there's no user
-      setUnreadInboxCount(0);
-    }
-  }, [initialUnreadCount, user, setUnreadInboxCount]); 
-
-  useEffect(() => {
-    const fetchPendingRequests = async () => {
-      try {
-        const requestsResponse = await getPendingRequests();
-        setRequestCount(requestsResponse.data?.length || 0);
-
-      } catch (error) {
-        console.error("Failed to fetch pending requests:", error);
-        setRequestCount(0);
-      }
-    };
-
-    if (user) {
-      fetchPendingRequests();
-    } else {
-      // If user logs out, reset request count
-      setRequestCount(0);
-    }
-  }, [user, setRequestCount]);
 
   const handleLovingItClick = async () => {
     setLovingItCount(prevCount => prevCount + 1);
