@@ -61,10 +61,15 @@ const ProfilePage = () => {
 
       try {
         const { data, error: rpcError } = await supabase.rpc('get_profile_with_privacy', {
-          profile_id: targetUserId
+          profile_id: targetUserId,
+          viewer_id: user?.id || null // Pass current user's ID or null if not logged in
         });
-
+        
         if (rpcError) throw rpcError;
+        if (rpcError) {
+          console.error("RPC Error:", rpcError);
+          throw rpcError;
+        }
         
         const profile = data?.[0]; 
 
