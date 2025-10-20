@@ -40,7 +40,7 @@ type RecommendationWithMutuals = UserRecommendation & {
 const FunctionalSocial = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const { refetchRequestCount } = useSocialCounts();
+  const { setRequestCount } = useSocialCounts();
   const [loading, setLoading] = useState(true);
   
   // State for all social data
@@ -120,8 +120,50 @@ const FunctionalSocial = () => {
 
   // These handlers correctly call the new standalone functions
   const handleSendRequest = (addresseeId: string) => handleAction(() => sendConnectionRequest(addresseeId), "Connection request sent.");
-  const handleRespondRequest = (requesterId: string, response: 'accepted' | 'ignored') => handleAction(() => respondToRequest(requesterId, response), `Request ${response}.`);
+  const handleRespondRequest = async (requesterId: string, response: 'accepted' | 'ignored') => {
+    // 1. Store rollback state
+    const previousRequests = [...requests];
+
+    // 2. Optimistic updates
+    setRequestCount(prev => prev - 1);
+    setRequests(prev => prev.filter(req => req.requester_id !== requesterId));
+    
+    try {
+      // 3. API call
+      await respondToRequest(requesterId, response);
+      toast({ title: "Success", description: `Request ${response}.` });
+
+      // 4. On success, fetch all data (good compromise)
+      // This will correctly add the user to your "My Network" tab if accepted.
+      await fetchData(); 
+
+    } catch (error: any) {
+      // 5. Rollback on failure
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+      setRequests(previousRequests);
+      setRequestCount(prev => prev + 1);
+    }
+  };
   const handleRemoveConnection = (userId: string) => handleAction(() => removeConnection(userId), "Connection removed.");
+  const handleWithdrawRequest = async (addresseeId: string) => {
+    // 1. Store rollback state
+    const previousSentRequests = [...sentRequests];
+
+    // 2. Optimistic update
+    setSentRequests(prev => prev.filter(req => req.addressee_id !== addresseeId));
+
+    try {
+      // 3. API call
+      // We assume removeConnection handles deleting from the 'connection_requests' table
+      // based on your original code.
+      await removeConnection(addresseeId); 
+      toast({ title: "Success", description: "Request withdrawn." });
+    } catch (error: any) {
+      // 4. Rollback
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+      setSentRequests(previousSentRequests);
+    }
+  };
   const handleBlockUser = (userId: string) => handleAction(() => blockUser(userId), "User has been blocked.");
   const handleUnblockUser = (userId: string) => handleAction(() => unblockUser(userId), "User has been unblocked.");
   
@@ -168,7 +210,7 @@ const FunctionalSocial = () => {
                     loading={loading}
                     onRespondRequest={handleRespondRequest}
                     onBlockUser={handleBlockUser}
-                    onWithdrawRequest={handleRemoveConnection} // Withdrawing is the same as removing a pending connection
+                    onWithdrawRequest={handleWithdrawRequest}  // Withdrawing is the same as removing a pending connection
                 />
             </TabsContent>
             
