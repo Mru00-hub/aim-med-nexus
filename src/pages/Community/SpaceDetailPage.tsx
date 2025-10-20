@@ -233,8 +233,7 @@ export default function SpaceDetailPage() {
       toast({ title: "Success!", description: "Ownership transferred." });
       setShowTransferDialog(false);
       setSelectedNewOwnerId('');
-      await refreshSpaces(); 
-      await refreshList(); 
+      await refreshSpaces();  
     } catch (error: any) {
       toast({ title: "Transfer Failed", description: error.message, variant: "destructive" });
     } finally {
