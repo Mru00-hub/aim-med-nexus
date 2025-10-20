@@ -21,7 +21,8 @@ export type NotificationWithActor = {
   user_id: string;
   actor_id: string;
   type: NotificationType;
-  entity_id: string; // e.g., thread_id, user_id, job_id
+  entity_id: string | null; // e.g., thread_id, user_id, job_id
+  announcement_id: string | null;
   is_read: boolean;
   created_at: string;
   actor: {
@@ -57,7 +58,7 @@ export const getNotifications = async (): Promise<NotificationWithActor[]> => {
         full_name,
         profile_picture_url
       ),
-      announcement:announcements!entity_id ( 
+      announcement:announcements ( 
         title, 
         body 
       )
