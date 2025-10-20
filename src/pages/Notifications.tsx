@@ -225,7 +225,7 @@ const NotificationSkeleton = () => (
 export default function Notifications() {
   const [activeTab, setActiveTab] = useState('all');
   const { toast } = useToast();
-  const { refetchNotifCount } = useSocialCounts();
+  const { refetchNotifCount, setUnreadNotifCount } = useSocialCounts();
 
   const [notifications, setNotifications] = useState<NotificationWithActor[]>(
     []
@@ -281,6 +281,7 @@ export default function Notifications() {
   // --- API Mutation Handlers ---
   const handleMarkAsRead = async (id: string) => {
     const previousState = notifications;
+    setUnreadNotifCount((prev) => prev - 1); 
     setNotifications((current) =>
       current.map((n) => (n.id === id ? { ...n, is_read: true } : n))
     );
@@ -293,11 +294,14 @@ export default function Notifications() {
         variant: 'destructive',
       });
       setNotifications(previousState); // Revert
+      setUnreadNotifCount((prev) => prev + 1); 
     }
   };
 
   const handleMarkAllAsRead = async () => {
     const previousState = [...notifications];
+    const previousUnreadCount = unreadCount;
+    setUnreadNotifCount(0);
     setNotifications((current) => current.map((n) => ({ ...n, is_read: true })));
     try {
       await markAllNotificationsAsRead();
@@ -308,15 +312,22 @@ export default function Notifications() {
         variant: 'destructive',
       });
       setNotifications(previousState); // Revert
+      setUnreadNotifCount(previousUnreadCount);
     }
   };
 
   const handleDelete = async (id: string) => {
     const previousState = [...notifications];
+    const notificationToDelete = previousState.find(n => n.id === id);
+    const wasUnread = notificationToDelete && !notificationToDelete.is_read;
+    if (wasUnread) {
+      setUnreadNotifCount((prev) => prev - 1);
+    }
     setNotifications((current) => current.filter((n) => n.id !== id));
     try {
       await deleteNotification(id);
       toast({ title: 'Deleted', description: 'Notification removed.' });
+      refetchNotifCount();
     } catch (err) {
       toast({
         title: 'Error',
@@ -324,6 +335,9 @@ export default function Notifications() {
         variant: 'destructive',
       });
       setNotifications(previousState); // Revert
+      if (wasUnread) {
+      setUnreadNotifCount((prev) => prev + 1);
+      }
     }
   };
 
