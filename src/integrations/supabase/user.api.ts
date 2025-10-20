@@ -26,7 +26,6 @@ export type NotificationPreferences = {
   connection_requests: boolean;
   job_alerts: boolean;
   forum_updates: boolean;
-  message_notifications: boolean;
 };
 
 /**
@@ -53,7 +52,7 @@ export const getNotificationPreferences = async (): Promise<NotificationPreferen
   const { data, error } = await supabase
     .from('notification_preferences')
     .select(
-      'id, user_id, email_enabled, connection_requests, job_alerts, forum_updates, message_notifications'
+      'id, user_id, email_enabled, connection_requests, job_alerts, forum_updates'
     )
     .eq('user_id', user.id)
     .limit(1); // Expect one row per user
