@@ -8,8 +8,10 @@ import { getNotifications } from '@/integrations/supabase/notifications.api';
 
 interface SocialCountsContextType {
   requestCount: number;
+  setRequestCount,
   unreadInboxCount: number;
   unreadNotifCount: number;
+  setUnreadNotifCount,
   setUnreadInboxCount: (count: number) => void; // 2. ADD setter for inbox back
   refetchNotifCount: () => void; // [!code ++]
   refetchRequestCount: () => void; // [!code ++]
