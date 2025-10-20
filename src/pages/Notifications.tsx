@@ -1,277 +1,462 @@
-import React, { useState } from 'react';
+// src/pages/Notifications.tsx
+
+import React, { useState, useMemo, useEffect } from 'react';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { 
-  Bell, 
-  MessageSquare, 
-  Users, 
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Bell,
+  MessageSquare,
+  Users,
   Briefcase,
   CheckCircle,
   X,
-  Settings,
-  Mail,
-  Smartphone,
-  Calendar,
   Star,
-  Heart,
-  Reply,
-  Construction 
+  Construction,
+  AlertCircle,
+  CheckSquare,
+  Loader2,
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useToast } from '@/components/ui/use-toast';
+import {
+  getNotifications,
+  markNotificationAsRead,
+  markAllNotificationsAsRead,
+  deleteNotification,
+  NotificationWithActor,
+  NotificationType,
+} from '@/integrations/supabase/notifications.api';
+import { formatDistanceToNow } from 'date-fns';
 
-/**
- * Notifications Page - Comprehensive notification center
- * Manages all platform notifications with preferences and filtering
- */
-const Notifications = () => {
+// --- Helper function to get display details ---
+const getNotificationDetails = (notification: NotificationWithActor) => {
+  const { type, actor } = notification;
+  const actorName = actor?.full_name || 'Someone';
+
+  let icon: React.ElementType = Bell;
+  let title = 'New Notification';
+  let description = 'You have a new update.';
+
+  switch (type) {
+    case 'system_update':
+      icon = Star;
+      title = actor?.full_name || 'Platform Update'; // Use the actor's name (e.g., "System")
+      description = 'Check out the latest features and announcements.';
+      break;
+    case 'new_thread':
+      icon = MessageSquare;
+      title = 'New Public Thread';
+      description = `${actorName} created a new public thread.`;
+      break;
+    case 'new_space':
+      icon = Users;
+      title = 'New Space Created';
+      description = `${actorName} created a new space.`;
+      break;
+    case 'connection_accepted':
+      icon = CheckSquare;
+      title = 'Connection Accepted';
+      description = `${actorName} accepted your connection request.`;
+      break;
+    case 'new_reply':
+      icon = MessageSquare;
+      title = 'New Reply';
+      description = `${actorName} replied to a thread you're following.`;
+      break;
+    case 'job_application_update':
+      icon = Briefcase;
+      title = 'Job Application Update';
+      description = `Your application for a job has been updated.`;
+      break;
+    default:
+      console.warn(`Unknown notification type: ${type}`);
+  }
+
+  return { icon, title, description };
+};
+
+// --- Notification Card Sub-component ---
+const NotificationCard = ({
+  notification,
+  onClick,
+  onMarkRead,
+  onDelete,
+}: {
+  notification: NotificationWithActor;
+  onClick: (notification: NotificationWithActor) => void;
+  onMarkRead: (id: string) => void;
+  onDelete: (id: string) => void;
+}) => {
+  const { icon: Icon, title, description } = getNotificationDetails(notification);
+
+  return (
+    <Card
+      key={notification.id}
+      className={`card-medical cursor-pointer transition-all hover:shadow-hover ${
+        !notification.is_read ? 'border-l-4 border-l-primary bg-primary/5' : ''
+      }`}
+      onClick={() => onClick(notification)}
+    >
+      <CardContent className="p-6">
+        <div className="flex items-start gap-4">
+          <div
+            className={`w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center ${
+              !notification.is_read ? 'bg-gradient-primary' : 'bg-muted'
+            }`}
+          >
+            <Icon
+              className={`h-5 w-5 ${
+                !notification.is_read
+                  ? 'text-primary-foreground'
+                  : 'text-muted-foreground'
+              }`}
+            />
+          </div>
+
+          <div className="flex-1 min-w-0">
+            <div className="flex items-start justify-between mb-2">
+              <h3
+                className={`font-semibold truncate ${
+                  !notification.is_read
+                    ? 'text-foreground'
+                    : 'text-muted-foreground'
+                }`}
+              >
+                {title}
+              </h3>
+              <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                <span className="text-xs text-muted-foreground whitespace-nowrap">
+                  {formatDistanceToNow(new Date(notification.created_at), {
+                    addSuffix: true,
+                  })}
+                </span>
+                {!notification.is_read && (
+                  <div
+                    className="w-2 h-2 bg-primary rounded-full"
+                    title="Unread"
+                  ></div>
+                )}
+              </div>
+            </div>
+
+            <p className="text-muted-foreground mb-3">{description}</p>
+
+            <div className="flex items-center gap-3">
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onMarkRead(notification.id);
+                }}
+                disabled={notification.is_read}
+              >
+                <CheckCircle className="h-4 w-4 mr-1" />
+                Mark Read
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(notification.id);
+                }}
+              >
+                <X className="h-4 w-4 mr-1" />
+                Delete
+              </Button>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+// --- Skeleton Loader Sub-component ---
+const NotificationSkeleton = () => (
+  <Card className="card-medical">
+    <CardContent className="p-6">
+      <div className="flex items-start gap-4">
+        <Skeleton className="w-10 h-10 rounded-full flex-shrink-0" />
+        <div className="flex-1 space-y-3">
+          <div className="flex justify-between">
+            <Skeleton className="h-5 w-1/2" />
+            <Skeleton className="h-4 w-1/4" />
+          </div>
+          <Skeleton className="h-4 w-3/4" />
+          <div className="flex gap-3">
+            <Skeleton className="h-8 w-24" />
+            <Skeleton className="h-8 w-24" />
+          </div>
+        </div>
+      </div>
+    </CardContent>
+  </Card>
+);
+
+// --- Main Page Component ---
+export default function Notifications() {
   const [activeTab, setActiveTab] = useState('all');
-  
-  // Example notifications - in real app this would come from API
-  const notifications = [
-    {
-      id: 1,
-      type: 'forum',
-      icon: MessageSquare,
-      title: 'New reply in "Best guidelines for AFib in 2025?"',
-      description: 'Dr. Patel replied to your discussion in Global Cardiology forum',
-      timestamp: '5 minutes ago',
-      isRead: false,
-      actionUrl: '/forums/thread/1'
-    },
-    {
-      id: 2,
-      type: 'connection',
-      icon: Users,
-      title: 'New connection request',
-      description: 'Dr. Priya Sharma wants to connect with you',
-      timestamp: '2 hours ago',
-      isRead: false,
-      actionUrl: '/social'
-    },
-    {
-      id: 3,
-      type: 'job',
-      icon: Briefcase,
-      title: 'Job application update',
-      description: 'Your application for Clinical Data Analyst at CarePulse Labs has been reviewed',
-      timestamp: '1 day ago',
-      isRead: true,
-      actionUrl: '/networking?tab=jobs'
-    },
-    {
-      id: 4,
-      type: 'forum',
-      icon: Heart,
-      title: 'Your post received reactions',
-      description: '12 healthcare professionals liked your post about AI in diagnostics',
-      timestamp: '2 days ago',
-      isRead: true,
-      actionUrl: '/forums'
-    },
-    {
-      id: 5,
-      type: 'system',
-      icon: Star,
-      title: 'Welcome to AIMedNet Premium!',
-      description: 'Your premium subscription is now active. Enjoy enhanced features.',
-      timestamp: '3 days ago',
-      isRead: true,
-      actionUrl: '/premium'
-    },
-    {
-      id: 6,
-      type: 'forum',
-      icon: Reply,
-      title: 'Tagged in discussion',
-      description: 'Dr. Ahmed mentioned you in "AI triage in ER—real results"',
-      timestamp: '1 week ago',
-      isRead: true,
-      actionUrl: '/forums/thread/3'
+  const { toast } = useToast();
+
+  const [notifications, setNotifications] = useState<NotificationWithActor[]>(
+    []
+  );
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // --- Data Fetching ---
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const data = await getNotifications();
+        setNotifications(data);
+      } catch (err: any) {
+        setError('Failed to load notifications. Please try again later.');
+        console.error(err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchNotifications();
+  }, []);
+
+  // --- Memoized Lists ---
+  const unreadCount = useMemo(() => {
+    return notifications.filter((n) => !n.is_read).length;
+  }, [notifications]);
+
+  const filteredNotifications = useMemo(() => {
+    if (activeTab === 'all') return notifications;
+    if (activeTab === 'unread') return notifications.filter((n) => !n.is_read);
+
+    if (activeTab === 'updates') {
+      return notifications.filter(
+        (n) =>
+          n.type === 'system_update' ||
+          n.type === 'new_thread' ||
+          n.type === 'new_space' ||
+          n.type === 'new_reply'
+      );
     }
-  ];
 
-  const notificationPreferences = [
-    {
-      category: 'Forum Discussions',
-      description: 'Replies, mentions, and forum activity',
-      email: true,
-      push: true,
-      mobile: false
-    },
-    {
-      category: 'Connection Requests',
-      description: 'New connection requests and acceptances',
-      email: true,
-      push: true,
-      mobile: true
-    },
-    {
-      category: 'Job Applications',
-      description: 'Application updates and new job matches',
-      email: true,
-      push: false,
-      mobile: false
-    },
-    {
-      category: 'Messages',
-      description: 'New private messages and conversations',
-      email: false,
-      push: true,
-      mobile: true
-    },
-    {
-      category: 'Platform Updates',
-      description: 'New features, maintenance, and announcements',
-      email: true,
-      push: false,
-      mobile: false
+    if (activeTab === 'social') {
+      return notifications.filter((n) => n.type === 'connection_accepted');
     }
-  ];
 
-  const unreadCount = notifications.filter(n => !n.isRead).length;
+    return [];
+  }, [notifications, activeTab]);
 
-  const getNotificationsByType = (type: string) => {
-    if (type === 'all') return notifications;
-    if (type === 'unread') return notifications.filter(n => !n.isRead);
-    return notifications.filter(n => n.type === type);
+  // --- API Mutation Handlers ---
+  const handleMarkAsRead = async (id: string) => {
+    const previousState = notifications;
+    setNotifications((current) =>
+      current.map((n) => (n.id === id ? { ...n, is_read: true } : n))
+    );
+    try {
+      await markNotificationAsRead(id);
+    } catch (err) {
+      toast({
+        title: 'Error',
+        description: 'Failed to mark as read.',
+        variant: 'destructive',
+      });
+      setNotifications(previousState); // Revert
+    }
   };
 
-  const markAsRead = (id: number) => {
-    // In real app, this would update via API
-    console.log('Marking notification as read:', id);
+  const handleMarkAllAsRead = async () => {
+    const previousState = [...notifications];
+    setNotifications((current) => current.map((n) => ({ ...n, is_read: true })));
+    try {
+      await markAllNotificationsAsRead();
+    } catch (err) {
+      toast({
+        title: 'Error',
+        description: 'Failed to mark all as read.',
+        variant: 'destructive',
+      });
+      setNotifications(previousState); // Revert
+    }
   };
 
-  const markAllAsRead = () => {
-    // In real app, this would update via API
-    console.log('Marking all notifications as read');
+  const handleDelete = async (id: string) => {
+    const previousState = [...notifications];
+    setNotifications((current) => current.filter((n) => n.id !== id));
+    try {
+      await deleteNotification(id);
+      toast({ title: 'Deleted', description: 'Notification removed.' });
+    } catch (err) {
+      toast({
+        title: 'Error',
+        description: 'Failed to delete notification.',
+        variant: 'destructive',
+      });
+      setNotifications(previousState); // Revert
+    }
+  };
+
+  const handleNotificationClick = (notification: NotificationWithActor) => {
+    if (!notification.is_read) {
+      handleMarkAsRead(notification.id);
+    }
+    toast({
+      title: 'Navigation Under Construction',
+      description: 'Clicking this notification will take you to the content soon.',
+    });
+  };
+
+  // --- Main Render Helper ---
+  const renderContent = () => {
+    if (isLoading) {
+      return (
+        <div className="space-y-4">
+          <NotificationSkeleton />
+          <NotificationSkeleton />
+          <NotificationSkeleton />
+        </div>
+      );
+    }
+
+    if (error) {
+      return (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      );
+    }
+
+    if (filteredNotifications.length > 0) {
+      return (
+        <div className="space-y-4">
+          {filteredNotifications.map((notification) => (
+            <NotificationCard
+              key={notification.id}
+              notification={notification}
+              onClick={handleNotificationClick}
+              onMarkRead={handleMarkAsRead}
+              onDelete={handleDelete}
+            />
+          ))}
+        </div>
+      );
+    }
+
+    return (
+      <Card className="card-medical">
+        <CardContent className="p-12 text-center">
+          <Bell className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+          <h3 className="text-lg font-semibold mb-2">No notifications</h3>
+          <p className="text-muted-foreground">
+            {activeTab === 'unread'
+              ? "You're all caught up!"
+              : `No ${activeTab} notifications to show.`}
+          </p>
+        </CardContent>
+      </Card>
+    );
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="flex flex-col min-h-screen bg-background">
       <Header />
-      
-      <main className="container-medical py-8">
+
+      <main className="container-medical flex-grow py-8">
         <Alert className="mb-8 border-primary/50">
           <Construction className="h-5 w-5" />
-          <AlertTitle className="font-bold text-lg">Feature Under Construction</AlertTitle>
+          <AlertTitle className="font-bold text-lg">
+            Notifications Hub
+          </AlertTitle>
           <AlertDescription className="text-base">
-            We are actively building a powerful, real-time notification system for you. 
-            The content on this page is currently a placeholder. Thank you for your patience!
+            This is your new feed for all platform and community updates. Job
+            alerts are coming soon!
           </AlertDescription>
         </Alert>
-        
-        {/* Page Header */}
+
         <div className="flex justify-between items-center mb-8 animate-fade-in">
           <div>
             <h1 className="text-3xl font-bold mb-2">Notifications</h1>
             <p className="text-muted-foreground text-lg">
-              Stay updated with your professional healthcare network activity.
+              Stay updated with your community and platform activity.
             </p>
           </div>
-          
+
           <div className="flex items-center gap-4">
-            <Badge variant="secondary" className="text-sm">{unreadCount} unread</Badge>
-            <Button variant="outline" onClick={markAllAsRead}>
+            {unreadCount > 0 && (
+              <Badge variant="destructive" className="text-sm">
+                {unreadCount} Unread
+              </Badge>
+            )}
+            <Button
+              variant="outline"
+              onClick={handleMarkAllAsRead}
+              disabled={unreadCount === 0 || isLoading}
+            >
               Mark All Read
             </Button>
           </div>
         </div>
 
         <div className="grid lg:grid-cols-4 gap-8">
-          {/* Main Notifications */}
           <div className="lg:col-span-3 animate-slide-up">
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="grid w-full grid-cols-5 mb-6">
                 <TabsTrigger value="all">All</TabsTrigger>
                 <TabsTrigger value="unread">Unread</TabsTrigger>
-                <TabsTrigger value="forum">Forums</TabsTrigger>
-                <TabsTrigger value="connection">Social</TabsTrigger>
+                <TabsTrigger value="updates">Updates</TabsTrigger>
+                <TabsTrigger value="social">Social</TabsTrigger>
                 <TabsTrigger value="job">Jobs</TabsTrigger>
               </TabsList>
 
-              {['all', 'unread', 'forum', 'connection', 'job'].map((tabValue) => (
-                <TabsContent key={tabValue} value={tabValue} className="space-y-4">
-                  {getNotificationsByType(tabValue).length > 0 ? (
-                    getNotificationsByType(tabValue).map((notification) => (
-                      <Card 
-                        key={notification.id} 
-                        className={`card-medical cursor-pointer transition-all hover:shadow-hover ${
-                          !notification.isRead ? 'border-l-4 border-l-primary bg-primary/5' : ''
-                        }`}
-                        onClick={() => markAsRead(notification.id)}
-                      >
-                        <CardContent className="p-6">
-                          <div className="flex items-start gap-4">
-                            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                              !notification.isRead ? 'bg-gradient-primary' : 'bg-muted'
-                            }`}>
-                              <notification.icon className={`h-5 w-5 ${
-                                !notification.isRead ? 'text-primary-foreground' : 'text-muted-foreground'
-                              }`} />
-                            </div>
-                            
-                            <div className="flex-1">
-                              <div className="flex items-start justify-between mb-2">
-                                <h3 className={`font-semibold ${!notification.isRead ? 'text-foreground' : 'text-muted-foreground'}`}>
-                                  {notification.title}
-                                </h3>
-                                <div className="flex items-center gap-2">
-                                  <span className="text-xs text-muted-foreground">{notification.timestamp}</span>
-                                  {!notification.isRead && (
-                                    <div className="w-2 h-2 bg-primary rounded-full"></div>
-                                  )}
-                                </div>
-                              </div>
-                              
-                              <p className="text-muted-foreground mb-3">{notification.description}</p>
-                              
-                              <div className="flex items-center gap-3">
-                                <Button size="sm" variant="outline" className="hover:bg-primary/5">
-                                  View Details
-                                </Button>
-                                <Button size="sm" variant="ghost" onClick={(e) => {
-                                  e.stopPropagation();
-                                  markAsRead(notification.id);
-                                }}>
-                                  <CheckCircle className="h-4 w-4 mr-1" />
-                                  {notification.isRead ? 'Read' : 'Mark Read'}
-                                </Button>
-                                <Button size="sm" variant="ghost">
-                                  <X className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))
-                  ) : (
-                    <Card className="card-medical">
-                      <CardContent className="p-12 text-center">
-                        <Bell className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                        <h3 className="text-lg font-semibold mb-2">No notifications</h3>
-                        <p className="text-muted-foreground">
-                          {tabValue === 'unread' 
-                            ? "You're all caught up! No unread notifications."
-                            : `No ${tabValue === 'all' ? '' : tabValue} notifications to show.`
-                          }
-                        </p>
-                      </CardContent>
-                    </Card>
-                  )}
-                </TabsContent>
-              ))}
+              <TabsContent value="all" className="space-y-4">
+                {renderContent()}
+              </TabsContent>
+              <TabsContent value="unread" className="space-y-4">
+                {renderContent()}
+              </TabsContent>
+              <TabsContent value="updates" className="space-y-4">
+                {renderContent()}
+              </TabsContent>
+              <TabsContent value="social" className="space-y-4">
+                {renderContent()}
+              </TabsContent>
+
+              <TabsContent value="job" className="space-y-4">
+                <Card className="card-medical">
+                  <CardContent className="p-12 text-center">
+                    <Briefcase className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                    <h3 className="text-lg font-semibold mb-2">
+                      Job Notifications Coming Soon
+                    </h3>
+                    <p className="text-muted-foreground">
+                      We're building a dedicated job board. Soon, you'll get
+                      updates on applications and new job matches right here.
+                    </p>
+                  </CardContent>
+                </Card>
+              </TabsContent>
             </Tabs>
           </div>
 
-          {/* Sidebar */}
-          <div className="space-y-6 animate-fade-in">
-            {/* Quick Stats */}
+          <div className="space-y-6 animate-fade-in lg:col-span-1">
             <Card className="card-medical">
               <CardHeader>
                 <CardTitle>Activity Summary</CardTitle>
@@ -279,99 +464,24 @@ const Notifications = () => {
               <CardContent className="space-y-4">
                 <div className="flex justify-between items-center">
                   <span className="text-sm">Unread</span>
-                  <Badge variant="destructive">{unreadCount}</Badge>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm">Today</span>
-                  <span className="text-sm text-muted-foreground">
-                    {notifications.filter(n => n.timestamp.includes('ago') && 
-                      (n.timestamp.includes('minutes') || n.timestamp.includes('hours'))).length}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm">This week</span>
-                  <span className="text-sm text-muted-foreground">
-                    {notifications.length}
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Notification Preferences */}
-            <Card className="card-medical">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Settings className="h-5 w-5" />
-                  Preferences
-                </CardTitle>
-                <CardDescription>
-                  Manage how you receive notifications
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {notificationPreferences.map((pref, index) => (
-                  <div key={index} className="space-y-3">
-                    <div>
-                      <h4 className="font-medium text-sm">{pref.category}</h4>
-                      <p className="text-xs text-muted-foreground">{pref.description}</p>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Mail className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-sm">Email</span>
-                        </div>
-                        <Switch defaultChecked={pref.email} />
-                      </div>
-                      
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Bell className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-sm">Push</span>
-                        </div>
-                        <Switch defaultChecked={pref.push} />
-                      </div>
-                      
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Smartphone className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-sm">Mobile</span>
-                        </div>
-                        <Switch defaultChecked={pref.mobile} />
-                      </div>
-                    </div>
-                    
-                    {index < notificationPreferences.length - 1 && (
-                      <div className="border-t border-border pt-3" />
+                  <Badge variant={unreadCount > 0 ? 'destructive' : 'secondary'}>
+                    {isLoading ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      unreadCount
                     )}
-                  </div>
-                ))}
-                
-                <Button size="sm" className="w-full btn-medical">
-                  Save Preferences
-                </Button>
-              </CardContent>
-            </Card>
-
-            {/* Quick Actions */}
-            <Card className="card-medical">
-              <CardHeader>
-                <CardTitle>Quick Actions</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Button variant="outline" size="sm" className="w-full justify-start">
-                  <Calendar className="h-4 w-4 mr-2" />
-                  Schedule Digest
-                </Button>
-                <Button variant="outline" size="sm" className="w-full justify-start">
-                  <Mail className="h-4 w-4 mr-2" />
-                  Email Summary
-                </Button>
-                <Button variant="outline" size="sm" className="w-full justify-start">
-                  <Settings className="h-4 w-4 mr-2" />
-                  Advanced Settings
-                </Button>
+                  </Badge>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm">Total</span>
+                  <span className="text-sm text-muted-foreground">
+                    {isLoading ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      notifications.length
+                    )}
+                  </span>
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -381,6 +491,4 @@ const Notifications = () => {
       <Footer />
     </div>
   );
-};
-
-export default Notifications;
+}
