@@ -171,7 +171,7 @@ const ProfilePage = () => {
                       <CheckCircle className="h-6 w-6 text-primary" title="Verified Profile" />
                     )}
                   </div>
-                  <CardDescription className="text-lg capitalize mt-1 flex items-center gap-2">
+                  <div className="text-lg capitalize mt-1 flex items-center gap-2 text-muted-foreground">
                     <Badge variant="secondary" className="text-sm">
                       {profileData.user_role}
                     </Badge>
@@ -182,7 +182,7 @@ const ProfilePage = () => {
                         {profileData.connection_count} Connections
                       </Badge>
                     )}
-                  </CardDescription>
+                  </div>
                 </div>
                 {isOwnProfile && (
                   <Button asChild variant="outline">
