@@ -1,6 +1,6 @@
 // src/context/SocialCountsContext.tsx
 
-import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
+import React, { createContext, useState, useContext, ReactNode, useEffect, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { getPendingRequests } from '@/integrations/supabase/social.api'; // 1. REMOVE getUnreadInboxCount
