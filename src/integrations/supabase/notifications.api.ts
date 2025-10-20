@@ -29,6 +29,10 @@ export type NotificationWithActor = {
     full_name: string | null;
     profile_picture_url: string | null;
   } | null;
+  announcement: { // [!code ++]
+    title: string; // [!code ++]
+    body: string | null; // [!code ++]
+  } | null; // [!code ++]
 };
 
 // 2. --- API FUNCTIONS ---
@@ -52,6 +56,10 @@ export const getNotifications = async (): Promise<NotificationWithActor[]> => {
       actor:profiles!actor_id (
         full_name,
         profile_picture_url
+      ),
+      announcement:announcements!entity_id ( 
+        title, 
+        body 
       )
     `
     )
