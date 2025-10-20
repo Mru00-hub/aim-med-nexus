@@ -40,7 +40,7 @@ type RecommendationWithMutuals = UserRecommendation & {
 const FunctionalSocial = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const { refetchRequestCount, setRequestCount } = useSocialCounts();
+  const { refetchRequestCount } = useSocialCounts();
   const [loading, setLoading] = useState(true);
   
   // State for all social data
@@ -107,166 +107,23 @@ const FunctionalSocial = () => {
   
   useEffect(() => { fetchData(); }, [user]);
 
-  // Enhanced handleAction with optimistic updates and rollback
-  const handleAction = async (
-    action: () => Promise<any>, 
-    successMessage: string,
-    optimisticUpdate?: () => void,
-    rollback?: () => void
-  ) => {
-    // Apply optimistic update immediately
-    if (optimisticUpdate) optimisticUpdate();
-    
+  // This handleAction function is robust and works with the refactored API
+  const handleAction = async (action: () => Promise<any>, successMessage: string) => {
     try {
-      await action();
-      toast({ title: "Success", description: successMessage });
-      await fetchData(); // Re-fetch to ensure consistency
+        await action();
+        toast({ title: "Success", description: successMessage });
+        await fetchData(); // Re-fetch all data to ensure UI is consistent
     } catch (error: any) {
-      // Rollback on error
-      if (rollback) rollback();
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+        toast({ title: "Error", description: error.message, variant: "destructive" });
     }
   };
 
-  // Optimistic handlers
-  const handleSendRequest = (addresseeId: string) => {
-    const previousSent = [...sentRequests];
-    const previousRecommendations = [...recommendations];
-    
-    handleAction(
-      () => sendConnectionRequest(addresseeId),
-      "Connection request sent.",
-      // Optimistic update
-      () => {
-        // Add to sent requests (create a temporary object)
-        setSentRequests(prev => [...prev, { 
-          id: `temp-${addresseeId}`, 
-          requester_id: user!.id,
-          addressee_id: addresseeId,
-          created_at: new Date().toISOString(),
-        } as SentRequest]);
-        
-        // Remove from recommendations
-        setRecommendations(prev => prev.filter(rec => rec.id !== addresseeId));
-      },
-      // Rollback
-      () => {
-        setSentRequests(previousSent);
-        setRecommendations(previousRecommendations);
-      }
-    );
-  };
-
-  const handleRespondRequest = (requesterId: string, response: 'accepted' | 'ignored') => {
-    const previousRequests = [...requests];
-    const previousConnections = [...myConnections];
-    const requestToRespond = requests.find(r => r.requester_id === requesterId);
-    
-    handleAction(
-      () => respondToRequest(requesterId, response),
-      `Request ${response}.`,
-      // Optimistic update
-      () => {
-        // Remove from requests
-        setRequests(prev => prev.filter(r => r.requester_id !== requesterId));
-        setRequestCount(prev => Math.max(0, prev - 1));
-        
-        // If accepted, add to connections
-        if (response === 'accepted' && requestToRespond) {
-          setMyConnections(prev => [...prev, {
-            id: `temp-${requesterId}`,
-            user_id: user!.id,
-            connected_user_id: requesterId,
-            created_at: new Date().toISOString(),
-            requester: requestToRespond.requester,
-            addressee: requestToRespond.addressee,
-          } as Connection]);
-        }
-      },
-      // Rollback
-      () => {
-        setRequests(previousRequests);
-        setMyConnections(previousConnections);
-        setRequestCount(prev => prev + 1);
-      }
-    );
-  };
-
-  const handleRemoveConnection = (userId: string) => {
-    const previousConnections = [...myConnections];
-    const previousSent = [...sentRequests];
-    
-    handleAction(
-      () => removeConnection(userId),
-      "Connection removed.",
-      // Optimistic update
-      () => {
-        setMyConnections(prev => prev.filter(c => c.connected_user_id !== userId));
-        setSentRequests(prev => prev.filter(s => s.addressee_id !== userId));
-      },
-      // Rollback
-      () => {
-        setMyConnections(previousConnections);
-        setSentRequests(previousSent);
-      }
-    );
-  };
-
-  const handleBlockUser = (userId: string) => {
-    const previousBlocked = [...blockedUsers];
-    const previousRequests = [...requests];
-    const previousConnections = [...myConnections];
-    const previousRecommendations = [...recommendations];
-    const previousSent = [...sentRequests];
-    
-    handleAction(
-      () => blockUser(userId),
-      "User has been blocked.",
-      // Optimistic update
-      () => {
-        // Add to blocked (create temporary object)
-        setBlockedUsers(prev => [...prev, {
-          id: `temp-${userId}`,
-          blocker_id: user!.id,
-          blocked_id: userId,
-          created_at: new Date().toISOString(),
-          blocked_user: { id: userId, full_name: '', avatar_url: null } as any,
-        } as BlockedUser]);
-        
-        // Remove from all other lists
-        setRequests(prev => prev.filter(r => r.requester_id !== userId));
-        setMyConnections(prev => prev.filter(c => c.connected_user_id !== userId));
-        setRecommendations(prev => prev.filter(rec => rec.id !== userId));
-        setSentRequests(prev => prev.filter(s => s.addressee_id !== userId));
-        setRequestCount(prev => Math.max(0, prev - 1));
-      },
-      // Rollback
-      () => {
-        setBlockedUsers(previousBlocked);
-        setRequests(previousRequests);
-        setMyConnections(previousConnections);
-        setRecommendations(previousRecommendations);
-        setSentRequests(previousSent);
-      }
-    );
-  };
-
-  const handleUnblockUser = (userId: string) => {
-    const previousBlocked = [...blockedUsers];
-    
-    handleAction(
-      () => unblockUser(userId),
-      "User has been unblocked.",
-      // Optimistic update
-      () => {
-        setBlockedUsers(prev => prev.filter(b => b.blocked_id !== userId));
-      },
-      // Rollback
-      () => {
-        setBlockedUsers(previousBlocked);
-      }
-    );
-  };
+  // These handlers correctly call the new standalone functions
+  const handleSendRequest = (addresseeId: string) => handleAction(() => sendConnectionRequest(addresseeId), "Connection request sent.");
+  const handleRespondRequest = (requesterId: string, response: 'accepted' | 'ignored') => handleAction(() => respondToRequest(requesterId, response), `Request ${response}.`);
+  const handleRemoveConnection = (userId: string) => handleAction(() => removeConnection(userId), "Connection removed.");
+  const handleBlockUser = (userId: string) => handleAction(() => blockUser(userId), "User has been blocked.");
+  const handleUnblockUser = (userId: string) => handleAction(() => unblockUser(userId), "User has been unblocked.");
   
   return (
     <div className="min-h-screen bg-background">
@@ -311,7 +168,7 @@ const FunctionalSocial = () => {
                     loading={loading}
                     onRespondRequest={handleRespondRequest}
                     onBlockUser={handleBlockUser}
-                    onWithdrawRequest={handleRemoveConnection}
+                    onWithdrawRequest={handleRemoveConnection} // Withdrawing is the same as removing a pending connection
                 />
             </TabsContent>
             
