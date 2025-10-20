@@ -147,7 +147,7 @@ export const Header = () => {
                   <Settings className="mr-2 h-4 w-4" />
                   <span>Settings</span>
                 </DropdownMenuItem>
-                {profile?.user_role === 'ADMIN' && (
+                {profile?.role === 'ADMIN' && (
                   <DropdownMenuItem onClick={() => navigate('/admin')}>
                     <Shield className="mr-2 h-4 w-4" />
                     <span>Admin Dashboard</span>
@@ -200,7 +200,7 @@ export const Header = () => {
           <Button variant="ghost" className="justify-start" onClick={() => handleMobileNav('/settings')}>
             <Settings className="mr-2 h-4 w-4" /> Settings
           </Button>
-          {profile?.user_role === 'ADMIN' && (
+          {profile?.role === 'ADMIN' && (
             <Button variant="ghost" className="justify-start" onClick={() => handleMobileNav('/admin')}>
               <Shield className="mr-2 h-4 w-4" /> Admin Dashboard
             </Button>
