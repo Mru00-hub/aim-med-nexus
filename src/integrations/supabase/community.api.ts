@@ -193,9 +193,12 @@ export const getViewerRoleForSpace = async (spaceId: string): Promise<Enums<'mem
     if (error) {
         // .single() throws an error if no rows are found.
         // In our case, no row just means the user is not a member, which is not an application error.
-        if (error.code === 'PGRST116') {
+        if (error.code === 'PGRST116' || (error as any).status === 406) {
             return null; 
         }
+        
+        // It's some other unexpected database error
+        console.error("Unexpected error fetching user role:", error);
         throw error;
     }
     return data?.role || null;
