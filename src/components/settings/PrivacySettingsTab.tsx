@@ -6,26 +6,31 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
-import { Loader2, Save } from 'lucide-react';
+import { Loader2, Save, Info } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 // Define the structure of your privacy settings
 type PrivacySettings = {
   [key: string]: 'public' | 'connections' | 'private';
 };
 
-// Define the fields the user can control
-const privacyFields: { key: keyof PrivacySettings, label: string }[] = [
-  { key: 'email', label: 'Email Address' },
-  { key: 'phone', label: 'Phone Number' },
-  { key: 'date_of_birth', label: 'Date of Birth & Age' },
-  { key: 'current_location', label: 'Current Location' },
-  { key: 'current_position', label: 'Current Position' },
-  { key: 'organization', label: 'Organization' },
-  { key: 'institution', label: 'Educational Institution' },
-  { key: 'course', label: 'Course/Program' },
-  { key: 'specialization', label: 'Specialization' },
-  { key: 'bio', label: 'Professional Bio' },
-  { key: 'years_experience', label: 'Work Experience' },
+// ✅ UPDATED: Match your new normalized schema
+const privacyFields: { key: keyof PrivacySettings, label: string, description?: string }[] = [
+  { key: 'email', label: 'Email Address', description: 'Your contact email' },
+  { key: 'phone', label: 'Phone Number', description: 'Your contact phone' },
+  { key: 'date_of_birth', label: 'Date of Birth & Age', description: 'Your age will be calculated from this' },
+  { key: 'current_location', label: 'Current Location', description: 'City, state, or country' },
+  { key: 'current_position', label: 'Current Position', description: 'Your job title' },
+  { key: 'organization', label: 'Organization', description: 'Your workplace or company' },
+  { key: 'bio', label: 'Professional Bio', description: 'Your about section' },
+  // ✅ Educational fields
+  { key: 'institution', label: 'Educational Institution', description: 'Your university or college' },
+  { key: 'course', label: 'Course/Program', description: 'Your degree or program' },
+  { key: 'year_of_study', label: 'Year/Status', description: 'Current year or graduation status' },
+  // ✅ Professional fields
+  { key: 'specialization', label: 'Specialization/Field', description: 'Your area of expertise' },
+  { key: 'years_experience', label: 'Years of Experience', description: 'Your experience level' },
+  { key: 'medical_license', label: 'Medical License', description: 'Your license number' },
 ];
 
 const PrivacySettingsTab = () => {
@@ -54,7 +59,12 @@ const PrivacySettingsTab = () => {
           // No settings found, apply defaults
           const defaultSettings: PrivacySettings = {};
           privacyFields.forEach(field => {
-            defaultSettings[field.key] = 'connections'; // Default to 'connections'
+            // ✅ More sensible defaults
+            if (field.key === 'email' || field.key === 'phone' || field.key === 'date_of_birth') {
+              defaultSettings[field.key] = 'connections'; // Sensitive info
+            } else {
+              defaultSettings[field.key] = 'public'; // Professional info
+            }
           });
           setSettings(defaultSettings);
         }
@@ -84,9 +94,23 @@ const PrivacySettingsTab = () => {
       toast.error('Failed to save settings.');
       console.error(error);
     } else {
-      toast.success('Privacy settings updated!');
+      toast.success('Privacy settings updated successfully!');
     }
     setIsSaving(false);
+  };
+
+  // ✅ Helper to get visual indicator
+  const getPrivacyIcon = (level: string) => {
+    switch (level) {
+      case 'public':
+        return '🌍';
+      case 'connections':
+        return '👥';
+      case 'private':
+        return '🔒';
+      default:
+        return '❓';
+    }
   };
 
   if (isLoading) {
@@ -100,6 +124,8 @@ const PrivacySettingsTab = () => {
           <Skeleton className="h-10 w-full" />
           <Skeleton className="h-10 w-full" />
           <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-10 w-full" />
         </CardContent>
       </Card>
     );
@@ -108,34 +134,94 @@ const PrivacySettingsTab = () => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Profile Privacy</CardTitle>
+        <CardTitle>Profile Privacy Settings</CardTitle>
         <CardDescription>
-          Choose who can see the different parts of your profile.
+          Control who can see different parts of your profile. Changes take effect immediately.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        {privacyFields.map((field) => (
-          <div key={field.key} className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-            <label className="text-sm font-medium mb-2 sm:mb-0">
-              {field.label}
-            </label>
-            <Select
-              value={settings[field.key] || 'private'}
-              onValueChange={(value: 'public' | 'connections' | 'private') => 
-                handleSettingChange(field.key, value)
-              }
-            >
-              <SelectTrigger className="w-full sm:w-[200px]">
-                <SelectValue placeholder="Select privacy" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="public">Public (Everyone)</SelectItem>
-                <SelectItem value="connections">Connections Only</SelectItem>
-                <SelectItem value="private">Private (Only Me)</SelectItem>
-              </SelectContent>
-            </Select>
+        {/* ✅ Info Alert */}
+        <Alert>
+          <Info className="h-4 w-4" />
+          <AlertDescription>
+            <strong>Public:</strong> Everyone can see • <strong>Connections:</strong> Only your connections • <strong>Private:</strong> Only you
+          </AlertDescription>
+        </Alert>
+
+        {/* ✅ Grouped Sections */}
+        <div className="space-y-8">
+          {/* Contact Information */}
+          <div>
+            <h3 className="font-semibold text-sm mb-4 text-muted-foreground uppercase tracking-wide">
+              Contact Information
+            </h3>
+            <div className="space-y-4">
+              {privacyFields.filter(f => ['email', 'phone'].includes(f.key)).map((field) => (
+                <PrivacyFieldRow 
+                  key={field.key}
+                  field={field}
+                  value={settings[field.key] || 'private'}
+                  onChange={handleSettingChange}
+                  getIcon={getPrivacyIcon}
+                />
+              ))}
+            </div>
           </div>
-        ))}
+
+          {/* Personal Details */}
+          <div>
+            <h3 className="font-semibold text-sm mb-4 text-muted-foreground uppercase tracking-wide">
+              Personal Details
+            </h3>
+            <div className="space-y-4">
+              {privacyFields.filter(f => ['date_of_birth', 'current_location', 'bio'].includes(f.key)).map((field) => (
+                <PrivacyFieldRow 
+                  key={field.key}
+                  field={field}
+                  value={settings[field.key] || 'public'}
+                  onChange={handleSettingChange}
+                  getIcon={getPrivacyIcon}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Professional Information */}
+          <div>
+            <h3 className="font-semibold text-sm mb-4 text-muted-foreground uppercase tracking-wide">
+              Professional Information
+            </h3>
+            <div className="space-y-4">
+              {privacyFields.filter(f => ['current_position', 'organization', 'specialization', 'years_experience', 'medical_license'].includes(f.key)).map((field) => (
+                <PrivacyFieldRow 
+                  key={field.key}
+                  field={field}
+                  value={settings[field.key] || 'public'}
+                  onChange={handleSettingChange}
+                  getIcon={getPrivacyIcon}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Educational Information */}
+          <div>
+            <h3 className="font-semibold text-sm mb-4 text-muted-foreground uppercase tracking-wide">
+              Educational Information
+            </h3>
+            <div className="space-y-4">
+              {privacyFields.filter(f => ['institution', 'course', 'year_of_study'].includes(f.key)).map((field) => (
+                <PrivacyFieldRow 
+                  key={field.key}
+                  field={field}
+                  value={settings[field.key] || 'public'}
+                  onChange={handleSettingChange}
+                  getIcon={getPrivacyIcon}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
       </CardContent>
       <CardFooter className="flex justify-end bg-muted/50 p-4">
         <Button onClick={handleSaveChanges} disabled={isSaving}>
@@ -146,5 +232,49 @@ const PrivacySettingsTab = () => {
     </Card>
   );
 };
+
+// ✅ Extracted Component for Each Privacy Row
+const PrivacyFieldRow = ({ 
+  field, 
+  value, 
+  onChange, 
+  getIcon 
+}: { 
+  field: { key: string; label: string; description?: string };
+  value: 'public' | 'connections' | 'private';
+  onChange: (field: string, value: 'public' | 'connections' | 'private') => void;
+  getIcon: (level: string) => string;
+}) => (
+  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-4 rounded-lg border bg-card hover:bg-muted/50 transition-colors">
+    <div className="flex-1">
+      <div className="flex items-center gap-2">
+        <span className="text-lg">{getIcon(value)}</span>
+        <label className="text-sm font-medium">
+          {field.label}
+        </label>
+      </div>
+      {field.description && (
+        <p className="text-xs text-muted-foreground mt-1 ml-7">
+          {field.description}
+        </p>
+      )}
+    </div>
+    <Select
+      value={value}
+      onValueChange={(val: 'public' | 'connections' | 'private') => 
+        onChange(field.key, val)
+      }
+    >
+      <SelectTrigger className="w-full sm:w-[180px]">
+        <SelectValue placeholder="Select privacy" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="public">🌍 Public</SelectItem>
+        <SelectItem value="connections">👥 Connections</SelectItem>
+        <SelectItem value="private">🔒 Private</SelectItem>
+      </SelectContent>
+    </Select>
+  </div>
+);
 
 export default PrivacySettingsTab;
