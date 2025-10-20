@@ -200,8 +200,8 @@ export default function Forums() {
               <div>
                 <TooltipProvider delayDuration={100}>
                   <div className="flex flex-wrap gap-1 mt-1">
-                    {space.moderators.slice(0, 3).map(mod => (
-                      <Tooltip key={mod.id}|| `mod-${index}>
+                    {space.moderators.slice(0, 3).map((mod, index) => (
+                      <Tooltip key={mod.id || `mod-${index}`}>
                         <TooltipTrigger asChild>
                           <span className="inline-block"> {/* ✅ Add wrapper */}
                             <Badge variant="outline" className="cursor-default">
