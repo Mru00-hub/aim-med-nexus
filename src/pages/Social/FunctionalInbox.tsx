@@ -7,37 +7,30 @@ import { Card, CardContent } from '@/components/ui/card';
 import { MessageCircle } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 import type { Tables, Database } from '@/integrations/supabase/types';
 
-import { ConversationList } from '@/components/social/ConversationList';
-import { ConversationView } from '@/components/social/ConversationView';
-import { useAuth } from '@/hooks/useAuth';
 type Conversation = Database['public']['Functions']['inbox_conversations']['Returns'][0];
 type DirectMessagePayload = Tables<'direct_messages'>;
 
-// Simple debounce helper, adjust delay as needed
 function useDebouncedCallback(callback: () => void, delay: number) {
   const timeout = useRef<NodeJS.Timeout | null>(null);
-
   return useCallback(() => {
     if (timeout.current) clearTimeout(timeout.current);
-    timeout.current = setTimeout(() => {
-      callback();
-    }, delay);
+    timeout.current = setTimeout(callback, delay);
   }, [callback, delay]);
 }
 
 const FunctionalInbox = () => {
+  const { user, loading: authLoading } = useAuth();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const { setUnreadInboxCount } = useSocialCounts();
   const { toast } = useToast();
   const location = useLocation();
-  const { encryptionKey } = useAuth();
   const navigate = useNavigate();
 
-  // Flag to ignore fetch while optimistic update in progress
   const [optimisticUpdateInProgress, setOptimisticUpdateInProgress] = useState(false);
 
   const fetchAndSetConversations = useCallback(async () => {
@@ -56,7 +49,6 @@ const FunctionalInbox = () => {
     }
   }, [toast]);
 
-  // Debounced fetch to reduce flicker on rapid inserts
   const debouncedFetch = useDebouncedCallback(() => {
     if (!optimisticUpdateInProgress) {
       fetchAndSetConversations();
@@ -69,39 +61,51 @@ const FunctionalInbox = () => {
   }, [conversations, setUnreadInboxCount]);
 
   useEffect(() => {
-    fetchAndSetConversations(); // Initial fetch
+    if (authLoading || !user) return; // Wait for auth ready before subscribing/fetching
 
-    const channel = supabase
+    fetchAndSetConversations();
+
+    const subscription = supabase
       .channel('public:direct_messages_inbox')
       .on<DirectMessagePayload>(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'direct_messages' },
         () => {
+          console.log('Realtime insert received');
           debouncedFetch();
         }
       )
-      .subscribe();
+      .subscribe(async (status) => {
+        console.log('Subscription status:', status);
+        if (status === 'SUBSCRIBED') {
+          // Subscription ready
+        } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+          console.error('Subscription closed or error occurred');
+          // You can try to resubscribe here if needed
+        }
+      });
 
     return () => {
-      supabase.removeChannel(channel);
+      subscription.unsubscribe();
+      console.log('Subscription unsubscribed');
     };
-  }, [debouncedFetch, fetchAndSetConversations]);
+  }, [authLoading, user, fetchAndSetConversations, debouncedFetch]);
 
   const handleSelectConversation = (conversation: Conversation) => {
     setOptimisticUpdateInProgress(true);
     setSelectedConversation(conversation);
-    // Optimistically mark as read in the UI immediately
     setConversations(prev =>
       prev.map(c => (c.conversation_id === conversation.conversation_id ? { ...c, unread_count: 0 } : c))
     );
-    // Reset flag after delay allowing fetch to happen afterward
     setTimeout(() => setOptimisticUpdateInProgress(false), 1000);
   };
 
   useEffect(() => {
+    if (!user) return;
     const navState = location.state as { conversationId?: string; participant?: any };
     if (!navState?.conversationId) return;
     if (loading) return;
+
     const convoInList = conversations.find(c => c.conversation_id === navState.conversationId);
 
     if (convoInList) {
@@ -120,8 +124,9 @@ const FunctionalInbox = () => {
       setConversations(prev => [phantomConversation, ...prev]);
       setSelectedConversation(phantomConversation);
     }
+
     navigate(location.pathname, { replace: true, state: null });
-  }, [location.state, conversations, loading, navigate]);
+  }, [location.state, conversations, loading, navigate, user]);
 
   return (
     <div className="min-h-screen bg-background">
