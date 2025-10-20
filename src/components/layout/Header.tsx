@@ -44,12 +44,13 @@ export const Header = () => {
   const { 
     requestCount, 
     unreadInboxCount, 
-    unreadNotifCount // Get the new count
+    unreadNotifCount,
+    setUnreadInboxCount // Get the new count
   } = useSocialCounts();
 
   // --- THIS ARRAY DEFINITION WAS ACCIDENTALLY OMITTED ---
   const headerIcons = [
-    { icon: Bell, label: 'Notifications', href: '/notifications', showBadge: true, badge: unreadNotifCount, color: 'text-warning hover:text-warning/80' }, // Uses context
+    { icon: Bell, label: 'Notifications', href: '/notifications', showBadge: true, badge: unreadNotifCount, color: 'text-warning hover:text-warning/80' },
     { icon: Users, label: 'Social', href: '/social', showBadge: true, badge: requestCount, color: 'text-primary hover:text-primary/80' },
     { icon: MessageCircle, label: 'Inbox', href: '/inbox', showBadge: true, badge: unreadInboxCount, color: 'text-premium hover:text-premium/80' }
   ];
@@ -67,6 +68,15 @@ export const Header = () => {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  useEffect(() => {
+    if (initialUnreadCount !== null) {
+      setUnreadInboxCount(initialUnreadCount);
+    } else if (!user) {
+      // Explicitly set to 0 if there's no user
+      setUnreadInboxCount(0);
+    }
+  }, [initialUnreadCount, user, setUnreadInboxCount]);
 
   const handleLovingItClick = async () => {
     setLovingItCount(prevCount => prevCount + 1);
