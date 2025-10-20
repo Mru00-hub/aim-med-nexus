@@ -107,7 +107,7 @@ export default function AdminDashboard() {
   }
 
   // 2. Show Access Denied if user is not an admin
-  if (!profile || profile.user_role !== 'ADMIN') {
+  if (!profile || profile.role !== 'ADMIN') {
     return (
       <div className="flex h-screen flex-col">
         <Header />
