@@ -49,7 +49,7 @@ export const getNotifications = async (): Promise<NotificationWithActor[]> => {
       entity_id,
       is_read,
       created_at,
-      actor:profiles (
+      actor:profiles!actor_id (
         full_name,
         profile_picture_url
       )
