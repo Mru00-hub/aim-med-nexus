@@ -53,8 +53,8 @@ const getNotificationDetails = (notification: NotificationWithActor) => {
   switch (type) {
     case 'system_update':
       icon = Star;
-      title = actor?.full_name || 'Platform Update'; // Use the actor's name (e.g., "System")
-      description = 'Check out the latest features and announcements.';
+      title = announcement?.title || 'System Update';
+      description = announcement?.body || 'Check out the latest features and announcements.';
       break;
     case 'new_thread':
       icon = MessageSquare;
@@ -108,7 +108,11 @@ const NotificationCard = ({
       className={`card-medical cursor-pointer transition-all hover:shadow-hover ${
         !notification.is_read ? 'border-l-4 border-l-primary bg-primary/5' : ''
       }`}
-      onClick={() => onClick(notification)}
+      onClick={() => {
+        if (notification.type !== 'system_update') {
+          onClick(notification);
+        }
+      }}
     >
       <CardContent className="p-6">
         <div className="flex items-start gap-4">
@@ -152,7 +156,15 @@ const NotificationCard = ({
               </div>
             </div>
 
-            <p className="text-muted-foreground mb-3">{description}</p>
+            {notification.type === 'system_update' ? (
+              // For system updates, show the body with more spacing
+              <p className="text-muted-foreground mb-3 mt-2 whitespace-pre-wrap"> 
+                {description}
+              </p>
+            ) : (
+              // For other types, keep the original
+              <p className="text-muted-foreground mb-3">{description}</p> 
+            )}
 
             <div className="flex items-center gap-3">
               <Button
@@ -265,6 +277,23 @@ export default function Notifications() {
 
     return [];
   }, [notifications, activeTab]);
+
+  const handleNotificationClick = (notification: NotificationWithActor) => {
+    if (!notification.is_read) {
+      handleMarkAsRead(notification.id);
+    }
+    
+    // [!code focus]
+    // Don't show toast for system updates, as there's no navigation
+    if (notification.type === 'system_update') {
+      return;
+    }
+
+    toast({
+      title: 'Navigation Under Construction',
+      description: 'Clicking this notification will take you to the content soon.',
+    });
+  };
 
   // --- API Mutation Handlers ---
   const handleMarkAsRead = async (id: string) => {
