@@ -607,3 +607,43 @@ export const deleteThread = async (threadId: string): Promise<void> => {
     });
     if (error) throw error;
 };
+
+export type SummaryResponse = {
+  thread_id: string;
+  message_count: number;
+  latest_message_at: string | null;
+  ai_summary: string;
+};
+
+// Add this function to call your edge function
+export const getThreadSummary = async (threadId: string, limit: number): Promise<SummaryResponse> => {
+  // 1. Get the current user's auth token
+  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError) throw sessionError;
+  if (!session) throw new Error("User is not authenticated.");
+
+  const token = session.access_token;
+  
+  // 2. Construct the full function URL (as provided by you)
+  const functionUrl = `https://kkghalgyuxgzktcaxzht.supabase.co/functions/v1/summarize-last`;
+  const urlWithParams = `${functionUrl}?thread_id=${encodeURIComponent(threadId)}&limit=${limit}`;
+
+  // 3. Make a GET request using fetch
+  const response = await fetch(urlWithParams, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`, // Pass the auth token
+      'Content-Type': 'application/json'
+    }
+  });
+
+  // 4. Handle the response
+  if (!response.ok) {
+    const errorData = await response.json();
+    console.error("Summarize function error response:", errorData);
+    throw new Error(errorData.details || errorData.error || `Request failed with status ${response.status}`);
+  }
+
+  const data: SummaryResponse = await response.json();
+  return data;
+};
