@@ -27,6 +27,7 @@ import {
 
 // *** NEW: Import the privacy tab ***
 import PrivacySettingsTab from '@/components/settings/PrivacySettingsTab';
+import { NotificationsSettingsTab } from '@/components/settings/NotificationsSettingsTab';
 
 /**
  * A dedicated component for the "Account" settings tab.
@@ -102,28 +103,6 @@ const AccountSettingsTab = () => {
 };
 
 /**
- * A placeholder component for future notification settings.
- * (This component remains unchanged)
- */
-const NotificationSettingsTab = () => {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Notification Preferences</CardTitle>
-        <CardDescription>
-          Manage how you receive notifications from AIMedNet.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <p className="text-muted-foreground">
-          Email and in-app notification settings will be available here soon.
-        </p>
-      </CardContent>
-    </Card>
-  );
-};
-
-/**
  * The main Settings Page, which uses tabs to organize different setting areas.
  */
 export const SettingsPage = () => {
@@ -160,7 +139,7 @@ export const SettingsPage = () => {
             </TabsContent>
             
             <TabsContent value="notifications" className="mt-6">
-              <NotificationSettingsTab />
+              <NotificationsSettingsTab />
             </TabsContent>
           </Tabs>
         </div>
