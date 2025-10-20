@@ -219,14 +219,6 @@ export const NotificationsSettingsTab: React.FC = () => {
         />
 
         <SettingRow
-          title="Direct Messages"
-          description="Notify me about new direct messages."
-          checked={preferences.message_notifications}
-          onToggle={(value) => handleToggle('message_notifications', value)}
-          disabled={isSaving}
-        />
-
-        <SettingRow
           title="Job Alerts"
           description="Notify me about new job postings and application updates."
           checked={preferences.job_alerts}
