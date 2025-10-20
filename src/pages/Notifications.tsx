@@ -278,23 +278,6 @@ export default function Notifications() {
     return [];
   }, [notifications, activeTab]);
 
-  const handleNotificationClick = (notification: NotificationWithActor) => {
-    if (!notification.is_read) {
-      handleMarkAsRead(notification.id);
-    }
-    
-    // [!code focus]
-    // Don't show toast for system updates, as there's no navigation
-    if (notification.type === 'system_update') {
-      return;
-    }
-
-    toast({
-      title: 'Navigation Under Construction',
-      description: 'Clicking this notification will take you to the content soon.',
-    });
-  };
-
   // --- API Mutation Handlers ---
   const handleMarkAsRead = async (id: string) => {
     const previousState = notifications;
@@ -348,6 +331,13 @@ export default function Notifications() {
     if (!notification.is_read) {
       handleMarkAsRead(notification.id);
     }
+    
+    // [!code focus]
+    // Don't show toast for system updates, as there's no navigation
+    if (notification.type === 'system_update') {
+      return;
+    }
+
     toast({
       title: 'Navigation Under Construction',
       description: 'Clicking this notification will take you to the content soon.',
