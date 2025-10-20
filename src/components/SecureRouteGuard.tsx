@@ -1,8 +1,5 @@
-// src/components/SecureRouteGuard.tsx
-
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/integrations/supabase/client';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -22,7 +19,7 @@ export const SecureRouteGuard: React.FC<SecureRouteGuardProps> = ({ children }) 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleUnlock = async (e: React.FormEvent) => {
+  const handleUnlock = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !profile?.encryption_salt) {
       setError("Your profile is not configured correctly. Please contact support.");
@@ -30,24 +27,30 @@ export const SecureRouteGuard: React.FC<SecureRouteGuardProps> = ({ children }) 
     }
     setIsLoading(true);
     setError('');
-
-    // This single function call now handles everything.
     const success = await generateAndSetKeys(password, profile.encryption_salt);
-
     if (!success) {
       setError("Incorrect password. Please try again.");
     }
-    // Note: No need for an 'else' block. If successful, the component will
-    // re-render, `userMasterKey` will exist, and the children will be shown.
     setIsLoading(false);
-  };
+  }, [password, user, profile, generateAndSetKeys]);
 
-  // 3. The condition is now based on the permanent userMasterKey
+  if (!user || !profile) {
+    // Optional: Loading indicator if user/profile data is not ready yet
+    return (
+      <>
+        <Header />
+        <main className="container-medical flex items-center justify-center py-16">
+          <div className="text-center text-muted-foreground">Loading user data...</div>
+        </main>
+        <Footer />
+      </>
+    );
+  }
+
   if (userMasterKey) {
     return <>{children}</>;
   }
 
-  // If the key is missing, show the "Unlock" screen.
   return (
     <div className="min-h-screen bg-background">
       <Header />
