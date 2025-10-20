@@ -32,7 +32,7 @@ export const DiscoverTab = ({ recommendations, loading, onSendRequest, onBlockUs
             user={{ 
               id: rec.id, 
               full_name: rec.full_name, 
-              profile_picture_url: null, 
+              profile_picture_url: rec.profile_picture_url, 
               title: rec.specialization || rec.course,
               organization: rec.organization,
               location: rec.current_location,
