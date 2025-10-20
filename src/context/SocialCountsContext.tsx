@@ -11,6 +11,8 @@ interface SocialCountsContextType {
   unreadInboxCount: number;
   unreadNotifCount: number;
   setUnreadInboxCount: (count: number) => void; // 2. ADD setter for inbox back
+  refetchNotifCount: () => void; // [!code ++]
+  refetchRequestCount: () => void; // [!code ++]
 }
 
 const SocialCountsContext = createContext<SocialCountsContextType | undefined>(undefined);
@@ -21,6 +23,22 @@ export const SocialCountsProvider = ({ children }: { children: ReactNode }) => {
   const [unreadInboxCount, setUnreadInboxCount] = useState(0); // This will be set from Header
   const [unreadNotifCount, setUnreadNotifCount] = useState(0);
 
+  const fetchPendingRequests = useCallback(async () => { // [!code focus]
+    if (!user) return; // [!code focus]
+    try {
+      const requests = await getPendingRequests();
+      setRequestCount(requests.length || 0);
+    } catch (error) { console.error("Failed to fetch pending requests:", error); }
+  }, [user]); // [!code focus]
+
+  const fetchUnreadNotifCount = useCallback(async () => { // [!code focus]
+    if (!user) return; // [!code focus]
+    try {
+      const allNotifications = await getNotifications();
+      setUnreadNotifCount(allNotifications.filter(n => !n.is_read).length);
+    } catch (error) { console.error("Failed to fetch notification count:", error); }
+  }, [user]); // [!code focus]
+
   // This useEffect now *only* manages Social and Notifications
   useEffect(() => {
     if (!user) {
@@ -29,25 +47,8 @@ export const SocialCountsProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
-    // --- 1. Define Fetching Functions ---
-    const fetchPendingRequests = async () => {
-      try {
-        const requests = await getPendingRequests();
-        setRequestCount(requests.length || 0);
-      } catch (error) { console.error("Failed to fetch pending requests:", error); }
-    };
-
-    const fetchUnreadNotifCount = async () => {
-      try {
-        const allNotifications = await getNotifications();
-        setUnreadNotifCount(allNotifications.filter(n => !n.is_read).length);
-      } catch (error) { console.error("Failed to fetch notification count:", error); }
-    };
-    
-    // --- 2. Fetch Initial Data ---
     fetchPendingRequests();
     fetchUnreadNotifCount();
-    // 3. REMOVE fetchInboxCount()
 
     // --- 3. Set Up Realtime Subscriptions ---
     const notifChannel = supabase.channel('social-counts-notifications')
@@ -69,7 +70,7 @@ export const SocialCountsProvider = ({ children }: { children: ReactNode }) => {
       // 5. REMOVE inboxChannel cleanup
     };
 
-  }, [user]);
+  }, [user, fetchPendingRequests, fetchUnreadNotifCount]);
 
   return (
     <SocialCountsContext.Provider 
@@ -77,7 +78,9 @@ export const SocialCountsProvider = ({ children }: { children: ReactNode }) => {
         requestCount, 
         unreadInboxCount, 
         unreadNotifCount, 
-        setUnreadInboxCount // 6. Pass the setter
+        setUnreadInboxCount, // 6. Pass the setter
+        refetchNotifCount: fetchUnreadNotifCount, // [!code ++]
+        refetchRequestCount: fetchPendingRequests, // [!code ++]
       }}
     >
       {children}
