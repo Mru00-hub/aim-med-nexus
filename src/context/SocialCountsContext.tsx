@@ -1,5 +1,3 @@
-// src/context/SocialCountsContext.tsx
-
 import React, { createContext, useState, useContext, ReactNode, useEffect, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -15,6 +13,7 @@ interface SocialCountsContextType {
   setUnreadInboxCount: (count: number) => void;
   refetchNotifCount: () => void;
   refetchRequestCount: () => void;
+  markNotificationAsRead: (notificationId: string) => Promise<void>;
 }
 
 const SocialCountsContext = createContext<SocialCountsContextType | undefined>(undefined);
@@ -46,27 +45,24 @@ export const SocialCountsProvider = ({ children }: { children: ReactNode }) => {
   }, [user]);
 
   const markNotificationAsRead = useCallback(async (notificationId: string) => {
-    // Optimistically update unread notification count
+    // Optimistically decrement unread count
     setUnreadNotifCount(prev => Math.max(0, prev - 1));
-
     try {
-      // Call API to mark notification as read
       await supabase
         .from('notifications')
         .update({ is_read: true })
         .eq('id', notificationId)
         .eq('user_id', user!.id);
+      // Can optionally refetch here or rely on subscriptions
+    } catch (error) {
+      console.error('Failed to mark notification as read:', error);
+      // Rollback optimistic update on failure
+      setUnreadNotifCount(prev => prev + 1);
+    }
+  }, [user]);
 
-      // Optional: you could refetch notifications here or rely on subscription updates
-      } catch (error) {
-        console.error('Failed to mark notification as read:', error);
-        // Rollback optimistic update on failure
-        setUnreadNotifCount(prev => prev + 1);
-      }
-    }, [user]);
-
-    useEffect(() => {
-      if (!user) {
+  useEffect(() => {
+    if (!user) {
       setRequestCount(0);
       setUnreadNotifCount(0);
       return;
