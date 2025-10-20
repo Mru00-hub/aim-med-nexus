@@ -53,6 +53,7 @@ const FunctionalSocial = () => {
   const fetchData = async () => {
     if (!user) return;
     setLoading(true);
+    refetchRequestCount(); 
     
     try {
       const [
@@ -75,7 +76,6 @@ const FunctionalSocial = () => {
       setRequests(requestsRes || []);
       setMyConnections(connectionsRes || []);
       setBlockedUsers(blockedRes || []);
-      setRequestCount(requestsRes?.length || 0); 
 
       // Functions that still return an ApiResponse object
       if (sentRequestsRes.data) setSentRequests(sentRequestsRes.data);
