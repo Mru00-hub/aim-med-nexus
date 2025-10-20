@@ -9,6 +9,8 @@ import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import type { Tables, Database } from '@/integrations/supabase/types';
+import { ConversationList } from '@/components/social/ConversationList';
+import { ConversationView } from '@/components/social/ConversationView';
 
 type Conversation = Database['public']['Functions']['inbox_conversations']['Returns'][0];
 type DirectMessagePayload = Tables<'direct_messages'>;
