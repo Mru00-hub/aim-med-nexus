@@ -4,7 +4,6 @@ import { Footer } from '@/components/layout/Footer';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/components/ui/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useSocialCounts } from '@/context/SocialCountsContext';
 
 // Import the new standalone functions and types from the refactored API
 import {
@@ -40,7 +39,6 @@ type RecommendationWithMutuals = UserRecommendation & {
 const FunctionalSocial = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const { setRequestCount } = useSocialCounts();
   const [loading, setLoading] = useState(true);
   
   // State for all social data
@@ -49,10 +47,6 @@ const FunctionalSocial = () => {
   const [recommendations, setRecommendations] = useState<RecommendationWithMutuals[]>([]);
   const [myConnections, setMyConnections] = useState<Connection[]>([]);
   const [blockedUsers, setBlockedUsers] = useState<BlockedUser[]>([]);
-
-  useEffect(() => {
-    setRequestCount(requests.length);
-  }, [requests, setRequestCount]);
   
   const fetchData = async () => {
     if (!user) return;
