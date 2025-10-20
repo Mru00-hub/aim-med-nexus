@@ -27,6 +27,7 @@ import NotFound from "./pages/NotFound";
 import ProfilePage from './pages/ProfilePage';
 import CompleteProfile from "./pages/CompleteProfile";
 import AuthCallback from './pages/AuthCallback'; 
+import AdminDashboard from './pages/AdminDashboard';
 
 //--FOOTER Imports--
 import HelpPage from './pages/Info/Help';
@@ -117,6 +118,7 @@ const App = () => {
                     <Route path="/payment" element={<PaymentPage />} />
                     <Route path="/inbox" element={ <SecureRouteGuard> <FunctionalInbox /> </SecureRouteGuard> } />
                     <Route path="/settings" element={<SettingsPage />} />
+                    <Route path="/admin/dashboard" element={<AdminDashboard />} />
 
                     {/* --- (PROBLEM 5 FIX) ---
                       This route now correctly includes the :spaceId
