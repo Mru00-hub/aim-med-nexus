@@ -168,14 +168,32 @@ export default function ThreadDetailPage() {
     setIsSummarizing(true);
     setSummary(null);
     setSummaryError(null);
-    // Note: We don't set isSummaryOpen(true) here because the
-    // DialogTrigger does it automatically when clicked.
     
     try {
       const result = await getThreadSummary(threadId, summaryLimit);
       setSummary(result);
     } catch (error: any) {
-      setSummaryError(error.message || "An unknown error occurred.");
+      // Log the full error to the console for easier debugging
+      console.error("Failed to generate summary:", error);
+
+      let errorMessage = "An unknown error occurred.";
+
+      // Check for the nested error message from your AppError
+      if (error.context && error.context.error) {
+        // This is a common structure for Supabase FunctionsHttpError
+        errorMessage = error.context.error;
+      } else if (error.data && error.data.error) {
+        // Another possible structure
+        errorMessage = error.data.error;
+      } else if (error.error) {
+        // If the error object *is* your JSON response
+        errorMessage = error.error;
+      } else if (error.message) {
+        // Fallback to the standard error message
+        errorMessage = error.message;
+      }
+
+      setSummaryError(errorMessage);
     } finally {
       setIsSummarizing(false);
     }
