@@ -56,7 +56,7 @@ export const getNotificationPreferences = async (): Promise<NotificationPreferen
       'id, user_id, email_enabled, connection_requests, job_alerts, forum_updates, message_notifications'
     )
     .eq('user_id', user.id)
-    .single(); // Expect one row per user
+    .limit(1); // Expect one row per user
 
   if (error) {
     console.error('Error fetching notification preferences:', error);
