@@ -38,6 +38,7 @@ import {
   NotificationWithActor,
   NotificationType,
 } from '@/integrations/supabase/notifications.api';
+import { useSocialCounts } from '@/context/SocialCountsContext'; 
 import { formatDistanceToNow } from 'date-fns';
 
 // --- Helper function to get display details ---
@@ -212,6 +213,7 @@ const NotificationSkeleton = () => (
 export default function Notifications() {
   const [activeTab, setActiveTab] = useState('all');
   const { toast } = useToast();
+  const { refetchNotifCount } = useSocialCounts();
 
   const [notifications, setNotifications] = useState<NotificationWithActor[]>(
     []
@@ -227,6 +229,7 @@ export default function Notifications() {
       try {
         const data = await getNotifications();
         setNotifications(data);
+        refetchNotifCount(); 
       } catch (err: any) {
         setError('Failed to load notifications. Please try again later.');
         console.error(err);
@@ -235,7 +238,7 @@ export default function Notifications() {
       }
     };
     fetchNotifications();
-  }, []);
+  }, [refetchNotifCount]);
 
   // --- Memoized Lists ---
   const unreadCount = useMemo(() => {
