@@ -93,9 +93,23 @@ Summary:`,
   };
 }
 
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*", // Or your specific frontend URL for production
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
+};
+
 Deno.serve(async (req) => {
   const startTime = Date.now();
   console.log(`[${new Date().toISOString()}] Request received: ${req.method} ${req.url}`);
+
+  if (req.method === "OPTIONS") {
+    console.log("Handling OPTIONS request");
+    return new Response(JSON.stringify({ message: "ok" }), {
+      status: 200,
+      headers: corsHeaders,
+    });
+  }
   
   try {
     const authHeader = req.headers.get("Authorization");
@@ -127,6 +141,26 @@ Deno.serve(async (req) => {
 
     console.log(`Processing summary request for thread: ${threadId}, limit: ${limit}`);
 
+    if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+      console.error("Missing environment variables");
+      throw new AppError("Missing environment variables", 500);
+    }
+    
+    const userSupabase = createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: { persistSession: false },
+      global: {
+        headers: {
+          Authorization: authHeader,
+        },
+      },
+    });
+
+    const url = new URL(req.url);
+    const threadId = url.searchParams.get("thread_id");
+    const limit = Number(url.searchParams.get("limit")) || 50;
+
+    console.log(`Processing summary request for thread: ${threadId}, limit: ${limit}`);
+
     if (!threadId) {
       throw new AppError("thread_id is required", 400);
     }
@@ -139,6 +173,7 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify(summary), {
       status: 200,
       headers: { 
+        ...corsHeaders,
         "Content-Type": "application/json",
         "X-Response-Time": `${duration}ms`
       },
@@ -154,7 +189,7 @@ Deno.serve(async (req) => {
         status: err.status 
       }), {
         status: err.status,
-        headers: { "Content-Type": "application/json" },
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
     
@@ -165,7 +200,7 @@ Deno.serve(async (req) => {
       message: err instanceof Error ? err.message : "Unknown error"
     }), {
       status: 500,
-      headers: { "Content-Type": "application/json" },
+      headers: {...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });
