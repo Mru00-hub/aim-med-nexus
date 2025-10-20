@@ -53,8 +53,8 @@ const getNotificationDetails = (notification: NotificationWithActor) => {
   switch (type) {
     case 'system_update':
       icon = Star;
-      title = announcement?.title || 'System Update';
-      description = announcement?.body || 'Check out the latest features and announcements.';
+      title = notification.announcement?.title || 'System Update';
+      description = notification.announcement?.body || 'Check out the latest features and announcements.';
       break;
     case 'new_thread':
       icon = MessageSquare;
