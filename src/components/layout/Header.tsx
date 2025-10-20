@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { Heart, Bell, MessageSquare, Users, MessageCircle, Menu, X, Handshake, LogIn, UserPlus,UserIcon, LogOut, Settings, CreditCard, Trash2, Loader2 } from 'lucide-react';
+import { Heart, Bell, MessageSquare, Users, MessageCircle, Menu, X, Handshake, LogIn, UserPlus,UserIcon, LogOut, Settings, Shield, CreditCard, Trash2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { getLoveCount, incrementLoveCount } from '@/integrations/supabase/engagement';
@@ -35,7 +35,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 export const Header = () => {
-  const { user, loading, signOut, initialUnreadCount} = useAuth();
+  const { user, loading, signOut, initialUnreadCount, profile} = useAuth();
   const navigate = useNavigate();
   const [lovingItCount, setLovingItCount] = useState(0);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -147,6 +147,12 @@ export const Header = () => {
                   <Settings className="mr-2 h-4 w-4" />
                   <span>Settings</span>
                 </DropdownMenuItem>
+                {profile?.user_role === 'ADMIN' && (
+                  <DropdownMenuItem onClick={() => navigate('/admin')}>
+                    <Shield className="mr-2 h-4 w-4" />
+                    <span>Admin Dashboard</span>
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={signOut}>
                   <LogOut className="mr-2 h-4 w-4" />
@@ -194,6 +200,11 @@ export const Header = () => {
           <Button variant="ghost" className="justify-start" onClick={() => handleMobileNav('/settings')}>
             <Settings className="mr-2 h-4 w-4" /> Settings
           </Button>
+          {profile?.user_role === 'ADMIN' && (
+            <Button variant="ghost" className="justify-start" onClick={() => handleMobileNav('/admin')}>
+              <Shield className="mr-2 h-4 w-4" /> Admin Dashboard
+            </Button>
+          )}
           <Button variant="ghost" className="justify-start" onClick={signOut}>
               <LogOut className="mr-2 h-4 w-4" /> Log Out
           </Button>
