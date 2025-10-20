@@ -132,33 +132,28 @@ const FunctionalInbox = () => {
 
   // --- Handle Navigation State Preselection ---
   useEffect(() => {
-    if (!user || loading) return;
-    const navState = location.state as { conversationId?: string; participant?: any };
-    if (!navState?.conversationId) return;
+    if (!user) return;
 
-    const convoInList = conversations.find(
-      (c) => c.conversation_id === navState.conversationId
-    );
+    const channel = supabase
+      .channel(`inbox-updates-${user.id}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'direct_messages' }, () => {
+        triggerDebouncedFetch();
+      })
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          fetchAndSetConversations();
+        }
+        if (status === 'CHANNEL_ERROR' || status === 'CLOSED') {
+          console.warn('Subscription error or closed, will attempt reconnect with delay');
+          // Implement delayed reconnect with backoff if needed, and only reconnect if visible
+        }
+      });
 
-    if (convoInList) {
-      handleSelectConversation(convoInList);
-    } else if (navState.participant) {
-      const phantomConversation: Conversation = {
-        conversation_id: navState.conversationId,
-        last_message_at: new Date().toISOString(),
-        last_message_content: 'Starting new conversation...',
-        participant_avatar_url: navState.participant.profile_picture_url,
-        participant_full_name: navState.participant.full_name,
-        participant_id: navState.participant.id,
-        unread_count: 0,
-        is_starred: false,
-      };
-      setConversations((prev) => [phantomConversation, ...prev]);
-      setSelectedConversation(phantomConversation);
-    }
-
-    navigate(location.pathname, { replace: true, state: null });
-  }, [user, loading, conversations, location.state, navigate, handleSelectConversation]);
+    return () => {
+      channel.unsubscribe();
+      console.log('Subscription cleanup done.');
+    };
+  }, [user?.id]);
 
   // --- Render UI ---
   return (
