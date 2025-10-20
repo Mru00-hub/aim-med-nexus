@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useSocialCounts } from '@/context/SocialCountsContext';
 import { Header } from '@/components/layout/Header';
@@ -15,28 +15,27 @@ import { ConversationView } from '@/components/social/ConversationView';
 type Conversation = Database['public']['Functions']['inbox_conversations']['Returns'][0];
 type DirectMessagePayload = Tables<'direct_messages'>;
 
-function useDebouncedCallback(callback: () => void, delay: number) {
-  const timeout = useRef<NodeJS.Timeout | null>(null);
-  return useCallback(() => {
-    if (timeout.current) clearTimeout(timeout.current);
-    timeout.current = setTimeout(callback, delay);
-  }, [callback, delay]);
-}
-
 const FunctionalInbox = () => {
   const { user, loading: authLoading } = useAuth();
-  const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const { setUnreadInboxCount } = useSocialCounts();
   const { toast } = useToast();
   const location = useLocation();
   const navigate = useNavigate();
 
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [optimisticUpdateInProgress, setOptimisticUpdateInProgress] = useState(false);
 
+  // --- Ref guard to prevent overlapping fetches ---
+  const isFetchingRef = useRef(false);
+
+  // --- Stable Callback: Fetch Conversations ---
   const fetchAndSetConversations = useCallback(async () => {
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
     setLoading(true);
+
     try {
       const { data, error } = await supabase.from('inbox_conversations').select('*');
       if (error) throw error;
@@ -45,72 +44,105 @@ const FunctionalInbox = () => {
       setConversations(data);
     } catch (error: any) {
       console.error('Failed to fetch inbox:', error);
-      toast({ title: 'Error', description: 'Could not load your inbox.', variant: 'destructive' });
+      toast({
+        title: 'Error',
+        description: 'Could not load your inbox.',
+        variant: 'destructive',
+      });
     } finally {
       setLoading(false);
+      isFetchingRef.current = false;
     }
   }, [toast]);
 
-  const debouncedFetch = useDebouncedCallback(() => {
-    if (!optimisticUpdateInProgress) {
-      fetchAndSetConversations();
-    }
-  }, 400);
+  // --- Stable Debounced Wrapper ---
+  const debounceRef = useRef<NodeJS.Timeout | null>(null);
+  const triggerDebouncedFetch = useCallback(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      if (!optimisticUpdateInProgress) {
+        fetchAndSetConversations();
+      }
+    }, 500);
+  }, [fetchAndSetConversations, optimisticUpdateInProgress]);
 
+  // --- Update unread counts when conversations change ---
   useEffect(() => {
-    const unreadConversationsCount = conversations.filter(convo => (convo.unread_count || 0) > 0).length;
-    setUnreadInboxCount(unreadConversationsCount);
+    const unreadCount = conversations.reduce(
+      (acc, convo) => acc + ((convo.unread_count || 0) > 0 ? 1 : 0),
+      0
+    );
+    setUnreadInboxCount(unreadCount);
   }, [conversations, setUnreadInboxCount]);
 
+  // --- Subscription Setup (stable once per user) ---
   useEffect(() => {
     if (authLoading || !user) return;
 
-    const subscription = supabase
-      .channel('public:direct_messages_inbox')
+    const channel = supabase
+      .channel(`inbox-updates-${user.id}`)
       .on<DirectMessagePayload>(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'direct_messages' },
-        () => {
-          debouncedFetch();
-        }
+        () => triggerDebouncedFetch()
       )
       .subscribe((status) => {
         console.log('Supabase subscription status:', status);
         if (status === 'SUBSCRIBED') {
-          // Load initial data only once on successful connection
           fetchAndSetConversations();
-        }
-        else if (status === 'CHANNEL_ERROR' || status === 'CLOSED') {
-          console.error('Supabase subscription error or closed, consider resubscribing or alerting user');
+        } else if (status === 'CHANNEL_ERROR' || status === 'CLOSED') {
+          console.warn('Supabase subscription closed or errored, scheduling reconnect...');
+          // Attempt soft reconnection after 3s
+          setTimeout(() => {
+            if (user) {
+              supabase.removeChannel(channel);
+              console.log('Reconnecting to Supabase inbox channel...');
+              supabase
+                .channel(`inbox-updates-${user.id}`)
+                .on<DirectMessagePayload>(
+                  'postgres_changes',
+                  { event: 'INSERT', schema: 'public', table: 'direct_messages' },
+                  () => triggerDebouncedFetch()
+                )
+                .subscribe();
+            }
+          }, 3000);
         }
       });
 
     return () => {
-      subscription.unsubscribe();
-      console.log('Supabase subscription cleaned up.');
+      supabase.removeChannel(channel);
+      console.log('Supabase inbox subscription cleaned up.');
     };
-  }, [authLoading, user, debouncedFetch, fetchAndSetConversations]);
+  }, [user?.id, authLoading, triggerDebouncedFetch, fetchAndSetConversations]);
 
-  const handleSelectConversation = (conversation: Conversation) => {
+  // --- Handle Conversation Selection ---
+  const handleSelectConversation = useCallback((conversation: Conversation) => {
     setOptimisticUpdateInProgress(true);
     setSelectedConversation(conversation);
-    setConversations(prev =>
-      prev.map(c => (c.conversation_id === conversation.conversation_id ? { ...c, unread_count: 0 } : c))
+    setConversations((prev) =>
+      prev.map((c) =>
+        c.conversation_id === conversation.conversation_id
+          ? { ...c, unread_count: 0 }
+          : c
+      )
     );
     setTimeout(() => setOptimisticUpdateInProgress(false), 1000);
-  };
+  }, []);
 
+  // --- Handle Navigation State Preselection ---
   useEffect(() => {
-    if (!user) return;
+    if (!user || loading) return;
     const navState = location.state as { conversationId?: string; participant?: any };
     if (!navState?.conversationId) return;
-    if (loading) return;
 
-    const convoInList = conversations.find(c => c.conversation_id === navState.conversationId);
+    const convoInList = conversations.find(
+      (c) => c.conversation_id === navState.conversationId
+    );
 
     if (convoInList) {
       handleSelectConversation(convoInList);
-    } else if (!loading && conversations.length > 0 && navState.participant) {
+    } else if (navState.participant) {
       const phantomConversation: Conversation = {
         conversation_id: navState.conversationId,
         last_message_at: new Date().toISOString(),
@@ -121,13 +153,14 @@ const FunctionalInbox = () => {
         unread_count: 0,
         is_starred: false,
       };
-      setConversations(prev => [phantomConversation, ...prev]);
+      setConversations((prev) => [phantomConversation, ...prev]);
       setSelectedConversation(phantomConversation);
     }
 
     navigate(location.pathname, { replace: true, state: null });
-  }, [location.state, conversations, loading, navigate, user]);
+  }, [user, loading, conversations, location.state, navigate, handleSelectConversation]);
 
+  // --- Render UI ---
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -138,6 +171,7 @@ const FunctionalInbox = () => {
             Private messages and professional communication with your network.
           </p>
         </div>
+
         <div className="grid lg:grid-cols-4 gap-6 min-h-[700px] animate-slide-up">
           <Card className="card-medical lg:col-span-1 flex flex-col max-h-[700px]">
             <ConversationList
@@ -147,6 +181,7 @@ const FunctionalInbox = () => {
               selectedConversationId={selectedConversation?.conversation_id || null}
             />
           </Card>
+
           <Card className="card-medical lg:col-span-3 flex flex-col">
             {selectedConversation ? (
               <ConversationView
@@ -157,7 +192,9 @@ const FunctionalInbox = () => {
               <CardContent className="flex-1 flex items-center justify-center">
                 <div className="text-center">
                   <MessageCircle className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                  <h3 className="text-lg font-semibold mb-2">Select a conversation</h3>
+                  <h3 className="text-lg font-semibold mb-2">
+                    Select a conversation
+                  </h3>
                   <p className="text-muted-foreground">
                     Choose a conversation from the list to start messaging.
                   </p>
