@@ -1,12 +1,9 @@
-// src/pages/Notifications.tsx
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
@@ -28,7 +25,6 @@ import {
   CheckSquare,
   Loader2,
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/components/ui/use-toast';
 import {
   getNotifications,
@@ -36,12 +32,10 @@ import {
   markAllNotificationsAsRead,
   deleteNotification,
   NotificationWithActor,
-  NotificationType,
 } from '@/integrations/supabase/notifications.api';
 import { useSocialCounts } from '@/context/SocialCountsContext'; 
 import { formatDistanceToNow } from 'date-fns';
 
-// --- Helper function to get display details ---
 const getNotificationDetails = (notification: NotificationWithActor) => {
   const { type, actor } = notification;
   const actorName = actor?.full_name || 'Someone';
@@ -88,7 +82,6 @@ const getNotificationDetails = (notification: NotificationWithActor) => {
   return { icon, title, description };
 };
 
-// --- Notification Card Sub-component ---
 const NotificationCard = ({
   notification,
   onClick,
@@ -157,12 +150,10 @@ const NotificationCard = ({
             </div>
 
             {notification.type === 'system_update' ? (
-              // For system updates, show the body with more spacing
               <p className="text-muted-foreground mb-3 mt-2 whitespace-pre-wrap"> 
                 {description}
               </p>
             ) : (
-              // For other types, keep the original
               <p className="text-muted-foreground mb-3">{description}</p> 
             )}
 
@@ -199,7 +190,6 @@ const NotificationCard = ({
   );
 };
 
-// --- Skeleton Loader Sub-component ---
 const NotificationSkeleton = () => (
   <Card className="card-medical">
     <CardContent className="p-6">
@@ -221,19 +211,15 @@ const NotificationSkeleton = () => (
   </Card>
 );
 
-// --- Main Page Component ---
 export default function Notifications() {
   const [activeTab, setActiveTab] = useState('all');
   const { toast } = useToast();
-  const { refetchNotifCount, setUnreadNotifCount } = useSocialCounts();
+  const { refetchNotifCount, markNotificationAsRead } = useSocialCounts();
 
-  const [notifications, setNotifications] = useState<NotificationWithActor[]>(
-    []
-  );
+  const [notifications, setNotifications] = useState<NotificationWithActor[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // --- Data Fetching ---
   useEffect(() => {
     const fetchNotifications = async () => {
       setIsLoading(true);
@@ -241,7 +227,7 @@ export default function Notifications() {
       try {
         const data = await getNotifications();
         setNotifications(data);
-        refetchNotifCount(); 
+        refetchNotifCount();
       } catch (err: any) {
         setError('Failed to load notifications. Please try again later.');
         console.error(err);
@@ -252,39 +238,34 @@ export default function Notifications() {
     fetchNotifications();
   }, [refetchNotifCount]);
 
-  // --- Memoized Lists ---
-  const unreadCount = useMemo(() => {
-    return notifications.filter((n) => !n.is_read).length;
-  }, [notifications]);
+  const unreadCount = useMemo(() => notifications.filter(n => !n.is_read).length, [notifications]);
 
   const filteredNotifications = useMemo(() => {
     if (activeTab === 'all') return notifications;
-    if (activeTab === 'unread') return notifications.filter((n) => !n.is_read);
-
+    if (activeTab === 'unread') return notifications.filter(n => !n.is_read);
     if (activeTab === 'updates') {
       return notifications.filter(
-        (n) =>
+        n =>
           n.type === 'system_update' ||
           n.type === 'new_thread' ||
           n.type === 'new_space' ||
           n.type === 'new_reply'
       );
     }
-
     if (activeTab === 'social') {
-      return notifications.filter((n) => n.type === 'connection_accepted');
+      return notifications.filter(n => n.type === 'connection_accepted');
     }
-
     return [];
   }, [notifications, activeTab]);
 
-  // --- API Mutation Handlers ---
   const handleMarkAsRead = async (id: string) => {
-    const previousState = notifications;
-    setUnreadNotifCount((prev) => prev - 1); 
-    setNotifications((current) =>
-      current.map((n) => (n.id === id ? { ...n, is_read: true } : n))
+    const previousState = [...notifications];
+
+    // Optimistically update UI state immediately
+    setNotifications(current =>
+      current.map(n => (n.id === id ? { ...n, is_read: true } : n))
     );
+
     try {
       await markNotificationAsRead(id);
     } catch (err) {
@@ -293,16 +274,16 @@ export default function Notifications() {
         description: 'Failed to mark as read.',
         variant: 'destructive',
       });
-      setNotifications(previousState); // Revert
-      setUnreadNotifCount((prev) => prev + 1); 
+      setNotifications(previousState);
     }
   };
 
   const handleMarkAllAsRead = async () => {
     const previousState = [...notifications];
     const previousUnreadCount = unreadCount;
-    setUnreadNotifCount(0);
-    setNotifications((current) => current.map((n) => ({ ...n, is_read: true })));
+
+    setNotifications(current => current.map(n => ({ ...n, is_read: true })));
+
     try {
       await markAllNotificationsAsRead();
     } catch (err) {
@@ -311,8 +292,7 @@ export default function Notifications() {
         description: 'Failed to mark all as read.',
         variant: 'destructive',
       });
-      setNotifications(previousState); // Revert
-      setUnreadNotifCount(previousUnreadCount);
+      setNotifications(previousState);
     }
   };
 
@@ -320,10 +300,9 @@ export default function Notifications() {
     const previousState = [...notifications];
     const notificationToDelete = previousState.find(n => n.id === id);
     const wasUnread = notificationToDelete && !notificationToDelete.is_read;
-    if (wasUnread) {
-      setUnreadNotifCount((prev) => prev - 1);
-    }
-    setNotifications((current) => current.filter((n) => n.id !== id));
+
+    setNotifications(current => current.filter(n => n.id !== id));
+
     try {
       await deleteNotification(id);
       toast({ title: 'Deleted', description: 'Notification removed.' });
@@ -334,10 +313,7 @@ export default function Notifications() {
         description: 'Failed to delete notification.',
         variant: 'destructive',
       });
-      setNotifications(previousState); // Revert
-      if (wasUnread) {
-      setUnreadNotifCount((prev) => prev + 1);
-      }
+      setNotifications(previousState);
     }
   };
 
@@ -345,9 +321,7 @@ export default function Notifications() {
     if (!notification.is_read) {
       handleMarkAsRead(notification.id);
     }
-    
-    // [!code focus]
-    // Don't show toast for system updates, as there's no navigation
+
     if (notification.type === 'system_update') {
       return;
     }
@@ -358,7 +332,6 @@ export default function Notifications() {
     });
   };
 
-  // --- Main Render Helper ---
   const renderContent = () => {
     if (isLoading) {
       return (
@@ -383,7 +356,7 @@ export default function Notifications() {
     if (filteredNotifications.length > 0) {
       return (
         <div className="space-y-4">
-          {filteredNotifications.map((notification) => (
+          {filteredNotifications.map(notification => (
             <NotificationCard
               key={notification.id}
               notification={notification}
