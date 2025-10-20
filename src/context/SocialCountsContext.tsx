@@ -45,8 +45,28 @@ export const SocialCountsProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [user]);
 
-  useEffect(() => {
-    if (!user) {
+  const markNotificationAsRead = useCallback(async (notificationId: string) => {
+    // Optimistically update unread notification count
+    setUnreadNotifCount(prev => Math.max(0, prev - 1));
+
+    try {
+      // Call API to mark notification as read
+      await supabase
+        .from('notifications')
+        .update({ is_read: true })
+        .eq('id', notificationId)
+        .eq('user_id', user!.id);
+
+      // Optional: you could refetch notifications here or rely on subscription updates
+      } catch (error) {
+        console.error('Failed to mark notification as read:', error);
+        // Rollback optimistic update on failure
+        setUnreadNotifCount(prev => prev + 1);
+      }
+    }, [user]);
+
+    useEffect(() => {
+      if (!user) {
       setRequestCount(0);
       setUnreadNotifCount(0);
       return;
@@ -88,6 +108,7 @@ export const SocialCountsProvider = ({ children }: { children: ReactNode }) => {
         setUnreadInboxCount,
         refetchNotifCount: fetchUnreadNotifCount,
         refetchRequestCount: fetchPendingRequests,
+        markNotificationAsRead,
       }}
     >
       {children}
