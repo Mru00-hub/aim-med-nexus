@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -35,7 +35,6 @@ export const SecureRouteGuard: React.FC<SecureRouteGuardProps> = ({ children }) 
   }, [password, user, profile, generateAndSetKeys]);
 
   if (!user || !profile) {
-    // Optional: Loading indicator if user/profile data is not ready yet
     return (
       <>
         <Header />
@@ -47,8 +46,16 @@ export const SecureRouteGuard: React.FC<SecureRouteGuardProps> = ({ children }) 
     );
   }
 
-  if (userMasterKey) {
-    return <>{children}</>;
+  // Memoize the unlocked content to avoid re-rendering unnecessarily
+  const unlockedContent = useMemo(() => {
+    if (userMasterKey) {
+      return <>{children}</>;
+    }
+    return null;
+  }, [userMasterKey, children]);
+
+  if (unlockedContent) {
+    return unlockedContent;
   }
 
   return (
@@ -77,7 +84,7 @@ export const SecureRouteGuard: React.FC<SecureRouteGuardProps> = ({ children }) 
                 <label className="block text-sm font-medium mb-2">Password</label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input 
+                  <Input
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -98,3 +105,5 @@ export const SecureRouteGuard: React.FC<SecureRouteGuardProps> = ({ children }) 
     </div>
   );
 };
+
+export default SecureRouteGuard;
