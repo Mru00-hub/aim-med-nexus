@@ -162,11 +162,15 @@ export default function SpaceDetailPage() {
   };
 
   const handleDeleteThread = async (threadId: string) => {
+    console.log("handleDeleteThread called for threadId:", threadId);
     try {
+      console.log("Attempting to delete thread via API...");
       await deleteThread(threadId);
+      console.log("Thread successfully deleted.");
       toast({ title: "Success", description: "Thread has been deleted." });
       await refreshThreads();
     } catch (error: any) {
+      console.error("handleDeleteThread FAILED:", error);
       toast({
         variant: "destructive",
         title: "Deletion Failed",
