@@ -40,7 +40,8 @@ import CodeOfConductPage from './pages/Info/CodeOfConduct';
 
 // --- SOCIAL PAGE IMPORTS ---
 import Social from "./pages/Social/Social";
-import IndustryHub from "./pages/Social/IndustryHub";
+import IndustryHub from "./pages/IndustryHub/IndustryHub";
+import CompanyProfilePage from './pages/IndustryHub/CompanyProfilePage';
 import FunctionalSocial from "./pages/Social/FunctionalSocial";
 import FunctionalInbox from "./pages/Social/FunctionalInbox";
 
@@ -91,6 +92,7 @@ const App = () => {
                   <Route path="/partnerships" element={<Partnerships />} />
                   <Route path="/community" element={<Forums />} /> 
                   <Route path="/industryhub" element={<IndustryHub />} /> 
+                  <Route path="/industry-hub/company/example" element={<CompanyProfilePage />} />
 
                   <Route path="/info/help" element={<HelpPage />} />
                   <Route path="/info/support" element={<SupportPage />} />
