@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -93,7 +92,7 @@ const IndustryHub = () => {
                             </div>
                             <div className="flex flex-col gap-2 flex-shrink-0">
                                 <Button variant="outline" size="sm" onClick={handleSignIn}>Follow</Button>
-                                {company.name === 'CarePulse Labs' ? (
+                                {company.name === 'CityCare Hospital' ? (
                                   <Button 
                                     className="btn-medical" 
                                     size="sm" 
