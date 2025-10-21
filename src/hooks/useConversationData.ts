@@ -219,7 +219,17 @@ export const useConversationData = (conversationId: string | undefined, recipien
             // Call the API which encrypts and saves the new content
             const realEditedMessage = await editDirectMessage(messageId, newContent, conversationKey);
             // Replace the optimistic version with the real, encrypted version from the server
-            setMessages(current => current.map(m => m.id === messageId ? realEditedMessage : m));
+            setMessages(current => current.map(m => {
+              if (m.id === messageId) {
+                // Merge the existing data (like author) with the server's response
+                return {
+                  ...m, // This is the optimistic message, which still has .author
+                  ...realEditedMessage, // This overwrites content, is_edited, updated_at
+                  isOptimistic: false, // Don't forget to unset the flag!
+                };
+              }
+              return m;
+            }));
         } catch (error: any) {
             toast({ variant: 'destructive', title: 'Edit Failed', description: error.message });
             // Revert to the original message on failure
