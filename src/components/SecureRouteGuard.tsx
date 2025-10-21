@@ -20,8 +20,8 @@ export const SecureRouteGuard: React.FC<SecureRouteGuardProps> = ({ children }) 
 
   const handleUnlock = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !profile?.encryption_salt) {
-      setError("Your profile is not configured correctly. Please contact support.");
+    if (!user || !profile || !profile.encryption_salt) {
+      setError("Profile data is still loading or not configured. Please wait a moment and try again.");
       return;
     }
     setIsLoading(true);
