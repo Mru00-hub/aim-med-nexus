@@ -145,21 +145,6 @@ Deno.serve(async (req) => {
       console.error("Missing environment variables");
       throw new AppError("Missing environment variables", 500);
     }
-    
-    const userSupabase = createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      auth: { persistSession: false },
-      global: {
-        headers: {
-          Authorization: authHeader,
-        },
-      },
-    });
-
-    const url = new URL(req.url);
-    const threadId = url.searchParams.get("thread_id");
-    const limit = Number(url.searchParams.get("limit")) || 50;
-
-    console.log(`Processing summary request for thread: ${threadId}, limit: ${limit}`);
 
     if (!threadId) {
       throw new AppError("thread_id is required", 400);
