@@ -2,12 +2,13 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Building, TrendingUp, Calendar, Users } from 'lucide-react';
+import { Plus, Building, TrendingUp, Calendar, Users, ArrowRight } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const exampleCompanies = [
@@ -22,6 +23,7 @@ const exampleCollaborations = [
 const IndustryHub = () => {
   const navigate = useNavigate();
   const handleSignIn = () => navigate('/login');
+  const exampleProfileRoute = '/industry-hub/company/example';
 
   return (
     <div className="min-h-screen bg-background">
@@ -55,6 +57,25 @@ const IndustryHub = () => {
                 <h3 className="text-lg font-semibold">Companies on our Platform</h3>
                 <Button className="btn-medical" onClick={handleSignIn}><Plus className="h-4 w-4 mr-2" />Create Company Page</Button>
             </div>
+            <Card className="card-medical bg-primary/5 border-primary/20">
+              <CardHeader>
+                <CardTitle className="text-lg">See What's Coming!</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                  <p className="text-muted-foreground">
+                    Check out how our new, elegant company profile pages will look.
+                  </p>
+                  <Button 
+                    className="btn-medical" 
+                    onClick={() => navigate(exampleProfileRoute)}
+                  >
+                    View Example Profile
+                    <ArrowRight className="h-4 w-4 ml-2" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
             <div className="space-y-4">
               {exampleCompanies.map((company) => (
                 <Card key={company.id} className="card-medical">
@@ -72,7 +93,23 @@ const IndustryHub = () => {
                             </div>
                             <div className="flex flex-col gap-2 flex-shrink-0">
                                 <Button variant="outline" size="sm" onClick={handleSignIn}>Follow</Button>
-                                <Button className="btn-medical" size="sm" onClick={handleSignIn}><TrendingUp className="h-3 w-3 mr-1" />Advertise</Button>
+                                {company.name === 'CarePulse Labs' ? (
+                                  <Button 
+                                    className="btn-medical" 
+                                    size="sm" 
+                                    onClick={() => navigate(exampleProfileRoute)}
+                                  >
+                                    View Example Profile
+                                  </Button>
+                                ) : (
+                                  <Button 
+                                    variant="outline"
+                                    size="sm" 
+                                    onClick={handleSignIn}
+                                  >
+                                    View Profile
+                                  </Button>
+                                )}
                             </div>
                         </div>
                     </CardContent>
