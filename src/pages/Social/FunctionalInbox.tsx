@@ -93,27 +93,29 @@ const FunctionalInbox = () => {
         { event: 'INSERT', schema: 'public', table: 'direct_messages' },
         () => triggerDebouncedFetch()
       )
-      .subscribe((status) => {
+      .subscribe((status, err) => { // You can optionally get the error object
         console.log('Supabase subscription status:', status);
+
         if (status === 'SUBSCRIBED') {
+          // This is the ideal state, fetch the latest data
           fetchAndSetConversations();
-        } else if (status === 'CHANNEL_ERROR' || status === 'CLOSED') {
-          console.warn('Supabase subscription closed or errored, scheduling reconnect...');
-          // Attempt soft reconnection after 3s
-          setTimeout(() => {
-            if (user) {
-              supabase.removeChannel(channel);
-              console.log('Reconnecting to Supabase inbox channel...');
-              supabase
-                .channel(`inbox-updates-${user.id}`)
-                .on<DirectMessagePayload>(
-                  'postgres_changes',
-                  { event: 'INSERT', schema: 'public', table: 'direct_messages' },
-                  () => triggerDebouncedFetch()
-                )
-                .subscribe();
-            }
-          }, 3000);
+        }
+
+        if (status === 'CHANNEL_ERROR') {
+          // Log the specific error
+          console.error('Supabase channel error:', err);
+          // Optionally, show a toast to the user
+          toast({
+             title: 'Connection Error',
+             description: 'There was a problem with the live connection.',
+             variant: 'destructive',
+          });
+        }
+
+        if (status === 'CLOSED') {
+          // This just means the channel is closed.
+          // The client will handle reconnecting automatically.
+          console.warn('Supabase subscription closed. Client will attempt to reconnect...');
         }
       });
 
