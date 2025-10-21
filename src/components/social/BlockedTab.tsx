@@ -16,10 +16,10 @@ export const BlockedTab = ({ blockedUsers, loading, onUnblockUser }) => {
         {loading ? <Skeleton className="h-20 w-full" /> : blockedUsers.map(bu => (
           <UserActionCard 
             // FIX 1: Use the correct ID for the React key
-            key={bu.unblocked_user_id} 
+            key={bu.blocked_user_id} 
             user={{ 
               // FIX 2: Use the correct ID for the user prop
-              id: bu.unblocked_user_id, 
+              id: bu.blocked_user_id, 
               full_name: bu.full_name, 
               profile_picture_url: bu.profile_picture_url, 
               subtitle: 'This user is blocked' 
@@ -29,7 +29,7 @@ export const BlockedTab = ({ blockedUsers, loading, onUnblockUser }) => {
               variant="outline" 
               size="sm" 
               // FIX 3: Pass the correct ID to the click handler
-              onClick={() => onUnblockUser(bu.unblocked_user_id)}
+              onClick={() => onUnblockUser(bu.blocked_user_id)}
             >
               Unblock
             </Button>
