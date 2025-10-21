@@ -31,12 +31,12 @@ const mockCompany = {
   company_name: 'CityCare Hospital',
   industry: 'Hospital',
   company_logo_url: '/placeholder-logo.png', // Using placeholder
-  company_banner_url: 'https://via.placeholder.com/1200x300.png?text=CityCare+Hospital+Banner',
+  company_banner_url: 'http://googleusercontent.com/generated_image_content/0',
   company_size: '500-1000 employees',
   website_url: 'https://citycare.example.com',
   description:
     "CityCare Hospital is a leading multi-specialty healthcare provider in Delhi, dedicated to offering compassionate and comprehensive medical services. Our state-of-the-art facility is equipped with the latest technology and staffed by a team of highly skilled medical professionals.\n\nWe are committed to excellence in patient care, research, and medical education. Our mission is to improve the health of the communities we serve through innovative treatments, preventative care, and a patient-first approach. We believe in building lasting relationships with our patients, partners, and the community.",
-  tier: 'deluxe',
+  tier: 'premium',
   location: 'Delhi, IN',
   founded_year: 2005,
 };
@@ -131,8 +131,8 @@ const CompanyProfilePage = () => {
                   <h1 className="text-3xl md:text-4xl font-bold flex items-center gap-2">
                     {company.company_name}
                     {/* Using your deluxe badge style */}
-                    <Badge className="bg-gradient-deluxe text-white text-sm ml-2">
-                      Deluxe Partner
+                    <Badge className="bg-gradient-premium text-white text-sm ml-2">
+                      Premium Partner
                     </Badge>
                   </h1>
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-2">
