@@ -23,7 +23,7 @@ const exampleCollaborations = [
 const IndustryHub = () => {
   const navigate = useNavigate();
   const handleSignIn = () => navigate('/login');
-  const exampleProfileRoute = '/industry-hub/company/example';
+  const exampleProfileRoute = '/industryhub/company/example';
 
   return (
     <div className="min-h-screen bg-background">
