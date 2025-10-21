@@ -98,25 +98,43 @@ export const encryptMessage = async (plaintext: string, key: CryptoKey): Promise
  * @param {CryptoKey} key - The AES-GCM key.
  */
 export const decryptMessage = async (bundledCiphertext: string, key: CryptoKey): Promise<string> => {
-  const [ivString, encryptedString] = bundledCiphertext.split('.');
-  if (!ivString || !encryptedString) {
-    throw new Error('Invalid encrypted message format.');
+  try {
+    if (!bundledCiphertext || typeof bundledCiphertext !== 'string') {
+      throw new Error(`Invalid input: expected a string, got ${typeof bundledCiphertext}`);
+    }
+
+    const [ivString, encryptedString] = bundledCiphertext.split('.');
+    
+    if (!ivString || !encryptedString) {
+      // This is a new, more helpful error
+      throw new Error(`Invalid format. Expected "iv.ciphertext", got "${bundledCiphertext}"`);
+    }
+
+    const iv = new Uint8Array(atob(ivString).split('').map(c => c.charCodeAt(0)));
+    const ciphertext = new Uint8Array(atob(encryptedString).split('').map(c => c.charCodeAt(0)));
+
+    const decryptedBuffer = await getSubtle().decrypt(
+      {
+        name: 'AES-GCM',
+        iv: iv,
+      },
+      key,
+      ciphertext
+    );
+
+    const decoder = new TextDecoder();
+    return decoder.decode(decryptedBuffer);
+  
+  } catch (error: any) {
+    console.error('--- DECRYPTION FAILED ---');
+    console.error('Input text that failed:', bundledCiphertext);
+    console.error('Key used (info):', key); // This will log the CryptoKey object
+    console.error('Specific Error:', error.message);
+    console.error(error); // This will log the full DOMException
+    
+    // Re-throw a clearer error
+    throw new Error(`Decryption failed: ${error.message}. Check console for details.`);
   }
-
-  const iv = new Uint8Array(atob(ivString).split('').map(c => c.charCodeAt(0)));
-  const ciphertext = new Uint8Array(atob(encryptedString).split('').map(c => c.charCodeAt(0)));
-
-  const decryptedBuffer = await getSubtle().decrypt(
-    {
-      name: 'AES-GCM',
-      iv: iv,
-    },
-    key,
-    ciphertext
-  );
-
-  const decoder = new TextDecoder();
-  return decoder.decode(decryptedBuffer);
 };
 
 // ===========================================================
