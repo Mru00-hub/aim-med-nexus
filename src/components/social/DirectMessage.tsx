@@ -245,8 +245,10 @@ export const DirectMessage = ({ message, currentUserId, conversationKey, onReply
             
                 {/* FIX: The menu is now stable because it's only controlled by the `showActions` state */}
                 {showActions && (
-                    <div className={cn("absolute z-10 flex items-center bg-card border rounded-full shadow-md", "top-[-16px]", isMe ? "right-12" : "left-12")}>
-                        onClick={(e) => e.stopPropagation()}
+                    <div 
+                      className={cn("absolute z-10 flex items-center bg-card border rounded-full shadow-md", "top-[-16px]", isMe ? "right-12" : "left-12")}
+                      // 👇 --- (6) Stop click from propagating to the bubble ---
+                      onClick={(e) => e.stopPropagation()} // <-- MOVE IT HERE
                     >
                         {/* 👇 --- (7) Add the Reaction Button --- */}
                         <Button 
@@ -264,17 +266,6 @@ export const DirectMessage = ({ message, currentUserId, conversationKey, onReply
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { onReplyClick(message); setShowActions(false); }} title="Reply"><Reply className="h-4 w-4" /></Button>
                         {isMe && <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setIsEditing(true); setShowActions(false); }} title="Edit"><Pencil className="h-4 w-4" /></Button>}
                         {isMe && <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { onDelete(message.id); setShowActions(false); }} title="Delete"><Trash2 className="h-4 w-4 text-destructive" /></Button>}
-                    </div>
-                )}
-                
-                {/* 👇 --- (8) Render the Reaction Picker when active --- */}
-                {showReactionPicker && (
-                    <div 
-                        className={cn("absolute z-10", "top-[-16px]", isMe ? "right-12" : "left-12")}
-                        // Stop click from propagating to the bubble
-                        onClick={(e) => e.stopPropagation()} 
-                    >
-                        <EmojiPicker onSelect={handleReactionSelect} />
                     </div>
                 )}
             </div>
