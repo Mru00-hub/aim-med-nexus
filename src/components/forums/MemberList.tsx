@@ -8,6 +8,7 @@ import { Enums } from '@/integrations/supabase/types';
 interface MemberListProps {
     members: DisplayMember[];
     isLoading: boolean;
+    spaceType: Enums<'space_type'>;
     emptyStateMessage?: string;
     isCurrentUserAdmin?: boolean;
     onApprove?: (membershipId: string) => void;
@@ -19,6 +20,7 @@ interface MemberListProps {
 export const MemberList: React.FC<MemberListProps> = ({ 
     members, 
     isLoading, 
+    spaceType,
     emptyStateMessage = "There are no members to display.",
     isCurrentUserAdmin,
     onApprove,
@@ -63,6 +65,7 @@ export const MemberList: React.FC<MemberListProps> = ({
             onReject={onReject}
             onBan={onBan}
             onRoleChange={onRoleChange} 
+            spaceType={spaceType}
         />
       ))}
     </div>
