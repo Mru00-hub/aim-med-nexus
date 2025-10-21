@@ -16,7 +16,6 @@ export type DisplayMember = {
     full_name: string;
     profile_picture_url: string | null;
     role: 'ADMIN' | 'MODERATOR' | 'MEMBER';
-    // --- REFACTORED: Add new fields for richer data ---
     current_position?: string | null;
     organization?: string | null;
     location_name?: string | null;
@@ -57,26 +56,28 @@ export const MemberCard: React.FC<MemberCardProps> = ({ member, isCurrentUserAdm
         }
     };
 
-    // --- REFACTORED: Create details array to cleanly render available info ---
     const userDetails = [
         member.current_position,
         member.specialization_name,
         member.organization,
         member.location_name,
-    ].filter(Boolean); // Filter out any null or empty strings
+    ].filter(Boolean);
     
+    // --- NEW: Determine which set of controls to show ---
+    const showPendingControls = onApprove && onReject;
+    const showActiveMemberControls = onRoleChange && member.membership_id;
+
     return (
         <Card className="transition-all hover:shadow-md group">
             <CardContent className="p-4 flex items-center justify-between space-x-4">
-                <Link to={`/profile/${member.user_id}`} className="flex items-center space-x-4 flex-grow min-w-0"> {/* Added min-w-0 for flex truncation */}
+                <Link to={`/profile/${member.user_id}`} className="flex items-center space-x-4 flex-grow min-w-0">
                     <Avatar className="h-12 w-12">
                         <AvatarImage src={member.profile_picture_url || ''} alt={member.full_name} />
                         <AvatarFallback>{getInitials(member.full_name)}</AvatarFallback>
                     </Avatar>
-                    <div className="flex-1 min-w-0"> {/* Added min-w-0 for flex truncation */}
+                    <div className="flex-1 min-w-0">
                         <p className="font-semibold text-lg group-hover:text-primary truncate">{member.full_name}</p>
                         
-                        {/* --- REFACTORED: Display richer profile details --- */}
                         {userDetails.length > 0 && (
                           <p className="text-sm text-muted-foreground flex items-center flex-wrap truncate">
                             {userDetails.map((detail, index) => (
@@ -88,14 +89,18 @@ export const MemberCard: React.FC<MemberCardProps> = ({ member, isCurrentUserAdm
                           </p>
                         )}
                     </div>
-                    <Badge variant={getBadgeVariant(member.role)} className="capitalize ml-auto sm:ml-0 flex-shrink-0">
-                        {member.role.toLowerCase()}
-                    </Badge>
+                    {/* Badge is only shown for active members, not pending */}
+                    {!showPendingControls && (
+                        <Badge variant={getBadgeVariant(member.role)} className="capitalize ml-auto sm:ml-0 flex-shrink-0">
+                            {member.role.toLowerCase()}
+                        </Badge>
+                    )}
                 </Link>
 
-                {/* Admin controls remain unchanged */}
+                {/* --- REFACTORED ADMIN CONTROLS --- */}
                 <div className="flex items-center gap-2 flex-shrink-0">
-                    {isCurrentUserAdmin && onApprove && onReject && (
+                    {/* Controls for Pending Requests */}
+                    {isCurrentUserAdmin && showPendingControls && (
                         <>
                             <Button size="icon" variant="outline" onClick={(e) => handleAction(e, onApprove)} title="Approve">
                                 <Check className="h-4 w-4 text-green-500" />
@@ -106,27 +111,40 @@ export const MemberCard: React.FC<MemberCardProps> = ({ member, isCurrentUserAdm
                         </>
                     )}
 
-                    {isCurrentUserAdmin && onRoleChange && member.membership_id && onBan && (
+                    {/* Controls for Active Members */}
+                    {isCurrentUserAdmin && showActiveMemberControls && (
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Button size="icon" variant="ghost" onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
                                     <MoreHorizontal className="h-4 w-4" />
                                 </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent onClick={(e) => e.preventDefault()}>
-                                <DropdownMenuItem onClick={() => onRoleChange(member.membership_id!, 'ADMIN')}>
-                                    <UserCog className="mr-2 h-4 w-4" /> Make Admin
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => onRoleChange(member.membership_id!, 'MODERATOR')}>
-                                    <UserCheck className="mr-2 h-4 w-4" /> Make Moderator
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => onRoleChange(member.membership_id!, 'MEMBER')}>
-                                    <UserX className="mr-2 h-4 w-4" /> Make Member
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem className="text-red-600" onClick={() => onBan(member.membership_id!)}>
-                                    <ShieldX className="mr-2 h-4 w-4" /> Ban User
-                                </DropdownMenuItem>
+                            <DropdownMenuContent onClick={(e) => { e.stopPropagation(); e.preventDefault(); }}>
+                                {member.role !== 'ADMIN' && (
+                                    <DropdownMenuItem onClick={() => onRoleChange(member.membership_id!, 'ADMIN')}>
+                                        <UserCog className="mr-2 h-4 w-4" /> Make Admin
+                                    </DropdownMenuItem>
+                                )}
+                                {member.role !== 'MODERATOR' && (
+                                    <DropdownMenuItem onClick={() => onRoleChange(member.membership_id!, 'MODERATOR')}>
+                                        <UserCheck className="mr-2 h-4 w-4" /> Make Moderator
+                                    </DropdownMenuItem>
+                                )}
+                                {member.role !== 'MEMBER' && (
+                                    <DropdownMenuItem onClick={() => onRoleChange(member.membership_id!, 'MEMBER')}>
+                                        <UserX className="mr-2 h-4 w-4" /> Make Member
+                                    </DropdownMenuItem>
+                                )}
+                                
+                                {/* Conditionally render the Ban option */}
+                                {onBan && (
+                                    <>
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuItem className="text-red-600" onClick={() => onBan(member.membership_id!)}>
+                                            <ShieldX className="mr-2 h-4 w-4" /> Ban User
+                                        </DropdownMenuItem>
+                                    </>
+                                )}
                             </DropdownMenuContent>
                         </DropdownMenu>
                     )}
