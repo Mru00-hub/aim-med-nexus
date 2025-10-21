@@ -337,6 +337,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLoadingMessage('Signing out...');
     
     try {
+      await supabase.removeAllChannels();
+      console.log('All Supabase channels removed.');
       await supabase.auth.signOut();
       // FIX: Add navigation to the home page after sign-out.
       navigate('/'); 
