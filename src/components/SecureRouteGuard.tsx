@@ -26,7 +26,7 @@ export const SecureRouteGuard: React.FC<SecureRouteGuardProps> = ({ children }) 
     }
     setIsLoading(true);
     setError('');
-    const success = await generateAndSetKeys(password, profile.encryption_salt);
+    const success = await generateAndSetKeys(password, profile, profile.encryption_salt);
     if (!success) {
       setError("Incorrect password. Please try again.");
     }
