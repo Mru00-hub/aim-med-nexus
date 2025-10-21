@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -165,15 +166,18 @@ export const Message: React.FC<MessageProps> = ({
     return (
         <div className={cn("flex w-full gap-3", isCurrentUser ? "justify-end" : "justify-start")}>
             {!isCurrentUser && (
-                <Avatar className="h-10 w-10">
-                    <AvatarImage src={avatarUrl ?? undefined} alt={displayName} />
-                    <AvatarFallback>{displayName?.split(' ').map(n => n[0]).join('')}</AvatarFallback>
-                </Avatar>
-            )}
-            
+                <Link to={`/profile/${message.user_id}`} className="flex-shrink-0">
+                    <Avatar className="h-10 w-10">
+                        <AvatarImage src={avatarUrl ?? undefined} alt={displayName} />
+                        <AvatarFallback>{displayName?.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                    </Avatar>
+                </Link>
+            )}           
             <div className={cn("flex flex-col w-full relative", isCurrentUser ? "items-end" : "items-start")}>
                 <div className="flex items-center gap-2 mb-1">
-                    <span className="font-bold text-sm">{displayName}</span>
+                    <Link to={`/profile/${message.user_id}`} className="font-bold text-sm hover:underline hover:text-primary">
+                        {displayName}
+                    </Link>
                     <span className="text-xs text-muted-foreground">{new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                 </div>
 
@@ -221,10 +225,12 @@ export const Message: React.FC<MessageProps> = ({
             </div>
             
             {isCurrentUser && (
-                <Avatar className="h-10 w-10">
-                    <AvatarImage src={avatarUrl ?? undefined} alt={displayName} />
-                    <AvatarFallback>{displayName?.split(' ').map(n => n[0]).join('')}</AvatarFallback>
-                </Avatar>
+                <Link to={`/profile/${message.user_id}`} className="flex-shrink-0">
+                    <Avatar className="h-10 w-10">
+                        <AvatarImage src={avatarUrl ?? undefined} alt={displayName} />
+                        <AvatarFallback>{displayName?.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                    </Avatar>
+                </Link>
             )}
         </div>
     );
