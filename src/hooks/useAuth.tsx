@@ -13,7 +13,7 @@ interface AuthContextType {
   loading: boolean;
   loadingMessage: string;
   initialUnreadCount: number | null;
-  personalKey: CryptoKey | null; // Renamed from encryptionKey
+  personalKey: CryptoKey | null;
   userMasterKey: CryptoKey | null;
   generateAndSetKeys: (password: string, profile: Profile, salt: string) => Promise<boolean>;
   refreshProfile: () => Promise<void>;
@@ -41,16 +41,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const [initialUnreadCount, setInitialUnreadCount] = useState<number | null>(null);
   const [loadingMessage, setLoadingMessage] = useState('Initializing session...');
-  const [personalKey, setPersonalKey] = useState<CryptoKey | null>(null); // Renamed
+  const [personalKey, setPersonalKey] = useState<CryptoKey | null>(null);
   const [userMasterKey, setUserMasterKey] = useState<CryptoKey | null>(null); 
   const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
   
-  // Use ref to prevent race conditions with auth operations
   const isAuthOperationInProgress = useRef(false);
 
-  // Fetch profile helper with error handling
   const fetchProfile = useCallback(async (userId: string): Promise<Profile | null> => {
     try {
       const { data, error } = await supabase
@@ -78,14 +76,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const fetchUnreadCount = useCallback(async () => {
     try {
-      // Use supabase.rpc to call your PostgreSQL function
       const { data, error } = await supabase.rpc('get_my_unread_inbox_count');
       
       if (error) {
         console.error("Error fetching unread count:", error.message);
-        setInitialUnreadCount(null); // Set to null on error
+        setInitialUnreadCount(null);
       } else {
-        // The 'data' variable will hold the integer returned by your function
         setInitialUnreadCount(data);
       }
     } catch (rpcError: any) {
@@ -94,7 +90,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  // FIXED: Initialize auth state with getSession AND listen for changes
   useEffect(() => {
     let mounted = true;
     const init = async () => {
@@ -128,7 +123,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setSession(null);
         setUser(null);
         setProfile(null);
-        setInitialUnreadCount(null); 
+        setInitialUnreadCount(null);
+        // CRITICAL: Clear encryption keys on logout
+        setPersonalKey(null);
+        setUserMasterKey(null);
       }
     });
 
@@ -138,7 +136,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, [fetchProfile, fetchUnreadCount]);
     
-  // FIXED: refreshProfile no longer depends on user state
   const refreshProfile = useCallback(async () => {
     try {
       const { data: { session: currentSession } } = await supabase.auth.getSession();
@@ -157,50 +154,91 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         variant: "destructive",
       });
     }
-  }, [fetchProfile]);
+  }, [fetchProfile, toast]);
 
   const generateAndSetKeys = async (password: string, profile: Profile, salt: string): Promise<boolean> => {
     if (!password || !salt) {
-      toast({ title: "Key Generation Failed", variant: "destructive" });
+      console.error('❌ Missing password or salt');
+      toast({ title: "Key Generation Failed", description: "Missing required data", variant: "destructive" });
       return false;
     }
 
     try {
-      // Step 1: Derive the temporary personalKey from the password
+      console.log('🔐 === KEY GENERATION START ===');
+      console.log('Salt from profile:', salt);
+      console.log('Encrypted master key exists:', !!profile.encrypted_user_master_key);
+
+      // Step 1: ALWAYS derive the personalKey from password + salt
+      console.log('⚙️ Deriving personal key from password...');
       const derivedPersonalKey = await deriveKey(password, salt);
       setPersonalKey(derivedPersonalKey);
+      console.log('✅ Personal key derived successfully');
 
-      console.log('--- generateAndSetKeys DEBUG ---');
-      console.log('Salt used for derivation:', salt);
-      console.log('Profile Key from DB:', profile.encrypted_user_master_key);
-
-      // Step 2: Check if the user has a permanent master key stored
+      // Step 2: Check if user has an encrypted master key stored
       if (profile.encrypted_user_master_key) {
-        console.log('Mode: Attempting DECRYPTION...');
-        // User exists, decrypt their master key
-        const masterKeyJwkString = await decryptMessage(profile.encrypted_user_master_key, derivedPersonalKey);
-        const masterKey = await importConversationKey(masterKeyJwkString); // You'll add this to crypto.ts
-        setUserMasterKey(masterKey);
-        console.log("✅ User master key unlocked.");
+        console.log('🔓 MODE: DECRYPTION (existing user)');
+        console.log('Encrypted key to decrypt:', profile.encrypted_user_master_key.substring(0, 50) + '...');
+        
+        try {
+          // Decrypt the stored master key using the personal key
+          const masterKeyJwkString = await decryptMessage(
+            profile.encrypted_user_master_key, 
+            derivedPersonalKey
+          );
+          console.log('✅ Master key decrypted successfully');
+          console.log('JWK string length:', masterKeyJwkString.length);
+          
+          // Import the JWK back into a CryptoKey
+          const masterKey = await importConversationKey(masterKeyJwkString);
+          setUserMasterKey(masterKey);
+          console.log('✅ Master key imported and set');
+          console.log('🔐 === KEY GENERATION SUCCESS ===');
+          return true;
+
+        } catch (decryptError: any) {
+          console.error('❌ DECRYPTION FAILED:', decryptError.message);
+          console.error('This usually means the password is incorrect');
+          toast({ 
+            title: "Incorrect Password", 
+            description: "Could not unlock your encryption keys. Please check your password.",
+            variant: "destructive" 
+          });
+          return false;
+        }
 
       } else {
-        console.log('Mode: Attempting ENCRYPTION (first-time setup)...');
-        // First-time setup for this user. Generate, encrypt, and store their master key.
-        console.log("🔑 First-time setup: generating user master key...");
-        const newMasterKey = await generateConversationKey(); // Re-use the same generator
-        setUserMasterKey(newMasterKey);
+        console.log('🔒 MODE: ENCRYPTION (first-time setup)');
+        
+        // Generate a brand new master key for this user
+        console.log('⚙️ Generating new master key...');
+        const newMasterKey = await generateConversationKey();
+        console.log('✅ New master key generated');
 
+        // Export it to JWK string
         const masterKeyJwkString = await exportConversationKey(newMasterKey);
-        const encryptedMasterKey = await encryptMessage(masterKeyJwkString, derivedPersonalKey);
-        console.log('New key to be saved:', encryptedMasterKey);
+        console.log('✅ Master key exported to JWK');
+        console.log('JWK string length:', masterKeyJwkString.length);
 
-        // Store it in the database
+        // Encrypt the JWK with the personal key
+        const encryptedMasterKey = await encryptMessage(masterKeyJwkString, derivedPersonalKey);
+        console.log('✅ Master key encrypted');
+        console.log('Encrypted string:', encryptedMasterKey.substring(0, 50) + '...');
+
+        // Save to database
+        console.log('⚙️ Saving encrypted master key to database...');
         const { error } = await supabase
           .from('profiles')
           .update({ encrypted_user_master_key: encryptedMasterKey })
           .eq('id', profile.id);
 
-        if (error) throw error;
+        if (error) {
+          console.error('❌ Database update failed:', error);
+          throw error;
+        }
+        
+        console.log('✅ Encrypted master key saved to database');
+
+        // Update local state
         setProfile(currentProfile => {
           if (currentProfile) {
             return { ...currentProfile, encrypted_user_master_key: encryptedMasterKey };
@@ -208,18 +246,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return null;
         });
         setUserMasterKey(newMasterKey);
-        console.log("✅ New user master key generated and stored.");
+        
+        console.log('✅ First-time setup complete');
+        console.log('🔐 === KEY GENERATION SUCCESS ===');
+        return true;
       }
-      return true;
 
-    } catch (error) {
-      console.error("Failed to generate/unlock keys:", error);
-      // This catch block is important. It will catch decryption errors (wrong password).
+    } catch (error: any) {
+      console.error('❌ === KEY GENERATION FAILED ===');
+      console.error('Error:', error.message);
+      console.error('Stack:', error.stack);
+      toast({ 
+        title: "Encryption Error", 
+        description: "Failed to set up encryption keys. Please try again.",
+        variant: "destructive" 
+      });
       return false;
     }
   };
 
-  // FIXED: Proper error handling and return value
   const signUp = async (email: string, password: string, metadata?: any) => {
     isAuthOperationInProgress.current = true;
     setLoadingMessage('Creating your account...');
@@ -262,7 +307,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
   
-  // FIXED: No conflicting loading state management
   const signIn = async (email: string, password: string) => {
     isAuthOperationInProgress.current = true;
     setLoadingMessage('Signing you in...');
@@ -282,7 +326,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { error };
       }
       
-      // onAuthStateChange will handle the rest
       return { error: null };
     } catch (error: any) {
       toast({
@@ -293,8 +336,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { error };
     } finally {
       setLoadingMessage('');
-      // Don't set isAuthOperationInProgress to false here - 
-      // let onAuthStateChange handle it
     }
   };
 
@@ -339,8 +380,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       await supabase.removeAllChannels();
       console.log('All Supabase channels removed.');
+      
+      // Clear encryption keys BEFORE signing out
+      setPersonalKey(null);
+      setUserMasterKey(null);
+      
       await supabase.auth.signOut();
-      // FIX: Add navigation to the home page after sign-out.
       navigate('/'); 
     } catch (error) {
       console.error("Sign out error:", error);
@@ -351,10 +396,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
     } finally {
       setLoadingMessage('');
-      // onAuthStateChange will still run and clear the user state
     }
   };
-
 
   const value = {
     user,
