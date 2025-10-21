@@ -56,15 +56,22 @@ const FunctionalInbox = () => {
   }, [toast]);
 
   // --- Stable Debounced Wrapper ---
+  const optimisticRef = useRef(optimisticUpdateInProgress);
+  useEffect(() => {
+    optimisticRef.current = optimisticUpdateInProgress;
+  }, [optimisticUpdateInProgress]);
+
+  // --- Stable Debounced Wrapper ---
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
   const triggerDebouncedFetch = useCallback(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
-      if (!optimisticUpdateInProgress) {
+      // Use the ref here to get the *current* value
+      if (!optimisticRef.current) {
         fetchAndSetConversations();
       }
     }, 500);
-  }, [fetchAndSetConversations, optimisticUpdateInProgress]);
+  }, [fetchAndSetConversations]); 
 
   // --- Update unread counts when conversations change ---
   useEffect(() => {
@@ -129,31 +136,6 @@ const FunctionalInbox = () => {
     );
     setTimeout(() => setOptimisticUpdateInProgress(false), 1000);
   }, []);
-
-  // --- Handle Navigation State Preselection ---
-  useEffect(() => {
-    if (!user) return;
-
-    const channel = supabase
-      .channel(`inbox-updates-${user.id}`)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'direct_messages' }, () => {
-        triggerDebouncedFetch();
-      })
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          fetchAndSetConversations();
-        }
-        if (status === 'CHANNEL_ERROR' || status === 'CLOSED') {
-          console.warn('Subscription error or closed, will attempt reconnect with delay');
-          // Implement delayed reconnect with backoff if needed, and only reconnect if visible
-        }
-      });
-
-    return () => {
-      channel.unsubscribe();
-      console.log('Subscription cleanup done.');
-    };
-  }, [user?.id]);
 
   // --- Render UI ---
   return (
