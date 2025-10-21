@@ -65,6 +65,7 @@ export const SocialCountsProvider = ({ children }: { children: ReactNode }) => {
     if (!user) {
       setRequestCount(0);
       setUnreadNotifCount(0);
+      setUnreadInboxCount(0);
       return;
     }
 
