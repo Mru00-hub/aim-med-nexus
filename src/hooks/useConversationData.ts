@@ -417,7 +417,6 @@ export const useConversationData = (conversationId: string | undefined, recipien
         try {
             if (wasAdding) {
                 const realReaction = await addDirectMessageReaction(messageId, emoji);
-                // Replace optimistic reaction with real one
                 setMessages(currentMessages => currentMessages.map(msg => {
                     if (msg.id === messageId) {
                         const newReactions = msg.reactions.map(r => 
@@ -427,10 +426,10 @@ export const useConversationData = (conversationId: string | undefined, recipien
                     }
                     return msg;
                 }));
+                console.log('✅ Reaction added:', emoji);
             } else {
-                // We are removing a reaction
                 await removeDirectMessageReaction(messageId, emoji);
-                // The optimistic update already removed it, so we're good
+                console.log('✅ Reaction removed:', emoji);
             }
         } catch (error: any) {
             console.error('❌ Reaction failed:', error);
@@ -439,7 +438,6 @@ export const useConversationData = (conversationId: string | undefined, recipien
                 title: 'Reaction Failed', 
                 description: error.message 
             });
-            // Rollback on failure
             setMessages(currentMessages => currentMessages.map(msg => {
                 if (msg.id === messageId) {
                     return { ...msg, reactions: originalReactions };
@@ -447,7 +445,7 @@ export const useConversationData = (conversationId: string | undefined, recipien
                 return msg;
             }));
         }
-    }, [user, toast]);
+    }, [user, toast]); 
     
     return { 
         messages: displayMessages,
