@@ -24,6 +24,7 @@ export type DisplayMember = {
 
 interface MemberCardProps {
   member: DisplayMember;
+  spaceType: Enums<'space_type'>;
   isCurrentUserAdmin: boolean; 
   onRoleChange?: (membershipId: string, newRole: Enums<'membership_role'>) => void;
   onApprove?: (membershipId: string) => void;
@@ -120,12 +121,12 @@ export const MemberCard: React.FC<MemberCardProps> = ({ member, isCurrentUserAdm
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent onClick={(e) => { e.stopPropagation(); e.preventDefault(); }}>
-                                {member.role !== 'ADMIN' && (
+                                {spaceType === 'COMMUNITY_SPACE' && member.role !== 'ADMIN' && (
                                     <DropdownMenuItem onClick={() => onRoleChange(member.membership_id!, 'ADMIN')}>
                                         <UserCog className="mr-2 h-4 w-4" /> Make Admin
                                     </DropdownMenuItem>
                                 )}
-                                {member.role !== 'MODERATOR' && (
+                                {spaceType === 'FORUM' && member.role !== 'MODERATOR' && (
                                     <DropdownMenuItem onClick={() => onRoleChange(member.membership_id!, 'MODERATOR')}>
                                         <UserCheck className="mr-2 h-4 w-4" /> Make Moderator
                                     </DropdownMenuItem>
