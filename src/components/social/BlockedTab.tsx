@@ -5,6 +5,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { UserActionCard } from './UserActionCard';
 
 export const BlockedTab = ({ blockedUsers, loading, onUnblockUser }) => {
+  console.log("BLOCKED USERS DATA:", blockedUsers);
   return (
     <Card>
       <CardHeader>
