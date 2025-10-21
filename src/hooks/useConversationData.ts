@@ -85,12 +85,16 @@ export const useConversationData = (conversationId: string | undefined, recipien
 
             const decryptedList = await Promise.all(
                 messages.map(async (msg) => {
+                    if ((msg as MessageWithParent).isOptimistic) {
+                        return msg;
+                    }
                     try {
-                        // Use the SHARED conversation key!
                         const decryptedContent = await decryptMessage(msg.content, conversationKey);
                         return { ...msg, content: decryptedContent };
-                    } catch (e) {
-                        return { ...msg, content: "[Unable to decrypt]" };
+                    } catch (e: any) {
+                        // This will now only catch REAL decryption errors
+                        console.error(`Failed to decrypt message ID ${msg.id}:`, e.message);
+                        return { ...msg, content: "[Unable to decrypt message]" };
                     }
                 })
             );
