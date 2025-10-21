@@ -23,6 +23,7 @@ import {
   FlaskConical,
   BookOpen,
 } from 'lucide-react';
+import CityCareBanner from '@/assets/1761020986644.jpg';
 
 // --- Mock Data Based On Your Schema ---
 
@@ -31,7 +32,7 @@ const mockCompany = {
   company_name: 'CityCare Hospital',
   industry: 'Hospital',
   company_logo_url: '/placeholder-logo.png', // Using placeholder
-  company_banner_url: 'http://googleusercontent.com/generated_image_content/0',
+  company_banner_url: CityCareBanner, 
   company_size: '500-1000 employees',
   website_url: 'https://citycare.example.com',
   description:
