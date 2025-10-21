@@ -239,41 +239,79 @@ export const useConversationData = (conversationId: string | undefined, recipien
 
     const handleReaction = useCallback(async (messageId: number, emoji: string) => {
         if (!user) return;
-        const previousMessages = messages;
-        const targetMessage = messages.find(m => m.id === messageId);
-        if (!targetMessage) return;
 
-        const existingReaction = targetMessage.reactions.find(r => r.user_id === user.id && r.reaction_emoji === emoji);
+        const optimisticId = -Date.now(); // Create a temporary negative ID
+        let originalReactions: DirectMessageReaction[] = []; // For rollback
+        let wasAdding = false; // To know what to do in the catch block
+        let existingReaction: DirectMessageReaction | undefined;
 
-        // Optimistic UI update
-        setMessages(current => current.map(msg => {
-            if (msg.id === messageId) {
-                let newReactions = [...msg.reactions];
-                if (existingReaction) {
-                    newReactions = newReactions.filter(r => r.id !== existingReaction.id);
-                } else {
-                    const newOptimisticReaction: DirectMessageReaction = { id: -Date.now(), message_id: messageId, user_id: user.id, reaction_emoji: emoji, created_at: new Date().toISOString() };
-                    newReactions.push(newOptimisticReaction);
+        // 1. Perform Optimistic Update
+        setMessages(currentMessages => {
+            return currentMessages.map(msg => {
+                if (msg.id === messageId) {
+                    originalReactions = msg.reactions; // Store original state for rollback
+                    existingReaction = msg.reactions.find(r => r.user_id === user.id && r.reaction_emoji === emoji);
+                    
+                    let newReactions: DirectMessageReaction[];
+                    
+                    if (existingReaction) {
+                        // User is REMOVING an existing reaction
+                        wasAdding = false;
+                        newReactions = msg.reactions.filter(r => r.id !== existingReaction!.id);
+                    } else {
+                        // User is ADDING a new reaction
+                        wasAdding = true;
+                        const newOptimisticReaction: DirectMessageReaction = {
+                            id: optimisticId,
+                            message_id: messageId,
+                            user_id: user.id,
+                            reaction_emoji: emoji,
+                            created_at: new Date().toISOString()
+                        };
+                        newReactions = [...msg.reactions, newOptimisticReaction];
+                    }
+                    return { ...msg, reactions: newReactions };
                 }
-                return { ...msg, reactions: newReactions };
-            }
-            return msg;
-        }));
+                return msg;
+            });
+        });
 
-        // API call
+        // 2. Perform API Call
         try {
-            if (existingReaction) {
-                await removeDirectMessageReaction(messageId, emoji);
+            if (wasAdding) {
+                // We added a reaction.
+                // We assume addDirectMessageReaction returns the newly created reaction.
+                const realReaction = await addDirectMessageReaction(messageId, emoji);
+                
+                // Reconcile: update the temp ID with the real one from the DB
+                setMessages(currentMessages => currentMessages.map(msg => {
+                    if (msg.id === messageId) {
+                        const newReactions = msg.reactions.map(r => 
+                            r.id === optimisticId ? realReaction : r
+                        );
+                        return { ...msg, reactions: newReactions };
+                    }
+                    return msg;
+                }));
             } else {
-                await addDirectMessageReaction(messageId, emoji);
+                // We removed a reaction.
+                // We assume removeDirectMessageReaction handles its own logic.
+                await removeDirectMessageReaction(messageId, emoji);
+                // No reconciliation needed, the removal is final.
             }
-            // Optional: Resync messages to get real reaction IDs
-            fetchMessages();
         } catch (error: any) {
             toast({ variant: 'destructive', title: 'Reaction Failed', description: error.message });
-            setMessages(previousMessages);
+            
+            // Rollback to the original state on failure
+            setMessages(currentMessages => currentMessages.map(msg => {
+                if (msg.id === messageId) {
+                    return { ...msg, reactions: originalReactions };
+                }
+                return msg;
+            }));
         }
-    }, [messages, user, toast, fetchMessages]);
+    // This function is now stable and doesn't depend on `messages`
+    }, [user, toast]); 
     
     useEffect(() => {
         fetchMessages();
