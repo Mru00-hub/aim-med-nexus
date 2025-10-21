@@ -15,7 +15,7 @@ interface AuthContextType {
   initialUnreadCount: number | null;
   personalKey: CryptoKey | null; // Renamed from encryptionKey
   userMasterKey: CryptoKey | null;
-  generateAndSetKeys: (password: string, salt: string) => Promise<boolean>;
+  generateAndSetKeys: (password: string, profile: Profile, salt: string) => Promise<boolean>;
   refreshProfile: () => Promise<void>;
   fetchUnreadCount: () => Promise<void>;
   signUp: (email: string, password: string, metadata?: any) => Promise<{ data: { user: User | null; }; error: any; }>;
@@ -159,8 +159,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [fetchProfile]);
 
-  const generateAndSetKeys = async (password: string, salt: string): Promise<boolean> => {
-    if (!password || !salt || !profile) {
+  const generateAndSetKeys = async (password: string, profile: Profile, salt: string): Promise<boolean> => {
+    if (!password || !salt) {
       toast({ title: "Key Generation Failed", variant: "destructive" });
       return false;
     }
@@ -170,8 +170,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const derivedPersonalKey = await deriveKey(password, salt);
       setPersonalKey(derivedPersonalKey);
 
+      console.log('--- generateAndSetKeys DEBUG ---');
+      console.log('Salt used for derivation:', salt);
+      console.log('Profile Key from DB:', profile.encrypted_user_master_key);
+
       // Step 2: Check if the user has a permanent master key stored
       if (profile.encrypted_user_master_key) {
+        console.log('Mode: Attempting DECRYPTION...');
         // User exists, decrypt their master key
         const masterKeyJwkString = await decryptMessage(profile.encrypted_user_master_key, derivedPersonalKey);
         const masterKey = await importConversationKey(masterKeyJwkString); // You'll add this to crypto.ts
@@ -179,13 +184,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.log("✅ User master key unlocked.");
 
       } else {
+        console.log('Mode: Attempting ENCRYPTION (first-time setup)...');
         // First-time setup for this user. Generate, encrypt, and store their master key.
         console.log("🔑 First-time setup: generating user master key...");
         const newMasterKey = await generateConversationKey(); // Re-use the same generator
         setUserMasterKey(newMasterKey);
 
         const masterKeyJwkString = await exportConversationKey(newMasterKey);
-        const encryptedMasterKey = await encryptMessage(masterKeyJwkString, derivedPersonalKey); 
+        const encryptedMasterKey = await encryptMessage(masterKeyJwkString, derivedPersonalKey);
+        console.log('New key to be saved:', encryptedMasterKey);
 
         // Store it in the database
         const { error } = await supabase
