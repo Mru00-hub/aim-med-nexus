@@ -1,6 +1,5 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -34,6 +33,14 @@ export const SecureRouteGuard: React.FC<SecureRouteGuardProps> = ({ children }) 
     setIsLoading(false);
   }, [password, user, profile, generateAndSetKeys]);
 
+  const unlockedContent = useMemo(() => { // Hook 6
+    if (userMasterKey) {
+      return <>{children}</>;
+    }
+    return null;
+  }, [userMasterKey, children]);
+
+  // Now this conditional return is safe, because all hooks have been called
   if (!user || !profile) {
     return (
       <>
@@ -46,14 +53,7 @@ export const SecureRouteGuard: React.FC<SecureRouteGuardProps> = ({ children }) 
     );
   }
 
-  // Memoize the unlocked content to avoid re-rendering unnecessarily
-  const unlockedContent = useMemo(() => {
-    if (userMasterKey) {
-      return <>{children}</>;
-    }
-    return null;
-  }, [userMasterKey, children]);
-
+  // This check is also safe
   if (unlockedContent) {
     return unlockedContent;
   }
