@@ -141,11 +141,31 @@ const Register = () => {
     }
     
     const encryptionSalt = generateSalt();
+    const cleanUUID = (id: string | undefined | null): string | null => {
+      // Basic check: is it a falsy value, "other", or clearly not a UUID?
+      if (!id || id === 'other' || id.length < 36) { 
+        return null;
+      }
+      return id; // Assume it's a valid UUID
+    };
+    const cleanDate = (dateStr: string | undefined | null): string | null => {
+      if (!dateStr) return null; // Handles "", null, undefined
+      
+      const date = new Date(dateStr);
+      if (isNaN(date.getTime())) { // Check for "Invalid Date" (e.g., from "garbage" text)
+        return null;
+      }
+      const year = date.getFullYear();
+      const month = (date.getMonth() + 1).toString().padStart(2, '0');
+      const day = date.getDate().toString().padStart(2, '0');
+      
+      return `${year}-${month}-${day}`;
+    };
     
     const metadataForSupabase = {
       full_name: `${formData.firstName} ${formData.lastName}`.trim(),
-      date_of_birth: formData.date_of_birth || null,
-      phone: formData.phone,
+      date_of_birth: cleanDate(formData.date_of_birth),
+      phone: formData.phone || null,
       user_role: registrationType,
       location_id: formData.location_id === 'other' ? null : formData.location_id,
       location_other: formData.location_id === 'other' ? formData.location_other : null,
@@ -153,17 +173,18 @@ const Register = () => {
       institution_other: formData.institution_id === 'other' ? formData.institution_other : null,
       course_id: formData.course_id === 'other' ? null : formData.course_id,
       course_other: formData.course_id === 'other' ? formData.course_other : null,
-      student_year_value: formData.student_year_value,
-      current_position: formData.currentPosition,
-      organization: formData.organization,
+      student_year_value: formData.student_year_value || null,
+      current_position: formData.currentPosition || null,
+      organization: formData.organization || null,
       specialization_id: formData.specialization_id === 'other' ? null : formData.specialization_id,
       specialization_other: formData.specialization_id === 'other' ? formData.specialization_other : null,
-      experience_level_value: formData.experience_level_value,
-      medical_license: formData.medicalLicense,
-      bio: formData.bio,
+      experience_level_value: formData.experience_level_value || null,
+      medical_license: formData.medicalLicense || null,
+      bio: formData.bio || null,
       profile_picture_url: profilePictureUrl,
       encryption_salt: encryptionSalt,
     };
+    console.log("Submitting this metadata:", metadataForSupabase);
     
     const { data, error: signUpError } = await signUp(formData.email, formData.password, metadataForSupabase);
 
