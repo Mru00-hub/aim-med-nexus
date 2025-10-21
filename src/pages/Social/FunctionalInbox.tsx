@@ -127,7 +127,7 @@ const FunctionalInbox = () => {
   }, [user?.id, authLoading, triggerDebouncedFetch, fetchAndSetConversations]);
 
   // --- Handle Conversation Selection ---
-  const handleSelectConversation = useCallback((conversation: Conversation) => {
+  const handleSelectConversation = useCallback(async (conversation: Conversation) => {
     setOptimisticUpdateInProgress(true);
     setSelectedConversation(conversation);
     setConversations((prev) =>
