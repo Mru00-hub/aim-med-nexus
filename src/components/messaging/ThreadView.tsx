@@ -238,7 +238,7 @@ const useThreadData = (threadId: string, currentUserId: string | undefined, prof
 // ======================================================================
 // THREAD VIEW COMPONENT (Renderer)
 // ======================================================================
-export const ThreadView: React.FC<ThreadViewProps> = ({ threadId, spaceId }) => {
+export const ThreadView: React.FC<ThreadViewProps> = ({ threadId, spaceId, canModerate }) => {
   const { user, profile } = useAuth(); 
   const { toast } = useToast();
   
