@@ -8,7 +8,7 @@ import {
     getDirectMessagesWithDetails,
     deleteDirectMessage,
     editDirectMessage,
-    addDirectMessageReaction, // Or upsertDirectMessageReaction
+    addDirectMessageReaction,
     removeDirectMessageReaction,
     uploadDirectMessageAttachment,
     DirectMessageWithDetails,
@@ -34,8 +34,6 @@ export const useConversationData = (conversationId: string | undefined, recipien
     const [conversationKey, setConversationKey] = useState<CryptoKey | null>(null);
     const [isInitializingEncryption, setIsInitializingEncryption] = useState(true);
 
-    // ✅ FIX 2: fetchMessages is now stable and takes 'id' as an argument.
-    // This prevents stale closures and race conditions.
     const fetchMessages = useCallback(async (id: string) => {
       setIsLoading(true);
       try {
@@ -47,47 +45,81 @@ export const useConversationData = (conversationId: string | undefined, recipien
       } finally {
         setIsLoading(false);
       }
-    }, [toast]); // Now only depends on 'toast' (which is stable)
+    }, [toast]);
 
-
-    // This is the combined "master" effect.
+    // Main initialization effect
     useEffect(() => {
+        // Reset state when conversation changes
         setConversationKey(null);
         setMessages([]);
         setDisplayMessages([]);
         setIsInitializingEncryption(true);
         setIsLoading(true);
 
-        if (!conversationId || !userMasterKey) {
+        // Early return if prerequisites aren't met
+        if (!conversationId) {
+            console.log('⏸️ No conversationId provided');
             setIsInitializingEncryption(false);
             setIsLoading(false);
             return;
         }
 
-        let channel: any; // Supabase RealtimeChannel
+        if (!userMasterKey) {
+            console.log('⏸️ User master key not available yet');
+            setIsInitializingEncryption(false);
+            setIsLoading(false);
+            return;
+        }
+
+        console.log('🔐 Initializing conversation:', conversationId);
+
+        let channel: any;
         
         const initConversation = async () => {
             try {
-                // 1. Get the new encryption key FIRST
+                console.log('⚙️ Setting up conversation encryption...');
                 const convKey = await setupConversationEncryption(conversationId, userMasterKey);
+                
+                if (!convKey) {
+                    throw new Error('Failed to get conversation key');
+                }
+                
                 setConversationKey(convKey);
-                console.log("✅ Conversation encryption ready");
+                console.log('✅ Conversation encryption ready');
 
-                // 2. Fetch messages using the correct conversationId
-                // ✅ FIX 3: Pass conversationId to the stable fetchMessages function.
+                console.log('⚙️ Fetching messages...');
                 await fetchMessages(conversationId);
+                console.log('✅ Messages fetched');
 
-                // 3. Subscribe to the channel
+                console.log('⚙️ Setting up realtime subscription...');
                 channel = supabase.channel(`direct_messages:${conversationId}`)
-                  .on('postgres_changes', { event: '*', schema: 'public', table: 'direct_messages', filter: `conversation_id=eq.${conversationId}` }, (payload) => {
-                      if (payload.new && payload.new.sender_id === user?.id) return;
-                      // ✅ FIX 4: Pass conversationId here too.
+                  .on('postgres_changes', { 
+                      event: '*', 
+                      schema: 'public', 
+                      table: 'direct_messages', 
+                      filter: `conversation_id=eq.${conversationId}` 
+                  }, (payload) => {
+                      // Skip if this is our own message (optimistic updates handle it)
+                      if (payload.new && payload.new.sender_id === user?.id) {
+                          console.log('📤 Skipping own message from subscription');
+                          return;
+                      }
+                      console.log('📨 New message from subscription, refetching...');
                       fetchMessages(conversationId);
-                  }).subscribe();
+                  })
+                  .subscribe((status) => {
+                      console.log('📡 Subscription status:', status);
+                  });
+                
+                console.log('✅ Realtime subscription active');
                 
             } catch (error: any) {
-                console.error("Failed to initialize conversation encryption:", error);
-                toast({ variant: 'destructive', title: 'Error', description: 'Could not load this conversation.' });
+                console.error('❌ Failed to initialize conversation encryption:', error);
+                toast({ 
+                    variant: 'destructive', 
+                    title: 'Encryption Error', 
+                    description: 'Could not load this conversation. Please try refreshing.' 
+                });
             } finally {
                 setIsInitializingEncryption(false);
             }
@@ -95,80 +127,121 @@ export const useConversationData = (conversationId: string | undefined, recipien
 
         initConversation();
 
-        // 5. Cleanup function
         return () => {
             if (channel) {
+                console.log('🧹 Cleaning up subscription');
                 supabase.removeChannel(channel);
             }
         };
-    // ✅ FIX 5: 'fetchMessages' is now a stable dependency.
     }, [conversationId, userMasterKey, fetchMessages, user?.id, toast]);
 
-
-    // This decryption hook is correct and unchanged.
+    // Decryption effect
     useEffect(() => {
         const processMessages = async () => {
-            if (!conversationKey || !messages || messages.length === 0) {
+            if (!conversationKey) {
+                console.log('⏸️ No conversation key, skipping decryption');
                 setDisplayMessages([]);
                 return;
             }
 
+            if (!messages || messages.length === 0) {
+                console.log('⏸️ No messages to decrypt');
+                setDisplayMessages([]);
+                return;
+            }
+
+            console.log(`🔓 Decrypting ${messages.length} messages...`);
+
             const decryptedList = await Promise.all(
                 messages.map(async (msg) => {
+                    // Skip decryption for optimistic messages (they're already plaintext)
                     if (msg.isOptimistic) {
                         return msg;
                     }
+                    
                     try {
                         const decryptedContent = await decryptMessage(msg.content, conversationKey);
                         return { ...msg, content: decryptedContent };
                     } catch (e: any) {
-                        console.error(`Failed to decrypt message ID ${msg.id}:`, e.message);
+                        console.error(`❌ Failed to decrypt message ID ${msg.id}:`, e.message);
                         return { ...msg, content: "[Unable to decrypt message]" };
                     }
                 })
             );
 
+            // Build parent message references
             const messageMap = new Map(decryptedList.map(m => [m.id, m]));
             const flatList = decryptedList.map(message => ({
                 ...message,
-                parent_message_details: message.parent_message_id ? messageMap.get(message.parent_message_id) : undefined,
+                parent_message_details: message.parent_message_id 
+                    ? messageMap.get(message.parent_message_id) 
+                    : undefined,
             }));
             
-            const sortedList = flatList.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+            // Sort by creation time
+            const sortedList = flatList.sort((a, b) => 
+                new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+            );
+            
             setDisplayMessages(sortedList);
+            console.log(`✅ ${sortedList.length} messages decrypted and ready`);
         };
+        
         processMessages();
     }, [messages, conversationKey]); 
     
     const handleSendMessage = useCallback(async (content: string, parentMessageId: number | null, files: File[]) => {
-        if (!user || !profile || !conversationId || !conversationKey) return;
+        if (!user || !profile || !conversationId || !conversationKey) {
+            console.error('❌ Cannot send message: missing required data');
+            toast({ 
+                variant: 'destructive', 
+                title: 'Cannot Send', 
+                description: 'Required data is missing. Please refresh and try again.' 
+            });
+            return;
+        }
 
         const tempMsgId = -Date.now();
         const optimisticAttachments = files.map((file, index) => ({
             id: `temp_att_${Date.now()}_${index}`,
-            message_id: -1, file_name: file.name, file_type: file.type, file_url: URL.createObjectURL(file), file_size_bytes: file.size, created_at: new Date().toISOString(), uploaded_by: user.id, isUploading: true,
+            message_id: -1, 
+            file_name: file.name, 
+            file_type: file.type, 
+            file_url: URL.createObjectURL(file), 
+            file_size_bytes: file.size, 
+            created_at: new Date().toISOString(), 
+            uploaded_by: user.id, 
+            isUploading: true,
         })) as any;
         
         try {
-            if (!await canSendMessage(recipientId!)) throw new Error("You are no longer connected.");
+            if (!await canSendMessage(recipientId!)) {
+                throw new Error("You are no longer connected.");
+            }
 
+            // Create optimistic message
             const optimisticMessage: MessageWithParent = {
                 id: tempMsgId,
                 conversation_id: conversationId,
                 sender_id: user.id,
-                content: content,
+                content: content, // Already plaintext for optimistic display
                 isOptimistic: true,
                 parent_message_id: parentMessageId,
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString(),
                 is_edited: false,
-                author: { full_name: profile.full_name, profile_picture_url: profile.profile_picture_url },
+                author: { 
+                    full_name: profile.full_name, 
+                    profile_picture_url: profile.profile_picture_url 
+                },
                 reactions: [],
                 attachments: optimisticAttachments,
             };
 
             setMessages(current => [...current, optimisticMessage]);
+            console.log('📤 Optimistic message added');
 
+            // Send the real message (encrypted)
             const realMessage = await postDirectMessage(
               conversationId, 
               content, 
@@ -176,30 +249,51 @@ export const useConversationData = (conversationId: string | undefined, recipien
               parentMessageId
             );
             
+            console.log('✅ Real message sent, ID:', realMessage.id);
+
+            // Replace optimistic message with real one
             setMessages(current => current.map(msg => 
                 msg.id === tempMsgId 
-                ? { ...optimisticMessage, ...realMessage, id: realMessage.id, created_at: realMessage.created_at, isOptimistic: false } 
+                ? { 
+                    ...optimisticMessage, 
+                    ...realMessage, 
+                    id: realMessage.id, 
+                    created_at: realMessage.created_at, 
+                    isOptimistic: false 
+                } 
                 : msg
             ));
             
-            // ✅ FIX 1: RESTORED THE ATTACHMENT LOGIC
+            // Handle file uploads
             if (files.length > 0) {
+                console.log(`📎 Uploading ${files.length} attachments...`);
+                
                 const uploadedAttachments = await Promise.all(files.map(async (file, index) => {
                     try {
-                        const realAttachment = await uploadDirectMessageAttachment(realMessage.id, file, conversationKey);
+                        const realAttachment = await uploadDirectMessageAttachment(
+                            realMessage.id, 
+                            file, 
+                            conversationKey
+                        );
+                        console.log(`✅ Uploaded: ${file.name}`);
                         return { 
                             tempId: optimisticAttachments[index].id, 
                             realAttachment: { ...realAttachment, isUploading: false } 
                         };
                     } catch (uploadError) {
-                        console.error(`Upload failed for ${file.name}:`, uploadError);
+                        console.error(`❌ Upload failed for ${file.name}:`, uploadError);
                         return { 
                             tempId: optimisticAttachments[index].id, 
-                            realAttachment: { ...optimisticAttachments[index], isUploading: false, file_url: 'upload-failed' } 
+                            realAttachment: { 
+                                ...optimisticAttachments[index], 
+                                isUploading: false, 
+                                file_url: 'upload-failed' 
+                            } 
                         };
                     }
                 }));
 
+                // Update message with real attachment data
                 setMessages(current => current.map(msg => {
                     if (msg.id === realMessage.id) {
                         const attachmentMap = new Map(uploadedAttachments.map(ua => [ua.tempId, ua.realAttachment]));
@@ -210,7 +304,12 @@ export const useConversationData = (conversationId: string | undefined, recipien
                 }));
             }
         } catch (error: any) {
-            toast({ variant: 'destructive', title: 'Failed to Send', description: error.message });
+            console.error('❌ Send message failed:', error);
+            toast({ 
+                variant: 'destructive', 
+                title: 'Failed to Send', 
+                description: error.message 
+            });
             setMessages(current => current.filter(m => m.id !== tempMsgId));
         }
     }, [user, profile, conversationId, recipientId, toast, conversationKey]);
@@ -218,14 +317,26 @@ export const useConversationData = (conversationId: string | undefined, recipien
     const handleDeleteMessage = useCallback(async (messageId: number) => {
         const previousMessages = messages;
         setMessages(current => current.filter(m => m.id !== messageId));
-        try { await deleteDirectMessage(messageId); } 
-        catch (error: any) { setMessages(previousMessages);
-            toast({ variant: 'destructive', title: 'Delete Failed', description: error.message });
+        
+        try { 
+            await deleteDirectMessage(messageId);
+            console.log('✅ Message deleted:', messageId);
+        } catch (error: any) { 
+            console.error('❌ Delete failed:', error);
+            setMessages(previousMessages);
+            toast({ 
+                variant: 'destructive', 
+                title: 'Delete Failed', 
+                description: error.message 
+            });
         }
     }, [messages, toast]);
     
     const handleEditMessage = useCallback(async (messageId: number, newContent: string) => {
-        if (!conversationKey) return;
+        if (!conversationKey) {
+            console.error('❌ Cannot edit: no conversation key');
+            return;
+        }
 
         const originalMessage = messages.find(m => m.id === messageId);
         if (!originalMessage) return;
@@ -237,11 +348,13 @@ export const useConversationData = (conversationId: string | undefined, recipien
             isOptimistic: true,
         };
 
-        // ✅ FIX 5: No more incorrect type casting
         setMessages(current => current.map(m => m.id === messageId ? optimisticEditedMessage : m));
+        console.log('✏️ Optimistic edit applied');
 
         try {
             const realEditedMessage = await editDirectMessage(messageId, newContent, conversationKey);
+            console.log('✅ Message edited:', messageId);
+            
             setMessages(current => current.map(m => {
               if (m.id === messageId) {
                 return {
@@ -253,12 +366,16 @@ export const useConversationData = (conversationId: string | undefined, recipien
               return m;
             }));
         } catch (error: any) {
-            toast({ variant: 'destructive', title: 'Edit Failed', description: error.message });
+            console.error('❌ Edit failed:', error);
+            toast({ 
+                variant: 'destructive', 
+                title: 'Edit Failed', 
+                description: error.message 
+            });
             setMessages(current => current.map(m => m.id === messageId ? originalMessage : m));
         }
     }, [messages, toast, conversationKey]);
 
-    // This function is correct from our previous fixes
     const handleReaction = useCallback(async (messageId: number, emoji: string) => {
         if (!user) return;
 
@@ -271,7 +388,9 @@ export const useConversationData = (conversationId: string | undefined, recipien
             return currentMessages.map(msg => {
                 if (msg.id === messageId) {
                     originalReactions = msg.reactions;
-                    existingReaction = msg.reactions.find(r => r.user_id === user.id && r.reaction_emoji === emoji);
+                    existingReaction = msg.reactions.find(
+                        r => r.user_id === user.id && r.reaction_emoji === emoji
+                    );
                     
                     let newReactions: DirectMessageReaction[];
                     
@@ -298,6 +417,7 @@ export const useConversationData = (conversationId: string | undefined, recipien
         try {
             if (wasAdding) {
                 const realReaction = await addDirectMessageReaction(messageId, emoji);
+                // Replace optimistic reaction with real one
                 setMessages(currentMessages => currentMessages.map(msg => {
                     if (msg.id === messageId) {
                         const newReactions = msg.reactions.map(r => 
@@ -308,10 +428,18 @@ export const useConversationData = (conversationId: string | undefined, recipien
                     return msg;
                 }));
             } else {
+                // We are removing a reaction
                 await removeDirectMessageReaction(messageId, emoji);
+                // The optimistic update already removed it, so we're good
             }
         } catch (error: any) {
-            toast({ variant: 'destructive', title: 'Reaction Failed', description: error.message });
+            console.error('❌ Reaction failed:', error);
+            toast({ 
+                variant: 'destructive', 
+                title: 'Reaction Failed', 
+                description: error.message 
+            });
+            // Rollback on failure
             setMessages(currentMessages => currentMessages.map(msg => {
                 if (msg.id === messageId) {
                     return { ...msg, reactions: originalReactions };
@@ -319,13 +447,13 @@ export const useConversationData = (conversationId: string | undefined, recipien
                 return msg;
             }));
         }
-    }, [user, toast]); 
+    }, [user, toast]);
     
     return { 
         messages: displayMessages,
         isLoading, 
         conversationKey,
-        isInitializingEncryption, // Added this return value
+        isInitializingEncryption,
         replyingTo,
         setReplyingTo,
         handleSendMessage,
