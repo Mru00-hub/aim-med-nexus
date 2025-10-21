@@ -3,6 +3,7 @@
 import React from 'react';
 import { MemberCard, DisplayMember } from './MemberCard';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Enums } from '@/integrations/supabase/types';
 
 interface MemberListProps {
     members: DisplayMember[];
@@ -12,6 +13,7 @@ interface MemberListProps {
     onApprove?: (membershipId: string) => void;
     onReject?: (membershipId: string) => void;
     onBan?: (membershipId: string) => void;
+    onRoleChange?: (membershipId: string, newRole: Enums<'membership_role'>) => void;
 }
 
 export const MemberList: React.FC<MemberListProps> = ({ 
@@ -21,7 +23,8 @@ export const MemberList: React.FC<MemberListProps> = ({
     isCurrentUserAdmin,
     onApprove,
     onReject,
-    onBan
+    onBan,
+    onRoleChange
 }) => {
   // 1. Handle the loading state based on props
   if (isLoading) {
@@ -59,6 +62,7 @@ export const MemberList: React.FC<MemberListProps> = ({
             onApprove={onApprove}
             onReject={onReject}
             onBan={onBan}
+            onRoleChange={onRoleChange} 
         />
       ))}
     </div>
