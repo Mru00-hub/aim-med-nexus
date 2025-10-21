@@ -4,11 +4,10 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
-// REMOVED: SmilePlus
-import { Trash2, Pencil, Reply, Loader2, AlertCircle, Download, File as FileIcon } from 'lucide-react';
+import { Trash2, Pencil, Reply, Loader2, AlertCircle, Download, File as FileIcon, SmilePlus } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-// REMOVED: EmojiPicker import
+import { EmojiPicker } from './EmojiPicker';
 import { DirectMessageAttachment, DirectMessageWithDetails } from '@/integrations/supabase/social.api';
 import { MessageWithParent } from '@/hooks/useConversationData'; // NEW: Import the rich type
 import { decryptFile, decryptMessage } from '@/lib/crypto';
@@ -145,7 +144,7 @@ export const DirectMessage = ({ message, currentUserId, conversationKey, onReply
     const [isEditing, setIsEditing] = useState(false);
     const [editedContent, setEditedContent] = useState(message.content);
     const [showActions, setShowActions] = useState(false);
-    // REMOVED: showPicker state
+    const [showReactionPicker, setShowReactionPicker] = useState(false);
 
     const isMe = message.sender_id === currentUserId;
     const displayName = message.author?.full_name || 'User';
@@ -171,7 +170,11 @@ export const DirectMessage = ({ message, currentUserId, conversationKey, onReply
         // REMOVED: setShowPicker(false);
         setShowActions(false);
     }
-    
+
+    const handleReactionSelect = (emoji: string) => {
+        onReaction(message.id, emoji);
+        setShowReactionPicker(false); // Close the picker after selection
+    }
     // FIX: Squeezed text (Problem #1) is solved by adding max-w classes and word break utilities.
     const messageStyle = cn(
         "flex flex-col rounded-xl px-4 py-3 shadow-sm relative group cursor-pointer",
@@ -221,8 +224,10 @@ export const DirectMessage = ({ message, currentUserId, conversationKey, onReply
                     <span className="text-xs text-muted-foreground">{new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                 </div>
 
-                {/* The main message bubble itself */}
-                <div onClick={() => setShowActions(p => !p)}>
+                <div onClick={() => {
+                    setShowActions(p => !p);
+                    setShowReactionPicker(false);
+                }}>
                     <div className={messageStyle}>
                         {messageContent}
                     </div>
@@ -241,13 +246,37 @@ export const DirectMessage = ({ message, currentUserId, conversationKey, onReply
                 {/* FIX: The menu is now stable because it's only controlled by the `showActions` state */}
                 {showActions && (
                     <div className={cn("absolute z-10 flex items-center bg-card border rounded-full shadow-md", "top-[-16px]", isMe ? "right-12" : "left-12")}>
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {/* 👇 --- (7) Add the Reaction Button --- */}
+                        <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8" 
+                            onClick={() => { 
+                                setShowActions(false); 
+                                setShowReactionPicker(true); 
+                            }} 
+                            title="Add Reaction"
+                        >
+                            <SmilePlus className="h-4 w-4" />
+                        </Button>
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { onReplyClick(message); setShowActions(false); }} title="Reply"><Reply className="h-4 w-4" /></Button>
-                        {/* REMOVED: Add Reaction Button */}
                         {isMe && <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setIsEditing(true); setShowActions(false); }} title="Edit"><Pencil className="h-4 w-4" /></Button>}
-                        {isMe && <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onDelete(message.id)} title="Delete"><Trash2 className="h-4 w-4 text-destructive" /></Button>}
+                        {isMe && <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { onDelete(message.id); setShowActions(false); }} title="Delete"><Trash2 className="h-4 w-4 text-destructive" /></Button>}
                     </div>
                 )}
-                {/* REMOVED: showPicker conditional block */}
+                
+                {/* 👇 --- (8) Render the Reaction Picker when active --- */}
+                {showReactionPicker && (
+                    <div 
+                        className={cn("absolute z-10", "top-[-16px]", isMe ? "right-12" : "left-12")}
+                        // Stop click from propagating to the bubble
+                        onClick={(e) => e.stopPropagation()} 
+                    >
+                        <EmojiPicker onSelect={handleReactionSelect} />
+                    </div>
+                )}
             </div>
 
             {isMe && <Avatar className="h-8 w-8 flex-shrink-0"><AvatarImage src={message.author?.profile_picture_url || undefined} /><AvatarFallback>{displayName.charAt(0)}</AvatarFallback></Avatar>}
