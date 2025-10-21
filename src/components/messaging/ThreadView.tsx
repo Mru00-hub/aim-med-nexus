@@ -14,11 +14,7 @@ import {
   removeReaction,
   MessageWithDetails,
   MessageReaction,
-  uploadAttachment,
-  getViewerRoleForSpace, 
-  getSpaceDetails,       
-  Enums,                
-  Space,                 
+  uploadAttachment,  
   Profile, // Assuming Profile type is exported from community.api
 } from '@/integrations/supabase/community.api'; 
 
@@ -27,7 +23,8 @@ import { MessageInput, MessageInputRef } from './MessageInput';
 
 interface ThreadViewProps {
   threadId: string;
-  spaceId: string;
+  spaceId: string | null;   // 👈 1. ACCEPT NULL
+  canModerate: boolean;
 }
 
 export type MessageWithParent = MessageWithDetails & {
@@ -244,9 +241,7 @@ const useThreadData = (threadId: string, currentUserId: string | undefined, prof
 export const ThreadView: React.FC<ThreadViewProps> = ({ threadId, spaceId }) => {
   const { user, profile } = useAuth(); 
   const { toast } = useToast();
-  const [viewerRole, setViewerRole] = useState<Enums<'membership_role'> | null>(null);
-  const [spaceType, setSpaceType] = useState<Space['space_type'] | null>(null);
-  const [isLoadingPermissions, setIsLoadingPermissions] = useState(true);
+  
   const { 
     flatMessages, 
     isLoading, 
@@ -267,82 +262,7 @@ export const ThreadView: React.FC<ThreadViewProps> = ({ threadId, spaceId }) => 
   }, []);
   
   useEffect(() => { scrollToBottom(); }, [flatMessages, scrollToBottom]); 
-
-  useEffect(() => {
-    if (!spaceId || !user?.id) {
-      setIsLoadingPermissions(false);
-      return;
-    }
-
-    const fetchPermissions = async () => {
-      setIsLoadingPermissions(true);
-      try {
-        // Fetch both pieces of data at the same time
-        const [role, spaceDetails] = await Promise.all([
-          getViewerRoleForSpace(spaceId),
-          getSpaceDetails(spaceId)
-        ]);
-        console.log("PERMISSION DATA:", { 
-          fetchedRole: role, 
-          fetchedSpaceType: spaceDetails?.space_type 
-        });
-        
-        setViewerRole(role);
-        
-        if (spaceDetails) {
-          setSpaceType(spaceDetails.space_type);
-        } else {
-          toast({ variant: 'destructive', title: 'Error', description: 'Could not load space details.' });
-        }
-        
-      } catch (error: any) {
-        console.error("Failed to fetch permissions:", error);
-        toast({
-          variant: 'destructive',
-          title: 'Permission Error',
-          description: 'Could not determine your role for this space.',
-        });
-      } finally {
-        setIsLoadingPermissions(false);
-      }
-    };
-
-    fetchPermissions();
-  }, [spaceId, user?.id, toast]);
-
-
-  // -----------------------------------------------------------------
-  // 3. CALCULATE MODERATION RIGHTS BASED ON YOUR LOGIC
-  // -----------------------------------------------------------------
-  const canModerate = useMemo(() => {
-    if (isLoadingPermissions || !viewerRole || !spaceType) {
-      return false;
-    }
-
-    // Admins in a COMMUNITY_SPACE can moderate
-    if (spaceType === 'COMMUNITY_SPACE' && viewerRole === 'ADMIN') {
-      return true;
-    }
-
-    // Moderators in a FORUM can moderate
-    if (spaceType === 'FORUM' && viewerRole === 'MODERATOR') {
-      return true;
-    }
-
-    // (Assumption: Admins can also moderate FORUMS)
-    if (spaceType === 'FORUM' && viewerRole === 'ADMIN') {
-      return true;
-    }
-
-    return false;
-  }, [viewerRole, spaceType, isLoadingPermissions]);
-  console.log("MODERATION CHECK:", { 
-    role: viewerRole, 
-    type: spaceType, 
-    loading: isLoadingPermissions,
-    CAN_MODERATE: canModerate 
-  });
-    
+   
   const handleReplyClick = (message: MessageWithDetails) => { 
     setReplyingTo(message);
     scrollToBottom(); // <-- 2. ADD THIS to scroll down
