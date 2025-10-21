@@ -191,9 +191,9 @@ export const Message: React.FC<MessageProps> = ({
                           : "left-2"  // Place it on the left for other users
                     )}>
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); onReplyClick(message); setShowActions(false); }} title="Reply"><Reply className="h-4 w-4" /></Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); setShowPicker(p => !p); }} title="Add Reaction"><SmilePlus className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); setShowPicker(p => !p); setShowActions(false); }} title="Add Reaction"><SmilePlus className="h-4 w-4" /></Button>
                         {isCurrentUser && <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); setIsEditing(true); setShowActions(false); }} title="Edit"><Pencil className="h-4 w-4" /></Button>}
-                        {(isCurrentUser || canModerate) && <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); handleDelete(); }} title="Delete"><Trash2 className="h-4 w-4 text-destructive" /></Button>}
+                        {(isCurrentUser || canModerate) && <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); handleDelete(); setShowActions(false); }} title="Delete"><Trash2 className="h-4 w-4 text-destructive" /></Button>}
                     </div>
                 )}
                 {/* Emoji Picker */}
