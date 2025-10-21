@@ -47,7 +47,7 @@ const getBadgeVariant = (role: DisplayMember['role']) => {
     }
 };
 
-export const MemberCard: React.FC<MemberCardProps> = ({ member, isCurrentUserAdmin, onRoleChange, onApprove, onReject, onBan }) => {
+export const MemberCard: React.FC<MemberCardProps> = ({ member, spaceType, isCurrentUserAdmin, onRoleChange, onApprove, onReject, onBan }) => {
     
     const handleAction = (e: React.MouseEvent, action?: (id: string) => void) => {
         e.stopPropagation();
