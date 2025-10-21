@@ -11,6 +11,7 @@ import { useAuth } from '@/hooks/useAuth';
 import type { Tables, Database } from '@/integrations/supabase/types';
 import { ConversationList } from '@/components/social/ConversationList';
 import { ConversationView } from '@/components/social/ConversationView';
+import { markConversationAsRead } from '@/integrations/supabase/social.api';
 
 type Conversation = Database['public']['Functions']['inbox_conversations']['Returns'][0];
 type DirectMessagePayload = Tables<'direct_messages'>;
@@ -135,10 +136,35 @@ const FunctionalInbox = () => {
           ? { ...c, unread_count: 0 }
           : c
       )
-    );
-    setTimeout(() => setOptimisticUpdateInProgress(false), 1000);
-  }, []);
-
+    );  
+    try {
+      // Only call the API if it was actually unread
+      if (conversation.unread_count > 0) {
+        await markConversationAsRead(conversation.conversation_id);
+        // We don't need to re-fetch here, as our optimistic update
+        // and subscriptions will handle the UI.
+      }
+    } catch (error) {
+      console.error("Failed to mark conversation as read:", error);
+      // Optional: Rollback optimistic update on failure
+      setConversations((prev) =>
+        prev.map((c) =>
+          c.conversation_id === conversation.conversation_id
+            ? { ...c, unread_count: conversation.unread_count } // Revert to old count
+            : c
+        )
+      );
+      toast({
+        title: 'Error',
+        description: 'Could not mark message as read.',
+        variant: 'destructive',
+      });
+    } finally {
+      // Set optimistic update to false *after* API call finishes
+      setTimeout(() => setOptimisticUpdateInProgress(false), 500); // 500ms is safer
+    }
+  }, [toast]);
+  
   // --- Render UI ---
   return (
     <div className="min-h-screen bg-background">
