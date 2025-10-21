@@ -11,8 +11,8 @@ import { Plus, Building, TrendingUp, Calendar, Users, ArrowRight } from 'lucide-
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const exampleCompanies = [
-  { id: 1, name: 'CarePulse Labs', type: 'startup', location: 'Bengaluru, IN', description: 'Building AI tools to streamline hospital workflows.', employees: '50-100', tier: 'premium' },
-  { id: 2, name: 'CityCare Hospital', type: 'hospital', location: 'Delhi, IN', description: 'Multi-specialty hospital with strong community programs.', employees: '500+', tier: 'deluxe' }
+  { id: 1, name: 'CarePulse Labs', type: 'startup', location: 'Bengaluru, IN', description: 'Building AI tools to streamline hospital workflows.', employees: '50-100', tier: 'deluxe' },
+  { id: 2, name: 'CityCare Hospital', type: 'hospital', location: 'Delhi, IN', description: 'Multi-specialty hospital with strong community programs.', employees: '500+', tier: 'premium' }
 ];
 const exampleCollaborations = [
   { id: 1, title: 'Community Health Camp (Maternal & Child Health)', type: 'Health camp', location: 'Ranchi, IN', description: 'Looking for volunteers to run vitals and counsel mothers.', skills: ['Pediatrics', 'Counseling'], duration: '2 weeks', participants: 12 },
