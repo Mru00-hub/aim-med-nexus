@@ -282,6 +282,10 @@ export const ThreadView: React.FC<ThreadViewProps> = ({ threadId, spaceId }) => 
           getViewerRoleForSpace(spaceId),
           getSpaceDetails(spaceId)
         ]);
+        console.log("PERMISSION DATA:", { 
+          fetchedRole: role, 
+          fetchedSpaceType: spaceDetails?.space_type 
+        });
         
         setViewerRole(role);
         
@@ -332,6 +336,12 @@ export const ThreadView: React.FC<ThreadViewProps> = ({ threadId, spaceId }) => 
 
     return false;
   }, [viewerRole, spaceType, isLoadingPermissions]);
+  console.log("MODERATION CHECK:", { 
+    role: viewerRole, 
+    type: spaceType, 
+    loading: isLoadingPermissions,
+    CAN_MODERATE: canModerate 
+  });
     
   const handleReplyClick = (message: MessageWithDetails) => { 
     setReplyingTo(message);
