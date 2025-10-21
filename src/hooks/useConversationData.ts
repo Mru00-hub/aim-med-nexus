@@ -28,7 +28,7 @@ export const useConversationData = (conversationId: string | undefined, recipien
     const { toast } = useToast();
     
     // This state holds the raw messages (mostly encrypted) from the database
-    const [messages, setMessages] = useState<MessageWithParent[]>([]);
+    const [messages, setMessages] = useState<DirectMessageWithDetails[]>([]);
     // This state holds the final, decrypted messages ready for the UI
     const [displayMessages, setDisplayMessages] = useState<MessageWithParent[]>([]);
 
@@ -67,7 +67,7 @@ export const useConversationData = (conversationId: string | undefined, recipien
       setIsLoading(true);
       try {
         const data = await getDirectMessagesWithDetails(conversationId);
-        setMessages(data as MessageWithParent[]);
+        setMessages(data);
       } catch (error) {
         console.error('Error fetching messages:', error);
         toast({ variant: 'destructive', title: 'Error', description: 'Could not load messages.' });
@@ -85,7 +85,7 @@ export const useConversationData = (conversationId: string | undefined, recipien
 
             const decryptedList = await Promise.all(
                 messages.map(async (msg) => {
-                    if (msg.isOptimistic) {
+                    if ((msg as MessageWithParent).isOptimistic) {
                         return msg;
                     }
                     try {
@@ -138,7 +138,7 @@ export const useConversationData = (conversationId: string | undefined, recipien
                 attachments: optimisticAttachments,
             };
 
-            setMessages(current => [...current, optimisticMessage]);
+            setMessages(current => [...current, optimisticMessage as DirectMessageWithDetails]);
 
             // STEP 3: Call the real API.
             const realMessage = await postDirectMessage(
