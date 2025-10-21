@@ -8,7 +8,7 @@ import {
     getDirectMessagesWithDetails,
     deleteDirectMessage,
     editDirectMessage,
-    addDirectMessageReaction, // Assuming you still have this, or upsertDirectMessageReaction
+    addDirectMessageReaction,
     removeDirectMessageReaction,
     uploadDirectMessageAttachment,
     DirectMessageWithDetails,
@@ -158,6 +158,159 @@ export const useConversationData = (conversationId: string | undefined, recipien
         
         try {
             if (!await canSendMessage(recipientId!)) throw new Error("You are no longer connected.");
+import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/components/ui/use-toast';
+import {
+    canSendMessage, 
+    postDirectMessage,
+    getDirectMessagesWithDetails,
+    deleteDirectMessage,
+    editDirectMessage,
+    addDirectMessageReaction, // Or upsertDirectMessageReaction
+    removeDirectMessageReaction,
+    uploadDirectMessageAttachment,
+    DirectMessageWithDetails,
+    DirectMessageReaction,
+    Profile,
+    setupConversationEncryption,
+} from '@/integrations/supabase/social.api';
+import { decryptMessage } from '@/lib/crypto';
+
+export type MessageWithParent = DirectMessageWithDetails & {
+  parent_message_details?: DirectMessageWithDetails | null;
+  isOptimistic?: boolean;
+};
+
+export const useConversationData = (conversationId: string | undefined, recipientId: string | undefined) => {
+    const { user, profile, userMasterKey } = useAuth();
+    const { toast } = useToast();
+    
+    const [messages, setMessages] = useState<MessageWithParent[]>([]);
+    const [displayMessages, setDisplayMessages] = useState<MessageWithParent[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [replyingTo, setReplyingTo] = useState<MessageWithParent | null>(null);
+    const [conversationKey, setConversationKey] = useState<CryptoKey | null>(null);
+    const [isInitializingEncryption, setIsInitializingEncryption] = useState(true);
+
+    // ✅ FIX 2: fetchMessages is now stable and takes 'id' as an argument.
+    // This prevents stale closures and race conditions.
+    const fetchMessages = useCallback(async (id: string) => {
+      setIsLoading(true);
+      try {
+        const data = await getDirectMessagesWithDetails(id);
+        setMessages(data as MessageWithParent[]);
+      } catch (error: any) {
+        console.error('Error fetching messages:', error);
+        toast({ variant: 'destructive', title: 'Error', description: 'Could not load messages.' });
+      } finally {
+        setIsLoading(false);
+      }
+    }, [toast]); // Now only depends on 'toast' (which is stable)
+
+
+    // This is the combined "master" effect.
+    useEffect(() => {
+        setConversationKey(null);
+        setMessages([]);
+        setDisplayMessages([]);
+        setIsInitializingEncryption(true);
+        setIsLoading(true);
+
+        if (!conversationId || !userMasterKey) {
+            setIsInitializingEncryption(false);
+            setIsLoading(false);
+            return;
+        }
+
+        let channel: any; // Supabase RealtimeChannel
+        
+        const initConversation = async () => {
+            try {
+                // 1. Get the new encryption key FIRST
+                const convKey = await setupConversationEncryption(conversationId, userMasterKey);
+                setConversationKey(convKey);
+                console.log("✅ Conversation encryption ready");
+
+                // 2. Fetch messages using the correct conversationId
+                // ✅ FIX 3: Pass conversationId to the stable fetchMessages function.
+                await fetchMessages(conversationId);
+
+                // 3. Subscribe to the channel
+                channel = supabase.channel(`direct_messages:${conversationId}`)
+                  .on('postgres_changes', { event: '*', schema: 'public', table: 'direct_messages', filter: `conversation_id=eq.${conversationId}` }, (payload) => {
+                      if (payload.new && payload.new.sender_id === user?.id) return;
+                      // ✅ FIX 4: Pass conversationId here too.
+                      fetchMessages(conversationId);
+                  }).subscribe();
+                
+            } catch (error: any) {
+                console.error("Failed to initialize conversation encryption:", error);
+                toast({ variant: 'destructive', title: 'Error', description: 'Could not load this conversation.' });
+            } finally {
+                setIsInitializingEncryption(false);
+            }
+        };
+
+        initConversation();
+
+        // 5. Cleanup function
+        return () => {
+            if (channel) {
+                supabase.removeChannel(channel);
+            }
+        };
+    // ✅ FIX 5: 'fetchMessages' is now a stable dependency.
+    }, [conversationId, userMasterKey, fetchMessages, user?.id, toast]);
+
+
+    // This decryption hook is correct and unchanged.
+    useEffect(() => {
+        const processMessages = async () => {
+            if (!conversationKey || !messages || messages.length === 0) {
+                setDisplayMessages([]);
+                return;
+            }
+
+            const decryptedList = await Promise.all(
+                messages.map(async (msg) => {
+                    if (msg.isOptimistic) {
+                        return msg;
+                    }
+                    try {
+                        const decryptedContent = await decryptMessage(msg.content, conversationKey);
+                        return { ...msg, content: decryptedContent };
+                    } catch (e: any) {
+                        console.error(`Failed to decrypt message ID ${msg.id}:`, e.message);
+                        return { ...msg, content: "[Unable to decrypt message]" };
+                    }
+                })
+            );
+
+            const messageMap = new Map(decryptedList.map(m => [m.id, m]));
+            const flatList = decryptedList.map(message => ({
+                ...message,
+                parent_message_details: message.parent_message_id ? messageMap.get(message.parent_message_id) : undefined,
+            }));
+            
+            const sortedList = flatList.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+            setDisplayMessages(sortedList);
+        };
+        processMessages();
+    }, [messages, conversationKey]); 
+    
+    const handleSendMessage = useCallback(async (content: string, parentMessageId: number | null, files: File[]) => {
+        if (!user || !profile || !conversationId || !conversationKey) return;
+
+        const tempMsgId = -Date.now();
+        const optimisticAttachments = files.map((file, index) => ({
+            id: `temp_att_${Date.now()}_${index}`,
+            message_id: -1, file_name: file.name, file_type: file.type, file_url: URL.createObjectURL(file), file_size_bytes: file.size, created_at: new Date().toISOString(), uploaded_by: user.id, isUploading: true,
+        })) as any;
+        
+        try {
+            if (!await canSendMessage(recipientId!)) throw new Error("You are no longer connected.");
 
             const optimisticMessage: MessageWithParent = {
                 id: tempMsgId,
@@ -174,7 +327,6 @@ export const useConversationData = (conversationId: string | undefined, recipien
                 attachments: optimisticAttachments,
             };
 
-            // ✅ FIX 4: No more incorrect type casting
             setMessages(current => [...current, optimisticMessage]);
 
             const realMessage = await postDirectMessage(
@@ -184,16 +336,38 @@ export const useConversationData = (conversationId: string | undefined, recipien
               parentMessageId
             );
             
-            // This logic remains the same
             setMessages(current => current.map(msg => 
                 msg.id === tempMsgId 
                 ? { ...optimisticMessage, ...realMessage, id: realMessage.id, created_at: realMessage.created_at, isOptimistic: false } 
                 : msg
             ));
             
-            // This logic remains the same
+            // ✅ FIX 1: RESTORED THE ATTACHMENT LOGIC
             if (files.length > 0) {
-                // ... (attachment upload logic is unchanged)
+                const uploadedAttachments = await Promise.all(files.map(async (file, index) => {
+                    try {
+                        const realAttachment = await uploadDirectMessageAttachment(realMessage.id, file, conversationKey);
+                        return { 
+                            tempId: optimisticAttachments[index].id, 
+                            realAttachment: { ...realAttachment, isUploading: false } 
+                        };
+                    } catch (uploadError) {
+                        console.error(`Upload failed for ${file.name}:`, uploadError);
+                        return { 
+                            tempId: optimisticAttachments[index].id, 
+                            realAttachment: { ...optimisticAttachments[index], isUploading: false, file_url: 'upload-failed' } 
+                        };
+                    }
+                }));
+
+                setMessages(current => current.map(msg => {
+                    if (msg.id === realMessage.id) {
+                        const attachmentMap = new Map(uploadedAttachments.map(ua => [ua.tempId, ua.realAttachment]));
+                        const newAttachments = msg.attachments.map(att => attachmentMap.get(att.id) || att);
+                        return { ...msg, attachments: newAttachments };
+                    }
+                    return msg;
+                }));
             }
         } catch (error: any) {
             toast({ variant: 'destructive', title: 'Failed to Send', description: error.message });
@@ -307,17 +481,6 @@ export const useConversationData = (conversationId: string | undefined, recipien
         }
     }, [user, toast]); 
     
-    // ❌ This standalone useEffect has been REMOVED
-    // and its logic was merged into the new "master" useEffect.
-    /*
-    useEffect(() => {
-        fetchMessages();
-        const channel = supabase.channel(...)
-        ...
-        return () => { supabase.removeChannel(channel) };
-    }, [conversationId, fetchMessages, user?.id]);
-    */
-
     return { 
         messages: displayMessages,
         isLoading, 
