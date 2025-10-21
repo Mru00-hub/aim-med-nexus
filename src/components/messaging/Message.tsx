@@ -26,6 +26,7 @@ const EmojiPicker: React.FC<{ onSelect: (emoji: string) => void }> = ({ onSelect
 interface MessageProps {
     message: MessageWithDetails;
     currentUserId: string;
+    canModerate: boolean; 
     onDelete: (messageId: number) => void;
     onEditMessage: (messageId: number, newBody: string) => void; 
     onReplyClick: (message: MessageWithDetails) => void;
@@ -81,6 +82,7 @@ const Attachment: React.FC<{ attachment: MessageAttachment & { isUploading?: boo
 export const Message: React.FC<MessageProps> = ({ 
     message, 
     currentUserId, 
+    canModerate,
     onDelete,
     onEditMessage, 
     onReplyClick,
@@ -95,7 +97,6 @@ export const Message: React.FC<MessageProps> = ({
     const isCurrentUser = message.user_id === currentUserId;
     const displayName = message.author?.full_name || 'User';
     const avatarUrl = message.author?.profile_picture_url;
-    const canModerate = false; // Placeholder for moderation logic
     
     const reactionCounts = useMemo(() => {
         return message.reactions.reduce((acc, reaction) => {
