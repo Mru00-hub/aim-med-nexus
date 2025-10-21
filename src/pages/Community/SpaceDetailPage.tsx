@@ -282,21 +282,19 @@ export default function SpaceDetailPage() {
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
+                        console.log("Edit button clicked for:", thread.title);
                         setEditingThread(thread);
                       }}
                     >
                       <Pencil className="h-4 w-4 text-muted-foreground hover:text-primary" />
                     </Button>
 
-                    <AlertDialog>
+                    <AlertDialog onOpenChange={(open) => console.log("Delete Dialog open state changed:", open)}> 
                       <AlertDialogTrigger asChild>
                         <Button 
                           size="icon" 
                           variant="ghost" 
                           className="h-8 w-8" 
-                          onClick={(e) => {
-                            e.preventDefault();
-                          }}
                         >
                           <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
                         </Button>
@@ -310,7 +308,10 @@ export default function SpaceDetailPage() {
                         </AlertDialogHeader>
                         <AlertDialogFooter>
                           <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction onClick={() => handleDeleteThread(thread.id)}>
+                          <AlertDialogAction onClick={() => {
+                            console.log("CONFIRM delete button clicked in dialog"); // <-- ADD THIS
+                            handleDeleteThread(thread.id);
+                          }}>
                             Delete
                           </AlertDialogAction>
                         </AlertDialogFooter>
