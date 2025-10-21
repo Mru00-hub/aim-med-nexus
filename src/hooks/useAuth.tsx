@@ -201,7 +201,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .eq('id', profile.id);
 
         if (error) throw error;
-        await refreshProfile(); 
+        setProfile(currentProfile => {
+          if (currentProfile) {
+            return { ...currentProfile, encrypted_user_master_key: encryptedMasterKey };
+          }
+          return null;
+        });
         setUserMasterKey(newMasterKey);
         console.log("✅ New user master key generated and stored.");
       }
