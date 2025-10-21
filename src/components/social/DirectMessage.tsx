@@ -268,6 +268,15 @@ export const DirectMessage = ({ message, currentUserId, conversationKey, onReply
                         {isMe && <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { onDelete(message.id); setShowActions(false); }} title="Delete"><Trash2 className="h-4 w-4 text-destructive" /></Button>}
                     </div>
                 )}
+                {showReactionPicker && (
+                    <div 
+                        className={cn("absolute z-10", "top-[-16px]", isMe ? "right-12" : "left-12")}
+                        // Stop click from propagating to the bubble
+                        onClick={(e) => e.stopPropagation()} 
+                    >
+                        <EmojiPicker onSelect={handleReactionSelect} />
+                    </div>
+                )}
             </div>
 
             {isMe && <Avatar className="h-8 w-8 flex-shrink-0"><AvatarImage src={message.author?.profile_picture_url || undefined} /><AvatarFallback>{displayName.charAt(0)}</AvatarFallback></Avatar>}
