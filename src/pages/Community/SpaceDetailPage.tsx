@@ -292,7 +292,6 @@ export default function SpaceDetailPage() {
                           className="h-8 w-8" 
                           onClick={(e) => {
                             e.preventDefault();
-                            e.stopPropagation();
                           }}
                         >
                           <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
