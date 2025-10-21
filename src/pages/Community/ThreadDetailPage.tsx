@@ -352,7 +352,23 @@ export default function ThreadDetailPage() {
           )}
           
           <div className="flex-1 mt-4"> {/* Added margin-top */}
-            {threadId && <ThreadView threadId={threadId} />}
+            {isLoading ? (
+              // Show skeleton while main thread details are loading
+              <div className="space-y-4 p-4">
+                <Skeleton className="h-16 w-3/4" />
+                <Skeleton className="h-16 w-2/3 ml-auto" />
+              </div>
+            ) : threadId ? (
+              <ThreadView 
+                threadId={threadId} 
+                // Pass the spaceId (it's okay if it's null for public threads)
+                spaceId={threadDetails?.spaceId || null} 
+                // Pass the final moderation permission you already calculated
+                canModerate={canEdit} 
+              />
+            ) : (
+              <p>Thread ID not found.</p>
+            )}
           </div>
         </main>
         <Footer />
