@@ -99,6 +99,7 @@ export default function MembersPage() {
                                 isCurrentUserAdmin={isUserAdminOrMod} 
                                 onApprove={(membershipId) => handleMembershipUpdate(membershipId, 'ACTIVE')}
                                 onReject={(membershipId) => handleMembershipUpdate(membershipId, 'BANNED')} // Note: Rejecting sets status to BANNED
+                                spaceType={space.space_type}
                             />
                         </CardContent>
                     </Card>
@@ -113,6 +114,7 @@ export default function MembersPage() {
                             isCurrentUserAdmin={isUserAdminOrMod}
                             onRoleChange={handleRoleChange}
                             onBan={space.space_type !== 'PUBLIC' ? (membershipId) => handleMembershipUpdate(membershipId, 'BANNED') : undefined}
+                            spaceType={space.space_type}
                         />
                     </CardContent>
                 </Card>
