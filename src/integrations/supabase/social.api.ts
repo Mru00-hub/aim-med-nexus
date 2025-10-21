@@ -208,6 +208,7 @@ export const setupConversationEncryption = async (
 
   if (participant?.encrypted_conversation_key) {
     // Yes, decrypt and return it.
+    console.log('DEBUG: Found encrypted key in DB:', participant.encrypted_conversation_key);
     return decryptConversationKey(participant.encrypted_conversation_key, userMasterKey);
   }
 
