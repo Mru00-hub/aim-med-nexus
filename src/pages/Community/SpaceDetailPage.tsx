@@ -407,7 +407,7 @@ export default function SpaceDetailPage() {
                       {isUserCreator ? (
                         <>
                           <Button size="sm" variant="outline" onClick={() => setShowTransferDialog(true)}>
-                            <Crown className="h-4 w-4 mr-2" /> Transfer Ownership
+                            <Crown className="h-4 w-4 mr-2" /> Transfer
                           </Button>
                           <Button size="sm" variant="outline" onClick={() => setIsEditing(true)}>
                             <Pencil className="h-4 w-4 mr-2" /> Edit
