@@ -93,7 +93,7 @@ export const HeroSection = () => {
             </div>
 
             {/* Trust Indicators */}
-            <div className="flex items-center gap-8 pt-8 border-t border-border">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-8 pt-8 border-t border-border">
               <div className="flex items-center gap-2">
                 <Users className="h-5 w-5 text-primary" />
                 <span className="text-sm text-muted-foreground flex items-center gap-1.5">
@@ -128,7 +128,7 @@ export const HeroSection = () => {
               </div>
 
               {/* Floating Stats Cards */}
-              <div className="absolute -top-4 -left-4 bg-card border border-border rounded-lg p-4 shadow-card animate-scale-in">
+              <div className="absolute top-2 left-2 sm:-top-4 sm:-left-4 bg-card border border-border rounded-lg p-4 shadow-card animate-scale-in">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-gradient-primary rounded-full flex items-center justify-center">
                     <Users className="h-5 w-5 text-primary-foreground" />
@@ -142,7 +142,7 @@ export const HeroSection = () => {
                 </div>
               </div>
 
-              <div className="absolute -bottom-4 -right-4 bg-card border border-border rounded-lg p-4 shadow-card animate-scale-in">
+              <div className="absolute bottom-2 right-2 sm:-bottom-4 sm:-right-4 bg-card border border-border rounded-lg p-4 shadow-card animate-scale-in">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-gradient-medical rounded-full flex items-center justify-center">
                     <MessageSquare className="h-5 w-5 text-accent-foreground" />
