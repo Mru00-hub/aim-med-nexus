@@ -14,6 +14,12 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import {
+  Drawer,
+  DrawerContent,
+  DrawerTrigger,
+} from "@/components/ui/drawer"
+import { useMobile } from "@/hooks/use-mobile" 
 
 type Option = {
   value: string;
@@ -33,6 +39,75 @@ type SearchableSelectProps = {
   isLoading?: boolean; 
 };
 
+function SelectContent({
+  options,
+  value,
+  onValueChange,
+  onSearchChange,
+  searchPlaceholder,
+  emptyMessage,
+  showOther,
+  isLoading,
+  onClose, // Function to close the parent (Popover or Drawer)
+}: Omit<SearchableSelectProps, 'className' | 'placeholder'> & { onClose: () => void }) {
+  return (
+    <Command filter={() => 1}>
+      <CommandInput 
+        placeholder={searchPlaceholder} 
+        onValueChange={onSearchChange} 
+      />
+      <CommandEmpty>
+        {isLoading ? (
+          <div className="flex items-center justify-center p-2">
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Loading...
+          </div>
+        ) : (
+          emptyMessage
+        )}
+      </CommandEmpty>
+      {/* ✅ FIX: Add padding to the group for mobile drawer spacing */ }
+      <CommandGroup className="max-h-64 overflow-auto p-2">
+        {options.map((option) => (
+          <CommandItem
+            key={option.value}
+            value={option.label}
+            onSelect={() => {
+              onValueChange(option.value);
+              onClose(); // Close on select
+            }}
+          >
+            <Check
+              className={cn(
+                "mr-2 h-4 w-4",
+                value === option.value ? "opacity-100" : "opacity-0"
+              )}
+            />
+            {option.label}
+          </CommandItem>
+        ))}
+        {showOther && (
+          <CommandItem
+            value="Other"
+            onSelect={() => {
+              onValueChange("other");
+              onClose(); // Close on select
+            }}
+          >
+            <Check
+              className={cn(
+                "mr-2 h-4 w-4",
+                value === "other" ? "opacity-100" : "opacity-0"
+              )}
+            />
+            Other
+          </CommandItem>
+        )}
+      </CommandGroup>
+    </Command>
+  )
+}
+
 export function SearchableSelect({
   options,
   value,
@@ -51,83 +126,68 @@ export function SearchableSelect({
     ? { value: "other", label: "Other" }
     : options.find((option) => option.value === value);
 
+  const TriggerButton = (
+    <Button
+      variant="outline"
+      role="combobox"
+      aria-expanded={open}
+      className={cn("w-full justify-between", className)}
+    >
+      {selectedOption ? selectedOption.label : placeholder}
+      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+    </Button>
+  );
+
+  if (isMobile) {
+    return (
+      <Drawer open={open} onOpenChange={setOpen}>
+        <DrawerTrigger asChild>
+          {TriggerButton}
+        </DrawerTrigger>
+        <DrawerContent>
+          {/* ✅ Render the reusable content */}
+          <SelectContent
+            options={options}
+            value={value}
+            onValueChange={onValueChange}
+            onSearchChange={onSearchChange}
+            searchPlaceholder={searchPlaceholder}
+            emptyMessage={emptyMessage}
+            showOther={showOther}
+            isLoading={isLoading}
+            onClose={() => setOpen(false)}
+          />
+        </DrawerContent>
+      </Drawer>
+    )
+  }
+
+  // ✅ RENDER POPOVER ON DESKTOP
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
-          className={cn("w-full justify-between", className)}
-        >
-          {selectedOption ? selectedOption.label : placeholder}
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-        </Button>
+        {TriggerButton}
       </PopoverTrigger>
       <PopoverContent 
-        className="w-[400px] max-w-[calc(100vw-2rem)] p-0" 
+        // ✅ FIX: Use responsive width for desktop.
+        // This makes the popover match the trigger button's width.
+        className="w-[var(--radix-popover-trigger-width)] max-w-[calc(100vw-2rem)] p-0" 
         align="start"
-        // ✅ ADD: Ensure it stays within viewport
         sideOffset={5}
         collisionPadding={10}
       >
-        <Command
-          filter={() => 1}
-        >
-          <CommandInput 
-            placeholder={searchPlaceholder} 
-            // This is the key: call onSearchChange when user types
-            onValueChange={onSearchChange} 
-          />
-          <CommandEmpty>
-            {isLoading ? ( // Show custom loading message if input doesn't
-              <div className="flex items-center justify-center p-2">
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Loading...
-              </div>
-            ) : (
-              emptyMessage
-            )}
-          </CommandEmpty>
-          <CommandGroup className="max-h-64 overflow-auto">
-            {options.map((option) => (
-              <CommandItem
-                key={option.value}
-                // We use option.label here, but filtering is disabled
-                value={option.label}
-                onSelect={() => {
-                  onValueChange(option.value);
-                  setOpen(false);
-                }}
-              >
-                <Check
-                  className={cn(
-                    "mr-2 h-4 w-4",
-                    value === option.value ? "opacity-100" : "opacity-0"
-                  )}
-                />
-                {option.label}
-              </CommandItem>
-            ))}
-            {showOther && (
-              <CommandItem
-                value="Other"
-                onSelect={() => {
-                  onValueChange("other");
-                  setOpen(false);
-                }}
-              >
-                <Check
-                  className={cn(
-                    "mr-2 h-4 w-4",
-                    value === "other" ? "opacity-100" : "opacity-0"
-                  )}
-                />
-                Other
-              </CommandItem>
-            )}
-          </CommandGroup>
-        </Command>
+        {/* ✅ Render the reusable content */}
+        <SelectContent
+          options={options}
+          value={value}
+          onValueChange={onValueChange}
+          onSearchChange={onSearchChange}
+          searchPlaceholder={searchPlaceholder}
+          emptyMessage={emptyMessage}
+          showOther={showOther}
+          isLoading={isLoading}
+          onClose={() => setOpen(false)}
+        />
       </PopoverContent>
     </Popover>
   );
