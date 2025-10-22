@@ -35,6 +35,7 @@ import {
   AlertDescription,
   AlertTitle,
 } from "@/components/ui/alert";
+import '@/styles/page-reset.css';
 
 type ThreadDetails = {
   title: string;
@@ -46,6 +47,8 @@ type ThreadDetails = {
 
 export default function ThreadDetailPage() {
   const { threadId } = useParams<{ threadId: string }>();
+  const { user, profile } = useAuth(); // Get the current user
+  const { toast } = useToast();
   useEffect(() => {
     // Reset scroll position
     window.scrollTo(0, 0);
@@ -62,8 +65,6 @@ export default function ThreadDetailPage() {
     });
   }, [threadId]);
   
-  const { user, profile } = useAuth(); // Get the current user
-  const { toast } = useToast();
   const [threadDetails, setThreadDetails] = useState<ThreadDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [userRole, setUserRole] = useState<Enums<'membership_role'> | null>(null);
@@ -94,7 +95,7 @@ export default function ThreadDetailPage() {
         setThreadDetails(details);
         // Pre-fill the edit form fields
         setEditedTitle(details.title);
-        setEditedDescription(details.description || '');
+        setEditedDescription(details.decription || '');
       }
     } catch (error) {
       console.error("Failed to fetch thread details:", error);
@@ -219,7 +220,7 @@ export default function ThreadDetailPage() {
     <AuthGuard>
       <div className="flex flex-col h-screen bg-background">
         <Header />
-        <main className="flex-grow w-full flex flex-col py-4 px-4">
+        <main className="container-medical flex-1 py-4">
           <header>
             {isLoading ? (
               <div className="space-y-2">
