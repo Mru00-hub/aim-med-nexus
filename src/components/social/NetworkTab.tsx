@@ -48,7 +48,7 @@ export const NetworkTab = ({ myConnections, loading, onRemoveConnection }) => {
           <Input placeholder="Filter by name..." className="pl-10" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
         </div>
       </CardHeader>
-      <CardContent className="space-y-2">
+      <CardContent className="space-y-2 max-h-[60vh] overflow-y-auto">
         {loading ? <Skeleton className="h-20 w-full" /> : filteredConnections.map(conn => (
           <UserActionCard
             key={conn.id}
