@@ -178,7 +178,7 @@ export const DirectMessage = ({ message, currentUserId, conversationKey, onReply
     // FIX: Squeezed text (Problem #1) is solved by adding max-w classes and word break utilities.
     const messageStyle = cn(
         "flex flex-col rounded-xl px-4 py-3 shadow-sm relative group cursor-pointer",
-        "max-w-[85%] sm:max-w-lg break-words", // This limits the width
+        "max-w-[90%] sm:max-w-[80%] md:max-w-lg lg:max-w-xl break-words",// This limits the width
         isMe 
             ? "bg-blue-100 dark:bg-blue-900/50 text-blue-900 dark:text-blue-100" // Lighter blue style
             : "bg-card border"
@@ -216,17 +216,29 @@ export const DirectMessage = ({ message, currentUserId, conversationKey, onReply
     return (
         <div className={cn("flex w-full items-start gap-3 relative", isMe ? "justify-end" : "justify-start")}>
             {!isMe && (
-              <Avatar className="h-8 w-8 flex-shrink-0">
-                <AvatarImage src={message.author?.profile_picture_url || undefined} />
-                <AvatarFallback>{displayName.charAt(0)}</AvatarFallback>
-              </Avatar>
+              <a 
+                href={`/profile/${message.sender_id}`} 
+                className="flex-shrink-0 transition-smooth hover:opacity-80"
+              >
+                <Avatar className="h-8 w-8 md:h-10 md:w-10 flex-shrink-0">
+                  <AvatarImage src={message.author?.profile_picture_url || undefined} />
+                  <AvatarFallback>{displayName.charAt(0)}</AvatarFallback>
+                </Avatar>
+              </a>
             )}
             
             {/* This is the main content wrapper */}
             <div className={cn("flex flex-col relative", isMe ? "items-end" : "items-start", !isMe && "w-full")}>
-                <div className="flex items-center gap-2 mb-1">
-                    <span className="font-bold text-sm">{displayName}</span>
-                    <span className="text-xs text-muted-foreground">{new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                <div className="flex flex-col xs:flex-row xs:items-center gap-1 xs:gap-2 mb-1">
+                    <span className="font-bold text-xs sm:text-sm">
+                      <a 
+                        href={`/profile/${message.sender_id}`} 
+                        className="font-bold text-xs sm:text-sm hover:underline cursor-pointer transition-smooth"
+                      >
+                        {displayName}
+                      </a>
+                    </span>
+                    <span className="text-[10px] sm:text-xs text-muted-foreground">{new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                 </div>
 
                 <div onClick={() => {
@@ -234,7 +246,9 @@ export const DirectMessage = ({ message, currentUserId, conversationKey, onReply
                     setShowReactionPicker(false);
                 }}>
                     <div className={messageStyle}>
+                      <div className="p-3 md:p-4">
                         {messageContent}
+                      </div>
                     </div>
                 </div>
 
@@ -251,7 +265,7 @@ export const DirectMessage = ({ message, currentUserId, conversationKey, onReply
                 {/* FIX: The menu is now stable because it's only controlled by the `showActions` state */}
                 {showActions && (
                     <div 
-                      className={cn("absolute z-10 flex items-center bg-card border rounded-full shadow-md", "top-[-16px]", isMe ? "right-12" : "left-12")}
+                      className={cn("absolute z-10 flex items-center bg-card border rounded-full shadow-card hover:shadow-hover", "top-[-14px] md:top-[-16px]", isMe ? "right-10 md:right-12" : "left-10 md:left-12")}
                       // 👇 --- (6) Stop click from propagating to the bubble ---
                       onClick={(e) => e.stopPropagation()} // <-- MOVE IT HERE
                     >
@@ -259,7 +273,7 @@ export const DirectMessage = ({ message, currentUserId, conversationKey, onReply
                         <Button 
                             variant="ghost" 
                             size="icon" 
-                            className="h-8 w-8" 
+                            className="h-7 w-7 md:h-8 md:w-8"
                             onClick={() => { 
                                 setShowActions(false); 
                                 setShowReactionPicker(true); 
@@ -284,7 +298,7 @@ export const DirectMessage = ({ message, currentUserId, conversationKey, onReply
                 )}
             </div>
 
-            {isMe && <Avatar className="h-8 w-8 flex-shrink-0"><AvatarImage src={message.author?.profile_picture_url || undefined} /><AvatarFallback>{displayName.charAt(0)}</AvatarFallback></Avatar>}
+            {isMe && <Avatar className="h-8 w-8 md:h-10 md:w-10 flex-shrink-0"><AvatarImage src={message.author?.profile_picture_url || undefined} /><AvatarFallback>{displayName.charAt(0)}</AvatarFallback></Avatar>}
         </div>
     );
 };
