@@ -35,7 +35,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 export const Header = () => {
-  const { user, loading, signOut, initialUnreadCount, profile} = useAuth();
+  const { user, loading, signOut, profile} = useAuth();
   const navigate = useNavigate();
   const [lovingItCount, setLovingItCount] = useState(0);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -44,8 +44,7 @@ export const Header = () => {
   const { 
     requestCount, 
     unreadInboxCount, 
-    unreadNotifCount,
-    setUnreadInboxCount // Get the new count
+    unreadNotifCount // Get the new count
   } = useSocialCounts();
 
   // --- THIS ARRAY DEFINITION WAS ACCIDENTALLY OMITTED ---
@@ -68,15 +67,6 @@ export const Header = () => {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
-
-  useEffect(() => {
-    if (initialUnreadCount !== null) {
-      setUnreadInboxCount(initialUnreadCount);
-    } else if (!user) {
-      // Explicitly set to 0 if there's no user
-      setUnreadInboxCount(0);
-    }
-  }, [initialUnreadCount, user]);
 
   const handleLovingItClick = async () => {
     setLovingItCount(prevCount => prevCount + 1);
