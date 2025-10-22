@@ -15,6 +15,7 @@ interface User {
   organization?: string | null;
   location?: string | null;
   mutuals?: any[];
+  similarity_score?: number | null;
 }
 
 interface UserActionCardProps {
@@ -41,9 +42,17 @@ export const UserActionCard = ({ user, children }: UserActionCardProps) => {
             </Avatar>
           </Link>
           <div className="min-w-0">
-            <Link to={`/profile/${user.id}`} className="hover:underline">
-                <h4 className="font-semibold truncate">{user.full_name}</h4>
-            </Link>
+            <div className="flex items-center gap-2">
+              <Link to={`/profile/${user.id}`} className="hover:underline">
+                  <h4 className="font-semibold truncate">{user.full_name}</h4>
+              </Link>
+              {/* 👇 ADD THIS BADGE 👇 */}
+              {user.similarity_score && user.similarity_score > 0 && (
+                <Badge variant="secondary" className="flex-shrink-0">
+                  {Math.round(user.similarity_score)}% Match
+                </Badge>
+              )}
+            </div>
             {/* CHANGED: Render the new detailed information line */}
             {userDetails.length > 0 && (
               <p className="text-sm text-muted-foreground flex items-center flex-wrap truncate">
