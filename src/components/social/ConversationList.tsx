@@ -18,6 +18,16 @@ interface ConversationListProps {
   selectedConversationId: string | null;
 }
 
+const ConversationItemSkeleton = () => (
+  <div className="flex items-center p-3">
+    <Skeleton className="h-10 w-10 rounded-full" />
+    <div className="ml-3 flex-1 space-y-2">
+      <Skeleton className="h-4 w-3/4" />
+      <Skeleton className="h-3 w-1/2" />
+    </div>
+  </div>
+);
+
 export const ConversationList = ({ conversations, loading, onSelectConversation, selectedConversationId }: ConversationListProps) => {
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -49,7 +59,14 @@ export const ConversationList = ({ conversations, loading, onSelectConversation,
         </div>
       </CardHeader>
       <CardContent className="p-0 overflow-y-auto flex-1">
-        {loading ? ( <Skeleton className="h-16 w-full" /> ) : (
+        {loading ? (
+          <div className="space-y-1 p-2">
+            <ConversationItemSkeleton />
+            <ConversationItemSkeleton />
+            <ConversationItemSkeleton />
+            <ConversationItemSkeleton />
+          </div>
+        ) : (
           <div className="space-y-1">
             {filteredConversations.map((convo) => (
               <div
