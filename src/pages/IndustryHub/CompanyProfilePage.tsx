@@ -172,11 +172,11 @@ const CompanyProfilePage = () => {
         {/* === Section 2: Page Content (Tabs) === */}
         <div className="container-medical py-12">
           <Tabs defaultValue="about" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 mb-8">
-              <TabsTrigger value="about">About</TabsTrigger>
-              <TabsTrigger value="collaborations">Collaborations ({collaborations.length})</TabsTrigger>
-              <TabsTrigger value="jobs">Open Positions ({jobs.length})</TabsTrigger>
-              <TabsTrigger value="links">Products & Links</TabsTrigger>
+            <TabsList className="w-full justify-start overflow-x-auto mb-8">
+              <TabsTrigger value="about" className="whitespace-nowrap">About</TabsTrigger>
+              <TabsTrigger value="collaborations" className="whitespace-nowrap">Collaborations ({collaborations.length})</TabsTrigger>
+              <TabsTrigger value="jobs" className="whitespace-nowrap">Open Positions ({jobs.length})</TabsTrigger>
+              <TabsTrigger value="links" className="whitespace-nowrap">Products & Links</TabsTrigger>
             </TabsList>
 
             {/* --- About Tab --- */}
