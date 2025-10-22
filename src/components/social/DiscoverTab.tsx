@@ -24,7 +24,7 @@ export const DiscoverTab = ({ recommendations, loading, onSendRequest, onBlockUs
           <Input placeholder="Search by name..." className="pl-10" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
         </div>
       </CardHeader>
-      <CardContent className="space-y-2">
+      <CardContent className="space-y-2 max-h-[60vh] overflow-y-auto">
         {loading ? <Skeleton className="h-20 w-full" /> : filteredRecommendations.map(rec => (
           <UserActionCard 
             key={rec.id} 
