@@ -32,21 +32,21 @@ export const UserActionCard = ({ user, children }: UserActionCardProps) => {
 
   return (
     <Card className="hover:bg-muted/50 transition-colors">
-      <CardContent className="p-3 flex items-center justify-between">
-        <div className="flex items-center gap-4">
+      <CardContent className="p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+        <div className="flex items-center gap-4 min-w-0">
           <Link to={`/profile/${user.id}`}>
-            <Avatar>
+            <Avatar className="flex-shrink-0"> 
               <AvatarImage src={user.profile_picture_url || undefined} />
               <AvatarFallback>{user.full_name?.split(' ').map(n => n[0]).join('')}</AvatarFallback>
             </Avatar>
           </Link>
-          <div>
+          <div className="min-w-0">
             <Link to={`/profile/${user.id}`} className="hover:underline">
-                <h4 className="font-semibold">{user.full_name}</h4>
+                <h4 className="font-semibold truncate">{user.full_name}</h4>
             </Link>
             {/* CHANGED: Render the new detailed information line */}
             {userDetails.length > 0 && (
-              <p className="text-sm text-muted-foreground flex items-center flex-wrap">
+              <p className="text-sm text-muted-foreground flex items-center flex-wrap truncate">
                 {userDetails.map((detail, index) => (
                   <React.Fragment key={index}>
                     <span>{detail}</span>
@@ -65,7 +65,7 @@ export const UserActionCard = ({ user, children }: UserActionCardProps) => {
             )}
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex-shrink-0 flex items-center gap-2 w-full sm:w-auto">
           {children}
         </div>
       </CardContent>
