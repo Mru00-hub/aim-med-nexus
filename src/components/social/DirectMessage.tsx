@@ -11,6 +11,7 @@ import { EmojiPicker } from './EmojiPicker';
 import { DirectMessageAttachment, DirectMessageWithDetails } from '@/integrations/supabase/social.api';
 import { MessageWithParent } from '@/hooks/useConversationData'; // NEW: Import the rich type
 import { decryptFile, decryptMessage } from '@/lib/crypto';
+import { Link } from 'react-router-dom';
 
 const Attachment: React.FC<{ 
   attachment: DirectMessageAttachment & { isUploading?: boolean };
@@ -216,8 +217,8 @@ export const DirectMessage = ({ message, currentUserId, conversationKey, onReply
     return (
         <div className={cn("flex w-full items-start gap-3 relative", isMe ? "justify-end" : "justify-start")}>
             {!isMe && (
-              <a 
-                href={`/profile/${message.sender_id}`} 
+              <Link 
+                to={`/profile/${message.sender_id}`} 
                 className="flex-shrink-0 transition-smooth hover:opacity-80"
               >
                 <Avatar className="h-8 w-8 md:h-10 md:w-10 flex-shrink-0">
@@ -231,8 +232,8 @@ export const DirectMessage = ({ message, currentUserId, conversationKey, onReply
             <div className={cn("flex flex-col relative", isMe ? "items-end" : "items-start", !isMe && "w-full")}>
                 <div className="flex flex-col xs:flex-row xs:items-center gap-1 xs:gap-2 mb-1">
                     <span className="font-bold text-xs sm:text-sm">
-                      <a 
-                        href={`/profile/${message.sender_id}`} 
+                      <Link 
+                        to={`/profile/${message.sender_id}`} 
                         className="font-bold text-xs sm:text-sm hover:underline cursor-pointer transition-smooth"
                       >
                         {displayName}
