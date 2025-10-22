@@ -1,52 +1,4 @@
 /* src/App.css */
-#root {
-  /* We keep the responsive padding for a safe area near the screen edges,
-     but remove all the layout-constraining properties. */
-  padding: 1rem; 
-}
-
-/* On larger screens, we can have a bit more padding */
-@media (min-width: 640px) {
-  #root {
-    padding: 2rem;
-  }
-}
-
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
-}
-
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
-}
-
-.card {
-  padding: 2em;
-}
-
-.read-the-docs {
-  color: #888;
-}
 
 /* --- Global Mobile & Responsive Fixes --- */
 
@@ -63,70 +15,56 @@ img, svg, video, canvas {
   height: auto;
 }
 
-/* 3. Mobile padding and safe area inside root container */
+/* 3. Mobile padding and safe area inside root container.
+   This is the SINGLE source of truth for the main layout padding. */
 #root, .container-medical {
   width: 100%;
-  max-width: 1280px;
-  margin: 0 auto;
-  padding-left: 1rem;
-  padding-right: 1rem;
+  max-width: 1280px; /* Desktop max-width limit */
+  margin-left: auto;
+  margin-right: auto;
+  padding: 1rem; /* Mobile-first: 1rem on all sides */
   box-sizing: border-box;
 }
 
-/* 4. Cards should wrap and never overflow */
+/* 4. On larger screens (sm+), increase padding */
+@media (min-width: 640px) {
+  #root, .container-medical {
+    padding: 2rem;
+  }
+}
+
+/* 5. Cards should wrap text and have mobile-first padding. */
 .card, .card-medical, .card-premium {
-  word-wrap: break-word;
-  overflow-wrap: anywhere;
+  padding: 1rem; /* Mobile-first padding */
+  word-wrap: break-word; /* Use this for better readability */
+  overflow-wrap: break-word;
   max-width: 100%;
 }
 
-/* 5. Responsive grid defaults */
-.grid {
-  grid-template-columns: repeat(1, minmax(0, 1fr));
-}
-
-/* Let Tailwind handle md/lg from utility classes, this ensures mobile fallback */
-@media (min-width: 768px) {
-  .grid-md-2 {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+/* 6. Increase card padding on larger screens */
+@media (min-width: 640px) {
+  .card {
+    padding: 2em; /* Restore your desktop padding */
   }
-}
-@media (min-width: 1024px) {
-  .grid-lg-3 {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
+  /* You may want to add larger padding for .card-medical here too */
 }
 
-/* 6. Buttons and icon containers wrap properly */
-.flex {
-  flex-wrap: wrap;
-}
-
-/* 7. Prevent text from overflowing cards or buttons */
-h3, h4, h5, h6, p, span, a, button {
-  word-break: break-word;
-  overflow-wrap: anywhere;
-}
-
-/* 8. Tabs and filters align nicely */
+/* 7. Tabs and filters align nicely */
 .tabs-list, .filters-bar {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
 }
 
-/* 9. Adjust padding for small screens */
-@media (max-width: 640px) {
-  .card, .card-medical {
-    padding: 1rem !important;
-  }
-  .container-medical {
-    padding-left: 1rem;
-    padding-right: 1rem;
-  }
-}
-
-/* 10. Fix horizontal scroll issues */
+/* 8. Fix horizontal scroll issues */
 body {
   overflow-x: hidden;
 }
+
+/* REMOVED:
+   - Removed duplicate #root rule.
+   - Removed redundant @media query for .container-medical.
+   - REMOVED DANGEROUS .flex { flex-wrap: wrap; } override.
+   - Removed global text-break rule (#7). Apply this with utility classes.
+   - Removed .logo, .read-the-docs, etc. as they seemed like template code.
+*/
