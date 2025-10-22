@@ -63,7 +63,7 @@ const Attachment: React.FC<{ attachment: MessageAttachment & { isUploading?: boo
                 <img 
                     src={attachment.file_url} 
                     alt={attachment.file_name} 
-                    className="max-w-xs max-h-64 rounded-lg object-cover border"
+                    className="max-w-full max-h-64 rounded-lg object-cover border"
                 />
             </a>
         );
@@ -157,7 +157,7 @@ export const Message: React.FC<MessageProps> = ({
     );
     
     const messageStyle = cn(
-        "flex flex-col rounded-xl px-4 py-3 max-w-[85%] sm:max-w-lg shadow-sm cursor-pointer group relative",
+        "flex flex-col rounded-xl px-4 py-3 max-w-[85%] sm:max-w-lg shadow-sm cursor-pointer group relative break-words",
         isCurrentUser 
             ? "bg-blue-100 dark:bg-blue-900/50 text-blue-900 dark:text-blue-100" 
             : "bg-card border"
@@ -173,7 +173,7 @@ export const Message: React.FC<MessageProps> = ({
                     </Avatar>
                 </Link>
             )}           
-            <div className={cn("flex flex-col w-full relative", isCurrentUser ? "items-end" : "items-start")}>
+            <div className={cn("flex flex-col relative", isCurrentUser ? "items-end" : "items-start", !isCurrentUser && "w-full")}>
                 <div className="flex items-center gap-2 mb-1">
                     <Link to={`/profile/${message.user_id}`} className="font-bold text-sm hover:underline hover:text-primary">
                         {displayName}
