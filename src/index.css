@@ -197,6 +197,14 @@
     @apply py-16 md:py-20 lg:py-24;
   }
 
+  .message-bubble {
+    @apply rounded-radius-lg shadow-card transition-smooth;
+  }
+  
+  .message-bubble:hover {
+    @apply shadow-hover;
+  }
+
   /* Medical Animations */
   .animate-fade-in {
     animation: fadeIn 0.6s ease-out;
