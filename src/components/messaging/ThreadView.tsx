@@ -278,13 +278,13 @@ export const ThreadView: React.FC<ThreadViewProps> = ({ threadId, spaceId, canMo
   }
 
   return (
-    <div className="flex flex-col h-full border rounded-lg bg-card shadow-lg">
+    <div className="flex flex-col h-full border rounded-lg bg-card shadow-lg overflow-hidden">
       <CardHeader className="p-4 border-b">
         <CardTitle className="text-xl font-bold">Discussion Stream</CardTitle>
         <p className="text-sm text-muted-foreground">Thread ID: {threadId.substring(0, 8)}...</p>
       </CardHeader>
 
-      <div className="flex-1 overflow-y-hidden">
+      <div className="flex-1 overflow-y-hidden overflow-x-hidden">
         <ScrollArea className="h-full" viewportRef={scrollViewportRef}>
           <div className="p-4">
             {isLoading ? (
