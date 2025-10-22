@@ -109,7 +109,7 @@ const Attachment: React.FC<{
     }
     return (
       <a href={decryptedImgUrl || undefined} target="_blank" rel="noopener noreferrer" className="mt-2 block">
-        <img src={decryptedImgUrl || undefined} alt={decryptedName} className="max-w-xs max-h-64 rounded-lg object-cover border"/>
+        <img src={decryptedImgUrl || undefined} alt={decryptedName} className="max-w-full max-h-64 rounded-lg object-cover border"/>
       </a>
     );
   }
@@ -178,7 +178,7 @@ export const DirectMessage = ({ message, currentUserId, conversationKey, onReply
     // FIX: Squeezed text (Problem #1) is solved by adding max-w classes and word break utilities.
     const messageStyle = cn(
         "flex flex-col rounded-xl px-4 py-3 shadow-sm relative group cursor-pointer",
-        "max-w-[85%] sm:max-w-lg", // This limits the width
+        "max-w-[85%] sm:max-w-lg break-words", // This limits the width
         isMe 
             ? "bg-blue-100 dark:bg-blue-900/50 text-blue-900 dark:text-blue-100" // Lighter blue style
             : "bg-card border"
