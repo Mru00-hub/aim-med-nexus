@@ -54,7 +54,7 @@ export const ProfileProfessionalInfo: React.FC<ProfileProfessionalInfoProps> = (
       <div>
         <label className="block text-sm font-medium mb-2">Experience Level *</label>
         <Select value={formData.experience_level_value} onValueChange={(v) => onInputChange('experience_level_value', v)}>
-          <SelectTrigger><SelectValue placeholder="Select your experience" /></SelectTrigger>
+          <SelectTrigger className="min-w-0"><SelectValue placeholder="Select your experience" className="truncate"/></SelectTrigger>
           <SelectContent>
             {experiences.map(e => <SelectItem key={e.value} value={e.value}>{e.label}</SelectItem>)}
           </SelectContent>
