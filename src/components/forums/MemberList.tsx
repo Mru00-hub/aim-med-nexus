@@ -55,7 +55,7 @@ export const MemberList: React.FC<MemberListProps> = ({
 
   // 3. Render the list of members from props
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 max-h-[60vh] overflow-y-auto">
       {members.map((member) => (
         <MemberCard 
             key={member.user_id} 
