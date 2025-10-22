@@ -185,7 +185,7 @@ export const DirectMessage = ({ message, currentUserId, conversationKey, onReply
     );
 
     const messageContent = isEditing ? (
-        <div className="w-64">
+        <div className="w-full">
           <Textarea value={editedContent} onChange={(e) => setEditedContent(e.target.value)} autoFocus rows={3} className="bg-background text-foreground" />
           <div className="flex justify-end gap-2 mt-2">
               <Button variant="ghost" size="sm" onClick={() => setIsEditing(false)}>Cancel</Button>
@@ -241,15 +241,14 @@ export const DirectMessage = ({ message, currentUserId, conversationKey, onReply
                     <span className="text-[10px] sm:text-xs text-muted-foreground">{new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                 </div>
 
-                <div onClick={() => {
-                    setShowActions(p => !p);
-                    setShowReactionPicker(false);
-                }}>
-                    <div className={messageStyle}>
-                      <div className="p-3 md:p-4">
-                        {messageContent}
-                      </div>
-                    </div>
+                <div 
+                  className={messageStyle}
+                  onClick={() => {
+                      setShowActions(p => !p);
+                      setShowReactionPicker(false);
+                  }}
+                >
+                  {messageContent}
                 </div>
 
                 {Object.keys(reactionCounts).length > 0 && (
