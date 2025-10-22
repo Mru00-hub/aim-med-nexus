@@ -121,7 +121,7 @@ export function SearchableSelect({
   isLoading = false,
 }: SearchableSelectProps) {
   const [open, setOpen] = React.useState(false);
-
+  const isMobile = useIsMobile();
   const selectedOption = value === "other" 
     ? { value: "other", label: "Other" }
     : options.find((option) => option.value === value);
