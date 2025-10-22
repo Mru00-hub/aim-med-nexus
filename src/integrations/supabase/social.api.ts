@@ -308,7 +308,7 @@ export const getInbox = async (): Promise<Conversation[]> => {
  */
 // CHANGED: This now calls your new 'get_my_unread_inbox_count' function.
 export const getUnreadInboxCount = async (): Promise<number> => {
-  const { data, error } = await supabase.rpc('get_my_unread_incolab_count');
+  const { data, error } = await supabase.rpc('get_my_unread_inbox_count');
 
   if (error) {
     console.error('Error fetching unread inbox count:', error);
