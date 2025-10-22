@@ -140,7 +140,7 @@ export const Message: React.FC<MessageProps> = ({
         // FIX: Correctly closed the React Fragment
         <>
             {message.parent_message && (
-                <div className="text-xs rounded-md p-2 border-l-2 border-current/50 bg-current/10 mb-2">
+                <div className="text-xs rounded-md p-2 border-l-2 border-current/50 bg-current/10 mb-2 max-w-full overflow-hidden">
                     <p className="font-bold">{message.parent_message.author?.full_name}</p>
                     <p className="truncate opacity-80">{message.parent_message.body}</p>
                 </div>
@@ -157,28 +157,28 @@ export const Message: React.FC<MessageProps> = ({
     );
     
     const messageStyle = cn(
-        "flex flex-col rounded-xl px-4 py-3 max-w-[85%] sm:max-w-lg shadow-sm cursor-pointer group relative break-words",
+        "flex flex-col rounded-xl px-3 py-2 sm:px-4 sm:py-3 max-w-[85%] sm:max-w-lg shadow-sm cursor-pointer group relative break-words overflow-hidden",
         isCurrentUser 
             ? "bg-blue-100 dark:bg-blue-900/50 text-blue-900 dark:text-blue-100" 
             : "bg-card border"
     );
 
     return (
-        <div className={cn("flex w-full gap-3", isCurrentUser ? "justify-end" : "justify-start")}>
+        <div className={cn("flex w-full gap-2 sm:gap-3 min-w-0", isCurrentUser ? "justify-end" : "justify-start")}>
             {!isCurrentUser && (
                 <Link to={`/profile/${message.user_id}`} className="flex-shrink-0">
-                    <Avatar className="h-10 w-10">
+                    <Avatar className="h-8 w-8 sm:h-10 sm:w-10 flex-shrink-0">
                         <AvatarImage src={avatarUrl ?? undefined} alt={displayName} />
                         <AvatarFallback>{displayName?.split(' ').map(n => n[0]).join('')}</AvatarFallback>
                     </Avatar>
                 </Link>
             )}           
-            <div className={cn("flex flex-col relative", isCurrentUser ? "items-end" : "items-start", !isCurrentUser && "w-full")}>
-                <div className="flex items-center gap-2 mb-1">
+            <div className={cn("flex flex-col relative min-w-0", isCurrentUser ? "items-end" : "items-start", !isCurrentUser && "flex-1")}>
+                <div className="flex items-center gap-2 mb-1 max-w-full">
                     <Link to={`/profile/${message.user_id}`} className="font-bold text-sm hover:underline hover:text-primary">
                         {displayName}
                     </Link>
-                    <span className="text-xs text-muted-foreground">{new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                    <span className="text-xs text-muted-foreground flex-shrink-0">{new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                 </div>
 
                 <div className={messageStyle} onClick={() => setShowActions(p => !p)}>
@@ -187,12 +187,12 @@ export const Message: React.FC<MessageProps> = ({
 
                 {showActions && (
                     <div className={cn(
-                        "absolute z-10 flex items-center bg-card border rounded-full shadow-md",
+                        "absolute z-10 flex items-center bg-card border rounded-full shadow-md overflow-x-auto",
                         // Consistent positioning for all screen sizes:
                         "top-[-16px]", // Position it slightly above the message bubble
                         isCurrentUser
-                          ? "right-2" // Place it on the right for the current user
-                          : "left-2"  // Place it on the left for other users
+                          ? "right-0 sm:right-2" // Place it on the right for the current user
+                          : "left-0 sm:left-2"  // Place it on the left for other users
                     )}>
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); onReplyClick(message); setShowActions(false); }} title="Reply"><Reply className="h-4 w-4" /></Button>
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); setShowPicker(p => !p); setShowActions(false); }} title="Add Reaction"><SmilePlus className="h-4 w-4" /></Button>
@@ -226,7 +226,7 @@ export const Message: React.FC<MessageProps> = ({
             
             {isCurrentUser && (
                 <Link to={`/profile/${message.user_id}`} className="flex-shrink-0">
-                    <Avatar className="h-10 w-10">
+                    <Avatar className="h-8 w-8 sm:h-10 sm:w-10 flex-shrink-0">
                         <AvatarImage src={avatarUrl ?? undefined} alt={displayName} />
                         <AvatarFallback>{displayName?.split(' ').map(n => n[0]).join('')}</AvatarFallback>
                     </Avatar>
