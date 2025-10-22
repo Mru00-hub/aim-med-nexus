@@ -551,7 +551,7 @@ const CompleteProfile = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      <main className="container-medical py-12 px-4 sm:px-6">
+      <main className="py-12">
         <Card className="card-medical max-w-2xl mx-auto">
           <CardHeader>
             <CardTitle className="text-2xl sm:text-3xl">
@@ -624,8 +624,8 @@ const CompleteProfile = () => {
                 onInputChange={handleInputChange}
               />
               
-              <div className="flex gap-4 pt-4">
-                <Button type="submit" size="lg" className="btn-medical flex-1" disabled={isSubmitting}>
+              <div className="flex flex-col sm:flex-row gap-4 pt-4">
+                <Button type="submit" size="lg" className="btn-medical w-full sm:flex-1" disabled={isSubmitting}>
                   {isSubmitting ? 'Saving...' : 'Save Profile'}
                   <Save className="ml-2 h-5 w-5" />
                 </Button>
@@ -636,6 +636,7 @@ const CompleteProfile = () => {
                   size="lg"
                   onClick={handleSkip}
                   disabled={isSubmitting}
+                  className="w-full sm:w-auto"
                 >
                   Skip for Now
                 </Button>
@@ -652,7 +653,7 @@ const CompleteProfile = () => {
 const PageSkeleton = () => (
   <div className="min-h-screen bg-background">
     <Header />
-    <main className="container-medical py-12 px-4 sm:px-6">
+    <main className="py-12">
       <Card className="card-medical max-w-2xl mx-auto">
         <CardHeader>
           <Skeleton className="h-8 w-48" />
