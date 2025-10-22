@@ -44,17 +44,17 @@ const IndustryHub = () => {
           <TabsContent value="companies" className="space-y-6">
             <Card className="card-medical">
                 <CardContent className="pt-6">
-                    <div className="grid md:grid-cols-3 gap-4 mb-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                       <Input placeholder="Search name/desc..." />
-                      <Select><SelectTrigger><SelectValue placeholder="Company type" /></SelectTrigger></Select>
+                      <Select><SelectTrigger className="min-w-0"><SelectValue placeholder="Company type" className="truncate"/></SelectTrigger></Select>
                       <Input placeholder="Location..." />
                     </div>
                     <Button className="btn-medical w-full" onClick={handleSignIn}>Sign in to Filter</Button>
                 </CardContent>
             </Card>
-             <div className="flex justify-between items-center">
+             <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
                 <h3 className="text-lg font-semibold">Companies on our Platform</h3>
-                <Button className="btn-medical" onClick={handleSignIn}><Plus className="h-4 w-4 mr-2" />Create Company Page</Button>
+                <Button className="btn-medical w-full sm:w-auto flex-shrink-0" onClick={handleSignIn}><Plus className="h-4 w-4 mr-2" />Create Company Page</Button>
             </div>
             <Card className="card-medical bg-primary/5 border-primary/20">
               <CardHeader>
@@ -79,10 +79,12 @@ const IndustryHub = () => {
               {exampleCompanies.map((company) => (
                 <Card key={company.id} className="card-medical">
                     <CardContent className="p-6">
-                        <div className="flex gap-4">
-                            <div className="w-16 h-16 bg-gradient-primary rounded-lg flex items-center justify-center flex-shrink-0"><Building className="h-8 w-8 text-white" /></div>
+                        <div className="flex flex-col sm:flex-row gap-6">
+                            <div className="w-16 h-16 bg-gradient-primary rounded-lg flex items-center justify-center flex-shrink-0">
+                              <Building className="h-8 w-8 text-white" />
+                            </div>
                             <div className="flex-1 min-w-0">
-                                <h3 className="text-xl font-semibold pr-2">{company.name}</h3>
+                                <h3 className="text-xl font-semibold pr-2 truncate">{company.name}</h3>
                                 <div className="flex flex-wrap items-center gap-2 my-2">
                                     <Badge variant="outline">{company.type}</Badge>
                                     <Badge variant="secondary">{company.location}</Badge>
@@ -90,7 +92,7 @@ const IndustryHub = () => {
                                 </div>
                                 <p className="text-muted-foreground text-sm">{company.description}</p>
                             </div>
-                            <div className="flex flex-col gap-2 flex-shrink-0">
+                            <div className="flex flex-col gap-2 flex-shrink-0 w-full sm:w-auto">
                                 <Button variant="outline" size="sm" onClick={handleSignIn}>Follow</Button>
                                 {company.name === 'CityCare Hospital' ? (
                                   <Button 
@@ -120,29 +122,29 @@ const IndustryHub = () => {
           <TabsContent value="collaborations" className="space-y-6">
             <Card className="card-medical">
                 <CardContent className="pt-6">
-                    <div className="grid md:grid-cols-3 gap-4 mb-4">
-                        <Select><SelectTrigger><SelectValue placeholder="Type" /></SelectTrigger></Select>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                        <Select><SelectTrigger className="min-w-0"><SelectValue placeholder="Type" className="truncate"/></SelectTrigger></Select>
                         <Input placeholder="Location" />
                         <Input placeholder="Skill" />
                     </div>
                     <Button className="btn-medical w-full" onClick={handleSignIn}>Sign in to Filter</Button>
                 </CardContent>
             </Card>
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
                 <h3 className="text-lg font-semibold">Find Collaborations</h3>
-                <Button className="btn-medical" onClick={handleSignIn}><Plus className="h-4 w-4 mr-2" />Create Post</Button>
+                <Button className="btn-medical w-full sm:w-auto flex-shrink-0" onClick={handleSignIn}><Plus className="h-4 w-4 mr-2" />Create Post</Button>
             </div>
             <div className="space-y-4">
               {exampleCollaborations.map((collab) => (
                 <Card key={collab.id} className="card-medical">
                     <CardContent className="p-6">
-                        <div className="flex justify-between items-start">
+                        <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-4">
                             <div className="flex-1">
                                 <h3 className="text-xl font-semibold mb-2">{collab.title}</h3>
                                 <div className="flex flex-wrap gap-2 mb-3">
                                     {collab.skills.map(skill => <Badge key={skill} variant="secondary">{skill}</Badge>)}
                                 </div>
-                                <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-sm text-muted-foreground">
                                     <div className="flex items-center gap-1"><Calendar className="h-4 w-4" /><span>{collab.duration}</span></div>
                                     <div className="flex items-center gap-1"><Users className="h-4 w-4" /><span>{collab.participants} participants</span></div>
                                 </div>
