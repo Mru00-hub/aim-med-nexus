@@ -210,8 +210,8 @@ export const ProfessionalDetailsStep: React.FC<ProfessionalDetailsStepProps> = (
           <div>
             <label className="block text-sm font-medium mb-2">Year/Status *</label>
             <Select value={formData.student_year_value} onValueChange={(value) => handleInputChange('student_year_value', value)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Current year/status" />
+              <SelectTrigger className="min-w-0">
+                <SelectValue placeholder="Current year/status" className="truncate"/>
               </SelectTrigger>
               <SelectContent>
                 {studentYears.map(year => <SelectItem key={year.value} value={year.value}>{year.label}</SelectItem>)}
@@ -278,8 +278,8 @@ export const ProfessionalDetailsStep: React.FC<ProfessionalDetailsStepProps> = (
             <div>
               <label className="block text-sm font-medium mb-2">Experience*</label>
               <Select value={formData.experience_level_value} onValueChange={(value) => handleInputChange('experience_level_value', value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Years of experience" />
+                <SelectTrigger className="min-w-0">
+                  <SelectValue placeholder="Years of experience" className="truncate" />
                 </SelectTrigger>
                 <SelectContent>
                   {experiences.map(exp => <SelectItem key={exp.value} value={exp.value}>{exp.label}</SelectItem>)}
