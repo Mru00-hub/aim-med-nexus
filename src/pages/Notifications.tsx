@@ -400,7 +400,7 @@ export default function Notifications() {
           </AlertDescription>
         </Alert>
 
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-8 gap-4 animate-fade-in">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-8 gap-6 animate-fade-in">
           <div>
             <h1 className="text-3xl font-bold mb-2">Notifications</h1>
             <p className="text-muted-foreground text-lg">
@@ -408,9 +408,9 @@ export default function Notifications() {
             </p>
           </div>
 
-          <div className="flex items-center gap-4 w-full sm:w-auto">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4 w-full sm:w-auto">
             {unreadCount > 0 && (
-              <Badge variant="destructive" className="text-sm">
+              <Badge variant="destructive" className="text-sm whitespace-nowrap px-4 py-2 justify-center">
                 {unreadCount} Unread
               </Badge>
             )}
