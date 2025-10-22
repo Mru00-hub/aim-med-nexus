@@ -229,7 +229,7 @@ export const DirectMessage = ({ message, currentUserId, conversationKey, onReply
             )}
             
             {/* This is the main content wrapper */}
-            <div className={cn("flex flex-col relative", isMe ? "items-end" : "items-start", !isMe && "w-full")}>
+            <div className={cn("flex flex-col relative w-full", isMe ? "items-end" : "items-start")}>
                 <div className="flex flex-col xs:flex-row xs:items-center gap-1 xs:gap-2 mb-1">
                     <span className="font-bold text-xs sm:text-sm">
                       <Link 
