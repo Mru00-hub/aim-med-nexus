@@ -124,7 +124,7 @@ const NotificationCard = ({
           </div>
 
           <div className="flex-1 min-w-0">
-            <div className="flex items-start justify-between mb-2">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-2 gap-1 sm:gap-0">
               <h3
                 className={`font-semibold truncate ${
                   !notification.is_read
@@ -134,7 +134,7 @@ const NotificationCard = ({
               >
                 {title}
               </h3>
-              <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+              <div className="flex items-center gap-2 flex-shrink-0 ml-0 sm:ml-2">
                 <span className="text-xs text-muted-foreground whitespace-nowrap">
                   {formatDistanceToNow(new Date(notification.created_at), {
                     addSuffix: true,
@@ -157,7 +157,7 @@ const NotificationCard = ({
               <p className="text-muted-foreground mb-3">{description}</p> 
             )}
 
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <Button
                 size="sm"
                 variant="ghost"
@@ -400,7 +400,7 @@ export default function Notifications() {
           </AlertDescription>
         </Alert>
 
-        <div className="flex justify-between items-center mb-8 animate-fade-in">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-8 gap-4 animate-fade-in">
           <div>
             <h1 className="text-3xl font-bold mb-2">Notifications</h1>
             <p className="text-muted-foreground text-lg">
@@ -408,7 +408,7 @@ export default function Notifications() {
             </p>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 w-full sm:w-auto">
             {unreadCount > 0 && (
               <Badge variant="destructive" className="text-sm">
                 {unreadCount} Unread
@@ -418,16 +418,17 @@ export default function Notifications() {
               variant="outline"
               onClick={handleMarkAllAsRead}
               disabled={unreadCount === 0 || isLoading}
+              className="w-full sm:w-auto"
             >
               Mark All Read
             </Button>
           </div>
         </div>
 
-        <div className="grid lg:grid-cols-4 gap-8">
-          <div className="lg:col-span-3 animate-slide-up">
+        <div className="grid md:grid-cols-4 gap-8">
+          <div className="md:col-span-3 animate-slide-up">
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid w-full grid-cols-5 mb-6">
+              <TabsList className="w-full mb-6 overflow-x-auto justify-start">
                 <TabsTrigger value="all">All</TabsTrigger>
                 <TabsTrigger value="unread">Unread</TabsTrigger>
                 <TabsTrigger value="updates">Updates</TabsTrigger>
@@ -465,7 +466,7 @@ export default function Notifications() {
             </Tabs>
           </div>
 
-          <div className="space-y-6 animate-fade-in lg:col-span-1">
+          <div className="space-y-6 animate-fade-in md:col-span-1">
             <Card className="card-medical">
               <CardHeader>
                 <CardTitle>Activity Summary</CardTitle>
