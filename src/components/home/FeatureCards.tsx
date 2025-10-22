@@ -186,7 +186,7 @@ export const FeatureCards = () => {
     <section className="section-medical bg-muted/30">
       <div className="container-medical">
         {/* Section Header */}
-        <div className="text-center mb-16 animate-fade-in">
+        <div className="text-center mb-12 animate-fade-in">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">
             Your Complete Healthcare
             <span className="text-primary block">Professional Ecosystem</span>
@@ -198,7 +198,7 @@ export const FeatureCards = () => {
         </div>
 
         {/* Active Features */}
-        <div className="mb-16">
+        <div className="mb-12">
           <h3 className="text-2xl font-semibold mb-8 text-center">
             🚀 Available Now
           </h3>
