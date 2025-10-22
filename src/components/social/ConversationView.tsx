@@ -138,7 +138,7 @@ export const ConversationView = ({ conversation, onConversationUpdate }: Convers
             </div>
         </div>
       </CardHeader>
-      <CardContent className="flex-1 overflow-y-auto p-4 space-y-4 bg-muted/20">
+      <CardContent className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-4 bg-muted/20">
         {isLoading ? (
           <div className="flex justify-center items-center h-full">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
