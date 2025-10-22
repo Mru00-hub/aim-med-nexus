@@ -37,6 +37,7 @@ export const DiscoverTab = ({ recommendations, loading, onSendRequest, onBlockUs
               organization: rec.organization,
               location: rec.current_location,
               mutuals: rec.mutuals, 
+              similarity_score: rec.similarity_score,
             }}
           >
             <Button size="sm" onClick={() => onSendRequest(rec.id)}><UserPlus className="h-4 w-4 mr-2" />Connect</Button>
