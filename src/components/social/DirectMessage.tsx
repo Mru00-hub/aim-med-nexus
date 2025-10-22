@@ -225,7 +225,7 @@ export const DirectMessage = ({ message, currentUserId, conversationKey, onReply
                   <AvatarImage src={message.author?.profile_picture_url || undefined} />
                   <AvatarFallback>{displayName.charAt(0)}</AvatarFallback>
                 </Avatar>
-              </a>
+              </Link>
             )}
             
             {/* This is the main content wrapper */}
