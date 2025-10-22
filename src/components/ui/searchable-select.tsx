@@ -19,7 +19,7 @@ import {
   DrawerContent,
   DrawerTrigger,
 } from "@/components/ui/drawer"
-import { useMobile } from "@/hooks/use-mobile" 
+import { useIsMobile } from "@/hooks/use-mobile" 
 
 type Option = {
   value: string;
