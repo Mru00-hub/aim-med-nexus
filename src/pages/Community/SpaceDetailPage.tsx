@@ -402,7 +402,7 @@ export default function SpaceDetailPage() {
                         </Badge>
                       </div> 
                     </div>
-                    <div className="flex items-center gap-2 flex-shrink-0 ml-4">
+                    <div className="flex flex-wrap items-center justify-end gap-2 flex-shrink-0 ml-4">
                       {isUserCreator ? (
                         <>
                           <Button size="sm" variant="outline" onClick={() => setShowTransferDialog(true)}>
