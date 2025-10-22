@@ -203,7 +203,7 @@ export const DirectMessage = ({ message, currentUserId, conversationKey, onReply
               </div>
           )}
           {/* FIX: Word break utilities also help solve Problem #1 */}
-          <p className="text-sm break-words break-normal whitespace-pre-wrap">{message.content} {message.is_edited && <span className="text-xs opacity-70">(edited)</span>}</p>
+          <p className="text-sm break-words whitespace-pre-line">{message.content} {message.is_edited && <span className="text-xs opacity-70">(edited)</span>}</p>
           {message.attachments && message.attachments.length > 0 && (
               <div className="mt-2 space-y-2">
                   {message.attachments.map(att => (
