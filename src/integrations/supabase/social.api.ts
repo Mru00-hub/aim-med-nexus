@@ -39,7 +39,11 @@ export type DirectMessage = Tables<'direct_messages'>;
 export type DirectMessageReaction = Tables<'direct_message_reactions'>;
 export type DirectMessageAttachment = Tables<'direct_message_attachments'>;
 export type Profile = Tables<'profiles'>;
-export type Conversation = Tables<"inbox_conversations">;
+
+// CHANGED: This type now points to the return type of our new RPC function.
+export type Conversation =
+  Database["public"]["Functions"]["get_my_inbox_conversations"]["Returns"][number];
+
 // Matches the return type of get_pending_connection_requests() from types.ts
 export type ConnectionRequest =
   Database["public"]["Functions"]["get_pending_connection_requests"]["Returns"][number];
@@ -51,6 +55,16 @@ export type Connection =
 // Matches the return type of get_my_blocked_users() from types.ts
 export type BlockedUser =
   Database["public"]["Functions"]["get_my_blocked_users"]["Returns"][number];
+
+// CHANGED: Added a type for the data returned by getSentPendingRequests
+export type SentPendingRequest = {
+  addressee_id: string;
+  request_date: string;
+  full_name: string | null;
+  profile_picture_url: string | null;
+  current_position: string | null;
+  organization: string | null;
+};
 
 /**
  * A rich type for a direct message, including details about the author,
@@ -161,9 +175,39 @@ export const getUserRecommendations = async (targetUserId: string): Promise<ApiR
     return handleResponse(response);
 };
 
-export const getSentPendingRequests = async (): Promise<ApiResponse<any[]>> => {
-    const response = await supabase.from("sent_pending_requests").select("*");
-    return handleResponse(response);
+// CHANGED: This function now queries the 'user_connections' table directly.
+// Our RLS policy (auth.uid() = requester_id) secures this query.
+// I've also switched it to the "throw error" pattern to match your other functions.
+export const getSentPendingRequests = async (): Promise<SentPendingRequest[]> => {
+    const session = await getSessionOrThrow();
+    const { data, error } = await supabase
+        .from('user_connections')
+        .select(`
+            addressee_id,
+            created_at,
+            profiles:addressee_id (
+                full_name,
+                profile_picture_url,
+                current_position,
+                organization
+            )
+        `)
+        .eq('requester_id', session.user.id)
+        .eq('status', 'pending');
+
+    if (error) throw error;
+    if (!data) return [];
+
+    // Flatten the data to match the old view's structure, preventing breaking changes in your UI.
+    const flattenedData = data.map(req => ({
+        addressee_id: req.addressee_id,
+        request_date: req.created_at,
+        full_name: req.profiles?.full_name ?? null,
+        profile_picture_url: req.profiles?.profile_picture_url ?? null,
+        current_position: req.profiles?.current_position ?? null,
+        organization: req.profiles?.organization ?? null,
+    }));
+    return flattenedData;
 };
 
 export const getMutualConnections = async (otherUserId: string): Promise<Database['public']['Functions']['get_mutual_connections']['Returns']> => {
@@ -249,31 +293,29 @@ export const markConversationAsRead = async (conversationId: string): Promise<vo
 /**
  * Fetches the complete list of conversations for the user's inbox.
  */
+// CHANGED: This now calls your new 'get_my_inbox_conversations' function
+// instead of querying the 'inbox_conversations' view.
 export const getInbox = async (): Promise<Conversation[]> => {
-    const { data, error } = await supabase
-        .from("inbox_conversations")
-        .select("*")
-        .order("last_message_at", { ascending: false, nullsFirst: false });
+    const { data, error } = await supabase.rpc("get_my_inbox_conversations");
+
     if (error) throw error;
-    return data;
+    return data || [];
 };
 
 /**
  * Fetches the count of unread conversations for the
- * currently logged-in user by querying the 'inbox_conversations' view.
+ * currently logged-in user.
  */
+// CHANGED: This now calls your new 'get_my_unread_inbox_count' function.
 export const getUnreadInboxCount = async (): Promise<number> => {
-  const { count, error } = await supabase
-    .from('inbox_conversations')
-    .select('*', { count: 'exact', head: true }) // 1. Ask for the count
-    .eq('is_unread', true);                     // 2. Where unread is true
+  const { data, error } = await supabase.rpc('get_my_unread_incolab_count');
 
   if (error) {
     console.error('Error fetching unread inbox count:', error);
     return 0;
   }
 
-  return count || 0;
+  return data || 0;
 };
 
 /**
@@ -297,7 +339,7 @@ export const canSendMessage = async (otherUserId: string): Promise<boolean> => {
  *
  * @param conversationId - The conversation to post to.
  * @param content - The text of the message.
- * @param parentMessageId - The ID of the message being replied to (optional).
+ *m * @param parentMessageId - The ID of the message being replied to (optional).
  * @returns The newly created message object.
  */
 export const postDirectMessage = async (
@@ -478,10 +520,8 @@ export const getDirectMessagesWithDetails = async (conversationId: string): Prom
         .order('created_at', { ascending: true });
 
     if (error) throw error;
-    // We cast to `any` then `DirectMessageWithDetails[]` because the Supabase
-    // client library's generated types don't always understand custom aliases like `author`.
-    // Our custom `DirectMessageWithDetails` type ensures type safety in the app.
+    // We cast to \`any\` then \`DirectMessageWithDetails[]\` because the Supabase
+    // client library's generated types don't always understand custom aliases like \`author\`.
+    // Our custom \`DirectMessageWithDetails\` type ensures type safety in the app.
     return data as any as DirectMessageWithDetails[];
 };
-
-
