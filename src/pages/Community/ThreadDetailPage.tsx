@@ -46,6 +46,22 @@ type ThreadDetails = {
 
 export default function ThreadDetailPage() {
   const { threadId } = useParams<{ threadId: string }>();
+  useEffect(() => {
+    // Reset scroll position
+    window.scrollTo(0, 0);
+    
+    // Force layout recalculation
+    document.body.style.overflow = 'auto';
+    
+    // Clean up any lingering modals/dialogs
+    const dialogs = document.querySelectorAll('[role="dialog"]');
+    dialogs.forEach(dialog => {
+      if (!dialog.closest('[data-state="open"]')) {
+        dialog.remove();
+      }
+    });
+  }, [threadId]);
+  
   const { user, profile } = useAuth(); // Get the current user
   const { toast } = useToast();
   const [threadDetails, setThreadDetails] = useState<ThreadDetails | null>(null);
