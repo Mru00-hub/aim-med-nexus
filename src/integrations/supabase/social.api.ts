@@ -185,7 +185,7 @@ export const getSentPendingRequests = async (): Promise<SentPendingRequest[]> =>
         .select(`
             addressee_id,
             created_at,
-            profiles!addressee_id (
+            profiles!user_connections_addressee_id_fkey (
                 full_name,
                 profile_picture_url,
                 current_position,
