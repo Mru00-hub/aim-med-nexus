@@ -137,11 +137,11 @@ const FunctionalSocial = () => {
         </div>
         
         <Tabs defaultValue="discover">
-            <TabsList className="grid w-full grid-cols-4">
-                <TabsTrigger value="discover">Discover</TabsTrigger>
-                <TabsTrigger value="network">My Network ({myConnections.length})</TabsTrigger>
-                <TabsTrigger value="requests">Requests ({requests.length})</TabsTrigger>
-                <TabsTrigger value="blocked">Blocked ({blockedUsers.length})</TabsTrigger>
+            <TabsList className="w-full justify-start overflow-x-auto">
+                <TabsTrigger value="discover" className="whitespace-nowrap">Discover</TabsTrigger>
+                <TabsTrigger value="network" className="whitespace-nowrap">My Network ({myConnections.length})</TabsTrigger>
+                <TabsTrigger value="requests" className="whitespace-nowrap">Requests ({requests.length})</TabsTrigger>
+                <TabsTrigger value="blocked" className="whitespace-nowrap">Blocked ({blockedUsers.length})</TabsTrigger>
             </TabsList>
             
             <TabsContent value="discover" className="mt-6">
