@@ -16,28 +16,28 @@ img, svg, video, canvas {
 }
 
 /* 3. Mobile padding and safe area inside root container.
-/* 3. Mobile padding and safe area inside root container.
    #root provides the "safe area" padding for the whole app. */
 #root {
   width: 100%;
-  padding: 1rem; /* Mobile-first: 1rem on all sides */
   box-sizing: border-box;
 }
 
-/* 4. On larger screens (sm+), increase #root padding */
-@media (min-width: 640px) {
-  #root {
-    padding: 2rem;
-  }
-}
-
-/* NEW: .container-medical ONLY handles max-width and centering.
-   It should NOT have padding, since #root already does. */
+/* 4. .container-medical handles max-width, centering, AND padding.
+   This allows backgrounds to be full-width while content is padded. */
 .container-medical {
   width: 100%;
   max-width: 1280px; /* Desktop max-width limit */
   margin-left: auto;
   margin-right: auto;
+  padding: 1rem; /* ✅ FIX: Added mobile-first padding back */
+  box-sizing: border-box; /* Add box-sizing for consistency */
+}
+
+/* 5. On larger screens (sm+), increase .container-medical padding */
+@media (min-width: 640px) {
+  .container-medical {
+    padding: 2rem; /* ✅ FIX: Moved padding from #root to here */
+  }
 }
 
 /* 5. Cards should wrap text and have mobile-first padding. */
