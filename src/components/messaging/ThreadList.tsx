@@ -66,7 +66,7 @@ export const ThreadList: React.FC<ThreadListProps> = ({ space }) => {
         <Hash className="h-6 w-6" />
         {space.name} Threads
       </h2>
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-3 max-h-[60vh] overflow-y-auto">
         {threads.length > 0 ? (
           threads.map((thread) => (
             <Link to={user ? `/community/thread/${thread.id}` : '/login'} key={thread.id}>
