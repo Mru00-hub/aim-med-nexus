@@ -257,7 +257,7 @@ const ProfilePage = () => {
                   <Award className="h-5 w-5 text-primary" />
                   Skills & Expertise
                 </h3>
-                <div className="flex flex-wrap gap-2 mb-6">
+                <div className="flex flex-wrap gap-2 mb-6 max-h-40 overflow-y-auto pr-2">
                   {profileData.skills && profileData.skills.length > 0 ? (
                     profileData.skills.map(skill => (
                       <Badge key={skill} variant="secondary" className="px-3 py-1">
