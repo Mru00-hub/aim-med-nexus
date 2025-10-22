@@ -22,6 +22,7 @@ import {
     ConnectionRequest,
     Connection,
     BlockedUser,
+    SentPendingRequest
 } from '@/integrations/supabase/social.api';
 
 // Import the tab components
@@ -32,7 +33,6 @@ import { BlockedTab } from '@/components/social/BlockedTab';
 import type { Database, Tables } from '@/integrations/supabase/types';
 
 type UserRecommendation = Database['public']['Functions']['get_user_recommendations']['Returns'][number];
-type SentRequest = Tables<'sent_pending_requests'>;
 type RecommendationWithMutuals = UserRecommendation & {
     mutuals?: any[]; // The array of mutual connections
 };
@@ -78,7 +78,7 @@ const FunctionalSocial = () => {
       setBlockedUsers(blockedRes || []);
 
       // Functions that still return an ApiResponse object
-      if (sentRequestsRes.data) setSentRequests(sentRequestsRes.data);
+      setSentRequests(sentRequestsRes || []); 
       
       // Handle recommendations and their mutual connections
       if (recommendationsRes.data) {
