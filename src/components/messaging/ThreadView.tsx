@@ -278,15 +278,15 @@ export const ThreadView: React.FC<ThreadViewProps> = ({ threadId, spaceId, canMo
   }
 
   return (
-    <div className="flex flex-col h-full border rounded-lg bg-card shadow-lg overflow-hidden">
+    <div className="flex flex-col h-full border rounded-lg bg-card shadow-lg overflow-hidden max-w-full">
       <CardHeader className="p-4 border-b">
-        <CardTitle className="text-xl font-bold">Discussion Stream</CardTitle>
-        <p className="text-sm text-muted-foreground">Thread ID: {threadId.substring(0, 8)}...</p>
+        <CardTitle className="text-xl font-bold break-words">Discussion Stream</CardTitle>
+        <p className="text-sm text-muted-foreground break-all">Thread ID: {threadId.substring(0, 8)}...</p>
       </CardHeader>
 
-      <div className="flex-1 overflow-y-hidden overflow-x-hidden">
-        <ScrollArea className="h-full" viewportRef={scrollViewportRef}>
-          <div className="p-4">
+      <div className="flex-1 overflow-hidden min-w-0">
+        <ScrollArea className="h-full w-full" viewportRef={scrollViewportRef}>
+          <div className="p-2 sm:p-4 min-w-0">
             {isLoading ? (
               <div className="space-y-4">
                 <Skeleton className="h-16 w-3/4" />
@@ -317,7 +317,7 @@ export const ThreadView: React.FC<ThreadViewProps> = ({ threadId, spaceId, canMo
         </ScrollArea>
       </div>
       
-      <div className="mt-4 p-4 border-t bg-background">
+      <div className="mt-4 p-2 sm:p-4 border-t bg-background">
         <MessageInput 
             ref={messageInputRef}
             threadId={threadId} 
