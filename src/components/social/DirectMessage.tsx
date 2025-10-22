@@ -178,7 +178,7 @@ export const DirectMessage = ({ message, currentUserId, conversationKey, onReply
     // FIX: Squeezed text (Problem #1) is solved by adding max-w classes and word break utilities.
     const messageStyle = cn(
         "flex flex-col rounded-xl px-4 py-3 shadow-sm relative group cursor-pointer",
-        "max-w-[90%] sm:max-w-[80%] md:max-w-lg lg:max-w-xl break-words",// This limits the width
+        "max-w-[90%] sm:max-w-[80%] md:max-w-lg lg:max-w-xl",// This limits the width
         isMe 
             ? "bg-blue-100 dark:bg-blue-900/50 text-blue-900 dark:text-blue-100" // Lighter blue style
             : "bg-card border"
