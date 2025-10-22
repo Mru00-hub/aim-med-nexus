@@ -16,6 +16,7 @@ import { Database, Tables } from '@/integrations/supabase/types';
 import { supabase } from '@/integrations/supabase/client'; // For profile fetching and starring
 import { markConversationAsRead } from '@/integrations/supabase/social.api';
 import { DirectMessageWithDetails } from '@/integrations/supabase/social.api';
+import { Link } from 'react-router-dom';
 
 type Conversation = Database['public']['Functions']['get_my_inbox_conversations']['Returns'][number];
 
@@ -135,8 +136,8 @@ export const ConversationView = ({ conversation, onConversationUpdate, onBack}: 
                   <ArrowLeft className="h-5 w-5" />
                 </Button>
               )}
-              <a 
-                href={`/profile/${conversation.participant_id}`} 
+              <Link 
+                to={`/profile/${conversation.participant_id}`} 
                 className="flex items-center gap-3 transition-smooth hover:opacity-80 group"
               >
                 <Avatar className="h-10 w-10 md:h-12 md:w-12 border shadow-card">
