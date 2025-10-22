@@ -193,6 +193,10 @@
     @apply w-6 h-6 text-premium;
   }
 
+  .section-medical {
+    @apply py-16 md:py-20 lg:py-24;
+  }
+
   /* Medical Animations */
   .animate-fade-in {
     animation: fadeIn 0.6s ease-out;
