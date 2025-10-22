@@ -12,7 +12,7 @@ export const BlockedTab = ({ blockedUsers, loading, onUnblockUser }) => {
           <CardTitle>Blocked Users</CardTitle>
           <p className="text-sm text-muted-foreground pt-1">Users you have blocked cannot see you or interact with you.</p>
       </CardHeader>
-      <CardContent className="space-y-2">
+      <CardContent className="space-y-2 max-h-[60vh] overflow-y-auto">
         {loading ? <Skeleton className="h-20 w-full" /> : blockedUsers.map(bu => (
           <UserActionCard 
             // FIX 1: Use the correct ID for the React key
