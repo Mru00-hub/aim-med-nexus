@@ -99,7 +99,7 @@ const ProfilePage = () => {
     return (
       <div className="min-h-screen bg-background">
         <Header />
-        <main className="container-medical flex items-center justify-center py-20 px-4">
+        <main className="flex items-center justify-center py-20">
           <Alert className="max-w-lg">
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>Your Profile is Incomplete</AlertTitle>
@@ -120,7 +120,7 @@ const ProfilePage = () => {
     return (
       <div className="min-h-screen bg-background">
         <Header />
-        <main className="container-medical flex items-center justify-center py-20 px-4">
+        <main className="flex items-center justify-center py-20">
           <Alert variant="destructive" className="max-w-lg">
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>An Error Occurred</AlertTitle>
@@ -136,7 +136,7 @@ const ProfilePage = () => {
     return (
       <div className="min-h-screen bg-background">
         <Header />
-        <main className="container-medical flex items-center justify-center py-20 px-4">
+        <main className="flex items-center justify-center py-20">
           <Alert className="max-w-lg">
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>Profile Not Found</AlertTitle>
@@ -156,7 +156,7 @@ const ProfilePage = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      <main className="container-medical py-8 px-4">
+      <main className="py-8">
         <Card className="card-medical max-w-4xl mx-auto">
           {/* ✅ ENHANCED HEADER */}
           <CardHeader className="flex flex-col sm:flex-row items-start gap-6 p-6 bg-gradient-to-r from-primary/5 to-accent/5">
@@ -166,8 +166,8 @@ const ProfilePage = () => {
                 {profileData.full_name?.split(' ').map(n => n[0]).join('')}
               </AvatarFallback>
             </Avatar>
-            <div className="flex-grow">
-              <div className="flex justify-between items-start">
+            <div className="flex-grow w-full">
+              <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-4 sm:gap-2">
                 <div>
                   <div className="flex items-center gap-2">
                     <CardTitle className="text-3xl">{profileData.full_name}</CardTitle>
@@ -190,7 +190,7 @@ const ProfilePage = () => {
                   </div>
                 </div>
                 {isOwnProfile && (
-                  <Button asChild variant="outline">
+                  <Button asChild variant="outline" className="w-full sm:w-auto flex-shrink-0">
                     <Link to="/complete-profile">
                       <Edit className="mr-2 h-4 w-4" />
                       Edit Profile
@@ -378,7 +378,7 @@ const DetailItem = ({
 const ProfileSkeleton = () => (
   <div className="min-h-screen bg-background">
     <Header />
-    <main className="container-medical py-8 px-4">
+    <main className="py-8">
       <Card className="card-medical max-w-4xl mx-auto">
         <CardHeader className="flex flex-col sm:flex-row items-start gap-6 p-6">
           <Skeleton className="h-24 w-24 sm:h-32 sm:w-32 rounded-full" />
