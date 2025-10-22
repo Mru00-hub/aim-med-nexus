@@ -120,25 +120,37 @@ export const ConversationView = ({ conversation, onConversationUpdate }: Convers
 
   return (
     <>
-      <CardHeader className="pb-4 border-b border-border">
+      <CardHeader className="pb-3 md:pb-4 px-4 md:px-6 border-b border-border">
         <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-                <Avatar className="h-10 w-10 border">
+              <a 
+                href={`/profile/${conversation.participant_id}`} 
+                className="flex items-center gap-3 transition-smooth hover:opacity-80 group"
+              >
+                <Avatar className="h-10 w-10 md:h-12 md:w-12 border shadow-card">
                     <AvatarImage src={conversation.participant_avatar_url || undefined} />
                     <AvatarFallback>{conversation.participant_full_name?.split(' ').map(n => n[0]).join('')}</AvatarFallback>
                 </Avatar>
                 <div>
-                    <h3 className="font-semibold">{conversation.participant_full_name}</h3>
+                    <h3 className="text-base md:text-xl font-semibold tracking-tight">
+                      {conversation.participant_full_name}
+                    </h3>
                 </div>
+              </a>
             </div>
             <div className="flex items-center gap-2">
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleToggleStar}>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-8 w-8 md:h-9 md:w-9 transition-smooth" 
+                  onClick={handleToggleStar}
+                >
                     <Star className={cn("h-4 w-4", isStarred && "fill-current text-yellow-500")} />
                 </Button>
             </div>
         </div>
       </CardHeader>
-      <CardContent className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-4 bg-muted/20">
+      <CardContent className="flex-1 overflow-y-auto overflow-x-hidden p-3 md:p-4 lg:p-6 space-y-3 md:space-y-4 bg-muted/20">
         {isLoading ? (
           <div className="flex justify-center items-center h-full">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
