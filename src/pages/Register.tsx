@@ -280,7 +280,7 @@ const Register = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      <main className="container-medical py-4 sm:py-8 px-4 sm:px-6">
+      <main className="py-4 sm:py-8">
         <div className="text-center mb-6 sm:mb-8 animate-fade-in">
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-4">Join AIMedNet Today</h1>
           <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto">
