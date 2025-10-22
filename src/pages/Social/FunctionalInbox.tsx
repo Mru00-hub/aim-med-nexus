@@ -9,6 +9,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import type { Tables, Database } from '@/integrations/supabase/types';
+import { cn } from '@/lib/utils';
 import { ConversationList } from '@/components/social/ConversationList';
 import { ConversationView } from '@/components/social/ConversationView';
 import { markConversationAsRead } from '@/integrations/supabase/social.api';
@@ -178,7 +179,10 @@ const FunctionalInbox = () => {
         </div>
 
         <div className="grid lg:grid-cols-4 gap-6 min-h-[700px] animate-slide-up">
-          <Card className="card-medical lg:col-span-1 flex flex-col max-h-[700px]">
+          <Card className={cn(
+            "card-medical lg:col-span-1 flex flex-col max-h-[700px]",
+            selectedConversation ? "hidden lg:flex" : "flex"
+          )}>
             <ConversationList
               conversations={conversations}
               loading={loading}
@@ -187,11 +191,15 @@ const FunctionalInbox = () => {
             />
           </Card>
 
-          <Card className="card-medical lg:col-span-3 flex flex-col">
+          <Card className={cn(
+            "card-medical lg:col-span-3 flex flex-col",
+            selectedConversation ? "flex" : "hidden lg:flex"
+          )}>
             {selectedConversation ? (
               <ConversationView
                 conversation={selectedConversation}
                 onConversationUpdate={fetchAndSetConversations}
+                onBack={() => setSelectedConversation(null)}
               />
             ) : (
               <CardContent className="flex-1 flex items-center justify-center">
