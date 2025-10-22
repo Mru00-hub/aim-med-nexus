@@ -263,18 +263,19 @@ export default function SpaceDetailPage() {
           
           return (
             <Card key={thread.id} className="transition-all hover:shadow-md group">
-              <CardContent className="p-4 flex items-center justify-between">
-                <Link to={`/community/thread/${thread.id}`} className="flex-grow min-w-0">
-                  <h3 className="font-semibold text-lg group-hover:text-primary">{thread.title}</h3>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {thread.message_count} messages • Started by{' '}
-                    <span className="font-medium">{thread.creator_full_name}</span>
-                    {creatorDetails && <span className="text-xs block sm:inline sm:ml-2 opacity-80">{creatorDetails}</span>}
-                  </p>
+              <CardContent className="p-4">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <Link to={`/community/thread/${thread.id}`} className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-lg group-hover:text-primary break-words">{thread.title}</h3>
+                    <p className="text-sm text-muted-foreground mt-1 break-words">
+                      {thread.message_count} messages • Started by{' '}
+                      <span className="font-medium">{thread.creator_full_name}</span>
+                      {creatorDetails && <span className="text-xs block sm:inline sm:ml-2 opacity-80">{creatorDetails}</span>}
+                    </p>
                 </Link>
 
                 {canManageThread && (
-                  <div className="flex items-center ml-4 flex-shrink-0">
+                  <div className="flex items-center gap-1 flex-shrink-0 sm:ml-4">
                     <Button 
                       size="icon" 
                       variant="ghost" 
@@ -343,7 +344,7 @@ export default function SpaceDetailPage() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Header />
-      <main className="container mx-auto py-8 px-4 flex-1">
+      <main className="container-medical flex-1">
         {loading ? (
           <Skeleton className="h-40 w-full mb-8" />
         ) : space ? (
@@ -392,9 +393,9 @@ export default function SpaceDetailPage() {
                     </div>
                   </div>
                 ) : (
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <CardTitle className="text-3xl">{space.name}</CardTitle>
+                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
+                    <div className="flex-1 min-w-0">
+                      <CardTitle className="text-3xl break-words">{space.name}</CardTitle>
                       <div className="text-sm text-muted-foreground flex items-center gap-2 flex-wrap mt-2">
                         <span>{space.description}</span>
                         <Badge variant={space.join_level === 'INVITE_ONLY' ? 'secondary' : 'default'}>
@@ -402,7 +403,7 @@ export default function SpaceDetailPage() {
                         </Badge>
                       </div> 
                     </div>
-                    <div className="flex flex-wrap items-center justify-end gap-2 flex-shrink-0 ml-4">
+                    <div className="flex items-center gap-2 flex-shrink-0 sm:ml-4">
                       {isUserCreator ? (
                         <>
                           <Button size="sm" variant="outline" onClick={() => setShowTransferDialog(true)}>
@@ -522,7 +523,7 @@ export default function SpaceDetailPage() {
               </CardContent>
             </Card>
 
-            <div className="flex justify-between items-center mb-6">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
               <h2 className="text-2xl font-semibold flex items-center gap-2">
                 <Hash className="h-6 w-6" />Threads
               </h2>
