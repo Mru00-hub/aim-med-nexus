@@ -12,12 +12,12 @@ import { decryptMessage } from '@/lib/crypto';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useConversationData } from '@/hooks/useConversationData'; // NEW: Using our powerful hook
 import { cn } from '@/lib/utils';
-import { Tables } from '@/integrations/supabase/types';
+import { Database, Tables } from '@/integrations/supabase/types';
 import { supabase } from '@/integrations/supabase/client'; // For profile fetching and starring
 import { markConversationAsRead } from '@/integrations/supabase/social.api';
 import { DirectMessageWithDetails } from '@/integrations/supabase/social.api';
 
-type Conversation = Tables<'inbox_conversations'> & { is_starred?: boolean };
+type Conversation = Database['public']['Functions']['get_my_inbox_conversations']['Returns'][number];
 
 interface ConversationViewProps {
   conversation: Conversation;
