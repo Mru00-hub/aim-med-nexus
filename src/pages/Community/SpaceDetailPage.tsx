@@ -320,6 +320,7 @@ export default function SpaceDetailPage() {
                     </AlertDialog>
                   </div>
                 )}
+              </div>
               </CardContent>
             </Card>
           );
