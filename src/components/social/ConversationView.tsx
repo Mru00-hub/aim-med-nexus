@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Star, Loader2 } from 'lucide-react';
+import { Star, Loader2, ArrowLeft } from 'lucide-react';
 import { DirectMessage } from './DirectMessage';
 import { DirectMessageInput } from './DirectMessageInput';
 import { useAuth } from '@/hooks/useAuth';
@@ -22,9 +22,10 @@ type Conversation = Tables<'inbox_conversations'> & { is_starred?: boolean };
 interface ConversationViewProps {
   conversation: Conversation;
   onConversationUpdate: () => void;
+  onBack?: () => void;
 }
 
-export const ConversationView = ({ conversation, onConversationUpdate }: ConversationViewProps) => {
+export const ConversationView = ({ conversation, onConversationUpdate, onBack}: ConversationViewProps) => {
   const { user } = useAuth();
   const [isStarred, setIsStarred] = useState(conversation.is_starred ?? false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -123,6 +124,17 @@ export const ConversationView = ({ conversation, onConversationUpdate }: Convers
       <CardHeader className="pb-3 md:pb-4 px-4 md:px-6 border-b border-border">
         <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
+              {onBack && (
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="lg:hidden h-8 w-8 -ml-2" // Only shows on mobile
+                  onClick={onBack}
+                  aria-label="Back to conversations"
+                >
+                  <ArrowLeft className="h-5 w-5" />
+                </Button>
+              )}
               <a 
                 href={`/profile/${conversation.participant_id}`} 
                 className="flex items-center gap-3 transition-smooth hover:opacity-80 group"
