@@ -259,7 +259,7 @@ export default function Forums() {
       <Link to={user ? `/community/thread/${thread.id}` : '/login'}>
         <CardContent className="p-6">
           <h3 className="font-semibold text-lg mb-2">{thread.title}</h3>
-          <div className="flex items-center gap-4 text-xs text-muted-foreground">
+          <div className="flex flex-col gap-3 text-xs text-muted-foreground">
             <div>
               <span className="font-medium text-foreground">{thread.creator_full_name}</span>
               {(thread.creator_position || thread.creator_specialization) && (
@@ -268,11 +268,18 @@ export default function Forums() {
                 </p>
               )}
             </div>
-            <div className="flex items-center gap-1">
-              <MessageSquare className="h-3 w-3" />
-              <span>{thread.message_count} messages</span>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+              {/* Stat 1: Messages */}
+              <div className="flex items-center gap-1">
+                <MessageSquare className="h-3 w-3" />
+                <span>{thread.message_count} messages</span>
+              </div>
+            
+              {/* Stat 2: Last Activity */}
+              <span className="flex items-center">
+                Last activity: {new Date(thread.last_activity_at).toLocaleDateString()}
+              </span>
             </div>
-            <span>Last activity: {new Date(thread.last_activity_at).toLocaleDateString()}</span>
           </div>
         </CardContent>
       </Link>
