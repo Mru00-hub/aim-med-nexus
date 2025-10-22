@@ -351,7 +351,7 @@ export default function ThreadDetailPage() {
             </div>
           )}
           
-          <div className="flex-1 mt-4"> {/* Added margin-top */}
+          <div className="flex-1 mt-4 min-h-0"> {/* Added margin-top */}
             {isLoading ? (
               // Show skeleton while main thread details are loading
               <div className="space-y-4 p-4">
