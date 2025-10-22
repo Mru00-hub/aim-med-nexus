@@ -215,10 +215,15 @@ export const DirectMessage = ({ message, currentUserId, conversationKey, onReply
 
     return (
         <div className={cn("flex w-full items-start gap-3 relative", isMe ? "justify-end" : "justify-start")}>
-            {!isMe && <Avatar className="h-8 w-8 flex-shrink-0">...</Avatar>}
+            {!isMe && (
+              <Avatar className="h-8 w-8 flex-shrink-0">
+                <AvatarImage src={message.author?.profile_picture_url || undefined} />
+                <AvatarFallback>{displayName.charAt(0)}</AvatarFallback>
+              </Avatar>
+            )}
             
             {/* This is the main content wrapper */}
-            <div className={cn("flex flex-col w-auto", isMe ? "items-end" : "items-start")}>
+            <div className={cn("flex flex-col relative", isMe ? "items-end" : "items-start", !isMe && "w-full")}>
                 <div className="flex items-center gap-2 mb-1">
                     <span className="font-bold text-sm">{displayName}</span>
                     <span className="text-xs text-muted-foreground">{new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
