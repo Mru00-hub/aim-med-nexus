@@ -14,7 +14,7 @@ export const RequestsTab = ({ requests, sentRequests, loading, onRespondRequest,
           <TabsTrigger value="incoming">Incoming ({requests.length})</TabsTrigger>
           <TabsTrigger value="sent">Sent ({sentRequests.length})</TabsTrigger>
       </TabsList>
-      <TabsContent value="incoming" className="mt-4 space-y-2">
+      <TabsContent value="incoming" className="mt-4 space-y-2 max-h-[60vh] overflow-y-auto">
         {loading ? <Skeleton className="h-24 w-full" /> : requests.length > 0 ? requests.map(req => (
           <UserActionCard 
             key={req.requester_id} 
@@ -40,7 +40,7 @@ export const RequestsTab = ({ requests, sentRequests, loading, onRespondRequest,
           </UserActionCard>
         )) : <p className="text-center text-muted-foreground py-8">No incoming requests.</p>}
       </TabsContent>
-      <TabsContent value="sent" className="mt-4 space-y-2">
+      <TabsContent value="sent" className="mt-4 space-y-2 max-h-[60vh] overflow-y-auto">
         {/* The 'sent' tab logic was already correct as it used the right fields */}
         {loading ? <Skeleton className="h-24 w-full" /> : sentRequests.length > 0 ? sentRequests.map(req => (
           <UserActionCard 
