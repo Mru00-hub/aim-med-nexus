@@ -341,9 +341,9 @@ export default function SpaceDetailPage() {
   );
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="h-screen bg-background flex flex-col">
       <Header />
-      <main className="container mx-auto py-8 px-4 flex-grow">
+      <main className="container mx-auto py-8 px-4 flex-1 overflow-y-auto">
         {loading ? (
           <Skeleton className="h-40 w-full mb-8" />
         ) : space ? (
