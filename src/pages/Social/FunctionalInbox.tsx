@@ -12,9 +12,9 @@ import type { Tables, Database } from '@/integrations/supabase/types';
 import { cn } from '@/lib/utils';
 import { ConversationList } from '@/components/social/ConversationList';
 import { ConversationView } from '@/components/social/ConversationView';
-import { markConversationAsRead } from '@/integrations/supabase/social.api';
+import { markConversationAsRead, getInbox } from '@/integrations/supabase/social.api';
 
-type Conversation = Database['public']['Functions']['inbox_conversations']['Returns'][0];
+type Conversation = Database['public']['Functions']['get_my_inbox_conversations']['Returns'][number];
 type DirectMessagePayload = Tables<'direct_messages'>;
 
 const FunctionalInbox = () => {
@@ -39,9 +39,9 @@ const FunctionalInbox = () => {
     setLoading(true);
 
     try {
-      const { data, error } = await supabase.from('inbox_conversations').select('*');
-      if (error) throw error;
-
+      const data = await getInbox();
+      
+      // The rest of your logic is perfect and doesn't need to change
       data.sort((a, b) => (b.is_starred ? 1 : 0) - (a.is_starred ? 1 : 0));
       setConversations(data);
     } catch (error: any) {
