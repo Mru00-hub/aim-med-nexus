@@ -55,6 +55,7 @@ function SelectContent({
       <CommandInput 
         placeholder={searchPlaceholder} 
         onValueChange={onSearchChange} 
+        className="truncate"
       />
       <CommandEmpty>
         {isLoading ? (
