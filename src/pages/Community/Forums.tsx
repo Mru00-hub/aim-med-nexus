@@ -287,9 +287,9 @@ export default function Forums() {
   );
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="h-screen flex flex-col bg-background">
       <Header />
-      <main className="container mx-auto py-8 px-4">
+      <main className="flex-1 overflow-y-auto container mx-auto py-8 px-4">
         <div className="mb-8 text-center">
           <h1 className="text-3xl sm:text-4xl font-bold tracking-tight mb-2">Community Hub</h1>
           <p className="text-lg text-muted-foreground">Discover spaces, join discussions, and engage with your peers.</p>
