@@ -237,7 +237,7 @@ export const DirectMessage = ({ message, currentUserId, conversationKey, onReply
                         className="font-bold text-xs sm:text-sm hover:underline cursor-pointer transition-smooth"
                       >
                         {displayName}
-                      </a>
+                      </Link>
                     </span>
                     <span className="text-[10px] sm:text-xs text-muted-foreground">{new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                 </div>
