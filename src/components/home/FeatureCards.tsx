@@ -222,7 +222,7 @@ export const FeatureCards = () => {
         </div>
 
         {/* Bottom CTA */}
-        <div className="text-center mt-16 animate-fade-in">
+        <div className="text-center mt-12 animate-fade-in">
           <p className="text-lg text-muted-foreground mb-6">
             Ready to join the future of healthcare networking?
           </p>
