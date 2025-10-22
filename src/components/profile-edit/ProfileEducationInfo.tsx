@@ -68,7 +68,7 @@ export const ProfileEducationInfo: React.FC<ProfileEducationInfoProps> = ({
         <div>
           <label className="block text-sm font-medium mb-2">Year/Status (if student) {userRole === 'student' && '*'}</label>
           <Select value={formData.student_year_value} onValueChange={(v) => onInputChange('student_year_value', v)}>
-            <SelectTrigger><SelectValue placeholder="Select your year of study" /></SelectTrigger>
+            <SelectTrigger className="min-w-0"><SelectValue placeholder="Select your year of study" className="truncate"/></SelectTrigger>
             <SelectContent>
               {studentYears.map(y => <SelectItem key={y.value} value={y.value}>{y.label}</SelectItem>)}
             </SelectContent>
