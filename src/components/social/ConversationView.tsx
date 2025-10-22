@@ -149,7 +149,7 @@ export const ConversationView = ({ conversation, onConversationUpdate, onBack}: 
                       {conversation.participant_full_name}
                     </h3>
                 </div>
-              </a>
+              </Link>
             </div>
             <div className="flex items-center gap-2">
                 <Button 
