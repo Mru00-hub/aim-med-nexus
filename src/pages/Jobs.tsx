@@ -96,7 +96,7 @@ const Jobs = () => {
         <div className="mb-8 animate-slide-up">
           <Card className="card-medical">
             <CardContent className="pt-6">
-              <div className="grid md:grid-cols-5 gap-4 mb-4">
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
                 <div className="relative md:col-span-2">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input 
@@ -107,8 +107,8 @@ const Jobs = () => {
                   />
                 </div>
                 <Select>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Location" />
+                  <SelectTrigger className="min-w-0">
+                    <SelectValue placeholder="Location" className="truncate"/>
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="remote">Remote</SelectItem>
@@ -119,8 +119,8 @@ const Jobs = () => {
                   </SelectContent>
                 </Select>
                 <Select>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Experience" />
+                  <SelectTrigger className="min-w-0">
+                    <SelectValue placeholder="Experience" className="truncate"/>
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="0-1">0-1 years</SelectItem>
@@ -135,10 +135,10 @@ const Jobs = () => {
                 </Button>
               </div>
               
-              <div className="grid md:grid-cols-4 gap-4 mb-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
                 <Select>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Job Type" />
+                  <SelectTrigger className="min-w-0">
+                    <SelectValue placeholder="Job Type" className="truncate"/>
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="full-time">Full-time</SelectItem>
@@ -148,8 +148,8 @@ const Jobs = () => {
                   </SelectContent>
                 </Select>
                 <Select>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Salary Range" />
+                  <SelectTrigger className="min-w-0">
+                    <SelectValue placeholder="Salary Range" className="truncate"/>
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="0-5">₹0-5L</SelectItem>
@@ -159,8 +159,8 @@ const Jobs = () => {
                   </SelectContent>
                 </Select>
                 <Select>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Specialization" />
+                  <SelectTrigger className="min-w-0">
+                    <SelectValue placeholder="Specialization" className="truncate"/>
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="cardiology">Cardiology</SelectItem>
@@ -170,9 +170,9 @@ const Jobs = () => {
                   </SelectContent>
                 </Select>
                 
-                <div className="flex items-center gap-2">
+                <div className="flex flex-col sm:flex-row items-center gap-2">
                   {user ? (
-                    <Button className="btn-medical flex-1">
+                    <Button className="btn-medical w-full flex-1">
                       <Plus className="h-4 w-4 mr-2" />
                       Post Job
                     </Button>
@@ -184,8 +184,8 @@ const Jobs = () => {
                 </div>
               </div>
               
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center sm:justify-between gap-4">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                   <label className="flex items-center gap-2">
                     <input type="checkbox" className="rounded" />
                     <span className="text-sm">Notify me for new roles</span>
@@ -227,8 +227,8 @@ const Jobs = () => {
             {exampleJobs.map((job) => (
               <Card key={job.id} className="card-medical hover:shadow-hover transition-all cursor-pointer">
                 <CardContent className="p-6">
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="flex-1">
+                  <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-4 mb-4">
+                    <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-3 mb-2">
                         <h3 className="text-xl font-semibold hover:text-primary transition-colors">
                           {job.title}
@@ -240,7 +240,7 @@ const Jobs = () => {
                         )}
                       </div>
                       
-                      <div className="flex items-center gap-4 text-muted-foreground mb-3">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-muted-foreground mb-3">
                         <div className="flex items-center gap-1">
                           <Briefcase className="h-4 w-4" />
                           <span className="font-medium text-primary">{job.company}</span>
@@ -264,7 +264,7 @@ const Jobs = () => {
                         ))}
                       </div>
                       
-                      <div className="flex items-center gap-6 text-sm text-muted-foreground">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-6 text-sm text-muted-foreground">
                         <span className="font-semibold text-success">{job.salary}</span>
                         <span>{job.experience} experience</span>
                         <div className="flex items-center gap-1">
@@ -278,7 +278,7 @@ const Jobs = () => {
                       </div>
                     </div>
                     
-                    <div className="flex flex-col gap-2">
+                    <div className="flex flex-col gap-2 w-full sm:w-auto flex-shrink-0">
                       {user ? (
                         <>
                           <Button className="btn-medical">
@@ -320,7 +320,7 @@ const Jobs = () => {
         <div className="mt-16 animate-fade-in">
           <h2 className="text-2xl font-semibold mb-6">Career Resources</h2>
           
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {[
               { title: "Resume Builder", desc: "Create professional healthcare resumes", icon: "📄" },
               { title: "Interview Tips", desc: "Ace your healthcare job interviews", icon: "💼" },
