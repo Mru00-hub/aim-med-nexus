@@ -43,7 +43,7 @@ export const UserActionCard = ({ user, children }: UserActionCardProps) => {
             </Avatar>
           </Link>
           <div className="min-w-0">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col items-start gap-1 sm:flex-row sm:items-center sm:gap-2">
               <Link to={`/profile/${user.id}`} className="hover:underline">
                   <h4 className="font-semibold truncate">{user.full_name}</h4>
               </Link>
