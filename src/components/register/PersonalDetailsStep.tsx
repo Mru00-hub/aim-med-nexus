@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CircleX, Upload } from 'lucide-react';
+import { CircleX, Upload, Eye, EyeOff } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 type Location = {
@@ -18,6 +18,9 @@ type PersonalDetailsStepProps = {
   avatarPreview: string;
   handleAvatarChange: (e: ChangeEvent<HTMLInputElement>) => void;
   removeAvatar: () => void;
+  passwordError: string;
+  showPassword: boolean;
+  setShowPassword: (show: boolean) => void;
 };
 
 export const PersonalDetailsStep: React.FC<PersonalDetailsStepProps> = ({
@@ -26,6 +29,9 @@ export const PersonalDetailsStep: React.FC<PersonalDetailsStepProps> = ({
   avatarPreview,
   handleAvatarChange,
   removeAvatar,
+  passwordError,
+  showPassword,
+  setShowPassword,
 }) => {
   const [locations, setLocations] = useState<Location[]>([]);
   const [locationSearch, setLocationSearch] = useState("");
@@ -109,8 +115,9 @@ export const PersonalDetailsStep: React.FC<PersonalDetailsStepProps> = ({
       
       <div className="grid sm:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium mb-2">First Name *</label>
+          <label htmlFor="firstName" className="block text-sm font-medium mb-2">First Name *</label>
           <Input 
+            id="firstName"
             value={formData.firstName}
             onChange={(e) => handleInputChange('firstName', e.target.value)}
             placeholder="Enter your first name"
@@ -118,8 +125,9 @@ export const PersonalDetailsStep: React.FC<PersonalDetailsStepProps> = ({
           />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-2">Last Name *</label>
+          <label htmlFor="lastName" className="block text-sm font-medium mb-2">Last Name *</label>
           <Input 
+            id="lastName"
             value={formData.lastName}
             onChange={(e) => handleInputChange('lastName', e.target.value)}
             placeholder="Enter your last name"
@@ -129,8 +137,9 @@ export const PersonalDetailsStep: React.FC<PersonalDetailsStepProps> = ({
       </div>
 
       <div>
-        <label className="block text-sm font-medium mb-2">Email Address *</label>
+        <label htmlFor="email" className="block text-sm font-medium mb-2">Email Address *</label>
         <Input 
+          id="email"
           type="email"
           value={formData.email}
           onChange={(e) => handleInputChange('email', e.target.value)}
@@ -141,8 +150,9 @@ export const PersonalDetailsStep: React.FC<PersonalDetailsStepProps> = ({
 
       <div className="grid sm:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium mb-2">Phone Number</label>
+          <label htmlFor="phone" className="block text-sm font-medium mb-2">Phone Number</label>
           <Input 
+            id="phone"
             type="tel"
             value={formData.phone}
             onChange={(e) => handleInputChange('phone', e.target.value)}
@@ -150,8 +160,9 @@ export const PersonalDetailsStep: React.FC<PersonalDetailsStepProps> = ({
           />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-2">Date of Birth *</label>
+          <label htmlFor="dob" className="block text-sm font-medium mb-2">Date of Birth *</label>
           <Input 
+            id="dob"
             type="date"
             value={formData.date_of_birth}
             onChange={(e) => handleInputChange('date_of_birth', e.target.value)}
@@ -161,8 +172,9 @@ export const PersonalDetailsStep: React.FC<PersonalDetailsStepProps> = ({
       </div>
 
       <div>
-        <label className="block text-sm font-medium mb-2">Current Location *</label>
+        <label htmlFor="location" className="block text-sm font-medium mb-2">Current Location *</label>
         <SearchableSelect
+          // id="location" // Note: SearchableSelect doesn't take id directly, this label is for context
           options={locationOptions}
           value={formData.location_id}
           onValueChange={(value) => handleInputChange('location_id', value)}
@@ -185,27 +197,63 @@ export const PersonalDetailsStep: React.FC<PersonalDetailsStepProps> = ({
       </div>
 
       <div className="grid sm:grid-cols-2 gap-4">
+        {/* ✅ FIX: Updated Password Field */}
         <div>
-          <label className="block text-sm font-medium mb-2">Password *</label>
-          <Input 
-            type="password"
-            value={formData.password}
-            onChange={(e) => handleInputChange('password', e.target.value)}
-            placeholder="Create a strong password"
-            required
-            minLength={6}
-          />
+          <label htmlFor="password" className="block text-sm font-medium mb-2">Password *</label>
+          <div className="relative">
+            <Input 
+              id="password"
+              type={showPassword ? "text" : "password"}
+              value={formData.password}
+              onChange={(e) => handleInputChange('password', e.target.value)}
+              placeholder="Create a strong password"
+              required
+              minLength={6}
+            />
+            <Button
+              type="button" 
+              variant="ghost"
+              size="icon"
+              className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground"
+              onClick={() => setShowPassword(!showPassword)}
+              tabIndex={-1} 
+            >
+              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground mt-1">
+            Must be at least 6 characters long.
+          </p>
         </div>
+
+        {/* ✅ FIX: Updated Confirm Password Field */}
         <div>
-          <label className="block text-sm font-medium mb-2">Confirm Password *</label>
-          <Input 
-            type="password"
-            value={formData.confirmPassword}
-            onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
-            placeholder="Confirm your password"
-            required
-            minLength={6}
-          />
+          <label htmlFor="confirmPassword" className="block text-sm font-medium mb-2">Confirm Password *</label>
+          <div className="relative">
+            <Input 
+              id="confirmPassword"
+              type={showPassword ? "text" : "password"}
+              value={formData.confirmPassword}
+              onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
+              placeholder="Confirm your password"
+              required
+              minLength={6}
+            />
+            <Button
+              type="button" 
+              variant="ghost"
+              size="icon"
+              className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground"
+              onClick={() => setShowPassword(!showPassword)}
+              tabIndex={-1} // Keeps it out of the keyboard tab order
+            >
+              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </Button>
+          </div>
+          {/* This is the real-time error message */}
+          {passwordError && (
+            <p className="text-sm text-destructive mt-1">{passwordError}</p>
+          )}
         </div>
       </div>
     </>
