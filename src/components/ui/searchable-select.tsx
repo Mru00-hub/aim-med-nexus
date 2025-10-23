@@ -18,6 +18,9 @@ import {
   Drawer,
   DrawerContent,
   DrawerTrigger,
+  DrawerHeader,    
+  DrawerTitle,        
+  DrawerDescription,
 } from "@/components/ui/drawer"
 import { useIsMobile } from "@/hooks/use-mobile" 
 
@@ -152,7 +155,11 @@ export function SearchableSelect({
         </DrawerTrigger>
         <DrawerContent>
           {/* ✅ Render the reusable content */}
-          <div className="p-4">
+          <DrawerHeader className="text-left">
+            <DrawerTitle>{placeholder}</DrawerTitle>
+            <DrawerDescription>{searchPlaceholder}</Additional>
+          </DrawerHeader>
+          <div className="p-4 pt-0">
             <SelectContent
               options={options}
               value={value}
