@@ -10,7 +10,7 @@ import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Eye, EyeOff } from 'lucide-react';
 
 // Step Components
 import { RegistrationTypeStep } from '@/components/register/RegistrationTypeStep';
@@ -58,9 +58,24 @@ const Register = () => {
   const [avatarPreview, setAvatarPreview] = useState<string>('');
   
   const [formData, setFormData] = useState(initialFormData);
+  const [passwordError, setPasswordError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleInputChange = (field: string, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+    if (field === 'password' || field === 'confirmPassword') {
+      const newPassword = field === 'password' ? String(value) : formData.password;
+      const newConfirmPassword = field === 'confirmPassword' ? String(value) : formData.confirmPassword;
+      
+      // Only show error if confirmPassword has been touched
+      if (newConfirmPassword) { 
+        if (newPassword !== newConfirmPassword) {
+          setPasswordError("Passwords do not match.");
+        } else {
+          setPasswordError('');
+        }
+      }
+    }
   };
 
   const handleAvatarChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -86,6 +101,7 @@ const Register = () => {
       if (!firstName || !lastName || !email || !date_of_birth || !location_id || !password || !confirmPassword) return "Please fill in all required personal information fields.";
       if (password.length < 6) return "Password must be at least 6 characters long.";
       if (password !== confirmPassword) return "Passwords do not match.";
+      if (passwordError) return passwordError;
     }
     if (step === 3) {
       const { institution_id, course_id, student_year_value, currentPosition, organization, specialization_id, experience_level_value, agreeToTerms } = formData;
@@ -223,46 +239,59 @@ const Register = () => {
                 </div>
               </CardHeader>
               
-              <CardContent className="p-4 sm:p-6 pt-0">
-                <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
-                  {step === 2 && (
+              {step === 2 && (
+                <CardContent className="p-4 sm:p-6 pt-0">
+                  <div className="space-y-4 sm:space-y-6">
                     <PersonalDetailsStep
                       formData={formData}
                       handleInputChange={handleInputChange}
                       avatarPreview={avatarPreview}
                       handleAvatarChange={handleAvatarChange}
                       removeAvatar={removeAvatar}
+                      // ✅ FIX 1 & 2: Pass new props
+                      passwordError={passwordError}
+                      showPassword={showPassword}
+                      setShowPassword={setShowPassword}
                     />
-                  )}
-
-                  {step === 3 && (
-                    <ProfessionalDetailsStep
-                      formData={formData}
-                      handleInputChange={handleInputChange}
-                      registrationType={registrationType}
-                    />
-                  )}
-
+                  </div>
                   <div className="flex flex-col sm:flex-row gap-4 justify-between pt-6">
-                    {step > 1 && (
+                    {/* Back button is always type="button" */}
+                    <Button type="button" variant="outline" onClick={handleBack} className="order-2 sm:order-1">
+                      Back
+                    </Button>
+                    {/* Next button is type="button" and not in a form */}
+                    <Button type="button" size="lg" className="btn-medical order-1 sm:order-2 sm:ml-auto" onClick={handleNext}>
+                      Next: Educational Details <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  </div>
+                </CardContent>
+              )}
+
+              {step === 3 && (
+                // ✅ FIX 3: The <form> tag starts here, only for step 3
+                <form onSubmit={handleSubmit}> 
+                  <CardContent className="p-4 sm:p-6 pt-0">
+                    <div className="space-y-4 sm:space-y-6">
+                      <ProfessionalDetailsStep
+                        formData={formData}
+                        handleInputChange={handleInputChange}
+                        registrationType={registrationType}
+                      />
+                    </div>
+                    <div className="flex flex-col sm:flex-row gap-4 justify-between pt-6">
+                      {/* Back button is type="button" */}
                       <Button type="button" variant="outline" onClick={handleBack} className="order-2 sm:order-1">
                         Back
                       </Button>
-                    )}
-
-                    {step === 2 ? (
-                      <Button type="button" size="lg" className="btn-medical order-1 sm:order-2 sm:ml-auto" onClick={handleNext}>
-                        Next: Educational Details <ArrowRight className="ml-2 h-4 w-4" />
-                      </Button>
-                    ) : (
+                      {/* Submit button is type="submit" and is now correctly inside the form */}
                       <Button type="submit" size="lg" className="btn-medical order-1 sm:order-2 sm:ml-auto" disabled={isLoading}>
                         {isLoading ? 'Creating Account...' : 'Create Account'}
                         <ArrowRight className="ml-2 h-4 w-4" />
                       </Button>
-                    )}
-                  </div>
+                    </div>
+                  </CardContent>
                 </form>
-              </CardContent>
+              )}
             </Card>
 
             <div className="text-center mt-6 space-y-4">
