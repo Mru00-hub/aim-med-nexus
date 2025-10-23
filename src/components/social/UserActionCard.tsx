@@ -4,6 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { Users } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 // CHANGED: Expanded the User interface to include more optional details
 interface User {
