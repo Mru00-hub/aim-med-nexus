@@ -157,7 +157,7 @@ export function SearchableSelect({
           {/* ✅ Render the reusable content */}
           <DrawerHeader className="text-left">
             <DrawerTitle>{placeholder}</DrawerTitle>
-            <DrawerDescription>{searchPlaceholder}</Additional>
+            <DrawerDescription>{searchPlaceholder}</DrawerDescription>
           </DrawerHeader>
           <div className="p-4 pt-0">
             <SelectContent
