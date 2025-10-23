@@ -49,6 +49,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   
   const isAuthOperationInProgress = useRef(false);
 
+  const clearAuthState = useCallback(() => {
+    setUser(null);
+    setSession(null);
+    setProfile(null);
+    setInitialUnreadCount(null);
+    setPersonalKey(null);
+    setUserMasterKey(null);
+  }, []); 
+
   const fetchProfile = useCallback(async (userId: string): Promise<Profile | null> => {
     try {
       const { data, error } = await supabase
@@ -94,18 +103,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     let mounted = true;
     const init = async () => {
       const { data, error } = await supabase.auth.getSession();
-      if (mounted && data.session) {
-        setSession(data.session);
-        setUser(data.session.user);
-        const userProfile = await fetchProfile(data.session.user.id);
-        setProfile(userProfile);
-        if (userProfile) {
-          await fetchUnreadCount();
-        }
+      if (error) {
+        console.error("Error fetching session:", error.message);
       }
-      setLoading(false);
+      if (mounted) {
+        if (data.session) {
+          // --- SESSION EXISTS ---
+          setSession(data.session);
+          setUser(data.session.user);
+          const userProfile = await fetchProfile(data.session.user.id);
+          setProfile(userProfile);
+          if (userProfile) {
+            await fetchUnreadCount();
+          }
+        } else {
+          // --- NO SESSION EXISTS ---
+          // This is the new, smarter logic you asked for
+          clearAuthState();
+        }
+        // Set loading to false after all init logic is complete
+        setLoading(false);
+      }
     };
-
     init();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
@@ -120,13 +139,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
         });
       } else {
-        setSession(null);
-        setUser(null);
-        setProfile(null);
-        setInitialUnreadCount(null);
-        // CRITICAL: Clear encryption keys on logout
-        setPersonalKey(null);
-        setUserMasterKey(null);
+        clearAuthState();
       }
     });
 
@@ -134,7 +147,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       mounted = false;
       subscription.unsubscribe();
     };
-  }, [fetchProfile, fetchUnreadCount]);
+  }, [fetchProfile, fetchUnreadCount, clearAuthState]);
     
   const refreshProfile = useCallback(async () => {
     try {
@@ -380,25 +393,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       await supabase.removeAllChannels();
       console.log('All Supabase channels removed.');
-      
-      // Clear encryption keys BEFORE signing out
-      setPersonalKey(null);
-      setUserMasterKey(null);
-      
-      await supabase.auth.signOut();
+
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        // Handle the 403 session_not_found error, but still navigate
+        console.error("Sign out error:", error.message);
+        if (error.message !== "session_not_found") {
+           toast({
+            title: "Sign Out Error",
+            description: "There was a problem signing you out.",
+            variant: "destructive",
+          });
+        }
+      }
+
+      // We can confidently navigate here. The listener has already
+      // cleared the state in the background.
       navigate('/'); 
-    } catch (error) {
-      console.error("Sign out error:", error);
+    } catch (error: any) {
+      console.error("Unexpected sign out error:", error);
       toast({
         title: "Sign Out Error",
-        description: "There was a problem signing you out.",
+        description: "An unexpected error occurred during sign out.",
         variant: "destructive",
       });
     } finally {
       setLoadingMessage('');
+      // We no longer need isAuthOperationInProgress.current = false here
+      // because the listener will handle the state change.
     }
   };
-
+  
   const value = {
     user,
     session,
