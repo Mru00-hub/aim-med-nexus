@@ -152,17 +152,19 @@ export function SearchableSelect({
         </DrawerTrigger>
         <DrawerContent>
           {/* ✅ Render the reusable content */}
-          <SelectContent
-            options={options}
-            value={value}
-            onValueChange={onValueChange}
-            onSearchChange={onSearchChange}
-            searchPlaceholder={searchPlaceholder}
-            emptyMessage={emptyMessage}
-            showOther={showOther}
-            isLoading={isLoading}
-            onClose={() => setOpen(false)}
-          />
+          <div className="p-4">
+            <SelectContent
+              options={options}
+              value={value}
+              onValueChange={onValueChange}
+              onSearchChange={onSearchChange}
+              searchPlaceholder={searchPlaceholder}
+              emptyMessage={emptyMessage}
+              showOther={showOther}
+              isLoading={isLoading}
+              onClose={() => setOpen(false)}
+            />
+          </div>
         </DrawerContent>
       </Drawer>
     )
