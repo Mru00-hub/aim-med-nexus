@@ -234,5 +234,4 @@ export const Message: React.FC<MessageProps> = ({
             )}
         </div>
     );
-// FIX: Added the missing closing brace for the component
 };
