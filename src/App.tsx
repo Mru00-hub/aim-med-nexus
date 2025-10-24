@@ -115,7 +115,10 @@ const AppContent = () => {
             <Route path="/inbox" element={ <SecureRouteGuard> <FunctionalInbox /> </SecureRouteGuard> } />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
-
+            <Route 
+              path="/community/create-post" 
+              element={<CreateThread />} 
+            />
             <Route path="/community/space/:spaceId/create-thread" element={<CreateThread />} />
             <Route path="/community/space/:spaceId" element={<SpaceDetailPage />} />
             <Route path="/community/space/:spaceId/members" element={<MembersPage />} />
