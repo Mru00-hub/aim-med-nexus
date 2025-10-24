@@ -14,7 +14,7 @@ interface PostAndCommentsViewProps {
   canEdit: boolean;
   refresh: () => void;
   onReaction: (emoji: string) => void;
-  onComment: (body: string, parentMessageId?: number | null) => void; 
+  onComment: (body: string, files: File[], parentMessageId?: number | null) => void; 
   onCommentReaction: (commentId: number, emoji: string) => void; 
   onCommentEdit: (commentId: number, newBody: string) => void; 
   onCommentDelete: (commentId: number) => void;        
