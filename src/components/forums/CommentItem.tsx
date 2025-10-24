@@ -150,7 +150,7 @@ export const CommentItem: React.FC<CommentItemProps> = ({
                     onClick={() => handleReaction(emoji)}
                   >
                     {emoji}
-                  </BUTTON>
+                  </Button>
                 ))}
               </div>
             </PopoverContent>
