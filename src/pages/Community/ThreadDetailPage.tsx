@@ -5,7 +5,7 @@ import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { ThreadView } from '@/components/messaging/ThreadView'; // We will put all the logic here
 import AuthGuard from '@/components/AuthGuard'; // Protect this page
-import { getThreadDetails,getPostDetails,updatePost, updateThreadDetails, getViewerRoleForSpace, Thread, Enums, getThreadSummary, SummaryResponse, postMessage, MessageWithDetails, PublicPost,toggleReaction, editMessage, deletePost} from '@/integrations/supabase/community.api';
+import { getThreadDetails,getPostDetails,updatePost, updateThreadDetails, getViewerRoleForSpace, Thread, Enums, getThreadSummary, SummaryResponse, postMessage, MessageWithDetails, PublicPost,toggleReaction, editMessage, deleteMessage, deletePost} from '@/integrations/supabase/community.api';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/components/ui/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -329,6 +329,69 @@ export default function ThreadDetailPage() {
       });
   };
 
+  const handleOptimisticCommentReaction = (commentId: number, emoji: string) => {
+    if (!user || !postDetails) return;
+
+    // 1. Find the comment
+    const newComments = postDetails.comments.map(c => {
+      if (c.id !== commentId) return c;
+
+      // 2. Apply same logic as post reaction
+      const existingReaction = c.reactions.find(r => r.user_id === user.id);
+      let nextReactions;
+
+      if (!existingReaction) {
+        nextReactions = [...c.reactions, { message_id: commentId, user_id: user.id, reaction_emoji: emoji, id: Math.random() }];
+      } else if (existingReaction.reaction_emoji === emoji) {
+        nextReactions = c.reactions.filter(r => r.user_id !== user.id);
+      } else {
+        nextReactions = c.reactions.filter(r => r.user_id !== user.id);
+        nextReactions.push({ message_id: commentId, user_id: user.id, reaction_emoji: emoji, id: Math.random() });
+      }
+      return { ...c, reactions: nextReactions };
+    });
+    setPostDetails(prev => prev ? ({ ...prev, comments: newComments }) : null);
+
+    // 4. Call real API (using the same toggleReaction)
+    toggleReaction(commentId, emoji)
+      .catch(err => {
+        toast({ variant: 'destructive', title: 'Reaction failed', description: err.message });
+        fetchDetails(); // Revert
+      });
+  };
+
+  const handleOptimisticCommentEdit = (commentId: number, newBody: string) => {
+    // 1. Find and update the comment
+    const newComments = postDetails.comments.map(c => 
+      c.id === commentId ? { ...c, body: newBody, is_edited: true } : c
+    );
+
+    // 2. Set optimistic state
+    setPostDetails(prev => prev ? ({ ...prev, comments: newComments }) : null);
+
+    // 3. Call real API
+    editMessage(commentId, newBody)
+      .catch(err => {
+        toast({ variant: 'destructive', title: 'Edit failed', description: err.message });
+        fetchDetails(); // Revert
+      });
+  };
+
+  const handleOptimisticCommentDelete = (commentId: number) => {
+    // 1. Filter out the comment
+    const newComments = postDetails.comments.filter(c => c.id !== commentId);
+
+    // 2. Set optimistic state
+    setPostDetails(prev => prev ? ({ ...prev, comments: newComments }) : null);
+
+    // 3. Call real API
+    deleteMessage(commentId)
+      .catch(err => {
+        toast({ variant: 'destructive', title: 'Delete failed', description: err.message });
+        fetchDetails(); // Revert
+      });
+  };
+
   const handleOptimisticBodyUpdate = (newBody: string) => {
     if (!postDetails) return;
 
@@ -601,6 +664,9 @@ export default function ThreadDetailPage() {
                   onComment={handleOptimisticComment}
                   onBodyUpdate={handleOptimisticBodyUpdate}
                   onPostDelete={handleOptimisticPostDelete}
+                  onCommentReaction={handleOptimisticCommentReaction} // <-- ADDED
+                  onCommentEdit={handleOptimisticCommentEdit}       // <-- ADDED
+                  onCommentDelete={handleOptimisticCommentDelete}
                 />
               ) : !isPublicPost ? (
                 // --- OLD: Render the Slack-style Chat UI ---
