@@ -28,6 +28,7 @@ const REACTIONS = ['👍', '❤️', '🔥', '🧠', '😂'];
 interface CommentItemProps {
   comment: MessageWithDetails;
   threadId: string;       // <-- ADDED
+  depth: number;
   onComment: (body: string, parentMessageId?: number | null) => void;
   onCommentReaction: (commentId: number, emoji: string) => void;
   onCommentEdit: (commentId: number, newBody: string) => void;
@@ -38,6 +39,7 @@ interface CommentItemProps {
 export const CommentItem: React.FC<CommentItemProps> = ({ 
   comment, 
   threadId,
+  depth,
   onComment,
   onCommentReaction,
   onCommentEdit,
@@ -198,12 +200,14 @@ export const CommentItem: React.FC<CommentItemProps> = ({
         </div>
         {/* --- ACTION BAR --- */}
         <div className="flex items-center gap-3 text-xs text-muted-foreground px-2 py-1">
-          <button
-            onClick={() => setIsReplying(!isReplying)}
-            className="font-medium hover:text-primary"
-          >
-            Reply
-          </button>
+          {depth < 5 && (
+            <button
+              onClick={() => setIsReplying(!isReplying)}
+              className="font-medium hover:text-primary"
+            >
+              Reply
+            </button>
+          )}
           <span>{new Date(comment.created_at).toLocaleDateString()}</span>
           
           {/* Add Reaction Button */}
@@ -234,13 +238,13 @@ export const CommentItem: React.FC<CommentItemProps> = ({
             </PopoverContent>
           </Popover>
         </div>
-        {isReplying && (
+        {isReplying && depth < 5 && (
           <div className="mt-2">
             <CommentInput
-              threadId={threadId} // This now comes from the prop
+              threadId={threadId}
               parentMessageId={comment.id}
               onCommentPosted={(body, parentId) => {
-                onComment(body, parentId); // Pass to parent
+                onComment(body, parentId);
                 setIsReplying(false);
               }}
               isReply={true}
