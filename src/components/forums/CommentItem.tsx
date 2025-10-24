@@ -1,33 +1,41 @@
 import React, { useState, useMemo } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { usePostContext } from './PostContext';
+// REMOVED: import { usePostContext } from './PostContext';
 import { MessageWithDetails } from '@/integrations/supabase/community.api';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-// CHANGED: Added Popover components and Smile icon
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { ThumbsUp, CornerDownRight, Smile, File as FileIcon } from 'lucide-react'; // CHANGED: Added Smile
+import { ThumbsUp, CornerDownRight, Smile, File as FileIcon } from 'lucide-react';
 import { CommentInput } from './CommentInput';
 import { toggleReaction } from '@/integrations/supabase/community.api';
 import { useToast } from '@/components/ui/use-toast';
 
-// CHANGED: Define our standard list of reactions
 const REACTIONS = ['👍', '❤️', '🔥', '🧠', '😂'];
 
+// CHANGED: Updated props interface
 interface CommentItemProps {
   comment: MessageWithDetails;
+  refreshPost: () => void; // <-- ADDED
+  threadId: string;       // <-- ADDED
 }
 
-export const CommentItem: React.FC<CommentItemProps> = ({ comment }) => {
-  const { refreshPost, threadId } = usePostContext();
+// CHANGED: Updated component signature
+export const CommentItem: React.FC<CommentItemProps> = ({ 
+  comment, 
+  refreshPost, 
+  threadId 
+}) => {
+  // REMOVED: const { refreshPost, threadId } = usePostContext();
   const { user } = useAuth();
   const { toast } = useToast();
   const [isReplying, setIsReplying] = useState(false);
+
+  // ... (rest of the component logic is unchanged) ...
 
   const reactionGroups = useMemo(() => {
     if (!comment.reactions) return {};
@@ -52,7 +60,7 @@ export const CommentItem: React.FC<CommentItemProps> = ({ comment }) => {
     if (!user) return;
     try {
       await toggleReaction(comment.id, emoji);
-      refreshPost(); // Re-fetch all comments
+      refreshPost(); // This now calls the prop
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -110,7 +118,7 @@ export const CommentItem: React.FC<CommentItemProps> = ({ comment }) => {
             </div>
           )}
         </div>
-        {/* --- CHANGED: ACTION BAR --- */}
+        {/* --- ACTION BAR --- */}
         <div className="flex items-center gap-3 text-xs text-muted-foreground px-2 py-1">
           <button
             onClick={() => setIsReplying(!isReplying)}
@@ -142,7 +150,7 @@ export const CommentItem: React.FC<CommentItemProps> = ({ comment }) => {
                     onClick={() => handleReaction(emoji)}
                   >
                     {emoji}
-                  </Button>
+                  </BUTTON>
                 ))}
               </div>
             </PopoverContent>
@@ -151,11 +159,11 @@ export const CommentItem: React.FC<CommentItemProps> = ({ comment }) => {
         {isReplying && (
           <div className="mt-2">
             <CommentInput
-              threadId={threadId}
+              threadId={threadId} // This now comes from the prop
               parentMessageId={comment.id}
               onCommentPosted={() => {
                 setIsReplying(false);
-                refreshPost();
+                refreshPost(); // This now comes from the prop
               }}
               isReply={true}
             />
@@ -165,4 +173,3 @@ export const CommentItem: React.FC<CommentItemProps> = ({ comment }) => {
     </div>
   );
 };
-
