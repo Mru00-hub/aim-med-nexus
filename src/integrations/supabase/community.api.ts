@@ -544,7 +544,7 @@ export const toggleReaction = async (messageId: number, emoji: string): Promise<
     await getSessionOrThrow();
     const { error } = await supabase.rpc('toggle_reaction', {
         p_message_id: messageId,
-        p_reaction_emoji: emoji,
+        p_new_emoji: emoji, // CHANGED: Must be 'p_new_emoji' to match your SQL
     });
     if (error) throw error;
 };
@@ -666,13 +666,12 @@ export const createPost = async (payload: {
 
 export const updatePost = async (
   threadId: string,
-  payload: { title: string; body: string }
+  payload: { title: string }
 ): Promise<void> => {
   await getSessionOrThrow();
   const { error } = await supabase.rpc('update_post', {
     p_thread_id: threadId,
     p_title: payload.title,
-    p_description: payload.body,
   });
   if (error) throw error;
 };
