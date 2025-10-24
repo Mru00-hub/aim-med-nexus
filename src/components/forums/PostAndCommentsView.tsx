@@ -15,6 +15,8 @@ interface PostAndCommentsViewProps {
   refresh: () => void;
   onReaction: (emoji: string) => void;
   onComment: (body: string, parentMessageId?: number | null) => void; 
+  onBodyUpdate: (newBody: string) => void;
+  onPostDelete: () => void;
 }
 
 export const PostAndCommentsView: React.FC<PostAndCommentsViewProps> = ({
@@ -24,6 +26,8 @@ export const PostAndCommentsView: React.FC<PostAndCommentsViewProps> = ({
   refresh,
   onReaction,
   onComment, 
+  onBodyUpdate,
+  onPostDelete, 
 }) => {
   const { post, comments } = postDetails;
 
@@ -44,6 +48,8 @@ export const PostAndCommentsView: React.FC<PostAndCommentsViewProps> = ({
         canEdit={canEdit}
         refresh={refresh}
         onReaction={onReaction}
+        onBodyUpdate={onBodyUpdate}
+        onPostDelete={onPostDelete} 
       />
 
       <h2 className="text-xl font-semibold mb-4">
