@@ -17,7 +17,7 @@ import AuthGuard from '@/components/AuthGuard';
 // Import our new API functions
 import { createPost, uploadFilesForPost, AttachmentInput } from '@/integrations/supabase/community.api';
 import { useCommunity } from '@/context/CommunityContext';
-
+const POST_BODY_MAX_LENGTH = 3000;
 // Helper component for file previews
 const FilePreview = ({ file, onRemove }: { file: File, onRemove: () => void }) => {
   const isImage = file.type.startsWith('image/');
@@ -151,6 +151,7 @@ const CreatePostForm: React.FC = () => {
           onChange={(e) => setBody(e.target.value)} 
           disabled={isLoading} 
           required
+          maxLength={POST_BODY_MAX_LENGTH} 
         />
       </div>
 
