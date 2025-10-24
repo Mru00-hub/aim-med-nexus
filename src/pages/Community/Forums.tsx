@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Search, Plus, MessageSquare, ThumbsUp } from 'lucide-react';
+import { Search, Plus, MessageSquare, ThumbsUp, , UserPlus, Check, Loader2, Smile } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from '@/components/ui/use-toast';
 import { useCommunity } from '@/context/CommunityContext';
@@ -22,12 +22,21 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
   SpaceWithDetails, 
   createSpace,
   PublicPost,
   requestToJoinSpace,
-  joinSpaceAsMember
+  joinSpaceAsMember,
+  toggleFollow,
+  toggleReaction,
 } from '@/integrations/supabase/community.api';
+
+const REACTIONS = ['👍', '❤️', '🔥', '🧠', '😂'];
 
 export default function Forums() {
   const { user } = useAuth();
@@ -50,7 +59,8 @@ export default function Forums() {
   // Add state for optimistic updates
   const [optimisticSpaces, setOptimisticSpaces] = useState<SpaceWithDetails[]>([]);
   const [optimisticReactions, setOptimisticReactions] = useState<Record<string, number>>({});
-
+  const [followingStatus, setFollowingStatus] = useState<Record<string, boolean>>({});
+  const [isFollowLoading, setIsFollowLoading] = useState<Record<string, boolean>>({});
   // Define the missing functions
   const addOptimisticSpace = (space: SpaceWithDetails) => {
     setOptimisticSpaces(prev => [...prev, space]);
@@ -170,39 +180,52 @@ export default function Forums() {
     }
   };
 
-  const handleOptimisticReaction = async (threadId: string, messageId: number, emoji: string, currentCount: number) => {
-    if (!user) {
-      navigate('/login');
-      return;
-    }
+  const handleOptimisticReaction = async (e: React.MouseEvent, post: PublicPost, emoji: string) => {
+    e.preventDefault(); e.stopPropagation(); // Stop navigation
+    if (!user) { navigate('/login'); return; }
   
-    // Update local state immediately for instant UI feedback
+    // Optimistic update
     setOptimisticReactions(prev => ({
       ...prev,
-      [threadId]: (prev[threadId] ?? post.total_reaction_count) + 1
+      [post.thread_id]: (prev[post.thread_id] ?? post.total_reaction_count) + 1
     }));
   
     try {
-      // Call the actual API without awaiting UI update
       await toggleReaction(post.first_message_id, emoji);
+      // Background refresh to sync
+      refreshSpaces(); 
+    } catch (error: any) {
+      // Revert on error
+      setOptimisticReactions(prev => ({
+        ...prev,
+        [post.thread_id]: post.total_reaction_count // Revert to original count
+      }));
+      toast({ variant: 'destructive', title: 'Error', description: error.message });
+    }
+  };
+
+  const handleFollow = async (e: React.MouseEvent, post: PublicPost) => {
+    e.preventDefault(); e.stopPropagation(); // Stop navigation
+    if (!user) { navigate('/login'); return; }
     
-      // Refresh in background to get accurate counts
-      refreshSpaces().then(() => {
-        // Clear the optimistic update after real data loads
-        setOptimisticReactions(prev => {
-          const newState = { ...prev };
-          delete newState[post.thread_id];
-          return newState;
-        });
+    const authorId = post.author_id;
+    setIsFollowLoading(prev => ({ ...prev, [authorId]: true }));
+    
+    try {
+      await toggleFollow(authorId);
+      const newFollowingState = !followingStatus[authorId];
+      setFollowingStatus(prev => ({ ...prev, [authorId]: newFollowingState }));
+      
+      toast({
+        title: newFollowingState ? 'Followed' : 'Unfollowed',
+        description: newFollowingState
+          ? `You are now following ${post.author_name}.`
+          : `You are no longer following ${post.author_name}.`,
       });
     } catch (error: any) {
-      // Revert optimistic update on error
-      setOptimisticReactions(prev => {
-        const newState = { ...prev };
-        delete newState[threadId];
-        return newState;
-      });
-      toast({ variant: 'destructive', title: 'Error', description: error.message });
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } finally {
+      setIsFollowLoading(prev => ({ ...prev, [authorId]: false }));
     }
   };
   
@@ -295,45 +318,104 @@ export default function Forums() {
     );
   };
   
-  const renderPublicPostCard = (post: PublicPost) => (
-    <Card key={post.thread_id} className="transition-all duration-300 hover:border-primary/50 hover:shadow-lg">
-      <Link to={user ? `/community/thread/${post.thread_id}` : '/login'}>
+  const renderPublicPostCard = (post: PublicPost) => {
+    // Get loading/following status for this specific post's author
+    const isLoading = isFollowLoading[post.author_id];
+    const isFollowing = !!followingStatus[post.author_id];
+
+    return (
+      <Card key={post.thread_id} className="transition-all duration-300 hover:border-primary/50 hover:shadow-lg">
         <CardContent className="p-6">
-          <h3 className="font-semibold text-lg mb-2">{post.title}</h3>
-          <div className="flex flex-col gap-3 text-xs text-muted-foreground">
-            {/* Author Info */}
-            <div>
-              <span className="font-medium text-foreground">{post.author_name}</span>
-              {post.author_position && (
-                <p className="text-xs">
-                  {post.author_position}
-                </p>
-              )}
-            </div>
-            {/* Stats */}
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-              {/* Stat 1: Reactions */}
-              <div className="flex items-center gap-1 font-medium">
-                <ThumbsUp className="h-3 w-3" />
-                <span>
-                  {optimisticReactions[post.thread_id] ?? post.total_reaction_count} Reactions
+          {/* Link for the top part */}
+          <Link to={user ? `/community/thread/${post.thread_id}` : '/login'} className="block">
+            <h3 className="font-semibold text-lg mb-2">{post.title}</h3>
+            <div className="flex flex-col gap-3 text-xs text-muted-foreground">
+              {/* Author Info */}
+              <div>
+                <span className="font-medium text-foreground">{post.author_name}</span>
+                {post.author_position && <p className="text-xs">{post.author_position}</p>}
+              </div>
+              {/* Stats */}
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                {/* Stat 1: Reactions */}
+                <div className="flex items-center gap-1 font-medium">
+                  <ThumbsUp className="h-3 w-3" />
+                  <span>
+                    {optimisticReactions[post.thread_id] ?? post.total_reaction_count} Reactions
+                  </span>
+                </div>
+                {/* Stat 2: Comments */}
+                <div className="flex items-center gap-1">
+                  <MessageSquare className="h-3 w-3" />
+                  <span>{post.comment_count} comments</span>
+                </div>
+                {/* Stat 3: Last Activity */}
+                <span className="flex items-center">
+                  Last activity: {new Date(post.last_activity_at).toLocaleDateString()}
                 </span>
               </div>
-              {/* Stat 2: Comments */}
-              <div className="flex items-center gap-1">
-                <MessageSquare className="h-3 w-3" />
-                <span>{post.comment_count} comments</span>
-              </div>
-              {/* Stat 3: Last Activity */}
-              <span className="flex items-center">
-                Last activity: {new Date(post.last_activity_at).toLocaleDateString()}
-              </span>
             </div>
-          </div>
+          </Link>
+          
+          {/* --- NEW ACTION BAR --- */}
+          {user && (
+            <div className="mt-4 pt-4 border-t flex items-center gap-2">
+              {/* Follow Button */}
+              {user.id !== post.author_id && (
+                <Button
+                  variant={isFollowing ? 'secondary' : 'outline'}
+                  size="sm"
+                  onClick={(e) => handleFollow(e, post)}
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : isFollowing ? (
+                    <Check className="h-4 w-4 mr-2" />
+                  ) : (
+                    <UserPlus className="h-4 w-4 mr-2" />
+                  )}
+                  {isFollowing ? 'Following' : 'Follow'}
+                </Button>
+              )}
+              
+              {/* Reaction Button (Popover) */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="ghost" size="sm" onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
+                    <Smile className="h-4 w-4 mr-2" /> React
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-1">
+                  <div className="flex gap-1">
+                    {REACTIONS.map((emoji) => (
+                      <Button
+                        key={emoji}
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-lg rounded-full"
+                        onClick={(e) => handleOptimisticReaction(e, post, emoji)}
+                      >
+                        {emoji}
+                      </Button>
+                    ))}
+                  </div>
+                </PopoverContent>
+              </Popover>
+              
+              {/* Comment Button (as a link) */}
+              <Button variant="ghost" size="sm" asChild>
+                <Link to={user ? `/community/thread/${post.thread_id}` : '/login'}>
+                  <MessageSquare className="h-4 w-4 mr-2" />
+                  {post.comment_count}
+                </Link>
+              </Button>
+            </div>
+          )}
         </CardContent>
-      </Link>
-    </Card>
-  );
+      </Card>
+    );
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
