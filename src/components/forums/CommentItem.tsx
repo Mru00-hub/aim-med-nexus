@@ -4,7 +4,7 @@ import { usePostContext } from './PostContext';
 import { MessageWithDetails } from '@/integrations/supabase/community.api';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Badge } in '@/components/ui/badge';
+import { Badge } from '@/components/ui/badge';
 // CHANGED: Added Popover components and Smile icon
 import {
   Popover,
