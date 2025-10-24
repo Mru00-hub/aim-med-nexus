@@ -702,8 +702,8 @@ export default function ThreadDetailPage() {
             )}
           </div>
         </main>
-        <Footer />
       </div>
+      <Footer />
     </AuthGuard>
-  );
-}
+);
+
