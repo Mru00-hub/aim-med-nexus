@@ -143,6 +143,7 @@ export const getSpacesWithDetails = async (): Promise<SpaceWithDetails[]> => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
         // 🚀 FIX: Return the same mapped mock data your context expects
+        console.log('[getSpacesWithDetails] No session, returning MOCK_SPACES.');
         return MOCK_SPACES.map(space => ({
           ...space,
           creator_full_name: 'Community Member',
@@ -275,6 +276,7 @@ export const updateMemberRole = async (membershipId: string, newRole: Enums<'mem
 /** Fetches all global public threads using the new DB function. */
 export const getPublicThreads = async (): Promise<PublicPost[]> => {
     const { data: { session } } = await supabase.auth.getSession();
+    console.log('[getPublicThreads] No session, returning MOCK_PUBLIC_POSTS.');
     if (!session) return MOCK_PUBLIC_POSTS as any; // Keep mock for logged-out
 
     // This now queries our fast, pre-joined VIEW
