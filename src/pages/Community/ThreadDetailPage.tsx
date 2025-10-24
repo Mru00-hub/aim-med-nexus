@@ -120,6 +120,8 @@ export default function ThreadDetailPage() {
         description: error.message || 'Could not load thread.',
         variant: 'destructive',
       });
+      setBasicDetails(null);
+      setPostDetails(null); 
     } finally {
       setIsLoading(false);
     }
