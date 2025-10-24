@@ -275,57 +275,48 @@ export default function ThreadDetailPage() {
         id: Math.random(),
       });
     }
+  };
+    
+  const handleOptimisticComment = (body: string, parentMessageId: number | null = null) => {
+    if (!user || !profile || !postDetails) return;
 
-    const handleOptimisticComment = (body: string, parentMessageId: number | null = null) => {
-      if (!user || !profile || !postDetails) return;
-
-      // 1. Create a fake comment for the UI
-      const fakeComment: MessageWithDetails = {
-        id: Math.random(), // Temp ID
-        created_at: new Date().toISOString(),
-        user_id: user.id,
-        thread_id: postDetails.post.thread_id,
-        body: body,
-        parent_message_id: parentMessageId,
-        is_edited: false,
-        author: {
-          full_name: profile.full_name,
-          profile_picture_url: profile.profile_picture_url
-        },
-        reactions: [],
-        attachments: []
-      };
-
-      // 2. Optimistically update the state
-      setPostDetails(prev => {
-        if (!prev) return null;
-        return {
-          ...prev,
-          comments: [...prev.comments, fakeComment]
-        };
-      });
-
-      // 3. Call the real API (fire-and-forget)
-      postMessage(postDetails.post.thread_id, body, parentMessageId)
-        .catch((error: any) => {
-          // 4. On error, revert by fetching real data
-          toast({ variant: 'destructive', title: 'Failed to post', description: error.message });
-          fetchDetails(); // Revert
-        });
+    // 1. Create a fake comment (unchanged)
+    const fakeComment: MessageWithDetails = {
+      id: Math.random(), 
+      created_at: new Date().toISOString(),
+      user_id: user.id,
+      thread_id: postDetails.post.thread_id,
+      body: body,
+      parent_message_id: parentMessageId,
+      is_edited: false,
+      author: {
+        full_name: profile.full_name,
+        profile_picture_url: profile.profile_picture_url
+      },
+      reactions: [],
+      attachments: []
     };
-    // 1. Set optimistic state
-    const optimisticPost = { ...currentPost, reactions: nextReactions };
-    setPostDetails(prevDetails => prevDetails ? ({
-      ...prevDetails,
-      post: optimisticPost
-    }) : null);
 
-    // 2. Call the (now-updated) toggleReaction API
-    toggleReaction(currentPost.first_message_id, emoji)
+    // 2. Optimistically update the state (THIS IS THE FIX)
+    setPostDetails(prev => {
+      if (!prev) return null;
+      return {
+        ...prev,
+        // ALSO update the post object itself
+        post: {
+          ...prev.post,
+          comment_count: prev.post.comment_count + 1 
+        },
+        // Add the new comment to the comments array
+        comments: [...prev.comments, fakeComment]
+      };
+    });
+
+    // 3. Call the real API (unchanged)
+    postMessage(postDetails.post.thread_id, body, parentMessageId)
       .catch((error: any) => {
-        // 3. Revert on error
-        toast({ variant: 'destructive', title: 'Error', description: error.message });
-        fetchDetails();
+        toast({ variant: 'destructive', title: 'Failed to post', description: error.message });
+        fetchDetails(); // Revert on error
       });
   };
 
@@ -378,17 +369,26 @@ export default function ThreadDetailPage() {
   };
 
   const handleOptimisticCommentDelete = (commentId: number) => {
-    // 1. Filter out the comment
+    // 1. Filter out the comment (unchanged)
     const newComments = postDetails.comments.filter(c => c.id !== commentId);
 
-    // 2. Set optimistic state
-    setPostDetails(prev => prev ? ({ ...prev, comments: newComments }) : null);
+    // 2. Set optimistic state (THIS IS THE FIX)
+    setPostDetails(prev => prev ? ({ 
+      ...prev, 
+      // ALSO update the post object itself
+      post: {
+        ...prev.post,
+        // Decrement the count
+        comment_count: Math.max(0, prev.post.comment_count - 1) 
+      },
+      comments: newComments 
+    }) : null);
 
-    // 3. Call real API
+    // 3. Call real API (unchanged)
     deleteMessage(commentId)
       .catch(err => {
         toast({ variant: 'destructive', title: 'Delete failed', description: err.message });
-        fetchDetails(); // Revert
+        fetchDetails(); // Revert on error
       });
   };
 
