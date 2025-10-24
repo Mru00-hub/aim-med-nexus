@@ -95,7 +95,7 @@ export const PostDisplay: React.FC<PostDisplayProps> = ({
   const [isExpanded, setIsExpanded] = useState(false);
   const needsTruncation = useMemo(() => {
     // We strip HTML tags for a more accurate length check
-    const plainText = post.body.replace(/<[^>]+>/g, '');
+    const plainText = (post.body || '').replace(/<[^>]+>/g, '');
     return plainText.length > TRUNCATE_LENGTH;
   }, [post.body]);
 
@@ -221,7 +221,7 @@ export const PostDisplay: React.FC<PostDisplayProps> = ({
             prose prose-sm dark:prose-invert max-w-none
             ${needsTruncation && !isExpanded ? 'line-clamp-4' : ''}
           `}
-          dangerouslySetInnerHTML={{ __html: post.body }}
+          dangerouslySetInnerHTML={{ __html: post.body || '' }}
         />
 
         {needsTruncation && (
