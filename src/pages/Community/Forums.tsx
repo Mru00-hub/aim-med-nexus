@@ -85,7 +85,7 @@ export default function Forums() {
       const searchLower = threadSearchQuery.toLowerCase();
       return (
         (thread.title || '').toLowerCase().includes(searchLower) ||
-        (thread.author_name || '').toLowerCase().includes(searchLower) ||
+        (thread.author_name || '').toLowerCase().includes(searchLower) 
       );
     });
   }, [publicThreads, threadSearchQuery, user]);
