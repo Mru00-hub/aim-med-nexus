@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Search, Plus, MessageSquare } from 'lucide-react';
+import { Search, Plus, MessageSquare, ThumbsUp } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from '@/components/ui/use-toast';
 import { useCommunity } from '@/context/CommunityContext';
@@ -24,10 +24,15 @@ import {
 import {
   SpaceWithDetails, 
   createSpace,
-  ThreadWithDetails,
+  PublicPost,
   requestToJoinSpace,
   joinSpaceAsMember
 } from '@/integrations/supabase/community.api';
+
+const MOCK_PUBLIC_POSTS: PublicPost[] = [
+  { thread_id: 'mock-pub-thread-1', title: 'Best guidelines for AFib in 2025? (Example)', author_id: 'user-123', author_name: 'Dr. Chen (Example)', created_at: new Date().toISOString(), last_activity_at: new Date().toISOString(), comment_count: 23, first_message_id: 1, total_reaction_count: 58, description: 'Looking for the latest...', author_avatar: null, author_position: 'Cardiologist' },
+  { thread_id: 'mock-pub-thread-2', title: 'Hospital EHR vendor comparison (Example)', author_id: 'user-456', author_name: 'Dr. Patel (Example)', created_at: new Date().toISOString(), last_activity_at: new Date().toISOString(), comment_count: 18, first_message_id: 2, total_reaction_count: 42, description: 'We are evaluating new systems...', author_avatar: null, author_position: 'CMIO' },
+];
 
 export default function Forums() {
   const { user } = useAuth();
@@ -79,15 +84,16 @@ export default function Forums() {
   }, [spaces, optimisticSpaces, searchQuery, selectedFilter]);
 
   const filteredPublicThreads = useMemo(() => {
-    if (!publicThreads) return [];
-    return publicThreads.filter(thread => {
+    const threadsToFilter = publicThreads || (user ? [] : MOCK_PUBLIC_POSTS);
+    return threadsToFilter.filter(thread => {
       const searchLower = threadSearchQuery.toLowerCase();
       return (
         (thread.title || '').toLowerCase().includes(searchLower) ||
-        (thread.creator_full_name || '').toLowerCase().includes(searchLower)
+        (thread.author_name || '').toLowerCase().includes(searchLower) ||
+        (thread.description || '').toLowerCase().includes(searchLower)
       );
     });
-  }, [publicThreads, threadSearchQuery]);
+  }, [publicThreads, threadSearchQuery, user]);
 
   const handleCreateSpace = async (data: {
     name: string;
@@ -254,30 +260,36 @@ export default function Forums() {
     );
   };
   
-  const renderPublicThreadCard = (thread: ThreadWithDetails) => (
-    <Card key={thread.id} className="transition-all duration-300 hover:border-primary/50 hover:shadow-lg">
-      <Link to={user ? `/community/thread/${thread.id}` : '/login'}>
+  const renderPublicPostCard = (post: PublicPost) => (
+    <Card key={post.thread_id} className="transition-all duration-300 hover:border-primary/50 hover:shadow-lg">
+      <Link to={user ? `/community/thread/${post.thread_id}` : '/login'}>
         <CardContent className="p-6">
-          <h3 className="font-semibold text-lg mb-2">{thread.title}</h3>
+          <h3 className="font-semibold text-lg mb-2">{post.title}</h3>
           <div className="flex flex-col gap-3 text-xs text-muted-foreground">
+            {/* Author Info */}
             <div>
-              <span className="font-medium text-foreground">{thread.creator_full_name}</span>
-              {(thread.creator_position || thread.creator_specialization) && (
+              <span className="font-medium text-foreground">{post.author_name}</span>
+              {post.author_position && (
                 <p className="text-xs">
-                  {[thread.creator_position, thread.creator_specialization].filter(Boolean).join(' • ')}
+                  {post.author_position}
                 </p>
               )}
             </div>
+            {/* Stats */}
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-              {/* Stat 1: Messages */}
+              {/* Stat 1: Reactions */}
+              <div className="flex items-center gap-1 font-medium">
+                <ThumbsUp className="h-3 w-3" />
+                <span>{post.total_reaction_count} Reactions</span>
+              </div>
+              {/* Stat 2: Comments */}
               <div className="flex items-center gap-1">
                 <MessageSquare className="h-3 w-3" />
-                <span>{thread.message_count} messages</span>
+                <span>{post.comment_count} comments</span>
               </div>
-            
-              {/* Stat 2: Last Activity */}
+              {/* Stat 3: Last Activity */}
               <span className="flex items-center">
-                Last activity: {new Date(thread.last_activity_at).toLocaleDateString()}
+                Last activity: {new Date(post.last_activity_at).toLocaleDateString()}
               </span>
             </div>
           </div>
@@ -342,34 +354,33 @@ export default function Forums() {
           )}
         </section>
 
-        <section>
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-2xl font-semibold">Public Threads</h2>
-            {publicThreads && publicThreads.length > 0 && (
-              <Button 
-                size="sm" 
-                onClick={() => user ? navigate(`/community/space/${publicThreads[0].space_id}/create-thread`) : navigate('/login')}
-              >
-                <Plus className="h-4 w-4 mr-2" /> Start a Thread
-              </Button>
-            )}
+        <div className="flex justify-between items-center mb-4">
+            <h2 className="text-2xl font-semibold">Public Posts</h2>
+            <Button 
+              size="sm" 
+              // CHANGED: This now links to our new Create Post page
+              onClick={() => user ? navigate(`/community/create-post`) : navigate('/login')}
+            >
+              <Plus className="h-4 w-4 mr-2" /> Create Post
+            </Button>
           </div>
           <div className="relative mb-4">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input 
-              placeholder="Search public threads..." 
+              placeholder="Search public posts..." // CHANGED
               value={threadSearchQuery} 
               onChange={(e) => setThreadSearchQuery(e.target.value)} 
               className="pl-10" 
             />
           </div>
           {loading ? (
-            <p className="text-center text-muted-foreground py-4">Loading threads...</p>
+            <p className="text-center text-muted-foreground py-4">Loading posts...</p>
           ) : filteredPublicThreads.length === 0 ? (
-            <p className="text-center text-muted-foreground py-4">No public threads match your search.</p>
+            <p className="text-center text-muted-foreground py-4">No public posts match your search.</p>
           ) : (
             <div className="space-y-4">
-              {filteredPublicThreads.map(renderPublicThreadCard)}
+              {/* CHANGED: Calls the new render function */}
+              {filteredPublicThreads.map(renderPublicPostCard)}
             </div>
           )}
         </section>
