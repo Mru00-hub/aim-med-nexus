@@ -52,7 +52,7 @@ const FilePreview = ({ file, onRemove }: { file: File, onRemove: () => void }) =
 
 const CreatePostForm: React.FC = () => {
   const [title, setTitle] = useState('');
-  const [description, setDescription] = useState(''); // This is the main "body"
+  const [body, setBody] = useState('');  // This is the main "body"
   const [files, setFiles] = useState<File[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -72,7 +72,7 @@ const CreatePostForm: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim()) {
+    if (!title.trim() || !body.trim()) {
       setError('Title cannot be empty.');
       return;
     }
@@ -92,7 +92,7 @@ const CreatePostForm: React.FC = () => {
       toast({ title: "Creating post..." });
       const newThreadId = await createPost({
           title,
-          description,
+          body,
           attachments,
       });
       
@@ -142,14 +142,15 @@ const CreatePostForm: React.FC = () => {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="description" className="text-lg font-semibold">Body (Optional)</Label>
+        <Label htmlFor="body" className="text-lg font-semibold">Body (Optional)</Label>
         <Textarea 
-          id="description" 
+          id="body" 
           placeholder="Write the main content of your post. You can add images or files below." 
           rows={10} 
-          value={description} 
-          onChange={(e) => setDescription(e.target.value)} 
+          value={body} 
+          onChange={(e) => setBody(e.target.value)} 
           disabled={isLoading} 
+          required
         />
       </div>
 
