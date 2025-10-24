@@ -208,8 +208,7 @@ export default function Forums() {
                   <div className="flex flex-wrap gap-1 mt-1">
                     {/* CHANGED: Added '?' */}
                     {space.moderators?.slice(0, 3).map((mod, index) => (
-                      // @ts-ignore
-                      <Tooltip key={mod.id || `mod-${index}`}>
+                      <Tooltip key={mod.full_name || `mod-${index}`}>
                         <TooltipTrigger asChild>
                           <span className="inline-block">
                             <Badge variant="outline" className="cursor-default">
