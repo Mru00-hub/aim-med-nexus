@@ -5,8 +5,11 @@ import { CommentItem } from './CommentItem';
 // 1. ADD refreshPost and threadId to the props
 interface CommentListProps {
   comments: MessageWithDetails[];
-  refreshPost: () => void;
   threadId: string;
+  onComment: (body: string, parentMessageId?: number | null) => void;
+  onCommentReaction: (commentId: number, emoji: string) => void;
+  onCommentEdit: (commentId: number, newBody: string) => void;
+  onCommentDelete: (commentId: number) => void;
 }
 
 // Define the shape of a comment node in the tree
@@ -15,8 +18,11 @@ type CommentNode = MessageWithDetails & { children: CommentNode[] };
 // 2. ACCEPT the new props here
 export const CommentList: React.FC<CommentListProps> = ({ 
   comments, 
-  refreshPost, 
-  threadId 
+  threadId,
+  onComment,
+  onCommentReaction,
+  onCommentEdit,
+  onCommentDelete
 }) => {
   // This builds the nested tree
   const commentTree = useMemo(() => {
@@ -47,8 +53,11 @@ export const CommentList: React.FC<CommentListProps> = ({
             {/* 3. PASS the props down to CommentItem */}
             <CommentItem 
               comment={comment} 
-              refreshPost={refreshPost} 
               threadId={threadId} 
+              onComment={onComment}
+              onCommentReaction={onCommentReaction}
+              onCommentEdit={onCommentEdit}
+              onCommentDelete={onCommentDelete}
             />
             {comment.children.length > 0 && (
               // This is the mobile-first nesting
