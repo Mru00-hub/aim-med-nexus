@@ -57,6 +57,7 @@ const groupReactions = (reactions: any[]) => {
 // ADDED: Props interface
 interface PostDisplayProps {
   post: FullPostDetails['post'];
+  commentCount: number;
   refresh: () => void;
   onReaction: (emoji: string) => void; 
   onBodyUpdate: (newBody: string) => void;
@@ -69,6 +70,7 @@ const TRUNCATE_LENGTH = 300;
 // CHANGED: Component signature to accept props
 export const PostDisplay: React.FC<PostDisplayProps> = ({
   post,
+  commentCount,
   refresh,
   onReaction,
   onBodyUpdate,
@@ -472,7 +474,7 @@ export const PostDisplay: React.FC<PostDisplayProps> = ({
           <Button variant="ghost" className="w-full" >
             <MessageSquare className="h-5 w-5" />
             <span className="ml-2 hidden sm:inline">
-              Comment ({post.comment_count})
+              Comment ({commentCount})
             </span>
           </Button>
 
