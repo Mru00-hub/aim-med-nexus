@@ -6,6 +6,7 @@ import {
     getSpacesWithDetails, 
     getUserSpaces,
     getUserMemberships,
+    getPublicThreads,
     PublicPost,
     SpaceWithDetails,
     ThreadWithDetails,
