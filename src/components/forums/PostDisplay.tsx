@@ -228,76 +228,78 @@ export const PostDisplay: React.FC<PostDisplayProps> = ({
     <Card className="mb-6 shadow-md">
       <CardContent className="p-4 sm:p-6">
         {/* Author Info & Follow Button (Unchanged) */}
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-4">
-          <Link
-            to={`/profile/${post.author_id}`}
-            className="flex items-center gap-3 group"
-          >
-            <Avatar className="h-10 w-10">
-              <AvatarImage
-                src={post.author_avatar || ''}
-                alt={post.author_name || 'Author'}
-              />
-              <AvatarFallback>
-                {post.author_name?.charAt(0) || 'A'}
-              </AvatarFallback>
-            </Avatar>
-            <div>
-              <p className="font-semibold group-hover:underline">
-                {post.author_name}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                {post.author_position}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {new Date(post.created_at).toLocaleString()}
-              </p>
-            </div>
-          </Link>
-          {user && user.id !== post.author_id && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleFollow}
-              disabled={isFollowLoading}
-              className="w-full sm:w-auto"
+        <div className="flex justify-between items-start gap-4 mb-4">
+          <div className="flex-1 flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
+            <Link
+              to={`/profile/${post.author_id}`}
+              className="flex items-center gap-3 group"
             >
-              {isFollowLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              ) : (
-                <UserPlus className="h-4 w-4 mr-2" />
-              )}
-              {isFollowing ? 'Following' : 'Follow'}
-            </Button>
-          )}
-        </div>
+              <Avatar className="h-10 w-10">
+                <AvatarImage
+                  src={post.author_avatar || ''}
+                  alt={post.author_name || 'Author'}
+                />
+                <AvatarFallback>
+                  {post.author_name?.charAt(0) || 'A'}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <p className="font-semibold group-hover:underline">
+                  {post.author_name}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {post.author_position}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {new Date(post.created_at).toLocaleString()}
+                </p>
+              </div>
+            </Link>
+            {user && user.id !== post.author_id && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleFollow}
+                disabled={isFollowLoading}
+                className="w-full sm:w-auto"
+              >
+                {isFollowLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <UserPlus className="h-4 w-4 mr-2" />
+                )}
+                {isFollowing ? 'Following' : 'Follow'}
+              </Button>
+            )}
+          </div>
 
-        {canEdit && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon">
-                  <MoreHorizontal className="h-5 w-5" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={startEditTitle}>
-                  <Edit className="h-4 w-4 mr-2" />
-                  Edit Title
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={startEdit}>
-                  <Edit2 className="h-4 w-4 mr-2" />
-                  Edit Post Body
-                </DropdownMenuItem>
-                <DropdownMenuItem 
-                  className="text-destructive focus:text-destructive"
-                  onClick={onPostDelete}
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Delete Post
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
+          {canEdit && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon">
+                    <MoreHorizontal className="h-5 w-5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={startEditTitle}>
+                    <Edit className="h-4 w-4 mr-2" />
+                    Edit Title
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={startEdit}>
+                    <Edit2 className="h-4 w-4 mr-2" />
+                    Edit Post Body
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    className="text-destructive focus:text-destructive"
+                    onClick={onPostDelete}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete Post
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+        </div>
 
         {isEditingTitle ? (
           <div className="space-y-2 mb-4">
