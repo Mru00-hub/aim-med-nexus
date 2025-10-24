@@ -15,6 +15,9 @@ interface PostAndCommentsViewProps {
   refresh: () => void;
   onReaction: (emoji: string) => void;
   onComment: (body: string, parentMessageId?: number | null) => void; 
+  onCommentReaction: (commentId: number, emoji: string) => void; 
+  onCommentEdit: (commentId: number, newBody: string) => void; 
+  onCommentDelete: (commentId: number) => void;        
   onBodyUpdate: (newBody: string) => void;
   onPostDelete: () => void;
 }
@@ -25,18 +28,16 @@ export const PostAndCommentsView: React.FC<PostAndCommentsViewProps> = ({
   canEdit,
   refresh,
   onReaction,
-  onComment, 
+  onComment,
+  onCommentReaction, // <-- ADDED
+  onCommentEdit,     // <-- ADDED
+  onCommentDelete,   // <-- ADDED
   onBodyUpdate,
   onPostDelete, 
 }) => {
   const { post, comments } = postDetails;
 
-  // const contextValue: PostContextType = { ... }; // <-- REMOVED
-
   return (
-    // <PostContext.Provider ...> // <-- REMOVED WRAPPER
-    
-    // Centered layout, max-w-3xl is good for mobile and desktop reading
     <div className="max-w-3xl mx-auto">
       {/* Pass data directly as props now.
         You will need to update your PostDisplay component 
@@ -59,9 +60,11 @@ export const PostAndCommentsView: React.FC<PostAndCommentsViewProps> = ({
       <div className="mt-6">
         <CommentList 
           comments={comments}
-          onReply={onComment} 
-          refreshPost={refresh}
           threadId={threadId} 
+          onComment={onComment}
+          onCommentReaction={onCommentReaction}
+          onCommentEdit={onCommentEdit}
+          onCommentDelete={onCommentDelete}
         />
       </div>
     </div>
