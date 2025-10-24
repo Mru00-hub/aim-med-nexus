@@ -54,11 +54,13 @@ export const PostAndCommentsView: React.FC<PostAndCommentsViewProps> = ({
       </h2>
       <CommentInput threadId={threadId} onCommentPosted={refresh} />
       <div className="mt-6">
-        <CommentList comments={comments} />
+        <CommentList 
+          comments={comments}
+          refreshPost={refresh}
+          threadId={threadId} 
+        />
       </div>
     </div>
-    
-    // </PostContext.Provider> // <-- REMOVED WRAPPER
   );
 };
 
