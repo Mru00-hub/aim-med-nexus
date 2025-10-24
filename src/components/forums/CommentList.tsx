@@ -6,7 +6,7 @@ type CommentNode = MessageWithDetails & { children: CommentNode[] };
 interface CommentListProps {
   comments: MessageWithDetails[];
   threadId: string;
-  onComment: (body: string, parentMessageId?: number | null) => void;
+  onComment: (body: string, files: File[], parentMessageId?: number | null) => Promise<void>; 
   onCommentReaction: (commentId: number, emoji: string) => void;
   onCommentEdit: (commentId: number, newBody: string) => void;
   onCommentDelete: (commentId: number) => void;
