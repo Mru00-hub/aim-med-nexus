@@ -48,6 +48,7 @@ const groupReactions = (reactions: any[]) => {
 interface PostDisplayProps {
   post: FullPostDetails['post'];
   refresh: () => void;
+  onReaction: (emoji: string) => void; 
   canEdit: boolean;
   threadId: string;
 }
@@ -56,6 +57,7 @@ interface PostDisplayProps {
 export const PostDisplay: React.FC<PostDisplayProps> = ({
   post,
   refresh,
+  onReaction,
   canEdit, // This prop is now available if you need to add an "Edit" button
   threadId, // This prop is now available
 }) => {
@@ -124,9 +126,12 @@ export const PostDisplay: React.FC<PostDisplayProps> = ({
     if (isReactionLoading || !user) return;
     setIsReactionLoading(true);
     try {
-      await toggleReaction(post.first_message_id, emoji);
-      refresh(); // CHANGED: Called refresh() from props
+      onReaction(emoji);
+      
+      // REMOVED: await toggleReaction(post.first_message_id, emoji);
+      // REMOVED: refresh();
     } catch (error: any) {
+      // This is now less likely to fire, but good as a fallback
       toast({
         title: 'Error',
         description: error.message,
@@ -134,6 +139,8 @@ export const PostDisplay: React.FC<PostDisplayProps> = ({
       });
     } finally {
       setIsReactionLoading(false);
+      // We can close the popover after a short delay
+      setTimeout(() => setPopoverOpen(false), 300);
     }
   };
 
