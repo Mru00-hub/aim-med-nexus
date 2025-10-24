@@ -20,8 +20,6 @@ import AuthGuard from '@/components/AuthGuard';
 import { createPost, uploadFilesForPost, AttachmentInput } from '@/integrations/supabase/community.api';
 import { useCommunity } from '@/context/CommunityContext';
 import { Document, Page, pdfjs } from 'react-pdf';
-import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
-import 'react-pdf/dist/esm/Page/TextLayer.css';
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 const POST_BODY_MAX_LENGTH = 3000;
 const URL_REGEX = /(https?:\/\/[^\s]+)/g;
