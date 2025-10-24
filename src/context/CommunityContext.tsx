@@ -12,6 +12,7 @@ import {
     Membership,
     Enums,
 } from '@/integrations/supabase/community.api';
+import { supabase } from '@/integrations/supabase/client';
 
 // --- MODIFIED INTERFACE ---
 interface CommunityContextType {
