@@ -14,20 +14,44 @@ interface CommentInputProps {
 }
 
 // Small preview component for attached files
-const FilePreview = ({ file, onRemove }: { file: File; onRemove: () => void; }) => (
-  <div className="relative flex items-center p-2 border rounded-md text-sm">
-    <FileIcon className="h-4 w-4 mr-2 text-muted-foreground" />
-    <span className="truncate flex-1 mr-6">{file.name}</span>
-    <Button
-      variant="ghost"
-      size="icon"
-      className="absolute top-1 right-1 h-6 w-6"
-      onClick={onRemove}
-    >
-      <X className="h-4 w-4" />
-    </Button>
-  </div>
-);
+const FilePreview = ({ file, onRemove }: { file: File, onRemove: () => void }) => {
+  const [preview, setPreview] = useState<string | null>(null);
+  const isImage = file.type.startsWith('image/');
+
+  useEffect(() => {
+    if (isImage) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      setPreview(null);
+    }
+  }, [file, isImage]);
+
+  return (
+    <div className="relative group w-full overflow-hidden flex items-center p-2 border rounded-md">
+      {isImage && preview ? (
+        <img src={preview} alt={file.name} className="h-16 w-16 rounded-md object-cover flex-shrink-0" />
+      ) : (
+        <FileIcon className="h-16 w-16 text-muted-foreground flex-shrink-0" />
+      )}
+      <div className="ml-3 overflow-hidden min-w-0">
+        <p className="text-sm font-medium truncate">{file.name}</p>
+        <p className="text-xs text-muted-foreground">{(file.size / 1024).toFixed(1)} KB</p>
+      </div>
+      <Button 
+        variant="ghost" 
+        size="icon" 
+        className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity" 
+        onClick={onRemove}
+      >
+        <X className="h-4 w-4" />
+      </Button>
+    </div>
+  );
+};
 
 export const CommentInput: React.FC<CommentInputProps> = ({
   threadId,
