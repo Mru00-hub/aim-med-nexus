@@ -50,6 +50,8 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
 
   // This function is now named `refreshSpaces` but its logic is the same
   const refreshSpaces = useCallback(async () => {
+    console.log('--- refreshSpaces START ---');
+    console.log('User object from useAuth:', user); // <-- LOG 1: What does useAuth think?
     setIsLoadingSpaces(true);
     try {
       // 1. Always fetch public spaces and threads.
@@ -59,14 +61,20 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
         getPublicThreads(),
       ]);
 
+      console.log('Fetched spaces count:', spacesData?.length);
+      console.log('Fetched threads count:', publicThreadsData?.length);
+
       setSpaces(spacesData || []);
       setPublicThreads(publicThreadsData || []);
 
       // 2. *Only* fetch memberships if the user is actually logged in.
       if (user) {
+        console.log('User is present, attempting to fetch memberships...');
         const membershipsData = await getUserMemberships();
         setMemberships(membershipsData || []);
+        console.log('Successfully fetched memberships.');
       } else {
+        console.log('No user, clearing memberships.');
         // 3. If logged out, ensure memberships are cleared.
         setMemberships([]);
       }
@@ -74,12 +82,13 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
     } catch (error: any) {
       // This catch block will now only trigger on a *real* network/API error,
       // not on a "logged out" error from getUserMemberships.
-      console.error('Failed to fetch community data:', error.message);
+      console.error('--- REFRESH SPACES FAILED ---', error.message);
       setSpaces([]);
       setMemberships([]);
       setPublicThreads([]);
     } finally {
       setIsLoadingSpaces(false);
+      console.log('--- refreshSpaces END ---');
     }
   }, [user]);
 
