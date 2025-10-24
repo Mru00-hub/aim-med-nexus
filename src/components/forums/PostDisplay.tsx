@@ -7,6 +7,13 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"; 
 import {
   Popover,
   PopoverContent,
@@ -26,7 +33,7 @@ import {
   toggleReaction,
   FullPostDetails, // ADDED: Import FullPostDetails type
 } from '@/integrations/supabase/community.api';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown, ChevronUp, MoreHorizontal, Edit2, Trash2} from 'lucide-react';
 
 const REACTIONS = ['👍', '❤️', '🔥', '🧠', '😂'];
 
@@ -50,6 +57,8 @@ interface PostDisplayProps {
   post: FullPostDetails['post'];
   refresh: () => void;
   onReaction: (emoji: string) => void; 
+  onBodyUpdate: (newBody: string) => void;
+  onPostDelete: () => void; 
   canEdit: boolean;
   threadId: string;
 }
@@ -59,6 +68,8 @@ export const PostDisplay: React.FC<PostDisplayProps> = ({
   post,
   refresh,
   onReaction,
+  onBodyUpdate,
+  onPostDelete,
   canEdit, // This prop is now available if you need to add an "Edit" button
   threadId, // This prop is now available
 }) => {
@@ -93,13 +104,37 @@ export const PostDisplay: React.FC<PostDisplayProps> = ({
   const [isReactionLoading, setIsReactionLoading] = useState(false);
   const [popoverOpen, setPopoverOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [isEditingBody, setIsEditingBody] = useState(false);
+  const [editedBody, setEditedBody] = useState(post.body || '');
+  const [isSavingBody, setIsSavingBody] = useState(false);
   const needsTruncation = useMemo(() => {
     // We strip HTML tags for a more accurate length check
     const plainText = (post.body || '').replace(/<[^>]+>/g, '');
     return plainText.length > TRUNCATE_LENGTH;
   }, [post.body]);
 
-  // (rest of your state and effects...)
+  const handleSaveBody = () => {
+    if (!editedBody.trim() || editedBody === post.body) {
+      setIsEditingBody(false);
+      return;
+    }
+    
+    setIsSavingBody(true);
+    // Call the optimistic handler from parent
+    onBodyUpdate(editedBody); 
+    
+    // Simulate save time and close
+    setTimeout(() => {
+      setIsEditingBody(false);
+      setIsSavingBody(false);
+    }, 500);
+  };
+
+  const startEdit = () => {
+    setEditedBody(post.body || '');
+    setIsEditingBody(true);
+  };
 
   const reactionGroups = useMemo(() => groupReactions(post.reactions), [
     post.reactions,
@@ -211,37 +246,95 @@ export const PostDisplay: React.FC<PostDisplayProps> = ({
           )}
         </div>
 
+        {canEdit && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <MoreHorizontal className="h-5 w-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={startEdit}>
+                  <Edit2 className="h-4 w-4 mr-2" />
+                  Edit Post Body
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  className="text-destructive focus:text-destructive"
+                  onClick={onPostDelete}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete Post
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
+
         {/* Post Title */}
         <h1 className="text-2xl font-bold mb-4">{post.title}</h1>
 
         {/* Post Body (HTML) */}
-        <div
-          className={`
-            prose prose-sm dark:prose-invert max-w-none
-            ${needsTruncation && !isExpanded ? 'line-clamp-4' : ''}
-          `}
-          dangerouslySetInnerHTML={{ __html: post.body || '' }}
-        />
+        {isEditingBody ? (
+          <div className="space-y-2">
+            <Textarea
+              value={editedBody}
+              onChange={(e) => setEditedBody(e.target.value)}
+              rows={10}
+              autoFocus
+            />
+            <div className="flex justify-end gap-2">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setIsEditingBody(false)}
+                disabled={isSavingBody}
+              >
+                Cancel
+              </Button>
+              <Button 
+                size="sm" 
+                onClick={handleSaveBody}
+                disabled={isSavingBody}
+              >
+                {isSavingBody ? (
+                  <Loader2 className="h-4 w-4 animate-spin" /> 
+                ) : (
+                  'Save'
+                )}
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div
+              className={`
+                prose prose-sm dark:prose-invert max-w-none
+                ${needsTruncation && !isExpanded ? 'line-clamp-4' : ''}
+              `}
+              dangerouslySetInnerHTML={{ __html: post.body || '' }}
+            />
 
-        {needsTruncation && (
-          <Button
-            variant="link"
-            size="sm"
-            className="px-0 h-auto text-primary hover:no-underline"
-            onClick={() => setIsExpanded(!isExpanded)}
-          >
-            {isExpanded ? (
-              <>
-                Show less
-                <ChevronUp className="h-4 w-4 ml-1" />
-              </>
-            ) : (
-              <>
-                Show more
-                <ChevronDown className="h-4 w-4 ml-1" />
-              </>
+            {needsTruncation && (
+              <Button
+                variant="link"
+                size="sm"
+                className="px-0 h-auto text-primary hover:no-underline"
+                onClick={() => setIsExpanded(!isExpanded)}
+              >
+                {isExpanded ? (
+                  <>
+                    Show less
+                    <ChevronUp className="h-4 w-4 ml-1" />
+                  </>
+                ) : (
+                  <>
+                    Show more
+                    <ChevronDown className="h-4 w-4 ml-1" />
+                  </>
+                )}
+              </Button>
             )}
-          </Button>
+          </>
         )}
 
         {/* Attachments (Unchanged) */}
