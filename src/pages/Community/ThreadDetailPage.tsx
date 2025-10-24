@@ -243,15 +243,11 @@ export default function ThreadDetailPage() {
 
     const currentPost = postDetails.post;
     // @ts-ignore
-    const userHasReacted = currentPost.reactions.find(r => r.user_id === user.id && r.reaction_emoji === emoji);
+    const existingReaction = currentPost.reactions.find(r => r.user_id === user.id);
     let nextReactions;
 
-    if (userHasReacted) {
-      // Optimistically remove the reaction
-      // @ts-ignore
-      nextReactions = currentPost.reactions.filter(r => !(r.user_id === user.id && r.reaction_emoji === emoji));
-    } else {
-      // Optimistically add the reaction (create a fake one)
+    if (!existingReaction) {
+      // Case 1: Add new reaction
       nextReactions = [
         ...currentPost.reactions,
         {
@@ -259,27 +255,42 @@ export default function ThreadDetailPage() {
           user_id: user.id,
           reaction_emoji: emoji,
           created_at: new Date().toISOString(),
-          id: Math.random(), // Temporary optimistic ID
+          id: Math.random(),
         }
       ];
+    } else if (existingReaction.reaction_emoji === emoji) {
+      // Case 2: Remove existing reaction
+      // @ts-ignore
+      nextReactions = currentPost.reactions.filter(r => r.user_id !== user.id);
+    } else {
+      // Case 3: Replace existing reaction
+      // @ts-ignore
+      nextReactions = currentPost.reactions.filter(r => r.user_id !== user.id);
+      nextReactions.push({
+        message_id: currentPost.first_message_id,
+        user_id: user.id,
+        reaction_emoji: emoji,
+        created_at: new Date().toISOString(),
+        id: Math.random(),
+      });
     }
     
-    // 1. Set the optimistic state immediately
+    // 1. Set optimistic state
     const optimisticPost = { ...currentPost, reactions: nextReactions };
     setPostDetails(prevDetails => prevDetails ? ({
       ...prevDetails,
       post: optimisticPost
     }) : null);
 
-    // 2. Call the real API (fire-and-forget)
+    // 2. Call the (now-updated) toggleReaction API
     toggleReaction(currentPost.first_message_id, emoji)
       .catch((error: any) => {
-        // 3. On error, show toast and revert by refetching
+        // 3. Revert on error
         toast({ variant: 'destructive', title: 'Error', description: error.message });
-        fetchDetails(); // Revert by fetching real data
+        fetchDetails();
       });
   };
-
+    
   return (
     <AuthGuard>
       <div className="flex flex-col min-h-screen bg-background">
