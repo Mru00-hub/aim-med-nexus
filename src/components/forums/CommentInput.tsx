@@ -13,7 +13,7 @@ import { useToast } from '@/components/ui/use-toast';
 interface CommentInputProps {
   threadId: string;
   parentMessageId?: number | null;
-  onCommentPosted: () => void;
+  onCommentPosted: (body: string, parentMessageId?: number | null) => void;
   isReply?: boolean;
 }
 
@@ -85,7 +85,7 @@ export const CommentInput: React.FC<CommentInputProps> = ({
 
       setBody('');
       setFiles([]);
-      onCommentPosted(); // This refreshes the whole comment list
+      onCommentPosted(body, parentMessageId); // This refreshes the whole comment list
       toast({
         title: 'Success',
         description: parentMessageId ? 'Reply posted.' : 'Comment posted.',
