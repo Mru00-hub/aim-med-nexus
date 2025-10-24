@@ -29,11 +29,6 @@ import {
   joinSpaceAsMember
 } from '@/integrations/supabase/community.api';
 
-const MOCK_PUBLIC_POSTS: PublicPost[] = [
-  { thread_id: 'mock-pub-thread-1', title: 'Best guidelines for AFib in 2025? (Example)', author_id: 'user-123', author_name: 'Dr. Chen (Example)', created_at: new Date().toISOString(), last_activity_at: new Date().toISOString(), comment_count: 23, first_message_id: 1, total_reaction_count: 58, description: 'Looking for the latest...', author_avatar: null, author_position: 'Cardiologist' },
-  { thread_id: 'mock-pub-thread-2', title: 'Hospital EHR vendor comparison (Example)', author_id: 'user-456', author_name: 'Dr. Patel (Example)', created_at: new Date().toISOString(), last_activity_at: new Date().toISOString(), comment_count: 18, first_message_id: 2, total_reaction_count: 42, description: 'We are evaluating new systems...', author_avatar: null, author_position: 'CMIO' },
-];
-
 export default function Forums() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -65,9 +60,9 @@ export default function Forums() {
   };
 
   const filteredSpaces = useMemo(() => {
-    if (!spaces) return optimisticSpaces;
+    const spacesToFilter = spaces || []; // 🚀 SIMPLIFIED
     // Combine real spaces with optimistic ones
-    const allSpaces = [...spaces, ...optimisticSpaces];
+    const allSpaces = [...spacesToFilter, ...optimisticSpaces];
     return allSpaces
       .filter(space => space.space_type !== 'PUBLIC')
       .filter(space => {
@@ -84,7 +79,7 @@ export default function Forums() {
   }, [spaces, optimisticSpaces, searchQuery, selectedFilter]);
 
   const filteredPublicThreads = useMemo(() => {
-    const threadsToFilter = publicThreads || (user ? [] : MOCK_PUBLIC_POSTS);
+    const threadsToFilter = publicThreads || []; // 🚀 SIMPLIFIED
     return threadsToFilter.filter(thread => {
       const searchLower = threadSearchQuery.toLowerCase();
       return (
