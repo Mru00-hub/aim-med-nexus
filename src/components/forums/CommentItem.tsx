@@ -29,7 +29,7 @@ interface CommentItemProps {
   comment: MessageWithDetails;
   threadId: string;       // <-- ADDED
   depth: number;
-  onComment: (body: string, parentMessageId?: number | null) => void;
+  onComment: (body: string, files: File[], parentMessageId?: number | null) => Promise<void>;
   onCommentReaction: (commentId: number, emoji: string) => void;
   onCommentEdit: (commentId: number, newBody: string) => void;
   onCommentDelete: (commentId: number) => void;
@@ -271,8 +271,8 @@ export const CommentItem: React.FC<CommentItemProps> = ({
             <CommentInput
               threadId={threadId}
               parentMessageId={comment.id}
-              onCommentPosted={(body, parentId) => {
-                onComment(body, parentId);
+              onCommentPosted={async (body, files, parentId) => {
+                await onComment(body, files, parentId);
                 setIsReplying(false);
               }}
               isReply={true}
