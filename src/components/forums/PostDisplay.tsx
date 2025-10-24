@@ -135,8 +135,7 @@ export const PostDisplay: React.FC<PostDisplayProps> = ({
     try {
       onReaction(emoji);
       
-      // REMOVED: await toggleReaction(post.first_message_id, emoji);
-      // REMOVED: refresh();
+      
     } catch (error: any) {
       // This is now less likely to fire, but good as a fallback
       toast({
