@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,6 +28,7 @@ import {
   File as FileIcon,
   Loader2,
   Smile,
+  Edit,
 } from 'lucide-react';
 import {
   toggleFollow,
@@ -59,6 +61,7 @@ interface PostDisplayProps {
   onReaction: (emoji: string) => void; 
   onBodyUpdate: (newBody: string) => void;
   onPostDelete: () => void; 
+  onTitleUpdate: (newTitle: string) => void;
   canEdit: boolean;
   threadId: string;
 }
@@ -70,13 +73,14 @@ export const PostDisplay: React.FC<PostDisplayProps> = ({
   onReaction,
   onBodyUpdate,
   onPostDelete,
+  onTitleUpdate,
   canEdit, // This prop is now available if you need to add an "Edit" button
   threadId, // This prop is now available
 }) => {
   // REMOVED: const { post, refreshPost } = usePostContext();
   const { user } = useAuth();
   const { toast } = useToast();
-
+  
   const handleShare = () => {
     // Get the current page's URL
     const postUrl = window.location.href;
@@ -107,6 +111,9 @@ export const PostDisplay: React.FC<PostDisplayProps> = ({
   const [isEditingBody, setIsEditingBody] = useState(false);
   const [editedBody, setEditedBody] = useState(post.body || '');
   const [isSavingBody, setIsSavingBody] = useState(false);
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [editedTitle, setEditedTitle] = useState(post.title || '');
+  const [isSavingTitle, setIsSavingTitle] = useState(false);
   const needsTruncation = useMemo(() => {
     // We strip HTML tags for a more accurate length check
     const plainText = (post.body || '').replace(/<[^>]+>/g, '');
@@ -133,6 +140,26 @@ export const PostDisplay: React.FC<PostDisplayProps> = ({
   const startEdit = () => {
     setEditedBody(post.body || '');
     setIsEditingBody(true);
+  };
+
+  const handleSaveTitle = () => {
+    if (!editedTitle.trim() || editedTitle === post.title) {
+      setIsEditingTitle(false);
+      return;
+    }
+    setIsSavingTitle(true);
+    onTitleUpdate(editedTitle); // Call parent handler
+    
+    setTimeout(() => {
+      setIsEditingTitle(false);
+      setIsSavingTitle(false);
+    }, 500);
+  };
+
+  // ADDED: Handler to start editing title
+  const startEditTitle = () => {
+    setEditedTitle(post.title || '');
+    setIsEditingTitle(true);
   };
 
   const reactionGroups = useMemo(() => groupReactions(post.reactions), [
@@ -253,6 +280,10 @@ export const PostDisplay: React.FC<PostDisplayProps> = ({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={startEditTitle}>
+                  <Edit className="h-4 w-4 mr-2" />
+                  Edit Title
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={startEdit}>
                   <Edit2 className="h-4 w-4 mr-2" />
                   Edit Post Body
@@ -268,8 +299,24 @@ export const PostDisplay: React.FC<PostDisplayProps> = ({
             </DropdownMenu>
           )}
 
-        {/* Post Title */}
-        <h1 className="text-2xl font-bold mb-4">{post.title}</h1>
+        {isEditingTitle ? (
+          <div className="space-y-2 mb-4">
+            <Input
+              value={editedTitle}
+              onChange={(e) => setEditedTitle(e.target.value)}
+              className="text-2xl font-bold h-auto p-0 border-0 shadow-none focus-visible:ring-0"
+              autoFocus
+            />
+            <div className="flex justify-end gap-2">
+              <Button variant="ghost" size="sm" onClick={() => setIsEditingTitle(false)} disabled={isSavingTitle}>Cancel</Button>
+              <Button size="sm" onClick={handleSaveTitle} disabled={isSavingTitle}>
+                {isSavingTitle ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save'}
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <h1 className="text-2xl font-bold mb-4">{post.title}</h1>
+        )}
 
         {/* Post Body (HTML) */}
         {isEditingBody ? (
