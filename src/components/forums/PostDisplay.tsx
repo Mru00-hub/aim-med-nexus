@@ -30,7 +30,7 @@ import {
   File as FileIcon,
   Loader2,
   Smile,
-  Edit,
+  Edit, MoreHorizontal, Edit2, Trash2, X,
 } from 'lucide-react';
 import {
   toggleFollow,
@@ -38,9 +38,62 @@ import {
   FullPostDetails, // ADDED: Import FullPostDetails type
 } from '@/integrations/supabase/community.api';
 import { ChevronDown, ChevronUp, MoreHorizontal, Edit2, Trash2} from 'lucide-react';
-
+import { supabase } from '@/integrations/supabase/client';
+import { Document, Page, pdfjs } from 'react-pdf';
+pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 const REACTIONS = ['👍', '❤️', '🔥', '🧠', '😂'];
+const URL_REGEX = /(https?:\/\/[^\s]+)/g;
 
+function getYouTubeVideoId(url: string): string | null {
+  const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/ ]{11})/;
+  const match = url.match(regex);
+  return match ? match[1] : null;
+}
+
+interface AttachmentPreviewProps {
+  attachment: {
+    file_url: string;
+    file_name: string;
+    file_type: string;
+  };
+}
+const AttachmentPreview: React.FC<AttachmentPreviewProps> = ({ attachment }) => {
+  const isImage = attachment.file_type.startsWith('image/');
+  const isVideo = attachment.file_type.startsWith('video/');
+  const isPdf = attachment.file_type === 'application/pdf';
+
+  return (
+    <a
+      href={attachment.file_url}
+      target="_blank"
+      rel="noreferrer"
+      className="relative group w-full overflow-hidden flex items-center p-2 border rounded-md"
+    >
+      {isImage ? (
+        <img src={attachment.file_url} alt={attachment.file_name} className="h-16 w-16 rounded-md object-cover flex-shrink-0" />
+      ) : isVideo ? (
+        <video src={attachment.file_url} muted className="h-16 w-16 rounded-md object-cover flex-shrink-0" />
+      ) : isPdf ? (
+        <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-md flex items-center justify-center bg-gray-100">
+          <Document
+            file={attachment.file_url}
+            loading={<Loader2 className="h-4 w-4 animate-spin" />}
+            error={<FileIcon className="h-8 w-8 text-destructive" />}
+            renderAnnotationLayer={false}
+            renderTextLayer={false}
+          >
+            <Page pageNumber={1} width={64} />
+          </Document>
+        </div>
+      ) : (
+        <FileIcon className="h-16 w-16 text-muted-foreground flex-shrink-0" />
+      )}
+      <div className="ml-3 overflow-hidden min-w-0">
+        <p className="text-sm font-medium truncate">{attachment.file_name}</p>
+      </div>
+    </a>
+  );
+};
 // Helper to group reactions (unchanged)
 const groupReactions = (reactions: any[]) => {
   if (!reactions) return {};
@@ -120,6 +173,42 @@ export const PostDisplay: React.FC<PostDisplayProps> = ({
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editedTitle, setEditedTitle] = useState(post.title || '');
   const [isSavingTitle, setIsSavingTitle] = useState(false);
+  const [linkPreview, setLinkPreview] = useState<any>(null);
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+  useEffect(() => {
+    // Rule 1: Don't show link previews if attachments exist
+    if (post.attachments && post.attachments.length > 0) {
+      setLinkPreview(null);
+      return;
+    }
+
+    // Rule 2: Find the first URL in the body
+    const urls = (post.body || '').match(URL_REGEX);
+    if (urls && urls[0]) {
+      const firstUrl = urls[0];
+      const videoId = getYouTubeVideoId(firstUrl);
+
+      // Rule 3: Handle YouTube links locally
+      if (videoId) {
+        setLinkPreview({ type: 'youtube', data: { embedUrl: `https://www.youtube.com/embed/${videoId}` } });
+      } else {
+        // Rule 4: Fetch previews for other websites
+        setIsPreviewLoading(true);
+        supabase.functions.invoke('get-link-preview', { body: { url: firstUrl } })
+          .then(({ data, error }) => {
+            if (data && !error && (data.title || data.image)) {
+              setLinkPreview({ type: 'website', data: data });
+            }
+          })
+          .finally(() => {
+            setIsPreviewLoading(false);
+          });
+      }
+    } else {
+      setLinkPreview(null); // No URL found
+    }
+  }, [post.body, post.attachments]);
+  
   const needsTruncation = useMemo(() => {
     // We strip HTML tags for a more accurate length check
     const plainText = (post.body || '').replace(/<[^>]+>/g, '');
@@ -388,44 +477,61 @@ export const PostDisplay: React.FC<PostDisplayProps> = ({
                     Show more
                     <ChevronDown className="h-4 w-4 ml-1" />
                   </>
-                )}
+                )}  
               </Button>
             )}
           </>
         )}
 
         {/* Attachments (Unchanged) */}
-        {post.attachments && post.attachments.length > 0 && (
-          <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {post.attachments.map((att: any) =>
-              att.file_type.startsWith('image/') ? (
-                <a
-                  key={att.id}
-                  href={att.file_url}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  <img
-                    src={att.file_url}
-                    alt={att.file_name}
-                    className="rounded-md object-cover w-full h-auto max-h-80 border"
-                  />
-                </a>
-              ) : (
-                <a
-                  key={att.id}
-                  href={att.file_url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex items-center p-3 border rounded-md hover:bg-muted transition-colors"
-                >
-                  <FileIcon className="h-6 w-6 mr-3 text-primary flex-shrink-0" />
-                  <span className="text-sm truncate">{att.file_name}</span>
-                </a>
-              )
-            )}
-          </div>
-        )}
+        <div className="mt-4 space-y-4">
+          {/* 1. Attachment Previews */}
+          {post.attachments && post.attachments.length > 0 && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {post.attachments.map((att: any) => (
+                <AttachmentPreview key={att.id} attachment={att} />
+              ))}
+            </div>
+          )}
+
+          {/* 2. Link Preview (Loading) */}
+          {isPreviewLoading && (
+            <div className="flex items-center text-sm text-muted-foreground p-2">
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <span>Fetching preview...</span>
+            </div>
+          )}
+          
+          {/* 3. Link Preview (Rendered) */}
+          {linkPreview && (!post.attachments || post.attachments.length === 0) && (
+            <div className="relative mt-2 border rounded-lg overflow-hidden">
+              {/* YouTube Player */}
+              {linkPreview.type === 'youtube' && (
+                <div className="aspect-video w-full">
+                  <iframe
+                    width="100%" height="100%"
+                    src={linkPreview.data.embedUrl}
+                    title="YouTube video player"
+                    frameBorder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  ></iframe>
+                </div>
+              )}
+              
+              {/* Website Preview */}
+              {linkPreview.type === 'website' && (
+                <>
+                  {linkPreview.data.image && <img src={linkPreview.data.image} alt="Preview" className="w-full h-48 object-cover" />}
+                  <div className="p-4">
+                    <h4 className="font-semibold truncate">{linkPreview.data.title || 'No Title Found'}</h4>
+                    <p className="text-sm text-muted-foreground line-clamp-2">{linkPreview.data.description || 'No Description'}</p>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+        </div>
 
         {/* Reaction Counts (Unchanged) */}
         {Object.keys(reactionGroups).length > 0 && (
