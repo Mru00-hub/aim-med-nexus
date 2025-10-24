@@ -12,28 +12,43 @@ interface CommentInputProps {
   onCommentPosted: (body: string,files: File[], parentMessageId?: number | null) => Promise<void>;
   isReply?: boolean;
 }
-
+const MAX_COMMENT_FILES = 1;
 // Small preview component for attached files
 const FilePreview = ({ file, onRemove }: { file: File, onRemove: () => void }) => {
   const [preview, setPreview] = useState<string | null>(null);
   const isImage = file.type.startsWith('image/');
+  const isVideo = file.type.startsWith('video/');
 
   useEffect(() => {
+    let objectUrl: string | null = null;
+
     if (isImage) {
       const reader = new FileReader();
       reader.onloadend = () => {
         setPreview(reader.result as string);
       };
       reader.readAsDataURL(file);
+    } else if (isVideo) {
+      objectUrl = URL.createObjectURL(file);
+      setPreview(objectUrl);
     } else {
       setPreview(null);
     }
-  }, [file, isImage]);
+
+    return () => {
+      if (objectUrl) {
+        URL.revokeObjectURL(objectUrl);
+      }
+    };
+  }, [file, isImage, isVideo]);
 
   return (
     <div className="relative group w-full overflow-hidden flex items-center p-2 border rounded-md">
       {isImage && preview ? (
         <img src={preview} alt={file.name} className="h-16 w-16 rounded-md object-cover flex-shrink-0" />
+      ) : isVideo && preview ? (
+        <video src={preview} muted className="h-16 w-16 rounded-md object-cover flex-shrink-0" />
+      // --- PDF RENDER BLOCK IS REMOVED ---
       ) : (
         <FileIcon className="h-16 w-16 text-muted-foreground flex-shrink-0" />
       )}
@@ -68,10 +83,21 @@ export const CommentInput: React.FC<CommentInputProps> = ({
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      setFiles((prev) => [...prev, ...Array.from(e.target.files!)]);
+      const newFiles = Array.from(e.target.files);
+      
+      // Check file limit
+      if (files.length + newFiles.length > MAX_COMMENT_FILES) {
+        toast({
+          variant: "destructive",
+          title: "File limit reached",
+          description: `You can only attach ${MAX_COMMENT_FILES} file to a comment.`,
+        });
+        return;
+      }
+      setFiles(prev => [...prev, ...newFiles]);
     }
   };
-
+  
   const removeFile = (indexToRemove: number) => {
     setFiles((prev) => prev.filter((_, index) => index !== indexToRemove));
   };
@@ -159,7 +185,6 @@ export const CommentInput: React.FC<CommentInputProps> = ({
           <input
             type="file"
             ref={fileInputRef}
-            multiple
             className="hidden"
             onChange={handleFileChange}
           />
