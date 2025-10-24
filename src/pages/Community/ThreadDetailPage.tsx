@@ -72,7 +72,6 @@ export default function ThreadDetailPage() {
   const [summaryError, setSummaryError] = useState<string | null>(null);
   const [summaryLimit, setSummaryLimit] = useState<number>(50);
   const [isSummaryOpen, setIsSummaryOpen] = useState(false);
-  const navigate = useNavigate();
 
   const fetchDetails = async () => {
     if (!threadId) return;
