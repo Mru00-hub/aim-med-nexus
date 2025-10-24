@@ -282,7 +282,7 @@ const CreatePostForm: React.FC = () => {
         <Label htmlFor="body" className="text-lg font-semibold">Body (Optional)</Label>
         <Textarea 
           id="body" 
-          placeholder="Write the main content of your post or paste a link to preview.. You can add images or files below." 
+          placeholder="Write the main content of your post or paste a link to preview.. You can use Markdown for **bold** and *italic* text. You can add images or files below." 
           rows={10} 
           value={body} 
           onChange={(e) => setBody(e.target.value)} 
