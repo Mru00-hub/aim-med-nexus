@@ -56,6 +56,8 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
     try {
       // 1. Always fetch public spaces and threads.
       // These functions will return mock data if the user is logged out.
+      const { data: { session } } = await supabase.auth.getSession();      
+      console.log('Current session status:', session ? 'ACTIVE' : 'NULL');
       const [spacesData, publicThreadsData] = await Promise.all([
         getSpacesWithDetails(),
         getPublicThreads(),
@@ -68,14 +70,13 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
       setPublicThreads(publicThreadsData || []);
 
       // 2. *Only* fetch memberships if the user is actually logged in.
-      if (user) {
-        console.log('User is present, attempting to fetch memberships...');
+      if (session) {
+        console.log('Session is active, fetching memberships.');
         const membershipsData = await getUserMemberships();
         setMemberships(membershipsData || []);
-        console.log('Successfully fetched memberships.');
       } else {
-        console.log('No user, clearing memberships.');
-        // 3. If logged out, ensure memberships are cleared.
+        // 3. If no session, ensure memberships are cleared.
+        console.log('No session, clearing memberships.');
         setMemberships([]);
       }
       
