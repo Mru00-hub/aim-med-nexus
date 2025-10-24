@@ -5,7 +5,7 @@ import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { ThreadView } from '@/components/messaging/ThreadView'; // We will put all the logic here
 import AuthGuard from '@/components/AuthGuard'; // Protect this page
-import { getThreadDetails,getPostDetails,updatePost, updateThreadDetails, getViewerRoleForSpace, Thread, Enums, getThreadSummary, SummaryResponse, MessageWithDetails, PublicPost,} from '@/integrations/supabase/community.api';
+import { getThreadDetails,getPostDetails,updatePost, updateThreadDetails, getViewerRoleForSpace, Thread, Enums, getThreadSummary, SummaryResponse, MessageWithDetails, PublicPost,toggleReaction} from '@/integrations/supabase/community.api';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/components/ui/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -233,6 +233,51 @@ export default function ThreadDetailPage() {
     } finally {
       setIsSummarizing(false);
     }
+  };
+
+  const handleOptimisticReaction = (emoji: string) => {
+    if (!user || !postDetails) {
+      toast({ title: 'Please log in to react.' });
+      return;
+    }
+
+    const currentPost = postDetails.post;
+    // @ts-ignore
+    const userHasReacted = currentPost.reactions.find(r => r.user_id === user.id && r.reaction_emoji === emoji);
+    let nextReactions;
+
+    if (userHasReacted) {
+      // Optimistically remove the reaction
+      // @ts-ignore
+      nextReactions = currentPost.reactions.filter(r => !(r.user_id === user.id && r.reaction_emoji === emoji));
+    } else {
+      // Optimistically add the reaction (create a fake one)
+      nextReactions = [
+        ...currentPost.reactions,
+        {
+          message_id: currentPost.first_message_id,
+          user_id: user.id,
+          reaction_emoji: emoji,
+          created_at: new Date().toISOString(),
+          id: Math.random(), // Temporary optimistic ID
+        }
+      ];
+    }
+    
+    // 1. Set the optimistic state immediately
+    const optimisticPost = { ...currentPost, reactions: nextReactions };
+    setPostDetails(prevDetails => prevDetails ? ({
+      ...prevDetails,
+      post: optimisticPost
+    }) : null);
+
+    // 2. Call the real API (fire-and-forget)
+    toggleReaction(currentPost.first_message_id, emoji)
+      .catch((error: any) => {
+        // 3. On error, show toast and revert by refetching
+        toast({ variant: 'destructive', title: 'Error', description: error.message });
+        fetchDetails(); // Revert by fetching real data
+      });
   };
 
   return (
@@ -468,6 +513,7 @@ export default function ThreadDetailPage() {
                   postDetails={postDetails}
                   canEdit={canEdit}
                   refresh={fetchDetails}
+                  onReaction={handleOptimisticReaction}
                 />
               ) : !isPublicPost ? (
                 // --- OLD: Render the Slack-style Chat UI ---
