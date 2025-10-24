@@ -40,10 +40,10 @@ import { PostAndCommentsView } from '@/components/forums/PostAndCommentsView';
 type BasicThreadDetails = {
   title: string;
   description: string | null;
-  spaceName: string | null;
+  spaceName: data.spaces?.name || 'Public Post',
   spaceId: string | null;
   creator_id: string;
-  spaceType: 'PUBLIC' | 'FORUM' | 'COMMUNITY_SPACE' | null;
+  spaceType: data.spaces?.space_type || 'PUBLIC',
 };
 
 type FullPostDetails = {
