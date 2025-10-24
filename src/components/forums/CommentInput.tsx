@@ -4,16 +4,12 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Send, Loader2, Paperclip, X, File as FileIcon } from 'lucide-react';
-import {
-  postMessage,
-  uploadAttachment, // Using your existing function!
-} from '@/integrations/supabase/community.api';
 import { useToast } from '@/components/ui/use-toast';
 
 interface CommentInputProps {
   threadId: string;
   parentMessageId?: number | null;
-  onCommentPosted: (body: string, parentMessageId?: number | null) => void;
+  onCommentPosted: (body: string,files: File[], parentMessageId?: number | null) => Promise<void>;
   isReply?: boolean;
 }
 
@@ -58,35 +54,19 @@ export const CommentInput: React.FC<CommentInputProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const trimmedBody = body.trim();
     if (!body.trim() && files.length === 0) return;
     if (!user) return;
 
     setIsLoading(true);
 
     try {
-      // Step 1. Post the text message to get a message ID
-      // We post an empty string if there's only a file
-      const messageBody = body.trim() || (files.length > 0 ? '📎 Attachment' : '');
-      const newMessage = await postMessage(
-        threadId,
-        messageBody, // Post body
-        parentMessageId
-      );
+      await onCommentPosted(trimmedBody, files, parentMessageId);
 
-      // Step 2. If files exist, upload them one by one
-      if (files.length > 0) {
-        toast({
-          title: 'Uploading files...',
-          description: `Attaching ${files.length} file(s) to your comment.`,
-        });
-        await Promise.all(
-          files.map((file) => uploadAttachment(newMessage.id, file))
-        );
-      }
-
+      // Clear the form on success
       setBody('');
       setFiles([]);
-      onCommentPosted(body, parentMessageId); // This refreshes the whole comment list
+      // Toast is now handled by the parent, but we can keep a generic one
       toast({
         title: 'Success',
         description: parentMessageId ? 'Reply posted.' : 'Comment posted.',
