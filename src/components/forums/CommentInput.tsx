@@ -66,9 +66,10 @@ export const CommentInput: React.FC<CommentInputProps> = ({
     try {
       // Step 1. Post the text message to get a message ID
       // We post an empty string if there's only a file
+      const messageBody = body.trim() || (files.length > 0 ? '📎 Attachment' : '');
       const newMessage = await postMessage(
         threadId,
-        body || '', // Post body
+        messageBody, // Post body
         parentMessageId
       );
 
