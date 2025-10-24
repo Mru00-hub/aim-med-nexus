@@ -21,6 +21,7 @@ import { ThumbsUp, CornerDownRight, Smile, File as FileIcon, MoreHorizontal, Edi
 import { CommentInput } from './CommentInput';
 import { toggleReaction } from '@/integrations/supabase/community.api';
 import { useToast } from '@/components/ui/use-toast';
+import ReactMarkdown from 'react-markdown';
 
 const REACTIONS = ['👍', '❤️', '🔥', '🧠', '😂'];
 
@@ -161,14 +162,16 @@ export const CommentItem: React.FC<CommentItemProps> = ({
               </div>
             </div>
           ) : (
-            <p className="text-sm whitespace-pre-wrap">
-              {comment.body}
+            <>
+              <ReactMarkdown className="text-sm prose prose-sm dark:prose-invert max-w-none">
+                {comment.body}
+              </ReactMarkdown>
               {comment.is_edited && (
                 <span className="text-xs opacity-70 ml-1">
                   (edited at {new Date(comment.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})
                 </span>
               )}
-            </p>
+            </>
           )}
       
           {/* Render comment attachments */}
