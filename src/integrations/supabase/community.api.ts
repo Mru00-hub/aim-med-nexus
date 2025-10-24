@@ -302,6 +302,15 @@ export const getPostDetails = async (threadId: string) => {
   if (postError) throw postError;
   if (!postData) throw new Error("Post not found.");
 
+  const { data: firstMessage, error: messageError } = await supabase
+    .from('messages')
+    .select('body')
+    .eq('id', postData.first_message_id)
+    .single();
+  
+  if (messageError) throw messageError;
+  if (!firstMessage) throw new Error("Post content not found.");
+
   // 2. Get attachments for the main post
   const { data: postAttachments, error: attachmentsError } = await supabase
     .from('message_attachments')
@@ -338,7 +347,7 @@ export const getPostDetails = async (threadId: string) => {
   if (commentsError) throw commentsError;
   
   return {
-    post: { ...postData, attachments: postAttachments || [], reactions: postReactions || [] },
+    post: { ...postData, body: firstMessage.body, attachments: postAttachments || [], reactions: postReactions || [] },
     comments: (comments || []) as MessageWithDetails[], // Reuse your type
   };
 };
