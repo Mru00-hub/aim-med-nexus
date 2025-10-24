@@ -1,6 +1,6 @@
 // src/pages/community/Forums.tsx
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect} from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
@@ -39,7 +39,7 @@ import {
 const REACTIONS = ['👍', '❤️', '🔥', '🧠', '😂'];
 
 export default function Forums() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -61,6 +61,20 @@ export default function Forums() {
   const [optimisticReactions, setOptimisticReactions] = useState<Record<string, number>>({});
   const [followingStatus, setFollowingStatus] = useState<Record<string, boolean>>({});
   const [isFollowLoading, setIsFollowLoading] = useState<Record<string, boolean>>({});
+  useEffect(() => {
+    // When the profile loads, initialize the followingStatus state
+    if (profile && profile.following) {
+      const followingMap: Record<string, boolean> = {};
+      
+      // Assuming profile.following is an array like [{ followed_id: 'uuid-123' }, ...]
+      // Adjust this line if your profile.following structure is different
+      profile.following.forEach((follow: { followed_id: string }) => {
+        followingMap[follow.followed_id] = true;
+      });
+      
+      setFollowingStatus(followingMap);
+    }
+  }, [profile]);
   // Define the missing functions
   const addOptimisticSpace = (space: SpaceWithDetails) => {
     setOptimisticSpaces(prev => [...prev, space]);
@@ -222,6 +236,7 @@ export default function Forums() {
           ? `You are now following ${post.author_name}.`
           : `You are no longer following ${post.author_name}.`,
       });
+      refreshProfile(); 
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     } finally {
