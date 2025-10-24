@@ -18,7 +18,7 @@ interface CommentInputProps {
 }
 
 // Small preview component for attached files
-const FilePreview = ({ file, onRemove }: { file: File; onRemove: (); }) => (
+const FilePreview = ({ file, onRemove }: { file: File; onRemove: () => void; }) => (
   <div className="relative flex items-center p-2 border rounded-md text-sm">
     <FileIcon className="h-4 w-4 mr-2 text-muted-foreground" />
     <span className="truncate flex-1 mr-6">{file.name}</span>
