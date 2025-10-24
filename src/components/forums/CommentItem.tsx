@@ -163,7 +163,7 @@ export const CommentItem: React.FC<CommentItemProps> = ({
             </div>
           ) : (
             <>
-              <ReactMarkdown className="text-sm prose prose-sm dark:prose-invert max-w-none">
+              <ReactMarkdown className="text-sm prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap">
                 {comment.body}
               </ReactMarkdown>
               {comment.is_edited && (
