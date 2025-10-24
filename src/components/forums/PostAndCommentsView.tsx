@@ -14,6 +14,7 @@ interface PostAndCommentsViewProps {
   canEdit: boolean;
   refresh: () => void;
   onReaction: (emoji: string) => void;
+  onComment: (body: string, parentMessageId?: number | null) => void; 
 }
 
 export const PostAndCommentsView: React.FC<PostAndCommentsViewProps> = ({
@@ -21,7 +22,8 @@ export const PostAndCommentsView: React.FC<PostAndCommentsViewProps> = ({
   postDetails,
   canEdit,
   refresh,
-  onReaction
+  onReaction,
+  onComment, 
 }) => {
   const { post, comments } = postDetails;
 
@@ -47,10 +49,11 @@ export const PostAndCommentsView: React.FC<PostAndCommentsViewProps> = ({
       <h2 className="text-xl font-semibold mb-4">
         Comments ({comments.length})
       </h2>
-      <CommentInput threadId={threadId} onCommentPosted={refresh} />
+      <CommentInput threadId={threadId} onCommentPosted={onComment} />
       <div className="mt-6">
         <CommentList 
           comments={comments}
+          onReply={onComment} 
           refreshPost={refresh}
           threadId={threadId} 
         />
