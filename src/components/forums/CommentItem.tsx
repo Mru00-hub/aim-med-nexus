@@ -161,7 +161,14 @@ export const CommentItem: React.FC<CommentItemProps> = ({
               </div>
             </div>
           ) : (
-            <p className="text-sm whitespace-pre-wrap">{comment.body}</p>
+            <p className="text-sm whitespace-pre-wrap">
+              {comment.body}
+              {comment.is_edited && (
+                <span className="text-xs opacity-70 ml-1">
+                  (edited at {new Date(comment.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})
+                </span>
+              )}
+            </p>
           )}
       
           {/* Render comment attachments */}
