@@ -104,9 +104,9 @@ const MOCK_SPACES: Space[] = [
   { id: 'mock-comm-1', name: 'Global Cardiology (Example)', description: 'Connect with cardiologists worldwide...', space_type: 'COMMUNITY_SPACE', join_level: 'INVITE_ONLY', creator_id: 'user-ghi', created_at: new Date().toISOString() },
 ];
 
-const MOCK_PUBLIC_THREADS: ThreadWithDetails[] = [
-  { id: 'mock-pub-thread-1', title: 'Best guidelines for AFib in 2025? (Example)', creator_id: 'user-123', creator_full_name: 'Dr. Chen (Example)', created_at: new Date().toISOString(), last_activity_at: new Date().toISOString(), message_count: 23, space_id: 'mock-pub-1' },
-  { id: 'mock-pub-thread-2', title: 'Hospital EHR vendor comparison (Example)', creator_id: 'user-456', creator_full_name: 'Dr. Patel (Example)', created_at: new Date().toISOString(), last_activity_at: new Date().toISOString(), message_count: 18, space_id: 'mock-pub-1' },
+const MOCK_PUBLIC_POSTS: PublicPost[] = [
+  { thread_id: 'mock-pub-thread-1', title: 'Best guidelines for AFib in 2025? (Example)', author_id: 'user-123', author_name: 'Dr. Chen (Example)', created_at: new Date().toISOString(), last_activity_at: new Date().toISOString(), comment_count: 23, first_message_id: 1, total_reaction_count: 58, description: 'Looking for the latest...', author_avatar: null, author_position: 'Cardiologist' },
+  { thread_id: 'mock-pub-thread-2', title: 'Hospital EHR vendor comparison (Example)', author_id: 'user-456', author_name: 'Dr. Patel (Example)', created_at: new Date().toISOString(), last_activity_at: new Date().toISOString(), comment_count: 18, first_message_id: 2, total_reaction_count: 42, description: 'We are evaluating new systems...', author_avatar: null, author_position: 'CMIO' },
 ];
 
 const MOCK_MESSAGES: MessageWithDetails[] = [];
@@ -266,7 +266,7 @@ export const updateMemberRole = async (membershipId: string, newRole: Enums<'mem
 /** Fetches all global public threads using the new DB function. */
 export const getPublicThreads = async (): Promise<PublicPost[]> => {
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return MOCK_PUBLIC_THREADS as any; // Keep mock for logged-out
+    if (!session) return MOCK_PUBLIC_POSTS as any; // Keep mock for logged-out
 
     // This now queries our fast, pre-joined VIEW
     const { data, error } = await supabase
