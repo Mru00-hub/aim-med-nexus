@@ -1,13 +1,12 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { usePostContext } from './PostContext';
+// REMOVED: import { usePostContext } from './PostContext';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/components/ui/use-toast';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-// CHANGED: Added Popover components and Smile icon
 import {
   Popover,
   PopoverContent,
@@ -20,17 +19,17 @@ import {
   Share2,
   File as FileIcon,
   Loader2,
-  Smile, // CHANGED: Added Smile
+  Smile,
 } from 'lucide-react';
 import {
   toggleFollow,
   toggleReaction,
+  FullPostDetails, // ADDED: Import FullPostDetails type
 } from '@/integrations/supabase/community.api';
 
-// CHANGED: Define our standard list of reactions
 const REACTIONS = ['👍', '❤️', '🔥', '🧠', '😂'];
 
-// Helper to group reactions
+// Helper to group reactions (unchanged)
 const groupReactions = (reactions: any[]) => {
   if (!reactions) return {};
   return reactions.reduce((acc, reaction) => {
@@ -45,25 +44,38 @@ const groupReactions = (reactions: any[]) => {
   }, {} as { [key: string]: { count: number; users: string[] } });
 };
 
-export const PostDisplay = () => {
-  const { post, refreshPost } = usePostContext();
+// ADDED: Props interface
+interface PostDisplayProps {
+  post: FullPostDetails['post'];
+  refresh: () => void;
+  canEdit: boolean;
+  threadId: string;
+}
+
+// CHANGED: Component signature to accept props
+export const PostDisplay: React.FC<PostDisplayProps> = ({
+  post,
+  refresh,
+  canEdit, // This prop is now available if you need to add an "Edit" button
+  threadId, // This prop is now available
+}) => {
+  // REMOVED: const { post, refreshPost } = usePostContext();
   const { user } = useAuth();
   const { toast } = useToast();
 
   const [isFollowing, setIsFollowing] = useState(false);
   const [isFollowLoading, setIsFollowLoading] = useState(false);
   const [isReactionLoading, setIsReactionLoading] = useState(false);
-  // State to control the reaction popover
   const [popoverOpen, setPopoverOpen] = useState(false);
 
-  // Note: You'd fetch the user's actual follow status on load
-  // useEffect(() => { ... fetch follow status ... }, [post.author_id, user.id]);
+  // (rest of your state and effects...)
 
   const reactionGroups = useMemo(() => groupReactions(post.reactions), [
     post.reactions,
   ]);
 
   const handleFollow = async () => {
+    // (function logic unchanged)
     if (isFollowLoading) return;
     setIsFollowLoading(true);
     try {
@@ -91,7 +103,7 @@ export const PostDisplay = () => {
     setIsReactionLoading(true);
     try {
       await toggleReaction(post.first_message_id, emoji);
-      refreshPost(); // Re-fetch to update counts
+      refresh(); // CHANGED: Called refresh() from props
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -100,21 +112,21 @@ export const PostDisplay = () => {
       });
     } finally {
       setIsReactionLoading(false);
-      // We don't close the popover, allowing multiple reactions
     }
   };
 
-  // Check if the current user has reacted with a specific emoji
+  // (rest of your helper functions: userHasReacted, userHasAnyReaction...)
+
   const userHasReacted = (emoji: string) => {
     if (!user || !reactionGroups[emoji]) return false;
     return reactionGroups[emoji].users.includes(user.id);
   };
 
-  // Check if the user has *any* reaction
   const userHasAnyReaction = useMemo(() => {
     if (!user) return false;
     return REACTIONS.some((emoji) => userHasReacted(emoji));
   }, [user, reactionGroups]);
+
 
   return (
     <Card className="mb-6 shadow-md">
@@ -164,8 +176,15 @@ export const PostDisplay = () => {
           )}
         </div>
 
-        {/* Post Body (Unchanged) */}
-        {/* ... */}
+        {/* Post Title */}
+        <h1 className="text-2xl font-bold mb-4">{post.title}</h1>
+
+        {/* Post Body (HTML) */}
+        <div
+          className="prose prose-sm dark:prose-invert max-w-none"
+          dangerouslySetInnerHTML={{ __html: post.body }}
+        />
+
 
         {/* Attachments (Unchanged) */}
         {post.attachments && post.attachments.length > 0 && (
@@ -182,7 +201,8 @@ export const PostDisplay = () => {
                     src={att.file_url}
                     alt={att.file_name}
                     className="rounded-md object-cover w-full h-auto max-h-80 border"
-                  />
+                  }
+                />
                 </a>
               ) : (
                 <a
@@ -216,7 +236,7 @@ export const PostDisplay = () => {
           </div>
         )}
 
-        {/* --- CHANGED: ACTION BAR --- */}
+        {/* --- ACTION BAR (Unchanged) --- */}
         <div className="mt-4 pt-4 border-t grid grid-cols-3 gap-2">
           {/* 1. React Button with Popover */}
           <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
