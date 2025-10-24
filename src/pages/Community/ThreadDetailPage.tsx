@@ -561,7 +561,8 @@ export default function ThreadDetailPage() {
                   postDetails={postDetails}
                   canEdit={canEdit}
                   refresh={fetchDetails}
-                  onReaction={handleOptimisticReaction} onComment={handleOptimisticComment}
+                  onReaction={handleOptimisticReaction} 
+                  onComment={handleOptimisticComment}
                 />
               ) : !isPublicPost ? (
                 // --- OLD: Render the Slack-style Chat UI ---
