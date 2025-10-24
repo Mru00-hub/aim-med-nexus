@@ -26,6 +26,7 @@ import {
   toggleReaction,
   FullPostDetails, // ADDED: Import FullPostDetails type
 } from '@/integrations/supabase/community.api';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 
 const REACTIONS = ['👍', '❤️', '🔥', '🧠', '😂'];
 
@@ -52,7 +53,7 @@ interface PostDisplayProps {
   canEdit: boolean;
   threadId: string;
 }
-
+const TRUNCATE_LENGTH = 300;
 // CHANGED: Component signature to accept props
 export const PostDisplay: React.FC<PostDisplayProps> = ({
   post,
@@ -91,6 +92,12 @@ export const PostDisplay: React.FC<PostDisplayProps> = ({
   const [isFollowLoading, setIsFollowLoading] = useState(false);
   const [isReactionLoading, setIsReactionLoading] = useState(false);
   const [popoverOpen, setPopoverOpen] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const needsTruncation = useMemo(() => {
+    // We strip HTML tags for a more accurate length check
+    const plainText = post.body.replace(/<[^>]+>/g, '');
+    return plainText.length > TRUNCATE_LENGTH;
+  }, [post.body]);
 
   // (rest of your state and effects...)
 
@@ -210,10 +217,33 @@ export const PostDisplay: React.FC<PostDisplayProps> = ({
 
         {/* Post Body (HTML) */}
         <div
-          className="prose prose-sm dark:prose-invert max-w-none"
+          className={`
+            prose prose-sm dark:prose-invert max-w-none
+            ${needsTruncation && !isExpanded ? 'line-clamp-4' : ''}
+          `}
           dangerouslySetInnerHTML={{ __html: post.body }}
         />
 
+        {needsTruncation && (
+          <Button
+            variant="link"
+            size="sm"
+            className="px-0 h-auto text-primary hover:no-underline"
+            onClick={() => setIsExpanded(!isExpanded)}
+          >
+            {isExpanded ? (
+              <>
+                Show less
+                <ChevronUp className="h-4 w-4 ml-1" />
+              </>
+            ) : (
+              <>
+                Show more
+                <ChevronDown className="h-4 w-4 ml-1" />
+              </>
+            )}
+          </Button>
+        )}
 
         {/* Attachments (Unchanged) */}
         {post.attachments && post.attachments.length > 0 && (
