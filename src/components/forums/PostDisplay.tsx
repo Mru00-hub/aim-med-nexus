@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import ReactMarkdown from 'react-markdown'; 
 import { Link } from 'react-router-dom';
 // REMOVED: import { usePostContext } from './PostContext';
 import { useAuth } from '@/hooks/useAuth';
@@ -361,13 +362,14 @@ export const PostDisplay: React.FC<PostDisplayProps> = ({
           </div>
         ) : (
           <>
-            <div
+            <ReactMarkdown
               className={`
                 prose prose-sm dark:prose-invert max-w-none
                 ${needsTruncation && !isExpanded ? 'line-clamp-4' : ''}
               `}
-              dangerouslySetInnerHTML={{ __html: post.body || '' }}
-            />
+            >
+              {post.body || ''}
+            </ReactMarkdown>
 
             {needsTruncation && (
               <Button
