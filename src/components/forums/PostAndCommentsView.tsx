@@ -43,6 +43,7 @@ export const PostAndCommentsView: React.FC<PostAndCommentsViewProps> = ({
     <div className="max-w-3xl mx-auto">
       <PostDisplay
         post={post}
+        commentCount={comments.length}
         threadId={threadId}
         canEdit={canEdit}
         refresh={refresh}
@@ -53,7 +54,7 @@ export const PostAndCommentsView: React.FC<PostAndCommentsViewProps> = ({
       />
 
       <h2 className="text-xl font-semibold mb-4">
-        Comments ({comments.length})
+        Comments
       </h2>
       <CommentInput threadId={threadId} onCommentPosted={onComment} />
       <div className="mt-6">
