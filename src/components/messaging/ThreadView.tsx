@@ -10,8 +10,7 @@ import {
   getMessagesWithDetails,
   deleteMessage,
   editMessage,
-  addReaction,
-  removeReaction,
+  toggleReaction,
   MessageWithDetails,
   MessageReaction,
   uploadAttachment,  
@@ -168,45 +167,53 @@ const useThreadData = (threadId: string, currentUserId: string | undefined, prof
         }
     }, [messages, toast]);
 
-    const handleReaction = useCallback(async (messageId: number, emoji: string) => {
+        const handleReaction = useCallback(async (messageId: number, emoji: string) => {
         if (!currentUserId) return;
 
         const previousMessages = messages;
-        const targetMessage = previousMessages.find(m => m.id === messageId);
-        if (!targetMessage) return;
 
-        const existingReaction = targetMessage.reactions.find(r => r.user_id === currentUserId);
-
+        // --- CORRECT OPTIMISTIC UPDATE ---
+        // This logic correctly mirrors the 'toggle' behavior.
         setMessages(current => current.map(msg => {
             if (msg.id === messageId) {
                 let newReactions = [...msg.reactions];
-                if (existingReaction) {
-                    newReactions = newReactions.filter(r => r.user_id !== currentUserId);
-                    if (existingReaction.reaction_emoji !== emoji) {
-                        const newOptimisticReaction: MessageReaction = { id: `temp-${Date.now()}`, message_id: messageId, user_id: currentUserId, reaction_emoji: emoji, created_at: new Date().toISOString() };
-                        newReactions.push(newOptimisticReaction);
+                const existingReactionIndex = newReactions.findIndex(r => r.user_id === currentUserId);
+
+                if (existingReactionIndex > -1) {
+                    // User has an existing reaction
+                    const existingReaction = newReactions[existingReactionIndex];
+                    if (existingReaction.reaction_emoji === emoji) {
+                        // User clicked the same emoji, so remove it
+                        newReactions.splice(existingReactionIndex, 1);
+                    } else {
+                        // User clicked a different emoji, so replace the old one
+                        newReactions[existingReactionIndex] = { ...existingReaction, reaction_emoji: emoji };
                     }
                 } else {
-                    const newOptimisticReaction: MessageReaction = { id: `temp-${Date.now()}`, message_id: messageId, user_id: currentUserId, reaction_emoji: emoji, created_at: new Date().toISOString() };
+                    // User has no reaction, so add this new one
+                    const newOptimisticReaction: MessageReaction = { 
+                        id: `temp-${Date.now()}`, 
+                        message_id: messageId, 
+                        user_id: currentUserId, 
+                        reaction_emoji: emoji, 
+                        created_at: new Date().toISOString() 
+                    };
                     newReactions.push(newOptimisticReaction);
                 }
                 return { ...msg, reactions: newReactions };
             }
             return msg;
         }));
+        // --- END OF OPTIMISTIC UPDATE ---
 
         try {
-            if (existingReaction) {
-                await removeReaction(messageId, existingReaction.reaction_emoji);
-                if (existingReaction.reaction_emoji !== emoji) {
-                    await addReaction(messageId, emoji);
-                }
-            } else {
-                await addReaction(messageId, emoji);
-            }
+            // --- SINGLE, CORRECT API CALL ---
+            await toggleReaction(messageId, emoji);
+
         } catch (error: any) {
             toast({ variant: 'destructive', title: 'Reaction Failed', description: error.message });
-            setMessages(previousMessages);
+            // Rollback on error
+            setMessages(previousMessages); 
         }
     }, [messages, currentUserId, toast]);
   

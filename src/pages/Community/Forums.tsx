@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Search, Plus, MessageSquare } from 'lucide-react';
+import { Search, Plus, MessageSquare, ThumbsUp , UserPlus, Check, Loader2, Smile } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from '@/components/ui/use-toast';
 import { useCommunity } from '@/context/CommunityContext';
@@ -22,12 +22,21 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
   SpaceWithDetails, 
   createSpace,
-  ThreadWithDetails,
+  PublicPost,
   requestToJoinSpace,
-  joinSpaceAsMember
+  joinSpaceAsMember,
+  toggleFollow,
+  toggleReaction,
 } from '@/integrations/supabase/community.api';
+
+const REACTIONS = ['👍', '❤️', '🔥', '🧠', '😂'];
 
 export default function Forums() {
   const { user } = useAuth();
@@ -49,7 +58,9 @@ export default function Forums() {
   const [selectedFilter, setSelectedFilter] = useState<string>('ALL');
   // Add state for optimistic updates
   const [optimisticSpaces, setOptimisticSpaces] = useState<SpaceWithDetails[]>([]);
-
+  const [optimisticReactions, setOptimisticReactions] = useState<Record<string, number>>({});
+  const [followingStatus, setFollowingStatus] = useState<Record<string, boolean>>({});
+  const [isFollowLoading, setIsFollowLoading] = useState<Record<string, boolean>>({});
   // Define the missing functions
   const addOptimisticSpace = (space: SpaceWithDetails) => {
     setOptimisticSpaces(prev => [...prev, space]);
@@ -60,9 +71,9 @@ export default function Forums() {
   };
 
   const filteredSpaces = useMemo(() => {
-    if (!spaces) return optimisticSpaces;
+    const spacesToFilter = spaces || []; // 🚀 SIMPLIFIED
     // Combine real spaces with optimistic ones
-    const allSpaces = [...spaces, ...optimisticSpaces];
+    const allSpaces = [...spacesToFilter, ...optimisticSpaces];
     return allSpaces
       .filter(space => space.space_type !== 'PUBLIC')
       .filter(space => {
@@ -79,15 +90,15 @@ export default function Forums() {
   }, [spaces, optimisticSpaces, searchQuery, selectedFilter]);
 
   const filteredPublicThreads = useMemo(() => {
-    if (!publicThreads) return [];
-    return publicThreads.filter(thread => {
+    const threadsToFilter = publicThreads || []; // 🚀 SIMPLIFIED
+    return threadsToFilter.filter(thread => {
       const searchLower = threadSearchQuery.toLowerCase();
       return (
         (thread.title || '').toLowerCase().includes(searchLower) ||
-        (thread.creator_full_name || '').toLowerCase().includes(searchLower)
+        (thread.author_name || '').toLowerCase().includes(searchLower) 
       );
     });
-  }, [publicThreads, threadSearchQuery]);
+  }, [publicThreads, threadSearchQuery, user]);
 
   const handleCreateSpace = async (data: {
     name: string;
@@ -169,6 +180,55 @@ export default function Forums() {
     }
   };
 
+  const handleOptimisticReaction = async (e: React.MouseEvent, post: PublicPost, emoji: string) => {
+    e.preventDefault(); e.stopPropagation(); // Stop navigation
+    if (!user) { navigate('/login'); return; }
+  
+    // Optimistic update
+    setOptimisticReactions(prev => ({
+      ...prev,
+      [post.thread_id]: (prev[post.thread_id] ?? post.total_reaction_count) + 1
+    }));
+  
+    try {
+      await toggleReaction(post.first_message_id, emoji);
+      // Background refresh to sync
+      refreshSpaces(); 
+    } catch (error: any) {
+      // Revert on error
+      setOptimisticReactions(prev => ({
+        ...prev,
+        [post.thread_id]: post.total_reaction_count // Revert to original count
+      }));
+      toast({ variant: 'destructive', title: 'Error', description: error.message });
+    }
+  };
+
+  const handleFollow = async (e: React.MouseEvent, post: PublicPost) => {
+    e.preventDefault(); e.stopPropagation(); // Stop navigation
+    if (!user) { navigate('/login'); return; }
+    
+    const authorId = post.author_id;
+    setIsFollowLoading(prev => ({ ...prev, [authorId]: true }));
+    
+    try {
+      await toggleFollow(authorId);
+      const newFollowingState = !followingStatus[authorId];
+      setFollowingStatus(prev => ({ ...prev, [authorId]: newFollowingState }));
+      
+      toast({
+        title: newFollowingState ? 'Followed' : 'Unfollowed',
+        description: newFollowingState
+          ? `You are now following ${post.author_name}.`
+          : `You are no longer following ${post.author_name}.`,
+      });
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } finally {
+      setIsFollowLoading(prev => ({ ...prev, [authorId]: false }));
+    }
+  };
+  
   const renderSpaceCard = (space: SpaceWithDetails) => {
     const isPrivate = space.join_level === 'INVITE_ONLY';
     const membershipStatus = getMembershipStatus(space.id);
@@ -179,14 +239,14 @@ export default function Forums() {
     const cardContent = (
       <Card className="h-full transition-all duration-300 hover:border-primary/50 hover:shadow-lg flex flex-col">
         <CardHeader>
-          <div className="flex justify-between items-start mb-2">
+          <div className="flex flex-wrap justify-between items-start mb-2 gap-2">
             <Badge variant={space.space_type === 'FORUM' ? 'secondary' : 'outline'}>
               {space.space_type === 'FORUM' ? 'Forum' : 'Community Space'}
             </Badge>
             {isPrivate && <Badge variant="destructive">Private</Badge>}
           </div>
-          <CardTitle className="text-xl">{space.name}</CardTitle>
-          <CardDescription className="text-sm">{space.description}</CardDescription>
+          <CardTitle className="text-lg sm:text-xl">{space.name}</CardTitle>
+          <CardDescription className="text-sm line-clamp-2">{space.description}</CardDescription>
         </CardHeader>
         <CardContent className="p-6 pt-0 flex-grow flex flex-col justify-between">
           <div className="text-xs text-muted-foreground space-y-2">
@@ -196,14 +256,15 @@ export default function Forums() {
                 {creatorDetails && <p className="text-xs">{creatorDetails}</p>}
               </div>
             )}
-            {space.moderators && space.moderators.length > 0 && (
+             {space.moderators?.length > 0 && (
               <div>
                 <TooltipProvider delayDuration={100}>
                   <div className="flex flex-wrap gap-1 mt-1">
-                    {space.moderators.slice(0, 3).map((mod, index) => (
-                      <Tooltip key={mod.id || `mod-${index}`}>
+                    {/* CHANGED: Added '?' */}
+                    {space.moderators?.slice(0, 3).map((mod, index) => (
+                      <Tooltip key={`${space.id}-mod-${index}`}>
                         <TooltipTrigger asChild>
-                          <span className="inline-block"> {/* ✅ Add wrapper */}
+                          <span className="inline-block">
                             <Badge variant="outline" className="cursor-default">
                               {mod.full_name}
                             </Badge>
@@ -216,15 +277,18 @@ export default function Forums() {
                         )}
                       </Tooltip>
                     ))}
-                    {space.moderators.length > 3 && (
-                      <Badge variant="outline">+{space.moderators.length - 3} more</Badge>
+                    {/* CHANGED: Added '?' */}
+                    {space.moderators?.length > 3 && (
+                      <Badge variant="outline">
+                        +{space.moderators.length - 3} more
+                      </Badge>
                     )}
                   </div>
                 </TooltipProvider>
               </div>
             )}
           </div>
-          <div className="mt-4 pt-4 border-t flex justify-end items-center">
+          <div className="mt-4 pt-4 border-t flex flex-wrap justify-end items-center gap-2">
             {membershipStatus === 'ACTIVE' ? (
               <Button asChild variant="outline" size="sm">
                 <Link to={`/community/space/${space.id}`}>Go to Space</Link>
@@ -254,37 +318,104 @@ export default function Forums() {
     );
   };
   
-  const renderPublicThreadCard = (thread: ThreadWithDetails) => (
-    <Card key={thread.id} className="transition-all duration-300 hover:border-primary/50 hover:shadow-lg">
-      <Link to={user ? `/community/thread/${thread.id}` : '/login'}>
+  const renderPublicPostCard = (post: PublicPost) => {
+    // Get loading/following status for this specific post's author
+    const isLoading = isFollowLoading[post.author_id];
+    const isFollowing = !!followingStatus[post.author_id];
+
+    return (
+      <Card key={post.thread_id} className="transition-all duration-300 hover:border-primary/50 hover:shadow-lg">
         <CardContent className="p-6">
-          <h3 className="font-semibold text-lg mb-2">{thread.title}</h3>
-          <div className="flex flex-col gap-3 text-xs text-muted-foreground">
-            <div>
-              <span className="font-medium text-foreground">{thread.creator_full_name}</span>
-              {(thread.creator_position || thread.creator_specialization) && (
-                <p className="text-xs">
-                  {[thread.creator_position, thread.creator_specialization].filter(Boolean).join(' • ')}
-                </p>
-              )}
-            </div>
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-              {/* Stat 1: Messages */}
-              <div className="flex items-center gap-1">
-                <MessageSquare className="h-3 w-3" />
-                <span>{thread.message_count} messages</span>
+          {/* Link for the top part */}
+          <Link to={user ? `/community/thread/${post.thread_id}` : '/login'} className="block">
+            <h3 className="font-semibold text-lg mb-2">{post.title}</h3>
+            <div className="flex flex-col gap-3 text-xs text-muted-foreground">
+              {/* Author Info */}
+              <div>
+                <span className="font-medium text-foreground">{post.author_name}</span>
+                {post.author_position && <p className="text-xs">{post.author_position}</p>}
               </div>
-            
-              {/* Stat 2: Last Activity */}
-              <span className="flex items-center">
-                Last activity: {new Date(thread.last_activity_at).toLocaleDateString()}
-              </span>
+              {/* Stats */}
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                {/* Stat 1: Reactions */}
+                <div className="flex items-center gap-1 font-medium">
+                  <ThumbsUp className="h-3 w-3" />
+                  <span>
+                    {optimisticReactions[post.thread_id] ?? post.total_reaction_count} Reactions
+                  </span>
+                </div>
+                {/* Stat 2: Comments */}
+                <div className="flex items-center gap-1">
+                  <MessageSquare className="h-3 w-3" />
+                  <span>{post.comment_count} comments</span>
+                </div>
+                {/* Stat 3: Last Activity */}
+                <span className="flex items-center">
+                  Last activity: {new Date(post.last_activity_at).toLocaleDateString()}
+                </span>
+              </div>
             </div>
-          </div>
+          </Link>
+          
+          {/* --- NEW ACTION BAR --- */}
+          {user && (
+            <div className="mt-4 pt-4 border-t flex items-center gap-2">
+              {/* Follow Button */}
+              {user.id !== post.author_id && (
+                <Button
+                  variant={isFollowing ? 'secondary' : 'outline'}
+                  size="sm"
+                  onClick={(e) => handleFollow(e, post)}
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : isFollowing ? (
+                    <Check className="h-4 w-4 mr-2" />
+                  ) : (
+                    <UserPlus className="h-4 w-4 mr-2" />
+                  )}
+                  {isFollowing ? 'Following' : 'Follow'}
+                </Button>
+              )}
+              
+              {/* Reaction Button (Popover) */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="ghost" size="sm" onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
+                    <Smile className="h-4 w-4 mr-2" /> React
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-1">
+                  <div className="flex gap-1">
+                    {REACTIONS.map((emoji) => (
+                      <Button
+                        key={emoji}
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-lg rounded-full"
+                        onClick={(e) => handleOptimisticReaction(e, post, emoji)}
+                      >
+                        {emoji}
+                      </Button>
+                    ))}
+                  </div>
+                </PopoverContent>
+              </Popover>
+              
+              {/* Comment Button (as a link) */}
+              <Button variant="ghost" size="sm" asChild>
+                <Link to={user ? `/community/thread/${post.thread_id}` : '/login'}>
+                  <MessageSquare className="h-4 w-4 mr-2" />
+                  {post.comment_count}
+                </Link>
+              </Button>
+            </div>
+          )}
         </CardContent>
-      </Link>
-    </Card>
-  );
+      </Card>
+    );
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -341,35 +472,34 @@ export default function Forums() {
             </div>
           )}
         </section>
-
         <section>
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-2xl font-semibold">Public Threads</h2>
-            {publicThreads && publicThreads.length > 0 && (
-              <Button 
-                size="sm" 
-                onClick={() => user ? navigate(`/community/space/${publicThreads[0].space_id}/create-thread`) : navigate('/login')}
-              >
-                <Plus className="h-4 w-4 mr-2" /> Start a Thread
-              </Button>
-            )}
+        <div className="flex justify-between items-center mb-4">
+            <h2 className="text-2xl font-semibold">Public Posts</h2>
+            <Button 
+              size="sm" 
+              // CHANGED: This now links to our new Create Post page
+              onClick={() => user ? navigate(`/community/create-post`) : navigate('/login')}
+            >
+              <Plus className="h-4 w-4 mr-2" /> Create Post
+            </Button>
           </div>
           <div className="relative mb-4">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input 
-              placeholder="Search public threads..." 
+              placeholder="Search public posts..." // CHANGED
               value={threadSearchQuery} 
               onChange={(e) => setThreadSearchQuery(e.target.value)} 
               className="pl-10" 
             />
           </div>
           {loading ? (
-            <p className="text-center text-muted-foreground py-4">Loading threads...</p>
+            <p className="text-center text-muted-foreground py-4">Loading posts...</p>
           ) : filteredPublicThreads.length === 0 ? (
-            <p className="text-center text-muted-foreground py-4">No public threads match your search.</p>
+            <p className="text-center text-muted-foreground py-4">No public posts match your search.</p>
           ) : (
             <div className="space-y-4">
-              {filteredPublicThreads.map(renderPublicThreadCard)}
+              {/* CHANGED: Calls the new render function */}
+              {filteredPublicThreads.map(renderPublicPostCard)}
             </div>
           )}
         </section>

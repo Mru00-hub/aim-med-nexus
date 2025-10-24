@@ -1,0 +1,208 @@
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '@/hooks/useAuth';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Send, Loader2, Paperclip, X, File as FileIcon } from 'lucide-react';
+import { useToast } from '@/components/ui/use-toast';
+
+interface CommentInputProps {
+  threadId: string;
+  parentMessageId?: number | null;
+  onCommentPosted: (body: string,files: File[], parentMessageId?: number | null) => Promise<void>;
+  isReply?: boolean;
+}
+const MAX_COMMENT_FILES = 1;
+// Small preview component for attached files
+const FilePreview = ({ file, onRemove }: { file: File, onRemove: () => void }) => {
+  const [preview, setPreview] = useState<string | null>(null);
+  const isImage = file.type.startsWith('image/');
+  const isVideo = file.type.startsWith('video/');
+
+  useEffect(() => {
+    let objectUrl: string | null = null;
+
+    if (isImage) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    } else if (isVideo) {
+      objectUrl = URL.createObjectURL(file);
+      setPreview(objectUrl);
+    } else {
+      setPreview(null);
+    }
+
+    return () => {
+      if (objectUrl) {
+        URL.revokeObjectURL(objectUrl);
+      }
+    };
+  }, [file, isImage, isVideo]);
+
+  return (
+    <div className="relative group w-full overflow-hidden flex items-center p-2 border rounded-md">
+      {isImage && preview ? (
+        <img src={preview} alt={file.name} className="h-16 w-16 rounded-md object-cover flex-shrink-0" />
+      ) : isVideo && preview ? (
+        <video src={preview} muted className="h-16 w-16 rounded-md object-cover flex-shrink-0" />
+      // --- PDF RENDER BLOCK IS REMOVED ---
+      ) : (
+        <FileIcon className="h-16 w-16 text-muted-foreground flex-shrink-0" />
+      )}
+      <div className="ml-3 overflow-hidden min-w-0">
+        <p className="text-sm font-medium truncate">{file.name}</p>
+        <p className="text-xs text-muted-foreground">{(file.size / 1024).toFixed(1)} KB</p>
+      </div>
+      <Button 
+        variant="ghost" 
+        size="icon" 
+        className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity" 
+        onClick={onRemove}
+      >
+        <X className="h-4 w-4" />
+      </Button>
+    </div>
+  );
+};
+
+export const CommentInput: React.FC<CommentInputProps> = ({
+  threadId,
+  parentMessageId = null,
+  onCommentPosted,
+  isReply = false,
+}) => {
+  const [body, setBody] = useState('');
+  const [files, setFiles] = useState<File[]>([]); // State for files
+  const [isLoading, setIsLoading] = useState(false);
+  const { user, profile } = useAuth();
+  const { toast } = useToast();
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const newFiles = Array.from(e.target.files);
+      
+      // Check file limit
+      if (files.length + newFiles.length > MAX_COMMENT_FILES) {
+        toast({
+          variant: "destructive",
+          title: "File limit reached",
+          description: `You can only attach ${MAX_COMMENT_FILES} file to a comment.`,
+        });
+        return;
+      }
+      setFiles(prev => [...prev, ...newFiles]);
+    }
+  };
+  
+  const removeFile = (indexToRemove: number) => {
+    setFiles((prev) => prev.filter((_, index) => index !== indexToRemove));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmedBody = body.trim();
+    if (!body.trim() && files.length === 0) return;
+    if (!user) return;
+
+    setIsLoading(true);
+
+    try {
+      await onCommentPosted(trimmedBody, files, parentMessageId);
+
+      // Clear the form on success
+      setBody('');
+      setFiles([]);
+      // Toast is now handled by the parent, but we can keep a generic one
+      toast({
+        title: 'Success',
+        description: parentMessageId ? 'Reply posted.' : 'Comment posted.',
+      });
+    } catch (error: any) {
+      console.error('Failed to post comment', error);
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (!user) return null;
+
+  return (
+    <form
+      onSubmit={handleSubmit}
+      className={`flex gap-2 ${isReply ? 'mt-2' : 'items-start'}`}
+    >
+      {!isReply && (
+        <Avatar className="h-10 w-10 hidden sm:block">
+          <AvatarImage
+            src={profile?.profile_picture_url || ''}
+            alt={profile?.full_name || 'Your avatar'}
+          />
+          <AvatarFallback>
+            {profile?.full_name?.charAt(0) || 'U'}
+          </AvatarFallback>
+        </Avatar>
+      )}
+      <div className="flex-1 space-y-2">
+        {/* File Preview Area */}
+        {files.length > 0 && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {files.map((file, i) => (
+              <FilePreview key={i} file={file} onRemove={() => removeFile(i)} />
+            ))}
+          </div>
+        )}
+
+        <Textarea
+          placeholder={
+            parentMessageId ? 'Write a reply...' : 'Write a comment...'
+          }
+          rows={isReply ? 2 : 3}
+          value={body}
+          onChange={(e) => setBody(e.target.value)}
+          className="flex-1"
+          disabled={isLoading}
+        />
+        <div className="flex justify-between items-center">
+          {/* File Attachment Button */}
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isLoading}
+          >
+            <Paperclip className="h-4 w-4" />
+          </Button>
+          <input
+            type="file"
+            ref={fileInputRef}
+            className="hidden"
+            onChange={handleFileChange}
+          />
+
+          <Button
+            type="submit"
+            size={isReply ? 'sm' : 'default'}
+            disabled={isLoading || (!body.trim() && files.length === 0)}
+          >
+            {isLoading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Send className="h-4 w-4" />
+            )}
+            <span className="ml-2">{isReply ? 'Reply' : 'Post Comment'}</span>
+          </Button>
+        </div>
+      </div>
+    </form>
+  );
+};

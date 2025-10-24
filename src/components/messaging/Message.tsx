@@ -10,8 +10,6 @@ import {
     MessageWithDetails, 
     MessageAttachment,
     editMessage,
-    addReaction,
-    removeReaction,
 } from '@/integrations/supabase/community.api'; 
 import { Reply, Trash2, Pencil, Paperclip, SmilePlus } from 'lucide-react';
 
@@ -145,7 +143,14 @@ export const Message: React.FC<MessageProps> = ({
                     <p className="truncate opacity-80">{message.parent_message.body}</p>
                 </div>
             )}
-            <p className="text-sm break-words whitespace-pre-wrap">{message.body} {message.is_edited && <span className="text-xs opacity-70">(edited)</span>}</p>
+            <p className="text-sm break-words whitespace-pre-wrap">
+              {message.body} 
+              {message.is_edited && (
+                <span className="text-xs opacity-70 ml-1">
+                  (edited at {new Date(message.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})
+                </span>
+              )}
+            </p>
             {message.attachments && message.attachments.length > 0 && (
                 <div className="mt-2">
                     {message.attachments.map(att => (
@@ -234,5 +239,4 @@ export const Message: React.FC<MessageProps> = ({
             )}
         </div>
     );
-// FIX: Added the missing closing brace for the component
 };

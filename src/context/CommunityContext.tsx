@@ -7,21 +7,25 @@ import {
     getUserSpaces,
     getUserMemberships,
     getPublicThreads,
+    PublicPost,
     SpaceWithDetails,
     ThreadWithDetails,
     Membership,
     Enums,
 } from '@/integrations/supabase/community.api';
+import { supabase } from '@/integrations/supabase/client';
 
 // --- MODIFIED INTERFACE ---
 interface CommunityContextType {
   spaces: SpaceWithDetails[];
   memberships: Membership[];
-  publicThreads: ThreadWithDetails[];
+  publicThreads: PublicPost[];
   isLoadingSpaces: boolean;
   refreshSpaces: () => Promise<void>; // <-- RENAMED for clarity
   updateLocalSpace: (updatedSpace: SpaceWithDetails) => void; // <-- ADDED for optimistic updates
-  updateLocalThread: (updatedThread: Partial<ThreadWithDetails> & { id: string }) => void; 
+  updateLocalPost: (
+    updatedPost: Partial<PublicPost> & { thread_id: string }
+  ) => void;
   getMembershipStatus: (spaceId: string) => Enums<'membership_status'> | null;
   setMemberships: React.Dispatch<React.SetStateAction<Membership[]>>;
   addOptimisticSpace: (space: SpaceWithDetails) => void;
@@ -35,7 +39,7 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
   
   const [spaces, setSpaces] = useState<SpaceWithDetails[]>([]); 
   const [memberships, setMemberships] = useState<Membership[]>([]);
-  const [publicThreads, setPublicThreads] = useState<ThreadWithDetails[]>([]); 
+  const [publicThreads, setPublicThreads] = useState<PublicPost[]>([]);
   const [isLoadingSpaces, setIsLoadingSpaces] = useState(true);
 
   const addOptimisticSpace = useCallback((space: SpaceWithDetails) => {
@@ -48,40 +52,46 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
 
   // This function is now named `refreshSpaces` but its logic is the same
   const refreshSpaces = useCallback(async () => {
+    console.log('--- refreshSpaces START ---');
+    console.log('User object from useAuth:', user); // <-- LOG 1: What does useAuth think?
     setIsLoadingSpaces(true);
     try {
-      if (user) {
-        const [spacesData, membershipsData, publicThreadsData] = await Promise.all([
-            getSpacesWithDetails(),
-            getUserMemberships(),
-            getPublicThreads()
-        ]);
-        setSpaces(spacesData || []);
+      // 1. Always fetch public spaces and threads.
+      // These functions will return mock data if the user is logged out.
+      const { data: { session } } = await supabase.auth.getSession();      
+      console.log('Current session status:', session ? 'ACTIVE' : 'NULL');
+      const [spacesData, publicThreadsData] = await Promise.all([
+        getSpacesWithDetails(),
+        getPublicThreads(),
+      ]);
+
+      console.log('Fetched spaces count:', spacesData?.length);
+      console.log('Fetched threads count:', publicThreadsData?.length);
+
+      setSpaces(spacesData || []);
+      setPublicThreads(publicThreadsData || []);
+
+      // 2. *Only* fetch memberships if the user is actually logged in.
+      if (session) {
+        console.log('Session is active, fetching memberships.');
+        const membershipsData = await getUserMemberships();
         setMemberships(membershipsData || []);
-        setPublicThreads(publicThreadsData || []);
       } else {
-        const [mockSpacesData, mockThreadsData] = await Promise.all([
-            getUserSpaces(),
-            getPublicThreads()
-        ]);
-
-        const mappedMockSpaces: SpaceWithDetails[] = mockSpacesData.map(space => ({
-          ...space,
-          creator_full_name: 'Community Member',
-          moderators: [],
-        }));
-
-        setSpaces(mappedMockSpaces);
-        setPublicThreads(mockThreadsData || []);
+        // 3. If no session, ensure memberships are cleared.
+        console.log('No session, clearing memberships.');
         setMemberships([]);
       }
+      
     } catch (error: any) {
-      console.error("Failed to fetch community data:", error.message);
+      // This catch block will now only trigger on a *real* network/API error,
+      // not on a "logged out" error from getUserMemberships.
+      console.error('--- REFRESH SPACES FAILED ---', error.message);
       setSpaces([]);
       setMemberships([]);
       setPublicThreads([]);
     } finally {
       setIsLoadingSpaces(false);
+      console.log('--- refreshSpaces END ---');
     }
   }, [user]);
 
@@ -98,14 +108,17 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
     );
   }, []); // No dependencies needed as `setSpaces` is stable
 
-  const updateLocalThread = useCallback((updatedThread: Partial<ThreadWithDetails> & { id: string }) => {
-    setPublicThreads(currentThreads =>
-      currentThreads.map(t =>
-        t.id === updatedThread.id ? { ...t, ...updatedThread } : t
-      )
-    );
-  }, []);
-
+  const updateLocalPost = useCallback(
+    (updatedPost: Partial<PublicPost> & { thread_id: string }) => {
+      setPublicThreads((currentThreads) =>
+        currentThreads.map((t) =>
+          t.thread_id === updatedPost.thread_id ? { ...t, ...updatedPost } : t
+        )
+      );
+    },
+    []
+  );
+    
   const getMembershipStatus = useCallback((spaceId: string): Enums<'membership_status'> | null => {
       const membership = memberships.find(m => m.space_id === spaceId);
       return membership ? membership.status : null;
@@ -119,12 +132,12 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
     isLoadingSpaces,
     refreshSpaces, // <-- EXPOSED as refreshSpaces
     updateLocalSpace, // <-- EXPOSED the new function
-    updateLocalThread,
+    updateLocalPost,
     getMembershipStatus,
     setMemberships, 
     addOptimisticSpace,
     removeOptimisticSpace,
-  }), [spaces, memberships, publicThreads, isLoadingSpaces, refreshSpaces, updateLocalSpace, updateLocalThread, getMembershipStatus]);
+  }), [spaces, memberships, publicThreads, isLoadingSpaces, refreshSpaces, updateLocalSpace, updateLocalPost, getMembershipStatus]);
 
   return (
     <CommunityContext.Provider value={contextValue}>

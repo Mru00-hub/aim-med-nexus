@@ -1,7 +1,7 @@
 // src/pages/community/CreateThread.tsx
 
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { Button } from '@/components/ui/button';
@@ -15,7 +15,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import AuthGuard from '@/components/AuthGuard';
 
 // Import our new API function
-import { createThread } from '@/integrations/supabase/community.api';
+import { createThread, getSpaceDetails } from '@/integrations/supabase/community.api';
 import { useCommunity } from '@/context/CommunityContext';
 
 // ----------------------------------------------------------------------
@@ -132,12 +132,37 @@ export const CreateThreadForm: React.FC<CreateThreadProps> = ({ spaceId = null, 
   )
 }
 
-// The page component now just provides the layout and renders the form
 const CreateThreadPage = () => {
-    console.log('%c[CreateThread.tsx] Rendering...', 'color: red; font-weight: bold;');
-    // Determine the header/description text based on the public space
-    const isPublic = true; // This page is always for public threads
+    // 1. Get the spaceId from the URL. It will be undefined for /create-post
+    const { spaceId } = useParams<{ spaceId: string }>(); 
     
+    // 2. Set state for our dynamic titles
+    const [spaceName, setSpaceName] = useState('the main Community Hub');
+    const [title, setTitle] = useState('Start a New Public Post');
+    const [description, setDescription] = useState('This post will be visible to everyone in the main Community Hub.');
+
+    // 3. Fetch space details if spaceId exists
+    useEffect(() => {
+        if (spaceId) {
+            // It's a private thread
+            setTitle('Start a New Thread');
+            getSpaceDetails(spaceId)
+                .then(details => {
+                    if (details) {
+                        setSpaceName(`the '${details.name}' space`);
+                        setDescription(`This thread will be posted in the '${details.name}' space.`);
+                    } else {
+                        setSpaceName('an unknown space');
+                        setDescription('Warning: This space could not be found.');
+                    }
+                })
+                .catch(() => {
+                    setSpaceName('an inaccessible space');
+                    setDescription('Warning: You may not have permission to post here.');
+                });
+        }
+    }, [spaceId]); // Re-run if spaceId changes
+
     return (
       <AuthGuard>
         <div className="min-h-screen bg-background">
@@ -145,14 +170,15 @@ const CreateThreadPage = () => {
           <main className="container mx-auto py-8 px-4">
             <Card className="max-w-3xl mx-auto">
               <CardHeader>
-                <CardTitle>Start a New Public Thread</CardTitle>
+                {/* 4. Use the dynamic state variables */}
+                <CardTitle>{title}</CardTitle>
                 <CardDescription>
-                  This thread will be visible to everyone in the main Community Hub.
+                  {description}
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                  {/* When spaceId is omitted, the API must default the thread to the PUBLIC space ID. */}
-                  <CreateThreadForm spaceId={null} /> 
+                  {/* 5. Pass the REAL spaceId (or null) to the form */}
+                  <CreateThreadForm spaceId={spaceId || null} /> 
               </CardContent>
             </Card>
           </main>
