@@ -175,16 +175,37 @@ export const CommentItem: React.FC<CommentItemProps> = ({
           {comment.attachments && comment.attachments.length > 0 && (
             <div className="mt-2 space-y-1">
               {comment.attachments.map((att) => (
-                <a
-                  key={att.id}
-                  href={att.file_url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex items-center text-sm p-2 border rounded-md bg-background hover:bg-zinc-100"
-                >
-                  <FileIcon className="h-4 w-4 mr-2 flex-shrink-0" />
-                  <span className="truncate">{att.file_name}</span>
-                </a>
+                const isImage = att.file_type?.startsWith('image/');
+                if (isImage) {
+                  return (
+                    <a
+                      key={att.id}
+                      href={att.file_url}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      <img
+                        src={att.file_url}
+                        alt={att.file_name}
+                        className="rounded-md object-cover w-full h-auto max-h-60 border"
+                      />
+                    </a>
+                  );
+                }
+                
+                // Fallback for non-image files
+                return (
+                  <a
+                    key={att.id}
+                    href={att.file_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center text-sm p-2 border rounded-md bg-background hover:bg-zinc-100"
+                  >
+                    <FileIcon className="h-4 w-4 mr-2 flex-shrink-0" />
+                    <span className="truncate">{att.file_name}</span>
+                  </a>
+                );
               ))}
             </div>
           )}
