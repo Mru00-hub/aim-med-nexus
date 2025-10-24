@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/popover';
 import {
   UserPlus,
+  Check,
   ThumbsUp,
   MessageSquare,
   Share2,
@@ -63,6 +64,7 @@ interface PostDisplayProps {
   onBodyUpdate: (newBody: string) => void;
   onPostDelete: () => void; 
   onTitleUpdate: (newTitle: string) => void;
+  onCommentClick: () => void;
   canEdit: boolean;
   threadId: string;
 }
@@ -174,12 +176,13 @@ export const PostDisplay: React.FC<PostDisplayProps> = ({
     setIsFollowLoading(true);
     try {
       await toggleFollow(post.author_id);
-      setIsFollowing(!isFollowing); // Optimistic update
+      const newFollowingState = !isFollowing;
+      setIsFollowing(newFollowingState); 
       toast({
-        title: isFollowing ? 'Unfollowed' : 'Followed',
-        description: `You are no longer ${
-          isFollowing ? '' : 'not'
-        } following ${post.author_name}.`,
+        title: newFollowingState ? 'Followed' : 'Unfollowed',
+        description: newFollowingState
+          ? `You are now following ${post.author_name}.`
+          : `You are no longer following ${post.author_name}.`,
       });
     } catch (error: any) {
       toast({
@@ -259,7 +262,7 @@ export const PostDisplay: React.FC<PostDisplayProps> = ({
             </Link>
             {user && user.id !== post.author_id && (
               <Button
-                variant="outline"
+                variant={isFollowing ? 'secondary' : 'outline'}
                 size="sm"
                 onClick={handleFollow}
                 disabled={isFollowLoading}
@@ -267,6 +270,8 @@ export const PostDisplay: React.FC<PostDisplayProps> = ({
               >
                 {isFollowLoading ? (
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : isFollowing ? (
+                  <Check className="h-4 w-4 mr-2" />
                 ) : (
                   <UserPlus className="h-4 w-4 mr-2" />
                 )}
@@ -471,7 +476,7 @@ export const PostDisplay: React.FC<PostDisplayProps> = ({
           </Popover>
 
           {/* 2. Comment Button (Unchanged) */}
-          <Button variant="ghost" className="w-full" >
+          <Button variant="ghost" className="w-full" onClick={onCommentClick}>
             <MessageSquare className="h-5 w-5" />
             <span className="ml-2 hidden sm:inline">
               Comment ({commentCount})
