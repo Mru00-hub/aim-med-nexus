@@ -85,7 +85,6 @@ export type AttachmentInput = {
 export type PublicPost = {
   thread_id: string;
   title: string;
-  description: string | null;
   created_at: string;
   last_activity_at: string;
   comment_count: number;
@@ -108,8 +107,8 @@ const MOCK_SPACES: Space[] = [
 ];
 
 const MOCK_PUBLIC_POSTS: PublicPost[] = [
-  { thread_id: 'mock-pub-thread-1', title: 'Best guidelines for AFib in 2025? (Example)', author_id: 'user-123', author_name: 'Dr. Chen (Example)', created_at: new Date().toISOString(), last_activity_at: new Date().toISOString(), comment_count: 23, first_message_id: 1, total_reaction_count: 58, description: 'Looking for the latest...', author_avatar: null, author_position: 'Cardiologist' },
-  { thread_id: 'mock-pub-thread-2', title: 'Hospital EHR vendor comparison (Example)', author_id: 'user-456', author_name: 'Dr. Patel (Example)', created_at: new Date().toISOString(), last_activity_at: new Date().toISOString(), comment_count: 18, first_message_id: 2, total_reaction_count: 42, description: 'We are evaluating new systems...', author_avatar: null, author_position: 'CMIO' },
+  { thread_id: 'mock-pub-thread-1', title: 'Best guidelines for AFib in 2025? (Example)', author_id: 'user-123', author_name: 'Dr. Chen (Example)', created_at: new Date().toISOString(), last_activity_at: new Date().toISOString(), comment_count: 23, first_message_id: 1, total_reaction_count: 58, author_avatar: null, author_position: 'Cardiologist' },
+  { thread_id: 'mock-pub-thread-2', title: 'Hospital EHR vendor comparison (Example)', author_id: 'user-456', author_name: 'Dr. Patel (Example)', created_at: new Date().toISOString(), last_activity_at: new Date().toISOString(), comment_count: 18, first_message_id: 2, total_reaction_count: 42, author_avatar: null, author_position: 'CMIO' },
 ];
 
 const MOCK_MESSAGES: MessageWithDetails[] = [];
@@ -642,13 +641,13 @@ export const uploadFilesForPost = async (
 
 export const createPost = async (payload: {
   title: string;
-  description: string;
+  body: string;
   attachments?: AttachmentInput[];
 }): Promise<string> => {
   await getSessionOrThrow();
   const { data, error } = await supabase.rpc('create_post', {
     p_title: payload.title,
-    p_description: payload.description,
+    p_body: payload.body, 
     p_attachments: payload.attachments || null,
   });
 
@@ -658,13 +657,13 @@ export const createPost = async (payload: {
 
 export const updatePost = async (
   threadId: string,
-  payload: { title: string; description: string }
+  payload: { title: string; body: string }
 ): Promise<void> => {
   await getSessionOrThrow();
   const { error } = await supabase.rpc('update_post', {
     p_thread_id: threadId,
     p_title: payload.title,
-    p_description: payload.description,
+    p_description: payload.body,
   });
   if (error) throw error;
 };
