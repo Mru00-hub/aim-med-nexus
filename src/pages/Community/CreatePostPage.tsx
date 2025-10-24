@@ -46,7 +46,6 @@ const FilePreview = ({ file, onRemove }: { file: File, onRemove: () => void }) =
   }, [file, isImage]);
 
   return (
-  return (
     <div className="relative group w-full overflow-hidden flex items-center p-2 border rounded-md">
       {isImage && preview ? (
         <img src={preview} alt={file.name} className="h-16 w-16 rounded-md object-cover flex-shrink-0" />
