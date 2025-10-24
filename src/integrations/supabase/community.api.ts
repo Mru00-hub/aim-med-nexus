@@ -25,6 +25,9 @@ export type SpaceWithDetails = Space & {
     role: Enums<'membership_role'>;
     specialization: string | null;
   }[] | null;
+  member_count?: number;
+  thread_count?: number;
+  last_activity_at?: string;
 };
 
 export type MemberProfile = {
