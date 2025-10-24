@@ -180,19 +180,19 @@ export default function Forums() {
     // Update local state immediately for instant UI feedback
     setOptimisticReactions(prev => ({
       ...prev,
-      [threadId]: (prev[threadId] ?? currentCount) + 1
+      [threadId]: (prev[threadId] ?? post.total_reaction_count) + 1
     }));
   
     try {
       // Call the actual API without awaiting UI update
-      await toggleReaction(messageId, emoji);
+      await toggleReaction(post.first_message_id, emoji);
     
       // Refresh in background to get accurate counts
       refreshSpaces().then(() => {
         // Clear the optimistic update after real data loads
         setOptimisticReactions(prev => {
           const newState = { ...prev };
-          delete newState[threadId];
+          delete newState[post.thread_id];
           return newState;
         });
       });
