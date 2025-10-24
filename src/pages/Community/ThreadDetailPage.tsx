@@ -5,7 +5,7 @@ import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { ThreadView } from '@/components/messaging/ThreadView'; // We will put all the logic here
 import AuthGuard from '@/components/AuthGuard'; // Protect this page
-import { getThreadDetails,getPostDetails,updatePost, updateThreadDetails, getViewerRoleForSpace, Thread, Enums, getThreadSummary, SummaryResponse, postMessage, MessageWithDetails, PublicPost,setUserReaction,toggleReaction, editMessage, deleteMessage, deletePost} from '@/integrations/supabase/community.api';
+import { getThreadDetails,getPostDetails,updatePost, updateThreadDetails, getViewerRoleForSpace, Thread, Enums, getThreadSummary, SummaryResponse, postMessage, uploadAttachment, MessageWithDetails, PublicPost,setUserReaction,toggleReaction, editMessage, deleteMessage, deletePost} from '@/integrations/supabase/community.api';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/components/ui/use-toast';
 import { useCommunity } from '@/context/CommunityContext';
@@ -272,16 +272,20 @@ export default function ThreadDetailPage() {
       });
   };
     
-  const handleOptimisticComment = (body: string, parentMessageId: number | null = null) => {
+  const handleOptimisticComment = (body: string, files: File[], parentMessageId: number | null = null) => {
     if (!user || !profile || !postDetails) return;
-
+    const messageBody = body || (files.length > 0 ? '📎 Attachment' : '');
+    // Don't post if everything is empty
+    if (!messageBody) {
+      throw new Error("Cannot post an empty comment.");
+    }
     // 1. Create a fake comment (unchanged)
     const fakeComment: MessageWithDetails = {
       id: Math.random(), 
       created_at: new Date().toISOString(),
       user_id: user.id,
       thread_id: postDetails.post.thread_id,
-      body: body,
+      body: messageBody,
       parent_message_id: parentMessageId,
       is_edited: false,
       author: {
@@ -307,16 +311,34 @@ export default function ThreadDetailPage() {
       };
     });
 
-    // 3. Call the real API (unchanged)
-    postMessage(postDetails.post.thread_id, body, parentMessageId)
-      .then(() => {
-        // ADDED: Refresh the main threads list on success
-        refreshSpaces(); 
-      })
-      .catch((error: any) => {
-        toast({ variant: 'destructive', title: 'Failed to post', description: error.message });
-        fetchDetails(); // Revert
+    try {
+      // Step 4a: Post the message
+      const newMessage = await postMessage(
+        postDetails.post.thread_id,
+        messageBody,
+        parentMessageId
+      );
+
+      // Step 4b: Upload files if they exist
+      if (files.length > 0) {
+        await Promise.all(
+          files.map((file) => uploadAttachment(newMessage.id, file))
+        );
+      }
+
+      // 5. Refresh data for accuracy
+      refreshSpaces();
+      // We must fetch details again to get the real comment + attachments
+      await fetchDetails(); 
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Failed to post',
+        description: error.message,
       });
+      fetchDetails(); // Revert on failure
+      throw error; // Re-throw to inform CommentInput it failed
+    }
   };
 
   const handleOptimisticCommentReaction = (commentId: number, emoji: string) => {
