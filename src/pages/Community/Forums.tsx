@@ -86,7 +86,6 @@ export default function Forums() {
       return (
         (thread.title || '').toLowerCase().includes(searchLower) ||
         (thread.author_name || '').toLowerCase().includes(searchLower) ||
-        (thread.description || '').toLowerCase().includes(searchLower)
       );
     });
   }, [publicThreads, threadSearchQuery, user]);
