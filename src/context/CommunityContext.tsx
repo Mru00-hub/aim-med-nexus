@@ -52,36 +52,29 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
   const refreshSpaces = useCallback(async () => {
     setIsLoadingSpaces(true);
     try {
+      // 1. Always fetch public spaces and threads.
+      // These functions will return mock data if the user is logged out.
+      const [spacesData, publicThreadsData] = await Promise.all([
+        getSpacesWithDetails(),
+        getPublicThreads(),
+      ]);
+
+      setSpaces(spacesData || []);
+      setPublicThreads(publicThreadsData || []);
+
+      // 2. *Only* fetch memberships if the user is actually logged in.
       if (user) {
-        const [spacesData, membershipsData, publicThreadsData] = await Promise.all([
-            getSpacesWithDetails(),
-            getUserMemberships(),
-            getPublicThreads()
-        ]);
-        setSpaces(spacesData || []);
+        const membershipsData = await getUserMemberships();
         setMemberships(membershipsData || []);
-        setPublicThreads(publicThreadsData || []);
       } else {
-        const [mockSpacesData, mockThreadsData] = await Promise.all([
-            getUserSpaces(),
-            getPublicThreads()
-        ]);
-
-        const mappedMockSpaces: SpaceWithDetails[] = mockSpacesData.map(space => ({
-          ...space,
-          creator_full_name: 'Community Member',
-          moderators: [],
-          creator_position: null,
-          creator_organization: null,
-          creator_specialization: null,
-        }));
-
-        setSpaces(mappedMockSpaces);
-        setPublicThreads(mockThreadsData || []);
+        // 3. If logged out, ensure memberships are cleared.
         setMemberships([]);
       }
+      
     } catch (error: any) {
-      console.error("Failed to fetch community data:", error.message);
+      // This catch block will now only trigger on a *real* network/API error,
+      // not on a "logged out" error from getUserMemberships.
+      console.error('Failed to fetch community data:', error.message);
       setSpaces([]);
       setMemberships([]);
       setPublicThreads([]);
