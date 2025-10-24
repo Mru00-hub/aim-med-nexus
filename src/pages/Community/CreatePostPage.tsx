@@ -24,6 +24,12 @@ pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/$
 const POST_BODY_MAX_LENGTH = 3000;
 const URL_REGEX = /(https?:\/\/[^\s]+)/g;
 const MAX_POST_FILES = 4; 
+function getYouTubeVideoId(url: string): string | null {
+  // Regex to find the video ID
+  const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/ ]{11})/;
+  const match = url.match(regex);
+  return match ? match[1] : null;
+}
 
 // Helper component for file previews
 const FilePreview = ({ file, onRemove }: { file: File, onRemove: () => void }) => {
@@ -118,24 +124,15 @@ interface LinkPreviewProps {
   };
   onRemove: () => void;
 }
-const LinkPreviewCard: React.FC<LinkPreviewProps> = ({ data, onRemove }) => (
-  <div className="relative mt-2 border rounded-lg overflow-hidden">
-    <Button variant="ghost" size="icon" className="absolute top-1 right-1 h-6 w-6 z-10" onClick={onRemove}>
-      <X className="h-4 w-4" />
-    </Button>
-    {data.image && <img src={data.image} alt="Preview" className="w-full h-48 object-cover" />}
-    <div className="p-4">
-      <h4 className="font-semibold truncate">{data.title}</h4>
-      <p className="text-sm text-muted-foreground truncate">{data.description}</p>
-    </div>
-  </div>
-);
 
 const CreatePostForm: React.FC = () => {
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');  // This is the main "body"
   const [debouncedBody] = useDebounce(body, 500);
-  const [linkPreview, setLinkPreview] = useState<any>(null);
+  const [linkPreview, setLinkPreview] = useState<{
+    type: 'youtube' | 'website';
+    data: any; // Will be an embedUrl for youtube, or metadata for website
+  } | null>(null);
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
   const [checkedUrl, setCheckedUrl] = useState<string | null>(null);
   const [files, setFiles] = useState<File[]>([]);
@@ -157,13 +154,23 @@ const CreatePostForm: React.FC = () => {
     if (urls && urls[0] && urls[0] !== checkedUrl && !linkPreview) {
       const firstUrl = urls[0];
       setCheckedUrl(firstUrl);
+      const videoId = getYouTubeVideoId(firstUrl);
+      if (videoId) {
+        setLinkPreview({
+          type: 'youtube',
+          data: { embedUrl: `https://www.youtube.com/embed/${videoId}` }
+        });
+        setIsPreviewLoading(false); // We're done
+        return; // Stop, don't call Supabase
+      }
+      
       setIsPreviewLoading(true);
-
+      setLinkPreview(null);
       // Call your Supabase function
       supabase.functions.invoke('get-link-preview', { body: { url: firstUrl } })
         .then(({ data, error }) => {
           if (data && !error && (data.title || data.image)) {
-            setLinkPreview(data);
+            setLinkPreview({ type: 'website', data: data }); 
           }
         })
         .finally(() => {
@@ -289,13 +296,56 @@ const CreatePostForm: React.FC = () => {
           </div>
         )}
         {linkPreview && (
-          <LinkPreviewCard 
-            data={linkPreview} 
-            onRemove={() => {
-              setLinkPreview(null);
-              setCheckedUrl(null); // Allow re-fetching
-            }} 
-          />
+          <div className="relative mt-2 border rounded-lg overflow-hidden">
+            {/* Universal Remove Button */}
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="absolute top-1 right-1 h-7 w-7 z-10 bg-black/30 hover:bg-black/50 text-white" 
+              onClick={() => {
+                setLinkPreview(null);
+                setCheckedUrl(null); // Allow re-fetching
+              }}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+            
+            {/* YouTube Player */}
+            {linkPreview.type === 'youtube' && (
+              <div className="aspect-video w-full">
+                <iframe
+                  width="100%"
+                  height="100%"
+                  src={linkPreview.data.embedUrl}
+                  title="YouTube video player"
+                  frameBorder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                ></iframe>
+              </div>
+            )}
+            
+            {/* Website Preview */}
+            {linkPreview.type === 'website' && (
+              <>
+                {linkPreview.data.image && (
+                  <img 
+                    src={linkPreview.data.image} 
+                    alt="Preview" 
+                    className="w-full h-48 object-cover" 
+                  />
+                )}
+                <div className="p-4">
+                  <h4 className="font-semibold truncate">
+                    {linkPreview.data.title || 'No Title Found'}
+                  </h4>
+                  <p className="text-sm text-muted-foreground line-clamp-2">
+                    {linkPreview.data.description || 'No Description'}
+                  </p>
+                </div>
+              </>
+            )}
+          </div>
         )}
       </div>
       
