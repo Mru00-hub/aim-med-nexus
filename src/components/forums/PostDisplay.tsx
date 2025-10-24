@@ -63,6 +63,28 @@ export const PostDisplay: React.FC<PostDisplayProps> = ({
   const { user } = useAuth();
   const { toast } = useToast();
 
+  const handleShare = () => {
+    // Get the current page's URL
+    const postUrl = window.location.href;
+    
+    // Use the modern navigator.clipboard API
+    navigator.clipboard.writeText(postUrl)
+      .then(() => {
+        toast({
+          title: 'Link Copied!',
+          description: 'The link to this post has been copied to your clipboard.',
+        });
+      })
+      .catch((err) => {
+        console.error('Failed to copy link: ', err);
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: 'Could not copy the link.',
+        });
+      });
+  };
+
   const [isFollowing, setIsFollowing] = useState(false);
   const [isFollowLoading, setIsFollowLoading] = useState(false);
   const [isReactionLoading, setIsReactionLoading] = useState(false);
