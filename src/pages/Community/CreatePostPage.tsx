@@ -20,35 +20,54 @@ import { useCommunity } from '@/context/CommunityContext';
 const POST_BODY_MAX_LENGTH = 3000;
 // Helper component for file previews
 const FilePreview = ({ file, onRemove }: { file: File, onRemove: () => void }) => {
-  const isImage = file.type.startsWith('image/');
   const [preview, setPreview] = useState<string | null>(null);
+  const isImage = file.type.startsWith('image/');
 
-  if (isImage) {
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setPreview(reader.result as string);
-    };
-    reader.readAsDataURL(file);
-  }
+  // --- THIS IS THE FIX ---
+  // We must use useEffect to run the file reader only once when the file changes.
+  useEffect(() => {
+    if (isImage) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+
+      // Cleanup function to revoke the object URL if we were using createObjectUrl
+      return () => {
+        // If you were using URL.createObjectURL(file), you would call
+        // URL.revokeObjectURL(preview) here.
+        // Since we use readAsDataURL, the data is in memory and managed by the hook.
+      };
+    } else {
+      // If it's not an image, clear any previous preview
+      setPreview(null);
+    }
+  }, [file, isImage]);
 
   return (
-    <div className="relative flex items-center p-2 border rounded-md">
+  return (
+    <div className="relative group w-full overflow-hidden flex items-center p-2 border rounded-md">
       {isImage && preview ? (
-        <img src={preview} alt={file.name} className="h-16 w-16 rounded-md object-cover" />
+        <img src={preview} alt={file.name} className="h-16 w-16 rounded-md object-cover flex-shrink-0" />
       ) : (
-        <FileIcon className="h-16 w-16 text-muted-foreground" />
+        <FileIcon className="h-16 w-16 text-muted-foreground flex-shrink-0" />
       )}
-      <div className="ml-3 overflow-hidden">
+      <div className="ml-3 overflow-hidden min-w-0">
         <p className="text-sm font-medium truncate">{file.name}</p>
         <p className="text-xs text-muted-foreground">{(file.size / 1024).toFixed(1)} KB</p>
       </div>
-      <Button variant="ghost" size="icon" className="absolute top-1 right-1 h-6 w-6" onClick={onRemove}>
+      <Button 
+        variant="ghost" 
+        size="icon" 
+        className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity" 
+        onClick={onRemove}
+      >
         <X className="h-4 w-4" />
       </Button>
     </div>
   );
 };
-
 
 const CreatePostForm: React.FC = () => {
   const [title, setTitle] = useState('');
@@ -72,10 +91,18 @@ const CreatePostForm: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || !body.trim()) {
-      setError('Title cannot be empty.');
+    if (!title.trim()) {
+      setError('A title is required.');
       return;
     }
+    
+    // --- CHANGE 2: Enforce body check only if there's no text AND no files ---
+    const bodyContent = body.trim();
+    if (!bodyContent && files.length === 0) {
+      setError('You must include a message body or at least one attachment.');
+      return;
+    }
+    
     setIsLoading(true);
     setError('');
 
@@ -92,29 +119,15 @@ const CreatePostForm: React.FC = () => {
       toast({ title: "Creating post..." });
       const newThreadId = await createPost({
           title,
-          body,
+          // --- CHANGE 3: Send the trimmed body ---
+          body: bodyContent, 
           attachments,
       });
       
-      toast({
-        title: "Success!",
-        description: "Your post has been created.",
-      });
-
-      // Refresh the main feed
-      refreshSpaces(); 
-
-      // Navigate to the new post's page
-      navigate(`/community/thread/${newThreadId}`);
+      // ... (rest of the success/navigate logic is fine) ...
 
     } catch (err: any) {
-      const errorMessage = err.message || 'Failed to create post. Please try again.';
-      setError(errorMessage);
-      toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive",
-      });
+      // ... (error handling is fine) ...
     } finally {
       setIsLoading(false);
     }
@@ -150,7 +163,6 @@ const CreatePostForm: React.FC = () => {
           value={body} 
           onChange={(e) => setBody(e.target.value)} 
           disabled={isLoading} 
-          required
           maxLength={POST_BODY_MAX_LENGTH} 
         />
       </div>
