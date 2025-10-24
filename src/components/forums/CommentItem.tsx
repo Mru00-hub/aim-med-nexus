@@ -5,12 +5,19 @@ import { MessageWithDetails } from '@/integrations/supabase/community.api';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger 
+} from "@/components/ui/dropdown-menu";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { ThumbsUp, CornerDownRight, Smile, File as FileIcon } from 'lucide-react';
+import { ThumbsUp, CornerDownRight, Smile, File as FileIcon, MoreHorizontal, Edit2, Trash2, Loader2 } from 'lucide-react';
 import { CommentInput } from './CommentInput';
 import { toggleReaction } from '@/integrations/supabase/community.api';
 import { useToast } from '@/components/ui/use-toast';
@@ -20,21 +27,30 @@ const REACTIONS = ['👍', '❤️', '🔥', '🧠', '😂'];
 // CHANGED: Updated props interface
 interface CommentItemProps {
   comment: MessageWithDetails;
-  refreshPost: () => void; // <-- ADDED
   threadId: string;       // <-- ADDED
+  onComment: (body: string, parentMessageId?: number | null) => void;
+  onCommentReaction: (commentId: number, emoji: string) => void;
+  onCommentEdit: (commentId: number, newBody: string) => void;
+  onCommentDelete: (commentId: number) => void;
 }
 
 // CHANGED: Updated component signature
 export const CommentItem: React.FC<CommentItemProps> = ({ 
   comment, 
-  refreshPost, 
-  threadId 
+  threadId,
+  onComment,
+  onCommentReaction,
+  onCommentEdit,
+  onCommentDelete
 }) => {
   // REMOVED: const { refreshPost, threadId } = usePostContext();
   const { user } = useAuth();
   const { toast } = useToast();
   const [isReplying, setIsReplying] = useState(false);
-
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedBody, setEditedBody] = useState(comment.body);
+  const [isSaving, setIsSaving] = useState(false);
+  const canEditOrDelete = user?.id === comment.user_id;
   // ... (rest of the component logic is unchanged) ...
 
   const reactionGroups = useMemo(() => {
@@ -59,14 +75,34 @@ export const CommentItem: React.FC<CommentItemProps> = ({
   const handleReaction = async (emoji: string) => {
     if (!user) return;
     try {
-      await toggleReaction(comment.id, emoji);
-      refreshPost(); // This now calls the prop
+      onCommentReaction(comment.id, emoji);
     } catch (error: any) {
       toast({
         title: 'Error',
         description: error.message,
         variant: 'destructive',
       });
+    }
+  };
+
+  const handleSaveEdit = () => {
+    if (!editedBody.trim() || editedBody === comment.body) {
+      setIsEditing(false);
+      return;
+    }
+    setIsSaving(true);
+    onCommentEdit(comment.id, editedBody);
+
+    // Close editing box after a short delay
+    setTimeout(() => {
+      setIsSaving(false);
+      setIsEditing(false);
+    }, 500);
+  };
+
+  const handleDelete = () => {
+    if (window.confirm('Are you sure you want to delete this comment?')) {
+      onCommentDelete(comment.id);
     }
   };
 
@@ -79,11 +115,53 @@ export const CommentItem: React.FC<CommentItemProps> = ({
         </AvatarFallback>
       </Avatar>
       <div className="flex-1">
-        <div className="bg-muted rounded-lg px-3 py-2">
+        <div className="bg-muted rounded-lg px-3 py-2 relative">
+          {canEditOrDelete && !isEditing && (
+            <div className="absolute top-1 right-1">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-7 w-7">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => setIsEditing(true)}>
+                    <Edit2 className="h-4 w-4 mr-2" />
+                    Edit
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    className="text-destructive focus:text-destructive"
+                    onClick={handleDelete}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          )}
           <p className="font-semibold text-sm">
             {comment.author?.full_name}
           </p>
-          <p className="text-sm whitespace-pre-wrap">{comment.body}</p>
+          {isEditing ? (
+            <div className="space-y-2 mt-2">
+              <Textarea
+                value={editedBody}
+                onChange={(e) => setEditedBody(e.target.value)}
+                rows={3}
+                autoFocus
+              />
+              <div className="flex justify-end gap-2">
+                <Button variant="ghost" size="sm" onClick={() => setIsEditing(false)} disabled={isSaving}>Cancel</Button>
+                <Button size="sm" onClick={handleSaveEdit} disabled={isSaving}>
+                  {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save'}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm whitespace-pre-wrap">{comment.body}</p>
+          )}
+      
           {/* Render comment attachments */}
           {comment.attachments && comment.attachments.length > 0 && (
             <div className="mt-2 space-y-1">
@@ -161,9 +239,9 @@ export const CommentItem: React.FC<CommentItemProps> = ({
             <CommentInput
               threadId={threadId} // This now comes from the prop
               parentMessageId={comment.id}
-              onCommentPosted={() => {
+              onCommentPosted={(body, parentId) => {
+                onComment(body, parentId); // Pass to parent
                 setIsReplying(false);
-                refreshPost(); // This now comes from the prop
               }}
               isReply={true}
             />
