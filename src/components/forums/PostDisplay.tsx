@@ -104,7 +104,6 @@ export const PostDisplay: React.FC<PostDisplayProps> = ({
   const [isReactionLoading, setIsReactionLoading] = useState(false);
   const [popoverOpen, setPopoverOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
-  const [isExpanded, setIsExpanded] = useState(false);
   const [isEditingBody, setIsEditingBody] = useState(false);
   const [editedBody, setEditedBody] = useState(post.body || '');
   const [isSavingBody, setIsSavingBody] = useState(false);
@@ -268,7 +267,6 @@ export const PostDisplay: React.FC<PostDisplayProps> = ({
               </DropdownMenuContent>
             </DropdownMenu>
           )}
-        </div>
 
         {/* Post Title */}
         <h1 className="text-2xl font-bold mb-4">{post.title}</h1>
