@@ -272,7 +272,11 @@ export default function ThreadDetailPage() {
       });
   };
     
-  const handleOptimisticComment = (body: string, files: File[], parentMessageId: number | null = null) => {
+  const handleOptimisticComment = async ( 
+    body: string,
+    files: File[], 
+    parentMessageId: number | null = null
+  ) => {
     if (!user || !profile || !postDetails) return;
     const messageBody = body || (files.length > 0 ? '📎 Attachment' : '');
     // Don't post if everything is empty
