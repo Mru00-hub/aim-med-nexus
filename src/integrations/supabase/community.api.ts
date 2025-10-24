@@ -72,6 +72,27 @@ export type PendingRequest = {
   specialization_name: string | null;
 };
 
+export type AttachmentInput = {
+  file_url: string;
+  file_name: string;
+  file_type: string;
+  file_size_bytes: number;
+};
+
+export type PublicPost = {
+  thread_id: string;
+  title: string;
+  description: string | null;
+  created_at: string;
+  last_activity_at: string;
+  comment_count: number;
+  author_id: string;
+  author_name: string | null;
+  author_avatar: string | null;
+  author_position: string | null;
+  first_message_id: number;
+  total_reaction_count: number;
+};
 
 // =================================================================
 // Rich Mock Data for Logged-Out Users
@@ -243,13 +264,70 @@ export const updateMemberRole = async (membershipId: string, newRole: Enums<'mem
 };
 
 /** Fetches all global public threads using the new DB function. */
-export const getPublicThreads = async (): Promise<ThreadWithDetails[]> => {
+export const getPublicThreads = async (): Promise<PublicPost[]> => {
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return MOCK_PUBLIC_THREADS;
+    if (!session) return MOCK_PUBLIC_THREADS as any; // Keep mock for logged-out
 
-    const { data, error } = await supabase.rpc('get_threads'); 
+    // This now queries our fast, pre-joined VIEW
+    const { data, error } = await supabase
+        .from('public_posts_feed')
+        .select('*')
+        .order('created_at', { ascending: false });
+        
     if (error) throw error;
-    return data;
+    return data || [];
+};
+
+export const getPostDetails = async (threadId: string) => {
+  // 1. Get the main post data from our view
+  const { data: postData, error: postError } = await supabase
+    .from('public_posts_feed')
+    .select('*')
+    .eq('thread_id', threadId)
+    .single();
+
+  if (postError) throw postError;
+  if (!postData) throw new Error("Post not found.");
+
+  // 2. Get attachments for the main post
+  const { data: postAttachments, error: attachmentsError } = await supabase
+    .from('message_attachments')
+    .select('*')
+    .eq('message_id', postData.first_message_id);
+  
+  if (attachmentsError) throw attachmentsError;
+
+  // 3. Get reactions for the main post
+  const { data: postReactions, error: reactionsError } = await supabase
+    .from('message_reactions')
+    .select('reaction_emoji, user_id') // just what we need
+    .eq('message_id', postData.first_message_id);
+
+  if (reactionsError) throw reactionsError;
+
+  // 4. Get all comments (messages EXCEPT the first one)
+  const { data: comments, error: commentsError } = await supabase
+    .from('messages')
+    .select(`
+      *,
+      author:profiles (
+        full_name,
+        profile_picture_url,
+        current_position
+      ),
+      reactions:message_reactions (*),
+      attachments:message_attachments (*)
+    `)
+    .eq('thread_id', threadId)
+    .neq('id', postData.first_message_id) // Exclude the "post" message
+    .order('created_at', { ascending: true });
+
+  if (commentsError) throw commentsError;
+  
+  return {
+    post: { ...postData, attachments: postAttachments || [], reactions: postReactions || [] },
+    comments: (comments || []) as MessageWithDetails[], // Reuse your type
+  };
 };
 
 // --- Space & Thread Creation ---
@@ -437,30 +515,13 @@ export const editMessage = async (messageId: number, newBody: string): Promise<M
 };
 
 /** Adds a reaction to a message. */
-export const addReaction = async (messageId: number, emoji: string): Promise<MessageReaction> => {
-    const session = await getSessionOrThrow();
-    const { data, error } = await supabase.from('message_reactions').insert({
-      message_id: messageId,
-      reaction_emoji: emoji,
-      user_id: session.user.id
-    }).select().single();
-    if (error) throw error;
-    if (!data) {
-        throw new Error("Failed to post message: No data returned.");
-    }
-    return data;
-};
-
-/** Removes a reaction from a message. */
-export const removeReaction = async (messageId: number, emoji: string) => {
-    const session = await getSessionOrThrow();
-    const { error } = await supabase.from('message_reactions').delete().match({
-      message_id: messageId,
-      reaction_emoji: emoji,
-      user_id: session.user.id
+export const toggleReaction = async (messageId: number, emoji: string): Promise<void> => {
+    await getSessionOrThrow();
+    const { error } = await supabase.rpc('toggle_reaction', {
+        p_message_id: messageId,
+        p_reaction_emoji: emoji,
     });
     if (error) throw error;
-    return { success: true };
 };
 
 export const uploadAttachment = async (
@@ -519,6 +580,84 @@ export const uploadAttachment = async (
   }
 
   return newAttachment;
+};
+
+export const uploadFilesForPost = async (
+  files: File[]
+): Promise<AttachmentInput[]> => {
+  const session = await getSessionOrThrow();
+  const userId = session.user.id;
+  const newThreadId = crypto.randomUUID(); // Create a temp UUID for grouping
+
+  const uploadPromises = files.map(async (file) => {
+    // We create a temp path. The final path will be determined by storage policies
+    // This path helps group files before the post is created.
+    const filePath = `public/${userId}/${newThreadId}/${file.name}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('message_attachments')
+      .upload(filePath, file);
+
+    if (uploadError) {
+      console.error("Storage upload error:", uploadError);
+      throw new Error(`Failed to upload file: ${uploadError.message}`);
+    }
+
+    // Get the public URL
+    const { data: { publicUrl } } = supabase.storage
+      .from('message_attachments')
+      .getPublicUrl(filePath);
+
+    if (!publicUrl) {
+      throw new Error("Could not get public URL for the uploaded file.");
+    }
+
+    return {
+      file_url: publicUrl,
+      file_name: file.name,
+      file_type: file.type,
+      file_size_bytes: file.size,
+    };
+  });
+
+  return Promise.all(uploadPromises);
+};
+
+export const createPost = async (payload: {
+  title: string;
+  description: string;
+  attachments?: AttachmentInput[];
+}): Promise<string> => {
+  await getSessionOrThrow();
+  const { data, error } = await supabase.rpc('create_post', {
+    p_title: payload.title,
+    p_description: payload.description,
+    p_attachments: payload.attachments || null,
+  });
+
+  if (error) throw error;
+  return data; // returns the new thread_id
+};
+
+export const updatePost = async (
+  threadId: string,
+  payload: { title: string; description: string }
+): Promise<void> => {
+  await getSessionOrThrow();
+  const { error } = await supabase.rpc('update_post', {
+    p_thread_id: threadId,
+    p_title: payload.title,
+    p_description: payload.description,
+  });
+  if (error) throw error;
+};
+
+export const deletePost = async (threadId: string): Promise<void> => {
+  await getSessionOrThrow();
+  const { error } = await supabase.rpc('delete_post', {
+    p_thread_id: threadId,
+  });
+  if (error) throw error;
 };
 
 // --- Membership Management ---
@@ -649,4 +788,74 @@ export const getThreadSummary = async (threadId: string, limit: number): Promise
 
   const data: SummaryResponse = await response.json();
   return data;
+};
+
+export const toggleFollow = async (userId: string): Promise<void> => {
+  await getSessionOrThrow();
+  const { error } = await supabase.rpc('toggle_follow', {
+    p_followed_id: userId,
+  });
+  if (error) throw error;
+};
+
+export const getProfileDetails = async (userId: string) => {
+  const session = await getSessionOrThrow();
+  const currentUserId = session.user.id;
+
+  // 1. Get profile info
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', userId)
+    .single();
+  
+  if (profileError) throw profileError;
+  if (!profile) throw new Error("Profile not found.");
+
+  // 2. Get their public posts
+  const { data: posts, error: postsError } = await supabase
+    .from('public_posts_feed')
+    .select('*')
+    .eq('author_id', userId)
+    .order('created_at', { ascending: false });
+
+  // 3. Get their created spaces
+  const { data: spaces, error: spacesError } = await supabase
+    .from('spaces')
+    .select('*')
+    .eq('creator_id', userId);
+  
+  // 4. Get follower/following counts
+  const { count: followersCount, error: followersError } = await supabase
+    .from('user_follows')
+    .select('*', { count: 'exact', head: true })
+    .eq('followed_id', userId);
+
+  const { count: followingCount, error: followingError } = await supabase
+    .from('user_follows')
+    .select('*', { count: 'exact', head: true })
+    .eq('follower_id', userId);
+
+  // 5. Check if the *current* user is following this profile
+  const { data: isFollowingData, error: isFollowingError } = await supabase
+    .from('user_follows')
+    .select('*')
+    .eq('follower_id', currentUserId)
+    .eq('followed_id', userId)
+    .maybeSingle(); // .maybeSingle() returns null instead of erroring
+
+  if (postsError || spacesError || followersError || followingError || isFollowingError) {
+    console.error("Error fetching profile details", {
+      postsError, spacesError, followersError, followingError, isFollowingError
+    });
+  }
+
+  return {
+    profile,
+    posts: posts || [],
+    spaces: spaces || [],
+    followers_count: followersCount || 0,
+    following_count: followingCount || 0,
+    is_followed_by_viewer: !!isFollowingData,
+  };
 };
