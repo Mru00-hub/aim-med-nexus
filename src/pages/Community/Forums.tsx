@@ -49,6 +49,7 @@ export default function Forums() {
   const [selectedFilter, setSelectedFilter] = useState<string>('ALL');
   // Add state for optimistic updates
   const [optimisticSpaces, setOptimisticSpaces] = useState<SpaceWithDetails[]>([]);
+  const [optimisticReactions, setOptimisticReactions] = useState<Record<string, number>>({});
 
   // Define the missing functions
   const addOptimisticSpace = (space: SpaceWithDetails) => {
@@ -170,6 +171,42 @@ export default function Forums() {
     }
   };
 
+  const handleOptimisticReaction = async (threadId: string, messageId: number, emoji: string, currentCount: number) => {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+  
+    // Update local state immediately for instant UI feedback
+    setOptimisticReactions(prev => ({
+      ...prev,
+      [threadId]: (prev[threadId] ?? currentCount) + 1
+    }));
+  
+    try {
+      // Call the actual API without awaiting UI update
+      await toggleReaction(messageId, emoji);
+    
+      // Refresh in background to get accurate counts
+      refreshSpaces().then(() => {
+        // Clear the optimistic update after real data loads
+        setOptimisticReactions(prev => {
+          const newState = { ...prev };
+          delete newState[threadId];
+          return newState;
+        });
+      });
+    } catch (error: any) {
+      // Revert optimistic update on error
+      setOptimisticReactions(prev => {
+        const newState = { ...prev };
+        delete newState[threadId];
+        return newState;
+      });
+      toast({ variant: 'destructive', title: 'Error', description: error.message });
+    }
+  };
+  
   const renderSpaceCard = (space: SpaceWithDetails) => {
     const isPrivate = space.join_level === 'INVITE_ONLY';
     const membershipStatus = getMembershipStatus(space.id);
@@ -203,7 +240,7 @@ export default function Forums() {
                   <div className="flex flex-wrap gap-1 mt-1">
                     {/* CHANGED: Added '?' */}
                     {space.moderators?.slice(0, 3).map((mod, index) => (
-                      <Tooltip key={mod.full_name || `mod-${index}`}>
+                      <Tooltip key={`${space.id}-mod-${index}`}>
                         <TooltipTrigger asChild>
                           <span className="inline-block">
                             <Badge variant="outline" className="cursor-default">
@@ -279,7 +316,9 @@ export default function Forums() {
               {/* Stat 1: Reactions */}
               <div className="flex items-center gap-1 font-medium">
                 <ThumbsUp className="h-3 w-3" />
-                <span>{post.total_reaction_count} Reactions</span>
+                <span>
+                  {optimisticReactions[post.thread_id] ?? post.total_reaction_count} Reactions
+                </span>
               </div>
               {/* Stat 2: Comments */}
               <div className="flex items-center gap-1">
