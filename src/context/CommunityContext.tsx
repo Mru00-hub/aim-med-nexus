@@ -6,7 +6,7 @@ import {
     getSpacesWithDetails, 
     getUserSpaces,
     getUserMemberships,
-    getPublicThreads,
+    PublicPost,
     SpaceWithDetails,
     ThreadWithDetails,
     Membership,
@@ -17,11 +17,13 @@ import {
 interface CommunityContextType {
   spaces: SpaceWithDetails[];
   memberships: Membership[];
-  publicThreads: ThreadWithDetails[];
+  publicThreads: PublicPost[];
   isLoadingSpaces: boolean;
   refreshSpaces: () => Promise<void>; // <-- RENAMED for clarity
   updateLocalSpace: (updatedSpace: SpaceWithDetails) => void; // <-- ADDED for optimistic updates
-  updateLocalThread: (updatedThread: Partial<ThreadWithDetails> & { id: string }) => void; 
+  updateLocalPost: (
+    updatedPost: Partial<PublicPost> & { thread_id: string }
+  ) => void;
   getMembershipStatus: (spaceId: string) => Enums<'membership_status'> | null;
   setMemberships: React.Dispatch<React.SetStateAction<Membership[]>>;
   addOptimisticSpace: (space: SpaceWithDetails) => void;
@@ -35,7 +37,7 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
   
   const [spaces, setSpaces] = useState<SpaceWithDetails[]>([]); 
   const [memberships, setMemberships] = useState<Membership[]>([]);
-  const [publicThreads, setPublicThreads] = useState<ThreadWithDetails[]>([]); 
+  const [publicThreads, setPublicThreads] = useState<PublicPost[]>([]);
   const [isLoadingSpaces, setIsLoadingSpaces] = useState(true);
 
   const addOptimisticSpace = useCallback((space: SpaceWithDetails) => {
@@ -69,6 +71,9 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
           ...space,
           creator_full_name: 'Community Member',
           moderators: [],
+          creator_position: null,
+          creator_organization: null,
+          creator_specialization: null,
         }));
 
         setSpaces(mappedMockSpaces);
@@ -98,14 +103,17 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
     );
   }, []); // No dependencies needed as `setSpaces` is stable
 
-  const updateLocalThread = useCallback((updatedThread: Partial<ThreadWithDetails> & { id: string }) => {
-    setPublicThreads(currentThreads =>
-      currentThreads.map(t =>
-        t.id === updatedThread.id ? { ...t, ...updatedThread } : t
-      )
-    );
-  }, []);
-
+  const updateLocalPost = useCallback(
+    (updatedPost: Partial<PublicPost> & { thread_id: string }) => {
+      setPublicThreads((currentThreads) =>
+        currentThreads.map((t) =>
+          t.thread_id === updatedPost.thread_id ? { ...t, ...updatedPost } : t
+        )
+      );
+    },
+    []
+  );
+    
   const getMembershipStatus = useCallback((spaceId: string): Enums<'membership_status'> | null => {
       const membership = memberships.find(m => m.space_id === spaceId);
       return membership ? membership.status : null;
@@ -119,12 +127,12 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
     isLoadingSpaces,
     refreshSpaces, // <-- EXPOSED as refreshSpaces
     updateLocalSpace, // <-- EXPOSED the new function
-    updateLocalThread,
+    updateLocalPost,
     getMembershipStatus,
     setMemberships, 
     addOptimisticSpace,
     removeOptimisticSpace,
-  }), [spaces, memberships, publicThreads, isLoadingSpaces, refreshSpaces, updateLocalSpace, updateLocalThread, getMembershipStatus]);
+  }), [spaces, memberships, publicThreads, isLoadingSpaces, refreshSpaces, updateLocalSpace, updateLocalPost, getMembershipStatus]);
 
   return (
     <CommunityContext.Provider value={contextValue}>
