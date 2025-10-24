@@ -141,8 +141,17 @@ export const getUserSpaces = async (): Promise<Space[]> => {
 
 export const getSpacesWithDetails = async (): Promise<SpaceWithDetails[]> => {
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return [];
-
+    if (!session) {
+        // 🚀 FIX: Return the same mapped mock data your context expects
+        return MOCK_SPACES.map(space => ({
+          ...space,
+          creator_full_name: 'Community Member',
+          moderators: [],
+          creator_position: null,
+          creator_organization: null,
+          creator_specialization: null,
+      }));
+    }
     const { data, error } = await supabase.rpc('get_spaces_with_details');
 
     if (error) {
