@@ -329,7 +329,7 @@ export const PostDisplay: React.FC<PostDisplayProps> = ({
           </Popover>
 
           {/* 2. Comment Button (Unchanged) */}
-          <Button variant="ghost" className="w-full">
+          <Button variant="ghost" className="w-full" >
             <MessageSquare className="h-5 w-5" />
             <span className="ml-2 hidden sm:inline">
               Comment ({post.comment_count})
@@ -337,7 +337,7 @@ export const PostDisplay: React.FC<PostDisplayProps> = ({
           </Button>
 
           {/* 3. Share Button (Unchanged) */}
-          <Button variant="ghost" className="w-full">
+          <Button variant="ghost" className="w-full" onClick={handleShare}>
             <Share2 className="h-5 w-5" />
             <span className="ml-2 hidden sm:inline">Share</span>
           </Button>
