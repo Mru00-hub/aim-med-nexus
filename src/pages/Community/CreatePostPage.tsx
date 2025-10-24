@@ -17,15 +17,21 @@ import AuthGuard from '@/components/AuthGuard';
 // Import our new API functions
 import { createPost, uploadFilesForPost, AttachmentInput } from '@/integrations/supabase/community.api';
 import { useCommunity } from '@/context/CommunityContext';
+import { Document, Page, pdfjs } from 'react-pdf';
+import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
+import 'react-pdf/dist/esm/Page/TextLayer.css';
+pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 const POST_BODY_MAX_LENGTH = 3000;
 // Helper component for file previews
 const FilePreview = ({ file, onRemove }: { file: File, onRemove: () => void }) => {
   const [preview, setPreview] = useState<string | null>(null);
   const isImage = file.type.startsWith('image/');
-
+  const isVideo = file.type.startsWith('video/');
+  const isPdf = file.type === 'application/pdf';
   // --- THIS IS THE FIX ---
   // We must use useEffect to run the file reader only once when the file changes.
   useEffect(() => {
+    let objectUrl: string | null = null;
     if (isImage) {
       const reader = new FileReader();
       reader.onloadend = () => {
@@ -33,23 +39,56 @@ const FilePreview = ({ file, onRemove }: { file: File, onRemove: () => void }) =
       };
       reader.readAsDataURL(file);
 
-      // Cleanup function to revoke the object URL if we were using createObjectUrl
-      return () => {
-        // If you were using URL.createObjectURL(file), you would call
-        // URL.revokeObjectURL(preview) here.
-        // Since we use readAsDataURL, the data is in memory and managed by the hook.
-      };
+      } else if (isVideo) {
+      objectUrl = URL.createObjectURL(file);
+      setPreview(objectUrl);
+    } else if (isPdf) {
+      // For PDFs, we don't set a preview URL.
+      // We will pass the 'file' object directly to the Document component.
+      setPreview(null); // Ensure preview is null
     } else {
-      // If it's not an image, clear any previous preview
       setPreview(null);
     }
-  }, [file, isImage]);
+
+    // Cleanup for video URLs
+    return () => {
+      if (objectUrl) {
+        URL.revokeObjectURL(objectUrl);
+      }
+    };
+  }, [file, isImage, isVideo, isPdf]);
 
   return (
     <div className="relative group w-full overflow-hidden flex items-center p-2 border rounded-md">
       {isImage && preview ? (
         <img src={preview} alt={file.name} className="h-16 w-16 rounded-md object-cover flex-shrink-0" />
+      ) : isVideo && preview ? (
+        // Video preview
+        <video 
+          src={preview} 
+          muted 
+          className="h-16 w-16 rounded-md object-cover flex-shrink-0" 
+        />
+      ) : isPdf ? (
+        // --- PDF PREVIEW BLOCK ---
+        <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-md flex items-center justify-center bg-gray-100">
+          <Document
+            file={file}
+            // Show a simple loading message
+            loading={<Loader2 className="h-4 w-4 animate-spin" />}
+            // Show an error message
+            error={<FileIcon className="h-8 w-8 text-destructive" />}
+            // Hide annotation/text layers for a clean preview
+            renderAnnotationLayer={false}
+            renderTextLayer={false}
+          >
+            {/* We must scale the page down to fit our tiny box */}
+            {/* The default PDF page is ~595px wide. 64/595 = ~0.107 */}
+            <Page pageNumber={1} width={64} />
+          </Document>
+        </div>
       ) : (
+        // Fallback icon
         <FileIcon className="h-16 w-16 text-muted-foreground flex-shrink-0" />
       )}
       <div className="ml-3 overflow-hidden min-w-0">
@@ -73,6 +112,7 @@ const CreatePostForm: React.FC = () => {
   const [body, setBody] = useState('');  // This is the main "body"
   const [files, setFiles] = useState<File[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState<string | null>(null);
   const [error, setError] = useState('');
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -94,41 +134,43 @@ const CreatePostForm: React.FC = () => {
       setError('A title is required.');
       return;
     }
-    
-    // --- CHANGE 2: Enforce body check only if there's no text AND no files ---
     const bodyContent = body.trim();
     if (!bodyContent && files.length === 0) {
       setError('You must include a message body or at least one attachment.');
-      return;
-    }
-    
     setIsLoading(true);
     setError('');
 
     try {
       let attachments: AttachmentInput[] | undefined = undefined;
 
-      // 1. Upload files first, if any
+      // --- 2. UPDATE HANDLESUBMIT ---
       if (files.length > 0) {
+        setUploadStatus('Uploading files...'); // <-- Set status
         toast({ title: "Uploading files..." });
         attachments = await uploadFilesForPost(files);
       }
 
-      // 2. Create the post with the uploaded file info
+      setUploadStatus('Creating post...'); // <-- Set status
       toast({ title: "Creating post..." });
       const newThreadId = await createPost({
           title,
-          // --- CHANGE 3: Send the trimmed body ---
           body: bodyContent, 
           attachments,
       });
       
-      // ... (rest of the success/navigate logic is fine) ...
+      toast({
+        title: "Success!",
+        description: "Your post has been created.",
+      });
+
+      refreshSpaces(); 
+      navigate(`/community/thread/${newThreadId}`);
 
     } catch (err: any) {
-      // ... (error handling is fine) ...
+      // ... (error handling)
     } finally {
       setIsLoading(false);
+      setUploadStatus(null); // <-- Clear status on end
     }
   };
   
