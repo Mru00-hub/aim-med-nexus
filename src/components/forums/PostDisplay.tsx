@@ -201,8 +201,7 @@ export const PostDisplay: React.FC<PostDisplayProps> = ({
                     src={att.file_url}
                     alt={att.file_name}
                     className="rounded-md object-cover w-full h-auto max-h-80 border"
-                  }
-                />
+                  />
                 </a>
               ) : (
                 <a
