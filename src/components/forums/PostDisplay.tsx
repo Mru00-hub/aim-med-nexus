@@ -454,6 +454,7 @@ export const PostDisplay: React.FC<PostDisplayProps> = ({
             <ReactMarkdown
               className={`
                 prose prose-sm dark:prose-invert max-w-none
+                whitespace-pre-wrap
                 ${needsTruncation && !isExpanded ? 'line-clamp-4' : ''}
               `}
             >
@@ -505,6 +506,16 @@ export const PostDisplay: React.FC<PostDisplayProps> = ({
           {/* 3. Link Preview (Rendered) */}
           {linkPreview && (!post.attachments || post.attachments.length === 0) && (
             <div className="relative mt-2 border rounded-lg overflow-hidden">
+              <div className="p-2 text-sm text-muted-foreground bg-accent rounded-t-lg">
+                <a 
+                  href={post.body?.match(URL_REGEX)?.[0]} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="hover:underline text-primary break-all"
+                >
+                  {post.body?.match(URL_REGEX)?.[0]}
+                </a>
+              </div>
               {/* YouTube Player */}
               {linkPreview.type === 'youtube' && (
                 <div className="aspect-video w-full">
