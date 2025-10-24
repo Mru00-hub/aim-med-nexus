@@ -215,7 +215,7 @@ export const CommentItem: React.FC<CommentItemProps> = ({
               Reply
             </button>
           )}
-          <span>{new Date(comment.created_at).toLocaleDateString()}</span>
+          <span>{new Date(comment.created_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</span>
           
           {/* Add Reaction Button */}
           <Popover>
