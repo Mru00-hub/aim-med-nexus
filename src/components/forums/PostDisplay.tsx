@@ -80,6 +80,7 @@ export const PostDisplay: React.FC<PostDisplayProps> = ({
   onTitleUpdate,
   canEdit, // This prop is now available if you need to add an "Edit" button
   threadId, // This prop is now available
+  onCommentClick, 
 }) => {
   // REMOVED: const { post, refreshPost } = usePostContext();
   const { user } = useAuth();
