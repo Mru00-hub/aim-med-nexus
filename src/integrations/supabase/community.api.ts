@@ -377,11 +377,11 @@ export const getThreadsForSpace = async (spaceId: string): Promise<ThreadWithDet
     if (error) throw error;
     return data;
 };
-export const getThreadDetails = async (threadId: string): Promise<(Thread & { spaces: { name: string } | null }) | null> => {
+export const getThreadDetails = async (threadId: string): (Thread & { spaces: { name: string; space_type: string } | null }) | null > => {
     // The query is the same, but the 'threads' table now implicitly includes creator_id
     const { data, error } = await supabase
       .from('threads')
-      .select('*, spaces (name)')
+      .select('*, spaces (name, space_type)') 
       .eq('id', threadId)
       .single();
     if (error) throw error;
