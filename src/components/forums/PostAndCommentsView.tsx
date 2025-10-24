@@ -20,6 +20,7 @@ interface PostAndCommentsViewProps {
   onCommentDelete: (commentId: number) => void;        
   onBodyUpdate: (newBody: string) => void;
   onPostDelete: () => void;
+  onTitleUpdate: (newTitle: string) => void; 
 }
 
 export const PostAndCommentsView: React.FC<PostAndCommentsViewProps> = ({
@@ -33,16 +34,13 @@ export const PostAndCommentsView: React.FC<PostAndCommentsViewProps> = ({
   onCommentEdit,     // <-- ADDED
   onCommentDelete,   // <-- ADDED
   onBodyUpdate,
+  onTitleUpdate,
   onPostDelete, 
 }) => {
   const { post, comments } = postDetails;
 
   return (
     <div className="max-w-3xl mx-auto">
-      {/* Pass data directly as props now.
-        You will need to update your PostDisplay component 
-        to accept these props.
-      */}
       <PostDisplay
         post={post}
         threadId={threadId}
@@ -51,6 +49,7 @@ export const PostAndCommentsView: React.FC<PostAndCommentsViewProps> = ({
         onReaction={onReaction}
         onBodyUpdate={onBodyUpdate}
         onPostDelete={onPostDelete} 
+        onTitleUpdate={onTitleUpdate}
       />
 
       <h2 className="text-xl font-semibold mb-4">
