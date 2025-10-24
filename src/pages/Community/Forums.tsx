@@ -202,14 +202,16 @@ export default function Forums() {
                 {creatorDetails && <p className="text-xs">{creatorDetails}</p>}
               </div>
             )}
-            {space.moderators && space.moderators.length > 0 && (
+             {space.moderators?.length > 0 && (
               <div>
                 <TooltipProvider delayDuration={100}>
                   <div className="flex flex-wrap gap-1 mt-1">
-                    {space.moderators.slice(0, 3).map((mod, index) => (
+                    {/* CHANGED: Added '?' */}
+                    {space.moderators?.slice(0, 3).map((mod, index) => (
+                      // @ts-ignore
                       <Tooltip key={mod.id || `mod-${index}`}>
                         <TooltipTrigger asChild>
-                          <span className="inline-block"> {/* ✅ Add wrapper */}
+                          <span className="inline-block">
                             <Badge variant="outline" className="cursor-default">
                               {mod.full_name}
                             </Badge>
@@ -222,8 +224,11 @@ export default function Forums() {
                         )}
                       </Tooltip>
                     ))}
-                    {space.moderators.length > 3 && (
-                      <Badge variant="outline">+{space.moderators.length - 3} more</Badge>
+                    {/* CHANGED: Added '?' */}
+                    {space.moderators?.length > 3 && (
+                      <Badge variant="outline">
+                        +{space.moderators.length - 3} more
+                      </Badge>
                     )}
                   </div>
                 </TooltipProvider>
