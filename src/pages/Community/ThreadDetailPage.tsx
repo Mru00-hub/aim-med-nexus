@@ -5,7 +5,7 @@ import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { ThreadView } from '@/components/messaging/ThreadView'; // We will put all the logic here
 import AuthGuard from '@/components/AuthGuard'; // Protect this page
-import { getThreadDetails,getPostDetails,updatePost, updateThreadDetails, getViewerRoleForSpace, Thread, Enums, getThreadSummary, SummaryResponse, postMessage, MessageWithDetails, PublicPost,toggleReaction, editMessage, deleteMessage, deletePost} from '@/integrations/supabase/community.api';
+import { getThreadDetails,getPostDetails,updatePost, updateThreadDetails, getViewerRoleForSpace, Thread, Enums, getThreadSummary, SummaryResponse, postMessage, MessageWithDetails, PublicPost,setUserReaction,toggleReaction, editMessage, deleteMessage, deletePost} from '@/integrations/supabase/community.api';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/components/ui/use-toast';
 import { useCommunity } from '@/context/CommunityContext';
@@ -240,7 +240,6 @@ export default function ThreadDetailPage() {
           message_id: currentPost.first_message_id,
           user_id: user.id,
           reaction_emoji: emoji,
-          created_at: new Date().toISOString(),
           id: Math.random(),
         }
       ];
@@ -256,10 +255,24 @@ export default function ThreadDetailPage() {
         message_id: currentPost.first_message_id,
         user_id: user.id,
         reaction_emoji: emoji,
-        created_at: new Date().toISOString(),
         id: Math.random(),
       });
     }
+  };
+
+  const optimisticPost = { ...currentPost, reactions: nextReactions };
+    setPostDetails(prevDetails => prevDetails ? ({
+      ...prevDetails,
+      post: optimisticPost
+    }) : null);
+
+    // 2. Call the real API
+    // CHANGED: Ensure this calls setUserReaction, NOT toggleReaction
+    setUserReaction(currentPost.first_message_id, emoji)
+      .catch((error: any) => {
+        toast({ variant: 'destructive', title: 'Error', description: error.message });
+        fetchDetails(); // Revert
+      });
   };
     
   const handleOptimisticComment = (body: string, parentMessageId: number | null = null) => {
