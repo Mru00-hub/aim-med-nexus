@@ -5,7 +5,7 @@ import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { ThreadView } from '@/components/messaging/ThreadView'; // We will put all the logic here
 import AuthGuard from '@/components/AuthGuard'; // Protect this page
-import { getThreadDetails,getPostDetails,updatePost, updateThreadDetails, getViewerRoleForSpace, Thread, Enums, getThreadSummary, SummaryResponse, MessageWithDetails, PublicPost,toggleReaction} from '@/integrations/supabase/community.api';
+import { getThreadDetails,getPostDetails,updatePost, updateThreadDetails, getViewerRoleForSpace, Thread, Enums, getThreadSummary, SummaryResponse, postMessage, MessageWithDetails, PublicPost,toggleReaction} from '@/integrations/supabase/community.api';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/components/ui/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -274,7 +274,44 @@ export default function ThreadDetailPage() {
         id: Math.random(),
       });
     }
-    
+
+    const handleOptimisticComment = (body: string, parentMessageId: number | null = null) => {
+      if (!user || !profile || !postDetails) return;
+
+      // 1. Create a fake comment for the UI
+      const fakeComment: MessageWithDetails = {
+        id: Math.random(), // Temp ID
+        created_at: new Date().toISOString(),
+        user_id: user.id,
+        thread_id: postDetails.post.thread_id,
+        body: body,
+        parent_message_id: parentMessageId,
+        is_edited: false,
+        author: {
+          full_name: profile.full_name,
+          profile_picture_url: profile.profile_picture_url
+        },
+        reactions: [],
+        attachments: []
+      };
+
+      // 2. Optimistically update the state
+      setPostDetails(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          comments: [...prev.comments, fakeComment]
+        };
+      });
+
+      // 3. Call the real API (fire-and-forget)
+      postMessage(postDetails.post.thread_id, body, parentMessageId)
+        .catch((error: any) => {
+          // 4. On error, revert by fetching real data
+          toast({ variant: 'destructive', title: 'Failed to post', description: error.message });
+          fetchDetails(); // Revert
+        });
+    };
     // 1. Set optimistic state
     const optimisticPost = { ...currentPost, reactions: nextReactions };
     setPostDetails(prevDetails => prevDetails ? ({
@@ -524,7 +561,7 @@ export default function ThreadDetailPage() {
                   postDetails={postDetails}
                   canEdit={canEdit}
                   refresh={fetchDetails}
-                  onReaction={handleOptimisticReaction}
+                  onReaction={handleOptimisticReaction} onComment={handleOptimisticComment}
                 />
               ) : !isPublicPost ? (
                 // --- OLD: Render the Slack-style Chat UI ---
