@@ -13,14 +13,7 @@ interface PostAndCommentsViewProps {
   postDetails: FullPostDetails;
   canEdit: boolean;
   refresh: () => void;
-}
-
-// You will also need to update PostDisplay to accept these props
-interface PostDisplayProps {
-  post: FullPostDetails['post'];
-  threadId: string;
-  canEdit: boolean;
-  refresh: () => void;
+  onReaction: (emoji: string) => void;
 }
 
 export const PostAndCommentsView: React.FC<PostAndCommentsViewProps> = ({
@@ -28,6 +21,7 @@ export const PostAndCommentsView: React.FC<PostAndCommentsViewProps> = ({
   postDetails,
   canEdit,
   refresh,
+  onReaction
 }) => {
   const { post, comments } = postDetails;
 
@@ -47,6 +41,7 @@ export const PostAndCommentsView: React.FC<PostAndCommentsViewProps> = ({
         threadId={threadId}
         canEdit={canEdit}
         refresh={refresh}
+        onReaction={onReaction}
       />
 
       <h2 className="text-xl font-semibold mb-4">
