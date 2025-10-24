@@ -421,7 +421,7 @@ export default function ThreadDetailPage() {
                           <AlertCircle className="h-4 w-4" />
                           <AlertTitle>Error</AlertTitle>
                           <AlertDescription>{summaryError}</AlertDescription>
-                        </SAlert>
+                        </Alert>
                       )}
 
                       {summary && (
