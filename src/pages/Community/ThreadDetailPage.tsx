@@ -1,11 +1,11 @@
 // src/pages/community/ThreadDetailPage.tsx
 import React, { useEffect, useState, useMemo } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { ThreadView } from '@/components/messaging/ThreadView'; // We will put all the logic here
 import AuthGuard from '@/components/AuthGuard'; // Protect this page
-import { getThreadDetails,getPostDetails,updatePost, updateThreadDetails, getViewerRoleForSpace, Thread, Enums, getThreadSummary, SummaryResponse, postMessage, MessageWithDetails, PublicPost,toggleReaction} from '@/integrations/supabase/community.api';
+import { getThreadDetails,getPostDetails,updatePost, updateThreadDetails, getViewerRoleForSpace, Thread, Enums, getThreadSummary, SummaryResponse, postMessage, MessageWithDetails, PublicPost,toggleReaction, editMessage, deletePost} from '@/integrations/supabase/community.api';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/components/ui/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -73,6 +73,7 @@ export default function ThreadDetailPage() {
   const [summaryError, setSummaryError] = useState<string | null>(null);
   const [summaryLimit, setSummaryLimit] = useState<number>(50);
   const [isSummaryOpen, setIsSummaryOpen] = useState(false);
+  const navigate = useNavigate();
 
   const fetchDetails = async () => {
     if (!threadId) return;
@@ -327,6 +328,41 @@ export default function ThreadDetailPage() {
         fetchDetails();
       });
   };
+
+  const handleOptimisticBodyUpdate = (newBody: string) => {
+    if (!postDetails) return;
+
+    // 1. Optimistically update state
+    setPostDetails(prev => prev ? ({
+      ...prev,
+      post: { ...prev.post, body: newBody }
+    }) : null);
+
+    // 2. Call real API
+    editMessage(postDetails.post.first_message_id, newBody)
+      .catch((error: any) => {
+        toast({ variant: 'destructive', title: 'Failed to save', description: error.message });
+        fetchDetails(); // Revert
+      });
+  };
+
+  const handleOptimisticPostDelete = () => {
+    if (!postDetails) return;
+    
+    const threadId = postDetails.post.thread_id;
+    
+    // 1. Show toast and navigate away
+    toast({ title: 'Post deleted' });
+    navigate('/community'); // Go back to main community page
+
+    // 2. Call real API (fire-and-forget)
+    deletePost(threadId)
+      .catch((error: any) => {
+        // User is already gone, just log the error
+        console.error("Failed to delete post:", error);
+        // We could show a global toast here if we had a global context
+      });
+  };
     
   return (
     <AuthGuard>
@@ -563,6 +599,8 @@ export default function ThreadDetailPage() {
                   refresh={fetchDetails}
                   onReaction={handleOptimisticReaction} 
                   onComment={handleOptimisticComment}
+                  onBodyUpdate={handleOptimisticBodyUpdate}
+                  onPostDelete={handleOptimisticPostDelete}
                 />
               ) : !isPublicPost ? (
                 // --- OLD: Render the Slack-style Chat UI ---
