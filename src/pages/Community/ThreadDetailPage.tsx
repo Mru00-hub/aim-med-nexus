@@ -72,6 +72,10 @@ export default function ThreadDetailPage() {
   const [summaryError, setSummaryError] = useState<string | null>(null);
   const [summaryLimit, setSummaryLimit] = useState<number>(50);
   const [isSummaryOpen, setIsSummaryOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedTitle, setEditedTitle] = useState('');
+  const [editedDescription, setEditedDescription] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
   const fetchDetails = async () => {
     if (!threadId) return;
@@ -96,20 +100,18 @@ export default function ThreadDetailPage() {
         spaceType: data.spaces?.space_type || 'PUBLIC',
       };
       setBasicDetails(details);
-      setEditedTitle(details.title);
-      setEditedDescription(details.description || ''); 
-
+      
       // Stage 2: Check if it's a public post
       if (details.spaceType === 'PUBLIC') {
         setIsPublicPost(true);
         // It's a public post, so fetch the full post/comment data
         const fullData = await getPostDetails(threadId);
         setPostDetails(fullData);
-        // Sync edited fields with full data
-        setEditedTitle(fullData.post.title);
       } else {
         // It's a private/forum thread.
         setIsPublicPost(false);
+        setEditedTitle(details.title);
+        setEditedDescription(details.description || '');
       }
     } catch (error: any) {
       console.error('Failed to fetch thread details:', error);
@@ -157,6 +159,42 @@ export default function ThreadDetailPage() {
     if (userRole === 'ADMIN' || userRole === 'MODERATOR') return true;
     return false;
   }, [user, profile, basicDetails, userRole]);
+
+  const handleSaveEdit = async () => {
+    if (!threadId || !basicDetails || !editedTitle.trim()) {
+      toast({ title: 'Title cannot be empty.', variant: 'destructive' });
+      return;
+    }
+
+    // This function should ONLY run for private threads
+    if (isPublicPost) return;
+
+    setIsSaving(true);
+    setIsEditing(false);
+
+    try {
+      // This is the OLD PATH for private threads, which is now correct
+      await updateThreadDetails(threadId, {
+        title: editedTitle,
+        description: editedDescription,
+      });
+      
+      // Optimistically update basic details for the header
+      setBasicDetails((prev) =>
+        prev ? { ...prev, title: editedTitle, description: editedDescription } : null
+      );
+      toast({ title: 'Success!', description: 'Thread updated.' });
+    } catch (error: any) {
+      toast({
+        title: 'Update Failed',
+        description: error.message,
+        variant: 'destructive',
+      });
+      setIsEditing(true); // Re-open form on failure
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const handleGenerateSummary = async () => {
     // ... (This function is unchanged)
@@ -411,6 +449,97 @@ export default function ThreadDetailPage() {
               : 'container-medical' // Full-width for chats
           }`}
         >
+          {!isPublicPost && (
+            <header className="relative">
+              {isLoading ? (
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-1/4" />
+                  <Skeleton className="h-8 w-3/4" />
+                  <Skeleton className="h-4 w-1/2" />
+                </div>
+              ) : basicDetails ? (
+                <>
+                  {canEdit && !isEditing && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="absolute top-0 right-0 h-8 w-8"
+                      onClick={() => setIsEditing(true)}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                  )}
+
+                  {isEditing ? (
+                    <div className="space-y-4 p-4 border rounded-md">
+                      <div>
+                        <label
+                          htmlFor="edit-title"
+                          className="text-sm font-medium text-muted-foreground"
+                        >
+                          Title
+                        </label>
+                        <Input
+                          id="edit-title"
+                          value={editedTitle}
+                          onChange={(e) => setEditedTitle(e.target.value)}
+                          className="text-2xl font-bold h-auto p-0 border-0 shadow-none focus-visible:ring-0"
+                        />
+                      </div>
+                      <div>
+                        <label
+                          htmlFor="edit-description"
+                          className="text-sm font-medium text-muted-foreground"
+                        >
+                          Description (Optional)
+                        </label>
+                        <Textarea
+                          id="edit-description"
+                          value={editedDescription}
+                          onChange={(e) =>
+                            setEditedDescription(e.target.value)
+                          }
+                          placeholder="Add an introduction..."
+                          className="mt-1"
+                        />
+                      </div>
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          variant="ghost"
+                          onClick={() => setIsEditing(false)}
+                          disabled={isSaving}
+                        >
+                          Cancel
+                        </Button>
+                        <Button onClick={handleSaveEdit} disabled={isSaving}>
+                          {isSaving && (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          )}
+                          Save
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <p className="text-sm text-muted-foreground">
+                        {basicDetails.spaceName}
+                      </p>
+                      <h1 className="text-3xl font-bold tracking-tight pr-12">
+                        {basicDetails.title}
+                      </h1>
+                      {basicDetails.description && (
+                        <p className="mt-2 text-lg text-muted-foreground">
+                          {basicDetails.description}
+                        </p>
+                      )}
+                    </>
+                  )}
+                </>
+              ) : (
+                <p>Thread not found.</p>
+              )}
+            </header>
+          )}
           {!isLoading && threadId && !isPublicPost && (
             <div
               className={`my-4 p-4 border rounded-lg bg-card shadow-sm ${
