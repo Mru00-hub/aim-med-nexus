@@ -180,14 +180,14 @@ export default function Forums() {
     const cardContent = (
       <Card className="h-full transition-all duration-300 hover:border-primary/50 hover:shadow-lg flex flex-col">
         <CardHeader>
-          <div className="flex justify-between items-start mb-2">
+          <div className="flex flex-wrap justify-between items-start mb-2 gap-2">
             <Badge variant={space.space_type === 'FORUM' ? 'secondary' : 'outline'}>
               {space.space_type === 'FORUM' ? 'Forum' : 'Community Space'}
             </Badge>
             {isPrivate && <Badge variant="destructive">Private</Badge>}
           </div>
-          <CardTitle className="text-xl">{space.name}</CardTitle>
-          <CardDescription className="text-sm">{space.description}</CardDescription>
+          <CardTitle className="text-lg sm:text-xl">{space.name}</CardTitle>
+          <CardDescription className="text-sm line-clamp-2">{space.description}</CardDescription>
         </CardHeader>
         <CardContent className="p-6 pt-0 flex-grow flex flex-col justify-between">
           <div className="text-xs text-muted-foreground space-y-2">
@@ -229,7 +229,7 @@ export default function Forums() {
               </div>
             )}
           </div>
-          <div className="mt-4 pt-4 border-t flex justify-end items-center">
+          <div className="mt-4 pt-4 border-t flex flex-wrap justify-end items-center gap-2">
             {membershipStatus === 'ACTIVE' ? (
               <Button asChild variant="outline" size="sm">
                 <Link to={`/community/space/${space.id}`}>Go to Space</Link>
