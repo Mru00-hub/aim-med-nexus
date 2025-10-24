@@ -8,6 +8,7 @@ import AuthGuard from '@/components/AuthGuard'; // Protect this page
 import { getThreadDetails,getPostDetails,updatePost, updateThreadDetails, getViewerRoleForSpace, Thread, Enums, getThreadSummary, SummaryResponse, postMessage, MessageWithDetails, PublicPost,toggleReaction, editMessage, deleteMessage, deletePost} from '@/integrations/supabase/community.api';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/components/ui/use-toast';
+import { useCommunity } from '@/context/CommunityContext';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -55,6 +56,8 @@ export default function ThreadDetailPage() {
   const { threadId } = useParams<{ threadId: string }>();
   const { user, profile } = useAuth(); // Get the current user
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const { refreshSpaces } = useCommunity(); 
   const [basicDetails, setBasicDetails] =
     useState<BasicThreadDetails | null>(null);
   const [postDetails, setPostDetails] =
@@ -64,10 +67,6 @@ export default function ThreadDetailPage() {
   const [userRole, setUserRole] = useState<Enums<'membership_role'> | null>(
     null
   );
-  const [isEditing, setIsEditing] = useState(false);
-  const [editedTitle, setEditedTitle] = useState('');
-  const [editedDescription, setEditedDescription] = useState(''); 
-  const [isSaving, setIsSaving] = useState(false);
   const [summary, setSummary] = useState<SummaryResponse | null>(null);
   const [isSummarizing, setIsSummarizing] = useState(false);
   const [summaryError, setSummaryError] = useState<string | null>(null);
@@ -159,57 +158,6 @@ export default function ThreadDetailPage() {
     if (userRole === 'ADMIN' || userRole === 'MODERATOR') return true;
     return false;
   }, [user, profile, basicDetails, userRole]);
-
-  const handleSaveEdit = async () => {
-    if (!threadId || !basicDetails || !editedTitle.trim()) {
-      toast({ title: 'Title cannot be empty.', variant: 'destructive' });
-      return;
-    }
-
-    setIsSaving(true);
-    setIsEditing(false);
-
-    try {
-      if (isPublicPost) {
-        // --- NEW PATH for Public Posts ---
-        await updatePost(threadId, {
-          title: editedTitle,
-        });
-        // Optimistically update the UI
-        setPostDetails((prev) =>
-          prev
-            ? {
-                ...prev,
-                post: {
-                  ...prev.post,
-                  title: editedTitle,
-                },
-              }
-            : null
-        );
-      } else {
-        // --- OLD PATH for private threads ---
-        await updateThreadDetails(threadId, {
-          title: editedTitle,
-          description: editedDescription,
-        });
-      }
-      // Optimistically update basic details for the header
-      setBasicDetails((prev) =>
-        prev ? { ...prev, title: editedTitle, description: !isPublicPost ? editedDescription : prev.description  } : null
-      );
-      toast({ title: 'Success!', description: 'Thread updated.' });
-    } catch (error: any) {
-      toast({
-        title: 'Update Failed',
-        description: error.message,
-        variant: 'destructive',
-      });
-      setIsEditing(true); // Re-open form on failure
-    } finally {
-      setIsSaving(false);
-    }
-  };
 
   const handleGenerateSummary = async () => {
     // ... (This function is unchanged)
@@ -314,9 +262,13 @@ export default function ThreadDetailPage() {
 
     // 3. Call the real API (unchanged)
     postMessage(postDetails.post.thread_id, body, parentMessageId)
+      .then(() => {
+        // ADDED: Refresh the main threads list on success
+        refreshSpaces(); 
+      })
       .catch((error: any) => {
         toast({ variant: 'destructive', title: 'Failed to post', description: error.message });
-        fetchDetails(); // Revert on error
+        fetchDetails(); // Revert
       });
   };
 
@@ -386,9 +338,13 @@ export default function ThreadDetailPage() {
 
     // 3. Call real API (unchanged)
     deleteMessage(commentId)
+      .then(() => {
+        // ADDED: Refresh the main threads list on success
+        refreshSpaces();
+      })
       .catch(err => {
         toast({ variant: 'destructive', title: 'Delete failed', description: err.message });
-        fetchDetails(); // Revert on error
+        fetchDetails(); // Revert
       });
   };
 
@@ -405,6 +361,23 @@ export default function ThreadDetailPage() {
     editMessage(postDetails.post.first_message_id, newBody)
       .catch((error: any) => {
         toast({ variant: 'destructive', title: 'Failed to save', description: error.message });
+        fetchDetails(); // Revert
+      });
+  };
+
+  const handleOptimisticTitleUpdate = (newTitle: string) => {
+    if (!postDetails) return;
+
+    // 1. Optimistically update state
+    setPostDetails(prev => prev ? ({
+      ...prev,
+      post: { ...prev.post, title: newTitle }
+    }) : null);
+
+    // 2. Call real API
+    updatePost(postDetails.post.thread_id, { title: newTitle })
+      .catch((error: any) => {
+        toast({ variant: 'destructive', title: 'Failed to save title', description: error.message });
         fetchDetails(); // Revert
       });
   };
@@ -439,105 +412,6 @@ export default function ThreadDetailPage() {
               : 'container-medical' // Full-width for chats
           }`}
         >
-          {/* --- HEADER --- */}
-          <header
-            className={`relative ${
-              isPublicPost ? 'max-w-3xl mx-auto' : ''
-            }`}
-          >
-            {isLoading ? (
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-1/4" />
-                <Skeleton className="h-8 w-3/4" />
-                <Skeleton className="h-4 w-1/2" />
-              </div>
-            ) : basicDetails ? (
-              <>
-                {canEdit && !isEditing && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="absolute top-0 right-0 h-8 w-8"
-                    onClick={() => setIsEditing(true)}
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                )}
-
-                {isEditing ? (
-                  <div className="space-y-4 p-4 border rounded-md">
-                    <div>
-                      <label
-                        htmlFor="edit-title"
-                        className="text-sm font-medium text-muted-foreground"
-                      >
-                        Title
-                      </label>
-                      <Input
-                        id="edit-title"
-                        value={editedTitle}
-                        onChange={(e) => setEditedTitle(e.target.value)}
-                        className="text-2xl font-bold h-auto p-0 border-0 shadow-none focus-visible:ring-0"
-                      />
-                    </div>
-                    {!isPublicPost && (
-                      <div>
-                        <label
-                          htmlFor="edit-description"
-                          className="text-sm font-medium text-muted-foreground"
-                        >
-                          Description (Optional)
-                        </label>
-                        <Textarea
-                          id="edit-description"
-                          value={editedDescription}
-                          onChange={(e) =>
-                            setEditedDescription(e.target.value)
-                          }
-                          placeholder="Add an introduction..."
-                          className="mt-1"
-                        />
-                      </div>
-                    )}
-                    <div className="flex justify-end gap-2">
-                      <Button
-                        variant="ghost"
-                        onClick={() => setIsEditing(false)}
-                        disabled={isSaving}
-                      >
-                        Cancel
-                      </Button>
-                      <Button onClick={handleSaveEdit} disabled={isSaving}>
-                        {isSaving && (
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        )}
-                        Save
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    <p className="text-sm text-muted-foreground">
-                      {basicDetails.spaceName}
-                    </p>
-                    <h1 className="text-3xl font-bold tracking-tight pr-12">
-                      {basicDetails.title}
-                    </h1>
-                    {basicDetails.description && !isPublicPost && (
-                      <p className="mt-2 text-lg text-muted-foreground">
-                        {basicDetails.description}
-                      </p>
-                    )}
-                  </>
-                )}
-              </>
-            ) : (
-              <p>Thread not found.</p>
-            )}
-          </header>
-
-          {/* --- AI SUMMARY (NOW CONDITIONAL) --- */}
-          {/* CHANGED: Added !isPublicPost condition */}
           {!isLoading && threadId && !isPublicPost && (
             <div
               className={`my-4 p-4 border rounded-lg bg-card shadow-sm ${
@@ -664,6 +538,7 @@ export default function ThreadDetailPage() {
                   onComment={handleOptimisticComment}
                   onBodyUpdate={handleOptimisticBodyUpdate}
                   onPostDelete={handleOptimisticPostDelete}
+                  onTitleUpdate={handleOptimisticTitleUpdate}
                   onCommentReaction={handleOptimisticCommentReaction} // <-- ADDED
                   onCommentEdit={handleOptimisticCommentEdit}       // <-- ADDED
                   onCommentDelete={handleOptimisticCommentDelete}
