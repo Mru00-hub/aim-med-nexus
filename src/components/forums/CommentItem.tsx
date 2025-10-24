@@ -174,7 +174,7 @@ export const CommentItem: React.FC<CommentItemProps> = ({
           {/* Render comment attachments */}
           {comment.attachments && comment.attachments.length > 0 && (
             <div className="mt-2 space-y-1">
-              {comment.attachments.map((att) => (
+              {comment.attachments.map((att) => {
                 const isImage = att.file_type?.startsWith('image/');
                 if (isImage) {
                   return (
@@ -206,7 +206,7 @@ export const CommentItem: React.FC<CommentItemProps> = ({
                     <span className="truncate">{att.file_name}</span>
                   </a>
                 );
-              ))}
+              })}
             </div>
           )}
           
