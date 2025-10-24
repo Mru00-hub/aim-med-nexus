@@ -7,6 +7,12 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+// CHANGED: Added Popover components and Smile icon
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import {
   UserPlus,
   ThumbsUp,
@@ -14,12 +20,15 @@ import {
   Share2,
   File as FileIcon,
   Loader2,
-  Pencil,
+  Smile, // CHANGED: Added Smile
 } from 'lucide-react';
 import {
   toggleFollow,
   toggleReaction,
 } from '@/integrations/supabase/community.api';
+
+// CHANGED: Define our standard list of reactions
+const REACTIONS = ['👍', '❤️', '🔥', '🧠', '😂'];
 
 // Helper to group reactions
 const groupReactions = (reactions: any[]) => {
@@ -37,13 +46,15 @@ const groupReactions = (reactions: any[]) => {
 };
 
 export const PostDisplay = () => {
-  const { post, refreshPost, canEdit } = usePostContext();
+  const { post, refreshPost } = usePostContext();
   const { user } = useAuth();
   const { toast } = useToast();
 
   const [isFollowing, setIsFollowing] = useState(false);
   const [isFollowLoading, setIsFollowLoading] = useState(false);
   const [isReactionLoading, setIsReactionLoading] = useState(false);
+  // State to control the reaction popover
+  const [popoverOpen, setPopoverOpen] = useState(false);
 
   // Note: You'd fetch the user's actual follow status on load
   // useEffect(() => { ... fetch follow status ... }, [post.author_id, user.id]);
@@ -89,6 +100,7 @@ export const PostDisplay = () => {
       });
     } finally {
       setIsReactionLoading(false);
+      // We don't close the popover, allowing multiple reactions
     }
   };
 
@@ -98,10 +110,16 @@ export const PostDisplay = () => {
     return reactionGroups[emoji].users.includes(user.id);
   };
 
+  // Check if the user has *any* reaction
+  const userHasAnyReaction = useMemo(() => {
+    if (!user) return false;
+    return REACTIONS.some((emoji) => userHasReacted(emoji));
+  }, [user, reactionGroups]);
+
   return (
     <Card className="mb-6 shadow-md">
       <CardContent className="p-4 sm:p-6">
-        {/* Author Info & Follow Button */}
+        {/* Author Info & Follow Button (Unchanged) */}
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-4">
           <Link
             to={`/profile/${post.author_id}`}
@@ -146,10 +164,10 @@ export const PostDisplay = () => {
           )}
         </div>
 
-        {/* Post Body (Handled by the parent page's Edit logic) */}
-        {/* The title and description are rendered in ThreadDetailPage.tsx */}
+        {/* Post Body (Unchanged) */}
+        {/* ... */}
 
-        {/* Attachments */}
+        {/* Attachments (Unchanged) */}
         {post.attachments && post.attachments.length > 0 && (
           <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2">
             {post.attachments.map((att: any) =>
@@ -182,7 +200,7 @@ export const PostDisplay = () => {
           </div>
         )}
 
-        {/* Reaction Counts */}
+        {/* Reaction Counts (Unchanged) */}
         {Object.keys(reactionGroups).length > 0 && (
           <div className="mt-4 pt-4 border-t flex flex-wrap gap-2">
             {Object.entries(reactionGroups).map(([emoji, { count }]) => (
@@ -198,27 +216,50 @@ export const PostDisplay = () => {
           </div>
         )}
 
-        {/* Action Bar */}
+        {/* --- CHANGED: ACTION BAR --- */}
         <div className="mt-4 pt-4 border-t grid grid-cols-3 gap-2">
-          <Button
-            variant={userHasReacted('👍') ? 'secondary' : 'ghost'}
-            className="w-full"
-            onClick={() => handleReaction('👍')}
-            disabled={isReactionLoading || !user}
-          >
-            {isReactionLoading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <ThumbsUp className="h-5 w-5" />
-            )}
-            <span className="ml-2 hidden sm:inline">Like</span>
-          </Button>
+          {/* 1. React Button with Popover */}
+          <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant={userHasAnyReaction ? 'secondary' : 'ghost'}
+                className="w-full"
+                disabled={isReactionLoading || !user}
+              >
+                {isReactionLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Smile className="h-5 w-5" />
+                )}
+                <span className="ml-2 hidden sm:inline">React</span>
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-1">
+              <div className="flex gap-1">
+                {REACTIONS.map((emoji) => (
+                  <Button
+                    key={emoji}
+                    variant={userHasReacted(emoji) ? 'default' : 'ghost'}
+                    size="icon"
+                    className="h-8 w-8 text-lg rounded-full"
+                    onClick={() => handleReaction(emoji)}
+                  >
+                    {emoji}
+                  </Button>
+                ))}
+              </div>
+            </PopoverContent>
+          </Popover>
+
+          {/* 2. Comment Button (Unchanged) */}
           <Button variant="ghost" className="w-full">
             <MessageSquare className="h-5 w-5" />
             <span className="ml-2 hidden sm:inline">
               Comment ({post.comment_count})
             </span>
           </Button>
+
+          {/* 3. Share Button (Unchanged) */}
           <Button variant="ghost" className="w-full">
             <Share2 className="h-5 w-5" />
             <span className="ml-2 hidden sm:inline">Share</span>
@@ -228,4 +269,3 @@ export const PostDisplay = () => {
     </Card>
   );
 };
-
