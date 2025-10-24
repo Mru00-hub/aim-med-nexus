@@ -1,12 +1,11 @@
 // src/pages/community/ThreadDetailPage.tsx
-
+import React, { useEffect, useState, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { ThreadView } from '@/components/messaging/ThreadView'; // We will put all the logic here
 import AuthGuard from '@/components/AuthGuard'; // Protect this page
-import React, { useEffect, useState, useMemo } from 'react';
-import { getThreadDetails, updateThreadDetails, getViewerRoleForSpace, Thread, Enums, getThreadSummary, SummaryResponse } from '@/integrations/supabase/community.api';
+import { getThreadDetails,getPostDetails,updatePost, updateThreadDetails, getViewerRoleForSpace, Thread, Enums, getThreadSummary, SummaryResponse, MessageWithDetails, PublicPost,} from '@/integrations/supabase/community.api';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/components/ui/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -36,39 +35,35 @@ import {
   AlertTitle,
 } from "@/components/ui/alert";
 import '@/styles/page-reset.css';
+import { PostAndCommentsView } from '@/components/forums/PostAndCommentsView';
 
-type ThreadDetails = {
+type BasicThreadDetails = {
   title: string;
   description: string | null;
   spaceName: string | null;
   spaceId: string | null;
   creator_id: string;
+  spaceType: 'PUBLIC' | 'FORUM' | 'COMMUNITY_SPACE' | null;
+};
+
+type FullPostDetails = {
+  post: PublicPost & { attachments: any[]; reactions: any[] };
+  comments: MessageWithDetails[];
 };
 
 export default function ThreadDetailPage() {
   const { threadId } = useParams<{ threadId: string }>();
   const { user, profile } = useAuth(); // Get the current user
   const { toast } = useToast();
-  useEffect(() => {
-    // Reset scroll position
-    window.scrollTo(0, 0);
-    
-    // Force layout recalculation
-    document.body.style.overflow = 'auto';
-    
-    // Clean up any lingering modals/dialogs
-    const dialogs = document.querySelectorAll('[role="dialog"]');
-    dialogs.forEach(dialog => {
-      if (!dialog.closest('[data-state="open"]')) {
-        dialog.remove();
-      }
-    });
-  }, [threadId]);
-  
-  const [threadDetails, setThreadDetails] = useState<ThreadDetails | null>(null);
+  const [basicDetails, setBasicDetails] =
+    useState<BasicThreadDetails | null>(null);
+  const [postDetails, setPostDetails] =
+    useState<FullPostDetails | null>(null);
+  const [isPublicPost, setIsPublicPost] = useState(false); // The "chameleon" switch
   const [isLoading, setIsLoading] = useState(true);
-  const [userRole, setUserRole] = useState<Enums<'membership_role'> | null>(null);
-
+  const [userRole, setUserRole] = useState<Enums<'membership_role'> | null>(
+    null
+  );
   const [isEditing, setIsEditing] = useState(false);
   const [editedTitle, setEditedTitle] = useState('');
   const [editedDescription, setEditedDescription] = useState('');
@@ -82,159 +77,196 @@ export default function ThreadDetailPage() {
   const fetchDetails = async () => {
     if (!threadId) return;
     setIsLoading(true);
+    setBasicDetails(null);
+    setPostDetails(null);
+    setIsPublicPost(false);
+
     try {
+      // Stage 1: Fetch basic details to know what *kind* of thread this is
+      // @ts-ignore
       const data = await getThreadDetails(threadId);
-      if (data) {
-        const details = {
-          title: data.title,
-          description: data.description,
-          spaceName: data.spaces?.name || 'Public Thread',
-          spaceId: data.space_id, 
-          creator_id: data.creator_id,
-        };
-        setThreadDetails(details);
-        // Pre-fill the edit form fields
-        setEditedTitle(details.title);
-        setEditedDescription(details.decription || '');
+      if (!data) throw new Error('Thread not found.');
+
+      const details: BasicThreadDetails = {
+        title: data.title,
+        description: data.description,
+        spaceName: data.spaces?.name || 'Public Post',
+        spaceId: data.space_id,
+        creator_id: data.creator_id,
+        // @ts-ignore
+        spaceType: data.spaces?.space_type || 'PUBLIC',
+      };
+      setBasicDetails(details);
+      setEditedTitle(details.title);
+      setEditedDescription(details.description || '');
+
+      // Stage 2: Check if it's a public post
+      if (details.spaceType === 'PUBLIC') {
+        setIsPublicPost(true);
+        // It's a public post, so fetch the full post/comment data
+        const fullData = await getPostDetails(threadId);
+        setPostDetails(fullData);
+        // Sync edited fields with full data
+        setEditedTitle(fullData.post.title);
+        setEditedDescription(fullData.post.description || '');
+      } else {
+        // It's a private/forum thread.
+        setIsPublicPost(false);
       }
-    } catch (error) {
-      console.error("Failed to fetch thread details:", error);
+    } catch (error: any) {
+      console.error('Failed to fetch thread details:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Could not load thread.',
+        variant: 'destructive',
+      });
     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
+    window.scrollTo(0, 0);
+    document.body.style.overflow = 'auto';
     fetchDetails();
   }, [threadId]);
 
   useEffect(() => {
+    // Fetch user role (only for private spaces)
     const fetchUserRole = async () => {
-      // We only fetch if the thread is in a space
-      if (threadDetails?.spaceId && user) {
+      if (basicDetails?.spaceId && user) {
         try {
-          const role = await getViewerRoleForSpace(threadDetails.spaceId);
+          const role = await getViewerRoleForSpace(basicDetails.spaceId);
           setUserRole(role);
         } catch (error) {
-          console.error("Failed to fetch user role:", error);
-          setUserRole(null); // Reset on error
+          console.error('Failed to fetch user role:', error);
+          setUserRole(null);
         }
       }
     };
-
-    if (threadDetails) {
+    if (basicDetails && !isPublicPost) {
       fetchUserRole();
     }
-  }, [threadDetails, user]);
+  }, [basicDetails, user, isPublicPost]);
+
+  const canEdit = useMemo(() => {
+    if (!user || !basicDetails) return false;
+    if (user.id === basicDetails.creator_id) return true;
+    if (profile?.user_role === 'ADMIN' || profile?.user_role === 'MODERATOR')
+      return true;
+    if (userRole === 'ADMIN' || userRole === 'MODERATOR') return true;
+    return false;
+  }, [user, profile, basicDetails, userRole]);
 
   const handleSaveEdit = async () => {
-    if (!threadId || !threadDetails || !editedTitle.trim()) {
-        toast({ title: "Title cannot be empty.", variant: "destructive" });
-        return;
+    if (!threadId || !basicDetails || !editedTitle.trim()) {
+      toast({ title: 'Title cannot be empty.', variant: 'destructive' });
+      return;
     }
-    const originalDetails = { ...threadDetails };
-    const optimisticDetails: ThreadDetails = {
-        ...threadDetails,
-        title: editedTitle,
-        description: editedDescription,
-    };
-    setThreadDetails(optimisticDetails);
-    setIsEditing(false); // Close the edit form right away
-    setIsSaving(true);  
+
+    setIsSaving(true);
+    setIsEditing(false);
+
     try {
-        await updateThreadDetails(threadId, {
-            title: editedTitle,
-            description: editedDescription,
+      if (isPublicPost) {
+        // --- NEW PATH for Public Posts ---
+        await updatePost(threadId, {
+          title: editedTitle,
+          description: editedDescription,
         });
-        toast({ title: "Success!", description: "Thread updated." });
+        // Optimistically update the UI
+        setPostDetails((prev) =>
+          prev
+            ? {
+                ...prev,
+                post: {
+                  ...prev.post,
+                  title: editedTitle,
+                  description: editedDescription,
+                },
+              }
+            : null
+        );
+      } else {
+        // --- OLD PATH for private threads ---
+        await updateThreadDetails(threadId, {
+          title: editedTitle,
+          description: editedDescription,
+        });
+      }
+      // Optimistically update basic details for the header
+      setBasicDetails((prev) =>
+        prev ? { ...prev, title: editedTitle, description: editedDescription } : null
+      );
+      toast({ title: 'Success!', description: 'Thread updated.' });
     } catch (error: any) {
-        toast({ title: "Update Failed", description: error.message, variant: "destructive" });
-        setThreadDetails(originalDetails);
-        setIsEditing(true); // Re-open the form so the user can fix the issue or retry
+      toast({
+        title: 'Update Failed',
+        description: error.message,
+        variant: 'destructive',
+      });
+      setIsEditing(true); // Re-open form on failure
     } finally {
-        setIsSaving(false);
+      setIsSaving(false);
     }
   };
 
-  const canEdit = useMemo(() => {
-    if (!user || !threadDetails) return false;
-
-    // 1. User is the creator
-    if (user.id === threadDetails.creator_id) {
-      return true;
-    }
-
-    // 2. User is a "global" admin/mod (from their profile)
-    //    This is the fix for public threads.
-    if (profile?.user_role === 'ADMIN' || profile?.user_role === 'MODERATOR') {
-      return true;
-    }
-
-    // 3. User is a space-specific Admin/Mod (from state)
-    //    This will be 'null' for public threads, which is fine.
-    if (userRole === 'ADMIN' || userRole === 'MODERATOR') {
-      return true;
-    }
-    
-    return false;
-  }, [user, profile, threadDetails, userRole]); 
-  
   const handleGenerateSummary = async () => {
+    // ... (This function is unchanged)
     if (!threadId) return;
-
     setIsSummarizing(true);
     setSummary(null);
     setSummaryError(null);
-    
     try {
       const result = await getThreadSummary(threadId, summaryLimit);
       setSummary(result);
     } catch (error: any) {
-      // Log the full error to the console for easier debugging
       console.error("Failed to generate summary:", error);
-
       let errorMessage = "An unknown error occurred.";
-
-      // Check for the nested error message from your AppError
+      // @ts-ignore
       if (error.context && error.context.error) {
-        // This is a common structure for Supabase FunctionsHttpError
+         // @ts-ignore
         errorMessage = error.context.error;
-      } else if (error.data && error.data.error) {
-        // Another possible structure
-        errorMessage = error.data.error;
-      } else if (error.error) {
-        // If the error object *is* your JSON response
-        errorMessage = error.error;
       } else if (error.message) {
-        // Fallback to the standard error message
         errorMessage = error.message;
       }
-
       setSummaryError(errorMessage);
     } finally {
       setIsSummarizing(false);
     }
   };
-  
+
   return (
     <AuthGuard>
-      <div className="flex flex-col h-screen bg-background">
+      <div className="flex flex-col min-h-screen bg-background">
         <Header />
-        <main className="container-medical flex-1 py-4">
-          <header>
+        {/* Mobile-first container: wide for chats, centered for posts */}
+        <main
+          className={`flex-1 py-4 ${
+            isPublicPost
+              ? 'container mx-auto px-4' // Centered for posts
+              : 'container-medical' // Full-width for chats
+          }`}
+        >
+          {/* --- HEADER --- */}
+          <header
+            className={`relative ${
+              isPublicPost ? 'max-w-3xl mx-auto' : ''
+            }`}
+          >
             {isLoading ? (
               <div className="space-y-2">
                 <Skeleton className="h-4 w-1/4" />
                 <Skeleton className="h-8 w-3/4" />
                 <Skeleton className="h-4 w-1/2" />
               </div>
-            ) : threadDetails ? (
+            ) : basicDetails ? (
               <>
                 {canEdit && !isEditing && (
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="absolute top-4 right-4 h-8 w-8" // Positioned for better layout
+                    className="absolute top-0 right-0 h-8 w-8"
                     onClick={() => setIsEditing(true)}
                   >
                     <Pencil className="h-4 w-4" />
@@ -242,31 +274,66 @@ export default function ThreadDetailPage() {
                 )}
 
                 {isEditing ? (
-                  // --- EDITING VIEW ---
-                  <div className="space-y-4">
-                     <div>
-                        <label htmlFor="edit-title" className="text-sm font-medium text-muted-foreground">Title</label>
-                        <Input id="edit-title" value={editedTitle} onChange={(e) => setEditedTitle(e.target.value)} className="text-2xl font-bold h-auto p-0 border-0 shadow-none focus-visible:ring-0" />
-                     </div>
-                     <div>
-                        <label htmlFor="edit-description" className="text-sm font-medium text-muted-foreground">Description (Optional)</label>
-                        <Textarea id="edit-description" value={editedDescription} onChange={(e) => setEditedDescription(e.target.value)} placeholder="Add an introduction..." className="mt-1" />
-                     </div>
-                     <div className="flex justify-end gap-2">
-                        <Button variant="ghost" onClick={() => setIsEditing(false)} disabled={isSaving}>Cancel</Button>
-                        <Button onClick={handleSaveEdit} disabled={isSaving}>
-                            {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Save
-                        </Button>
-                     </div>
+                  <div className="space-y-4 p-4 border rounded-md">
+                    <div>
+                      <label
+                        htmlFor="edit-title"
+                        className="text-sm font-medium text-muted-foreground"
+                      >
+                        Title
+                      </label>
+                      <Input
+                        id="edit-title"
+                        value={editedTitle}
+                        onChange={(e) => setEditedTitle(e.target.value)}
+                        className="text-2xl font-bold h-auto p-0 border-0 shadow-none focus-visible:ring-0"
+                      />
+                    </div>
+                    <div>
+                      <label
+                        htmlFor="edit-description"
+                        className="text-sm font-medium text-muted-foreground"
+                      >
+                        Description (Optional)
+                      </label>
+                      <Textarea
+                        id="edit-description"
+                        value={editedDescription}
+                        onChange={(e) =>
+                          setEditedDescription(e.target.value)
+                        }
+                        placeholder="Add an introduction..."
+                        className="mt-1"
+                      />
+                    </div>
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        variant="ghost"
+                        onClick={() => setIsEditing(false)}
+                        disabled={isSaving}
+                      >
+                        Cancel
+                      </Button>
+                      <Button onClick={handleSaveEdit} disabled={isSaving}>
+                        {isSaving && (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        )}
+                        Save
+                      </Button>
+                    </div>
                   </div>
                 ) : (
-                  // --- DISPLAY VIEW ---
                   <>
-                    <p className="text-sm text-muted-foreground">{threadDetails.spaceName}</p>
-                    <h1 className="text-3xl font-bold tracking-tight pr-12">{threadDetails.title}</h1> {/* Added padding-right */}
-                    {threadDetails.description && (
-                      <p className="mt-2 text-lg text-muted-foreground">{threadDetails.description}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {basicDetails.spaceName}
+                    </p>
+                    <h1 className="text-3xl font-bold tracking-tight pr-12">
+                      {basicDetails.title}
+                    </h1>
+                    {basicDetails.description && (
+                      <p className="mt-2 text-lg text-muted-foreground">
+                        {basicDetails.description}
+                      </p>
                     )}
                   </>
                 )}
@@ -275,9 +342,16 @@ export default function ThreadDetailPage() {
               <p>Thread not found.</p>
             )}
           </header>
-          {!isLoading && threadId && (
-            <div className="my-4 p-4 border rounded-lg bg-card shadow-sm">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+
+          {/* --- AI SUMMARY (NOW CONDITIONAL) --- */}
+          {/* CHANGED: Added !isPublicPost condition */}
+          {!isLoading && threadId && !isPublicPost && (
+            <div
+              className={`my-4 p-4 border rounded-lg bg-card shadow-sm ${
+                isPublicPost ? 'max-w-3xl mx-auto' : ''
+              }`}
+            >
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                 <div className="mb-2 sm:mb-0">
                   <h3 className="text-lg font-semibold">AI Thread Summary</h3>
                   <p className="text-sm text-muted-foreground">
@@ -301,9 +375,12 @@ export default function ThreadDetailPage() {
                         <SelectItem value="100">Last 100 Messages</SelectItem>
                       </SelectContent>
                     </Select>
-                    
+
                     <DialogTrigger asChild>
-                      <Button onClick={handleGenerateSummary} disabled={isSummarizing}>
+                      <Button
+                        onClick={handleGenerateSummary}
+                        disabled={isSummarizing}
+                      >
                         {isSummarizing ? (
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         ) : (
@@ -313,7 +390,7 @@ export default function ThreadDetailPage() {
                       </Button>
                     </DialogTrigger>
                   </div>
-
+                  
                   <DialogContent className="sm:max-w-[600px]">
                     <DialogHeader>
                       <DialogTitle>Thread Summary</DialogTitle>
@@ -322,10 +399,10 @@ export default function ThreadDetailPage() {
                           ? `Generating a summary from the last ${summaryLimit} messages...`
                           : summary
                           ? `Based on ${summary.message_count} messages (up to ${summaryLimit} analyzed).`
-                          : "Your summary will appear here."}
+                          : 'Your summary will appear here.'}
                       </DialogDescription>
                     </DialogHeader>
-                    
+
                     <div className="my-4">
                       {isSummarizing && (
                         <div className="space-y-2 flex flex-col items-center">
@@ -338,27 +415,34 @@ export default function ThreadDetailPage() {
                           <Skeleton className="h-4 w-3/4" />
                         </div>
                       )}
-                      
+
                       {summaryError && (
                         <Alert variant="destructive">
-                          <AlertCircle className="h-4 w-4" /> 
+                          <AlertCircle className="h-4 w-4" />
                           <AlertTitle>Error</AlertTitle>
                           <AlertDescription>{summaryError}</AlertDescription>
-                        </Alert>
+                        </SAlert>
                       )}
 
                       {summary && (
-                        // Using prose for nice text formatting, max-h for scrolling
                         <div className="prose prose-sm dark:prose-invert max-h-[50vh] overflow-y-auto rounded-md border p-4">
-                          <p>{summary.ai_summary.split('\n').map((line, i) => (
-                            <React.Fragment key={i}>{line}<br/></React.Fragment>
-                          ))}</p>
+                          <p>
+                            {summary.ai_summary.split('\n').map((line, i) => (
+                              <React.Fragment key={i}>
+                                {line}
+                                <br />
+                              </React.Fragment>
+                            ))}
+                          </p>
                         </div>
                       )}
                     </div>
 
                     <DialogFooter>
-                      <Button variant="outline" onClick={() => setIsSummaryOpen(false)}>
+                      <Button
+                        variant="outline"
+                        onClick={() => setIsSummaryOpen(false)}
+                      >
                         Close
                       </Button>
                     </DialogFooter>
@@ -367,22 +451,36 @@ export default function ThreadDetailPage() {
               </div>
             </div>
           )}
-          
-          <div className="flex-1 mt-4 min-h-0"> {/* Added margin-top */}
+
+          {/* --- THE CHAMELEON SWITCH --- */}
+          <div className="flex-1 mt-4 min-h-0">
             {isLoading ? (
-              // Show skeleton while main thread details are loading
-              <div className="space-y-4 p-4">
+              <div className="space-y-4 p-4 max-w-3xl mx-auto">
+                <Skeleton className="h-24 w-full" />
                 <Skeleton className="h-16 w-3/4" />
-                <Skeleton className="h-16 w-2/3 ml-auto" />
               </div>
-            ) : threadId ? (
-              <ThreadView 
-                threadId={threadId} 
-                // Pass the spaceId (it's okay if it's null for public threads)
-                spaceId={threadDetails?.spaceId || null} 
-                // Pass the final moderation permission you already calculated
-                canModerate={canEdit} 
-              />
+            ) : threadId && basicDetails ? (
+              isPublicPost && postDetails ? (
+                // --- NEW: Render the Post & Comment UI ---
+                <PostAndCommentsView
+                  threadId={threadId}
+                  postDetails={postDetails}
+                  canEdit={canEdit}
+                  refresh={fetchDetails}
+                />
+              ) : !isPublicPost ? (
+                // --- OLD: Render the Slack-style Chat UI ---
+                <ThreadView
+                  threadId={threadId}
+                  spaceId={basicDetails.spaceId || null}
+                  canModerate={canEdit}
+                />
+              ) : (
+                // Loading state for post details
+                <div className="space-y-4 p-4 max-w-3xl mx-auto">
+                  <Skeleton className="h-24 w-full" />
+                </div>
+              )
             ) : (
               <p>Thread ID not found.</p>
             )}
@@ -392,4 +490,4 @@ export default function ThreadDetailPage() {
       </div>
     </AuthGuard>
   );
-};
+}
