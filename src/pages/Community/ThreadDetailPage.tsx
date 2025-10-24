@@ -258,17 +258,14 @@ export default function ThreadDetailPage() {
         id: Math.random(),
       });
     }
-  };
-
-  const optimisticPost = { ...currentPost, reactions: nextReactions };
+    
+    const optimisticPost = { ...currentPost, reactions: nextReactions };
     setPostDetails(prevDetails => prevDetails ? ({
       ...prevDetails,
       post: optimisticPost
     }) : null);
 
-    // 2. Call the real API
-    // CHANGED: Ensure this calls setUserReaction, NOT toggleReaction
-    setUserReaction(currentPost.first_message_id, emoji)
+    toggleReaction(currentPost.first_message_id, emoji)
       .catch((error: any) => {
         toast({ variant: 'destructive', title: 'Error', description: error.message });
         fetchDetails(); // Revert
@@ -705,5 +702,5 @@ export default function ThreadDetailPage() {
       </div>
       <Footer />
     </AuthGuard>
-);
-
+  );
+}
