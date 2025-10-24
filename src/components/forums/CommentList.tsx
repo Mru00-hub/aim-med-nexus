@@ -2,14 +2,22 @@ import React, { useMemo } from 'react';
 import { MessageWithDetails } from '@/integrations/supabase/community.api';
 import { CommentItem } from './CommentItem';
 
+// 1. ADD refreshPost and threadId to the props
 interface CommentListProps {
   comments: MessageWithDetails[];
+  refreshPost: () => void;
+  threadId: string;
 }
 
 // Define the shape of a comment node in the tree
 type CommentNode = MessageWithDetails & { children: CommentNode[] };
 
-export const CommentList: React.FC<CommentListProps> = ({ comments }) => {
+// 2. ACCEPT the new props here
+export const CommentList: React.FC<CommentListProps> = ({ 
+  comments, 
+  refreshPost, 
+  threadId 
+}) => {
   // This builds the nested tree
   const commentTree = useMemo(() => {
     const map: { [key: number]: CommentNode } = {};
@@ -36,7 +44,12 @@ export const CommentList: React.FC<CommentListProps> = ({ comments }) => {
       <div className="space-y-4">
         {commentList.map((comment) => (
           <div key={comment.id}>
-            <CommentItem comment={comment} />
+            {/* 3. PASS the props down to CommentItem */}
+            <CommentItem 
+              comment={comment} 
+              refreshPost={refreshPost} 
+              threadId={threadId} 
+            />
             {comment.children.length > 0 && (
               // This is the mobile-first nesting
               // On small screens, ml-4 is enough. On larger, ml-8.
@@ -52,4 +65,3 @@ export const CommentList: React.FC<CommentListProps> = ({ comments }) => {
 
   return renderComments(commentTree);
 };
-
