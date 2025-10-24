@@ -10,8 +10,6 @@ import {
     MessageWithDetails, 
     MessageAttachment,
     editMessage,
-    addReaction,
-    removeReaction,
 } from '@/integrations/supabase/community.api'; 
 import { Reply, Trash2, Pencil, Paperclip, SmilePlus } from 'lucide-react';
 
