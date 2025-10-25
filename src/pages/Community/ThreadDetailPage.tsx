@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Pencil, Loader2, Sparkles, AlertCircle} from 'lucide-react';
+import { useCommunity } from '@/context/CommunityContext';
 import {
   Dialog,
   DialogContent,
@@ -76,6 +77,7 @@ export default function ThreadDetailPage() {
   const [editedTitle, setEditedTitle] = useState('');
   const [editedDescription, setEditedDescription] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const { refreshSpaces, updateLocalPost } = useCommunity();
 
   const fetchDetails = async () => {
     if (!threadId) return;
@@ -265,6 +267,15 @@ export default function ThreadDetailPage() {
       post: optimisticPost
     }) : null);
 
+    if (updateLocalPost && threadId) {
+      const newReactionCount = nextReactions.length;
+      updateLocalPost({
+        thread_id: threadId,
+        total_reaction_count: newReactionCount,
+        // You can also add user_reaction here if your SQL provides it
+      });
+    }
+
     toggleReaction(currentPost.first_message_id, emoji)
       .catch((error: any) => {
         toast({ variant: 'destructive', title: 'Error', description: error.message });
@@ -314,6 +325,13 @@ export default function ThreadDetailPage() {
         comments: [...prev.comments, fakeComment]
       };
     });
+
+    if (updateLocalPost && threadId && postDetails) {
+      updateLocalPost({
+        thread_id: threadId,
+        comment_count: postDetails.post.comment_count + 1,
+      });
+    }
 
     try {
       // Step 4a: Post the message
@@ -408,6 +426,13 @@ export default function ThreadDetailPage() {
       },
       comments: newComments 
     }) : null);
+
+    if (updateLocalPost && threadId && postDetails) {
+      updateLocalPost({
+        thread_id: threadId,
+        comment_count: Math.max(0, postDetails.post.comment_count - 1),
+      });
+    }
 
     // 3. Call real API (unchanged)
     deleteMessage(commentId)
