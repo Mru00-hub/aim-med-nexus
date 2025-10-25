@@ -6,10 +6,8 @@ import {
     getSpacesWithDetails, 
     getUserSpaces,
     getUserMemberships,
-    getPublicThreads,
     PublicPost,
     SpaceWithDetails,
-    ThreadWithDetails,
     Membership,
     Enums,
 } from '@/integrations/supabase/community.api';
@@ -19,7 +17,6 @@ import { supabase } from '@/integrations/supabase/client';
 interface CommunityContextType {
   spaces: SpaceWithDetails[];
   memberships: Membership[];
-  publicThreads: PublicPost[];
   isLoadingSpaces: boolean;
   refreshSpaces: () => Promise<void>; // <-- RENAMED for clarity
   updateLocalSpace: (updatedSpace: SpaceWithDetails) => void; // <-- ADDED for optimistic updates
@@ -39,7 +36,6 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
   
   const [spaces, setSpaces] = useState<SpaceWithDetails[]>([]); 
   const [memberships, setMemberships] = useState<Membership[]>([]);
-  const [publicThreads, setPublicThreads] = useState<PublicPost[]>([]);
   const [isLoadingSpaces, setIsLoadingSpaces] = useState(true);
 
   const addOptimisticSpace = useCallback((space: SpaceWithDetails) => {
@@ -60,16 +56,9 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
       // These functions will return mock data if the user is logged out.
       const { data: { session } } = await supabase.auth.getSession();      
       console.log('Current session status:', session ? 'ACTIVE' : 'NULL');
-      const [spacesData, publicThreadsData] = await Promise.all([
-        getSpacesWithDetails(),
-        getPublicThreads(),
-      ]);
-
+      const spacesData = await getSpacesWithDetails();
       console.log('Fetched spaces count:', spacesData?.length);
-      console.log('Fetched threads count:', publicThreadsData?.length);
-
       setSpaces(spacesData || []);
-      setPublicThreads(publicThreadsData || []);
 
       // 2. *Only* fetch memberships if the user is actually logged in.
       if (session) {
@@ -88,7 +77,6 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
       console.error('--- REFRESH SPACES FAILED ---', error.message);
       setSpaces([]);
       setMemberships([]);
-      setPublicThreads([]);
     } finally {
       setIsLoadingSpaces(false);
       console.log('--- refreshSpaces END ---');
@@ -128,16 +116,14 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
   const contextValue = useMemo(() => ({
     spaces,
     memberships,
-    publicThreads, 
     isLoadingSpaces,
     refreshSpaces, // <-- EXPOSED as refreshSpaces
     updateLocalSpace, // <-- EXPOSED the new function
-    updateLocalPost,
     getMembershipStatus,
     setMemberships, 
     addOptimisticSpace,
     removeOptimisticSpace,
-  }), [spaces, memberships, publicThreads, isLoadingSpaces, refreshSpaces, updateLocalSpace, updateLocalPost, getMembershipStatus]);
+  }), [spaces, memberships, isLoadingSpaces, refreshSpaces, updateLocalSpace, getMembershipStatus]);
 
   return (
     <CommunityContext.Provider value={contextValue}>
