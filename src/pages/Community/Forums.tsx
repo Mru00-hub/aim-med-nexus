@@ -1,6 +1,6 @@
 // src/pages/community/Forums.tsx
 
-import React, { useState, useMemo, useEffect} from 'react';
+import React, { useState, useMemo, useEffect, useCallback} from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Search, Plus, MessageSquare, ThumbsUp , UserPlus, Check, Loader2, Smile, Users } from 'lucide-react';
+import { Search, Plus, MessageSquare, ThumbsUp , UserPlus, Check, Loader2, Smile, Users, FileText} from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from '@/components/ui/use-toast';
 import { useCommunity } from '@/context/CommunityContext';
@@ -34,8 +34,10 @@ import {
   joinSpaceAsMember,
   toggleFollow,
   toggleReaction,
+  getPublicThreads,
 } from '@/integrations/supabase/community.api';
-
+import { PostFeedCard } from '@/components/forums/PostFeedCard';
+const POSTS_PER_PAGE = 4;
 const REACTIONS = ['👍', '❤️', '🔥', '🧠', '😂'];
 
 export default function Forums() {
@@ -46,7 +48,7 @@ export default function Forums() {
   const { 
     spaces, 
     publicThreads, 
-    isLoadingSpaces: loading, 
+    isLoadingSpaces: loadingSpaces,
     refreshSpaces, 
     getMembershipStatus,
     setMemberships, 
@@ -61,6 +63,12 @@ export default function Forums() {
   const [optimisticReactions, setOptimisticReactions] = useState<Record<string, number>>({});
   const [followingStatus, setFollowingStatus] = useState<Record<string, boolean>>({});
   const [isFollowLoading, setIsFollowLoading] = useState<Record<string, boolean>>({});
+  const [posts, setPosts] = useState<PublicPost[]>([]);
+  const [isLoadingPosts, setIsLoadingPosts] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMorePosts, setHasMorePosts] = useState(true);
+  
   useEffect(() => {
     // When the profile loads, initialize the followingStatus state
     if (profile && profile.following) {
@@ -103,16 +111,38 @@ export default function Forums() {
       });
   }, [spaces, optimisticSpaces, searchQuery, selectedFilter]);
 
+  const loadPosts = useCallback(async (page: number) => {
+    if (page === 1) setIsLoadingPosts(true);
+    else setIsLoadingMore(true);
+
+    try {
+      const newPosts = await getPublicThreads({ page, limit: POSTS_PER_PAGE });
+      
+      setPosts(prev => page === 1 ? newPosts : [...prev, ...newPosts]);
+      setHasMorePosts(newPosts.length === POSTS_PER_PAGE);
+      setCurrentPage(page);
+
+    } catch (error: any) {
+      toast({ title: 'Error loading posts', description: error.message, variant: 'destructive' });
+    } finally {
+      if (page === 1) setIsLoadingPosts(false);
+      else setIsLoadingMore(false);
+    }
+  }, [toast]);
+
+  useEffect(() => {
+    loadPosts(1);
+  }, [loadPosts]);
+
   const filteredPublicThreads = useMemo(() => {
-    const threadsToFilter = publicThreads || []; // 🚀 SIMPLIFIED
-    return threadsToFilter.filter(thread => {
+    return posts.filter(thread => {
       const searchLower = threadSearchQuery.toLowerCase();
       return (
         (thread.title || '').toLowerCase().includes(searchLower) ||
         (thread.author_name || '').toLowerCase().includes(searchLower) 
       );
     });
-  }, [publicThreads, threadSearchQuery, user]);
+  }, [posts, threadSearchQuery]);
 
   const handleCreateSpace = async (data: {
     name: string;
@@ -194,29 +224,32 @@ export default function Forums() {
     }
   };
 
-  const handleOptimisticReaction = async (e: React.MouseEvent, post: PublicPost, emoji: string) => {
-    e.preventDefault(); e.stopPropagation(); // Stop navigation
+  const handleOptimisticReaction = useCallback(async (
+    postId: string, 
+    firstMessageId: number,
+    currentReactionCount: number
+  ) => {
     if (!user) { navigate('/login'); return; }
-  
-    // Optimistic update
+
+    // Use a functional update for optimistic state
     setOptimisticReactions(prev => ({
       ...prev,
-      [post.thread_id]: (prev[post.thread_id] ?? post.total_reaction_count) + 1
+      [postId]: currentReactionCount + 1
     }));
   
     try {
-      await toggleReaction(post.first_message_id, emoji);
-      // Background refresh to sync
-      refreshSpaces(); 
+      await toggleReaction(firstMessageId, '👍'); // Using '👍' as default, same as old logic
+      // Note: We don't need to refresh all posts, just this one.
+      // For now, the optimistic state is enough.
     } catch (error: any) {
       // Revert on error
       setOptimisticReactions(prev => ({
         ...prev,
-        [post.thread_id]: post.total_reaction_count // Revert to original count
+        [postId]: currentReactionCount // Revert to original
       }));
       toast({ variant: 'destructive', title: 'Error', description: error.message });
     }
-  };
+  }, [user, navigate, toast]);
 
   const handleFollow = async (e: React.MouseEvent, post: PublicPost) => {
     e.preventDefault(); e.stopPropagation(); // Stop navigation
@@ -360,105 +393,6 @@ export default function Forums() {
       </div>
     );
   };
-  
-  const renderPublicPostCard = (post: PublicPost) => {
-    // Get loading/following status for this specific post's author
-    const isLoading = isFollowLoading[post.author_id];
-    const isFollowing = !!followingStatus[post.author_id];
-
-    return (
-      <Card key={post.thread_id} className="transition-all duration-300 hover:border-primary/50 hover:shadow-lg">
-        <CardContent className="p-6">
-          {/* Link for the top part */}
-          <Link to={user ? `/community/thread/${post.thread_id}` : '/login'} className="block">
-            <h3 className="font-semibold text-lg mb-2">{post.title}</h3>
-            <div className="flex flex-col gap-3 text-xs text-muted-foreground">
-              {/* Author Info */}
-              <div>
-                <span className="font-medium text-foreground">{post.author_name}</span>
-                {post.author_position && <p className="text-xs">{post.author_position}</p>}
-              </div>
-              {/* Stats */}
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-                {/* Stat 1: Reactions */}
-                <div className="flex items-center gap-1 font-medium">
-                  <ThumbsUp className="h-3 w-3" />
-                  <span>
-                    {optimisticReactions[post.thread_id] ?? post.total_reaction_count} Reactions
-                  </span>
-                </div>
-                {/* Stat 2: Comments */}
-                <div className="flex items-center gap-1">
-                  <MessageSquare className="h-3 w-3" />
-                  <span>{post.comment_count} comments</span>
-                </div>
-                {/* Stat 3: Last Activity */}
-                <span className="flex items-center">
-                  Last activity: {new Date(post.last_activity_at).toLocaleDateString()}
-                </span>
-              </div>
-            </div>
-          </Link>
-          
-          {/* --- NEW ACTION BAR --- */}
-          {user && (
-            <div className="mt-4 pt-4 border-t flex items-center gap-2">
-              {/* Follow Button */}
-              {user.id !== post.author_id && (
-                <Button
-                  variant={isFollowing ? 'secondary' : 'outline'}
-                  size="sm"
-                  onClick={(e) => handleFollow(e, post)}
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  ) : isFollowing ? (
-                    <Check className="h-4 w-4 mr-2" />
-                  ) : (
-                    <UserPlus className="h-4 w-4 mr-2" />
-                  )}
-                  {isFollowing ? 'Following' : 'Follow'}
-                </Button>
-              )}
-              
-              {/* Reaction Button (Popover) */}
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="ghost" size="sm" onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
-                    <Smile className="h-4 w-4 mr-2" /> React
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-1">
-                  <div className="flex gap-1">
-                    {REACTIONS.map((emoji) => (
-                      <Button
-                        key={emoji}
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-lg rounded-full"
-                        onClick={(e) => handleOptimisticReaction(e, post, emoji)}
-                      >
-                        {emoji}
-                      </Button>
-                    ))}
-                  </div>
-                </PopoverContent>
-              </Popover>
-              
-              {/* Comment Button (as a link) */}
-              <Button variant="ghost" size="sm" asChild>
-                <Link to={user ? `/community/thread/${post.thread_id}` : '/login'}>
-                  <MessageSquare className="h-4 w-4 mr-2" />
-                  {post.comment_count}
-                </Link>
-              </Button>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    );
-  };
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -505,7 +439,7 @@ export default function Forums() {
               <Plus className="h-4 w-4 mr-2" /> Create Space
             </Button>
           </div>
-          {loading ? (
+          {loadingSpaces ? (
             <p className="text-center text-muted-foreground py-4">Loading spaces...</p>
           ) : filteredSpaces.length === 0 ? (
             <p className="text-center text-muted-foreground py-4">No spaces match your criteria.</p>
@@ -535,16 +469,44 @@ export default function Forums() {
               className="pl-10" 
             />
           </div>
-          {loading ? (
-            <p className="text-center text-muted-foreground py-4">Loading posts...</p>
+          
+          {isLoadingPosts ? (
+            <div className="space-y-4">
+              <Skeleton className="h-24 w-full" />
+              <Skeleton className="h-24 w-full" />
+            </div>
           ) : filteredPublicThreads.length === 0 ? (
             <p className="text-center text-muted-foreground py-4">No public posts match your search.</p>
           ) : (
             <div className="space-y-4">
-              {/* CHANGED: Calls the new render function */}
-              {filteredPublicThreads.map(renderPublicPostCard)}
+              {filteredPublicThreads.map(post => (
+                <PostFeedCard 
+                  key={post.thread_id} 
+                  post={post} 
+                  onReaction={handleOptimisticReaction}
+                  optimisticReactionCount={optimisticReactions[post.thread_id]}
+                />
+              ))}
             </div>
           )}
+
+          {/* --- 12. ADD "Show More" Button --- */}
+          <div className="mt-6 text-center">
+            {hasMorePosts && !isLoadingPosts && (
+              <Button
+                variant="outline"
+                onClick={() => loadPosts(currentPage + 1)}
+                disabled={isLoadingMore}
+              >
+                {isLoadingMore && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {isLoadingMore ? 'Loading...' : 'Show More Posts'}
+              </Button>
+            )}
+            {!hasMorePosts && posts.length > POSTS_PER_PAGE && (
+              <p className="text-sm text-muted-foreground">You've reached the end.</p>
+            )}
+          </div>
+
         </section>
       </main>
       <Footer />
