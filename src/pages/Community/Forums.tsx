@@ -37,6 +37,8 @@ import {
   getPublicThreads,
 } from '@/integrations/supabase/community.api';
 import { PostFeedCard } from '@/components/forums/PostFeedCard';
+import { SpaceCard } from '@/components/forums/SpaceCard';
+import { Skeleton } from '@/components/ui/skeleton';
 const POSTS_PER_PAGE = 4;
 const REACTIONS = ['👍', '❤️', '🔥', '🧠', '😂'];
 
@@ -52,6 +54,8 @@ export default function Forums() {
     refreshSpaces, 
     getMembershipStatus,
     setMemberships, 
+    addOptimisticSpace, 
+    removeOptimisticSpace,
   } = useCommunity();
 
   const [showSpaceCreator, setShowSpaceCreator] = useState(false);
@@ -59,7 +63,7 @@ export default function Forums() {
   const [threadSearchQuery, setThreadSearchQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState<string>('ALL');
   // Add state for optimistic updates
-  const [optimisticSpaces, setOptimisticSpaces] = useState<SpaceWithDetails[]>([]);
+  
   const [optimisticReactions, setOptimisticReactions] = useState<Record<string, number>>({});
   const [followingStatus, setFollowingStatus] = useState<Record<string, boolean>>({});
   const [isFollowLoading, setIsFollowLoading] = useState<Record<string, boolean>>({});
@@ -93,15 +97,9 @@ export default function Forums() {
   };
 
   const filteredSpaces = useMemo(() => {
-    const spacesToFilter = spaces || []; // 🚀 SIMPLIFIED
-    // Combine real spaces with optimistic ones
-    const allSpaces = [...spacesToFilter, ...optimisticSpaces];
-    return allSpaces
+    return (spaces || [])
       .filter(space => space.space_type !== 'PUBLIC')
-      .filter(space => {
-        if (selectedFilter === 'ALL') return true;
-        return space.space_type === selectedFilter;
-      })
+      .filter(space => selectedFilter === 'ALL' || space.space_type === selectedFilter)
       .filter(space => {
         const searchLower = searchQuery.toLowerCase();
         return (
@@ -109,7 +107,7 @@ export default function Forums() {
           (space.description && space.description.toLowerCase().includes(searchLower))
         );
       });
-  }, [spaces, optimisticSpaces, searchQuery, selectedFilter]);
+  }, [spaces, searchQuery, selectedFilter]);
 
   const loadPosts = useCallback(async (page: number) => {
     if (page === 1) setIsLoadingPosts(true);
@@ -171,43 +169,32 @@ export default function Forums() {
     setShowSpaceCreator(false);
     
     try {
-      await createSpace({
-        name: data.name,
-        description: data.description,
-        space_type: data.space_type,
-        join_level: data.join_level,
-      });
-      removeOptimisticSpace(tempId);
+      await createSpace(data);
+      removeOptimisticSpace(tempId); // Use context
       await refreshSpaces(); 
       toast({ title: 'Success!', description: `The space "${data.name}" has been created.` });
     } catch (error: any) {
       toast({ variant: 'destructive', title: 'Creation Failed', description: error.message });
-      removeOptimisticSpace(tempId);
+      removeOptimisticSpace(tempId); // Use context
     } 
   };
-
-  const handleJoin = async (e: React.MouseEvent, space: SpaceWithDetails) => {
-    e.preventDefault();
-    e.stopPropagation();
+  
+  const handleJoin = async (space: SpaceWithDetails) => {
     if (!user) {
       navigate('/login');
       return;
     }
-
     toast({ title: 'Processing...', description: `Requesting to join ${space.name}.` });
     try {
-      const isOpenJoin = space.join_level === 'OPEN';
-      
-      if (isOpenJoin) {
+      if (space.join_level === 'OPEN') {
         await joinSpaceAsMember(space.id);
         toast({ title: 'Success!', description: `You have joined ${space.name}.` });
         await refreshSpaces();
       } else { 
         await requestToJoinSpace(space.id);
         toast({ title: 'Request Sent', description: `Your request to join ${space.name} is pending approval.` });
-        
-        setMemberships(prevMemberships => [
-          ...prevMemberships,
+        setMemberships(prev => [
+          ...prev,
           {
             space_id: space.id,
             user_id: user.id,
@@ -227,172 +214,42 @@ export default function Forums() {
   const handleOptimisticReaction = useCallback(async (
     postId: string, 
     firstMessageId: number,
-    currentReactionCount: number
+    emoji: string
   ) => {
     if (!user) { navigate('/login'); return; }
 
-    // Use a functional update for optimistic state
-    setOptimisticReactions(prev => ({
-      ...prev,
-      [postId]: currentReactionCount + 1
-    }));
+    setOptimisticReactions(prev => {
+      const currentCount = prev[postId] ?? posts.find(p => p.thread_id === postId)?.total_reaction_count ?? 0;
+      return { ...prev, [postId]: currentCount + 1 };
+    });
   
     try {
-      await toggleReaction(firstMessageId, '👍'); // Using '👍' as default, same as old logic
-      // Note: We don't need to refresh all posts, just this one.
-      // For now, the optimistic state is enough.
+      await toggleReaction(firstMessageId, emoji);
     } catch (error: any) {
-      // Revert on error
-      setOptimisticReactions(prev => ({
-        ...prev,
-        [postId]: currentReactionCount // Revert to original
-      }));
       toast({ variant: 'destructive', title: 'Error', description: error.message });
+      setOptimisticReactions(prev => {
+        const originalCount = posts.find(p => p.thread_id === postId)?.total_reaction_count ?? 0;
+        return { ...prev, [postId]: originalCount };
+      });
     }
-  }, [user, navigate, toast]);
+  }, [user, navigate, toast, posts]);
 
-  const handleFollow = async (e: React.MouseEvent, post: PublicPost) => {
-    e.preventDefault(); e.stopPropagation(); // Stop navigation
+  const handleFollow = useCallback(async (authorId: string) => {
     if (!user) { navigate('/login'); return; }
     
-    const authorId = post.author_id;
     setIsFollowLoading(prev => ({ ...prev, [authorId]: true }));
     
     try {
       await toggleFollow(authorId);
       const newFollowingState = !followingStatus[authorId];
       setFollowingStatus(prev => ({ ...prev, [authorId]: newFollowingState }));
-      
-      toast({
-        title: newFollowingState ? 'Followed' : 'Unfollowed',
-        description: newFollowingState
-          ? `You are now following ${post.author_name}.`
-          : `You are no longer following ${post.author_name}.`,
-      });
       refreshProfile(); 
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     } finally {
       setIsFollowLoading(prev => ({ ...prev, [authorId]: false }));
     }
-  };
-  
-  const renderSpaceCard = (space: SpaceWithDetails) => {
-    const isPrivate = space.join_level === 'INVITE_ONLY';
-    const membershipStatus = getMembershipStatus(space.id);
-    const creatorDetails = [space.creator_position, space.creator_organization]
-      .filter(Boolean)
-      .join(' @ ');
-
-    const cardContent = (
-      <Card className="h-full transition-all duration-300 hover:border-primary/50 hover:shadow-lg flex flex-col">
-        <CardHeader>
-          <div className="flex flex-wrap justify-between items-start mb-2 gap-2">
-            <Badge variant={space.space_type === 'FORUM' ? 'secondary' : 'outline'}>
-              {space.space_type === 'FORUM' ? 'Forum' : 'Community Space'}
-            </Badge>
-            {isPrivate && <Badge variant="destructive">Private</Badge>}
-          </div>
-          <CardTitle className="text-lg sm:text-xl">{space.name}</CardTitle>
-          <CardDescription className="text-sm line-clamp-2">{space.description}</CardDescription>
-        </CardHeader>
-        <CardContent className="p-6 pt-0 flex-grow flex flex-col justify-between">
-          <div className="text-xs text-muted-foreground space-y-2">
-            {space.creator_full_name && (
-              <div>
-                <p>Created by: <span className="font-semibold text-foreground">{space.creator_full_name}</span></p>
-                {creatorDetails && <p className="text-xs">{creatorDetails}</p>}
-              </div>
-            )}
-             {space.moderators?.length > 0 && (
-              <div>
-                <TooltipProvider delayDuration={100}>
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    {/* CHANGED: Added '?' */}
-                    {space.moderators?.slice(0, 3).map((mod, index) => (
-                      <Tooltip key={`${space.id}-mod-${index}`}>
-                        <TooltipTrigger asChild>
-                          <span className="inline-block">
-                            <Badge variant="outline" className="cursor-default">
-                              {mod.full_name}
-                            </Badge>
-                          </span>
-                        </TooltipTrigger>
-                        {mod.specialization && (
-                          <TooltipContent>
-                            <p>{mod.specialization}</p>
-                          </TooltipContent>
-                        )}
-                      </Tooltip>
-                    ))}
-                    {/* CHANGED: Added '?' */}
-                    {space.moderators?.length > 3 && (
-                      <Badge variant="outline">
-                        +{space.moderators.length - 3} more
-                      </Badge>
-                    )}
-                  </div>
-                </TooltipProvider>
-              </div>   
-            )}
-          </div>
-          <div className="mt-4 flex items-center gap-4 text-sm text-muted-foreground">
-            <TooltipProvider delayDuration={100}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className="flex items-center gap-1.5">
-                    <MessageSquare className="h-4 w-4" />
-                    <span className="font-medium text-foreground">{space.thread_count}</span>
-                    <span>{space.thread_count === 1 ? 'Post' : 'Posts'}</span>
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{space.thread_count} {space.thread_count === 1 ? 'post' : 'posts'} in this space</p>
-                </TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className="flex items-center gap-1.5">
-                    <Users className="h-4 w-4" />
-                    <span className="font-medium text-foreground">{space.member_count}</span>
-                    <span>{space.member_count === 1 ? 'Member' : 'Members'}</span>
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{space.member_count} {space.member_count === 1 ? 'member' : 'members'} in this space</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
-          <div className="mt-4 pt-4 border-t flex flex-wrap justify-end items-center gap-2">
-            {membershipStatus === 'ACTIVE' ? (
-              <Button asChild variant="outline" size="sm">
-                <Link to={`/community/space/${space.id}`}>Go to Space</Link>
-              </Button>
-            ) : membershipStatus === 'PENDING' ? (
-              <Button variant="secondary" size="sm" disabled>
-                Requested
-              </Button>
-            ) : (
-              <Button variant="default" size="sm" onClick={(e) => handleJoin(e, space)}>
-                {isPrivate ? 'Request to Join' : 'Join'}
-              </Button>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-    );
-
-    return (
-      <div 
-        key={space.id} 
-        className="cursor-pointer" 
-        onClick={() => membershipStatus === 'ACTIVE' && navigate(`/community/space/${space.id}`)}
-      >
-        {cardContent}
-      </div>
-    );
-  };
+  }, [user, navigate, toast, refreshProfile, followingStatus]);
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -440,12 +297,23 @@ export default function Forums() {
             </Button>
           </div>
           {loadingSpaces ? (
-            <p className="text-center text-muted-foreground py-4">Loading spaces...</p>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <Skeleton className="h-64 w-full" />
+              <Skeleton className="h-64 w-full" />
+              <Skeleton className="h-64 w-full" />
+            </div>
           ) : filteredSpaces.length === 0 ? (
             <p className="text-center text-muted-foreground py-4">No spaces match your criteria.</p>
           ) : (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredSpaces.map(renderSpaceCard)}
+              {filteredSpaces.map(space => (
+                <SpaceCard 
+                  key={space.id}
+                  space={space}
+                  membershipStatus={getMembershipStatus(space.id)}
+                  onJoin={handleJoin}
+                />
+              ))}
             </div>
           )}
         </section>
@@ -472,21 +340,27 @@ export default function Forums() {
           
           {isLoadingPosts ? (
             <div className="space-y-4">
-              <Skeleton className="h-24 w-full" />
-              <Skeleton className="h-24 w-full" />
+              <Skeleton className="h-40 w-full" />
+              <Skeleton className="h-40 w-full" />
             </div>
           ) : filteredPublicThreads.length === 0 ? (
             <p className="text-center text-muted-foreground py-4">No public posts match your search.</p>
           ) : (
             <div className="space-y-4">
-              {filteredPublicThreads.map(post => (
-                <PostFeedCard 
-                  key={post.thread_id} 
-                  post={post} 
-                  onReaction={handleOptimisticReaction}
-                  optimisticReactionCount={optimisticReactions[post.thread_id]}
-                />
-              ))}
+              {filteredPublicThreads.map(post => {
+                const authorId = 'author_id' in post ? post.author_id : post.creator_id;
+                return (
+                  <PostFeedCard 
+                    key={post.thread_id} 
+                    post={post}
+                    onReaction={handleOptimisticReaction}
+                    optimisticReactionCount={optimisticReactions[post.thread_id]}
+                    onFollow={handleFollow}
+                    isFollowing={!!followingStatus[authorId]}
+                    isFollowLoading={!!isFollowLoading[authorId]}
+                  />
+                );
+              })}
             </div>
           )}
 
