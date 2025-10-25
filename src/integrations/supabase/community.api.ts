@@ -127,8 +127,12 @@ const MOCK_SPACES: Space[] = [
 ];
 
 const MOCK_PUBLIC_POSTS: PublicPost[] = [
-  { thread_id: 'mock-pub-thread-1', title: 'Best guidelines for AFib in 2025? (Example)', author_id: 'user-123', author_name: 'Dr. Chen (Example)', created_at: new Date().toISOString(), last_activity_at: new Date().toISOString(), comment_count: 23, first_message_id: 1, total_reaction_count: 58, author_avatar: null, author_position: 'Cardiologist' },
-  { thread_id: 'mock-pub-thread-2', title: 'Hospital EHR vendor comparison (Example)', author_id: 'user-456', author_name: 'Dr. Patel (Example)', created_at: new Date().toISOString(), last_activity_at: new Date().toISOString(), comment_count: 18, first_message_id: 2, total_reaction_count: 42, author_avatar: null, author_position: 'CMIO' },
+  { thread_id: 'mock-pub-thread-1', title: 'Best guidelines for AFib in 2025? (Example)', author_id: 'user-123', author_name: 'Dr. Chen (Example)', created_at: new Date().toISOString(), last_activity_at: new Date().toISOString(), comment_count: 23, first_message_id: 1, total_reaction_count: 58, author_avatar: null, author_position: 'Cardiologist', first_message_body: 'This is an example post body for the AFib guidelines discussion. It can be a bit longer to test the "Show More" functionality.', attachments: null},
+  { thread_id: 'mock-pub-thread-2', title: 'Hospital EHR vendor comparison (Example)', author_id: 'user-456', author_name: 'Dr. Patel (Example)', created_at: new Date().toISOString(), last_activity_at: new Date().toISOString(), comment_count: 18, first_message_id: 2, total_reaction_count: 42, author_avatar: null, author_position: 'CMIO', first_message_body: 'We are comparing Epic, Cerner, and Meditech. What are your experiences? Attaching our internal comparison sheet.',
+    attachments: [
+      { file_url: 'mock_url.pdf', file_name: 'EHR-Comparison.pdf', file_type: 'application/pdf' }
+    ]
+  },
 ];
 
 const MOCK_MESSAGES: MessageWithDetails[] = [];
@@ -400,7 +404,7 @@ export const getPostDetails = async (threadId: string) => {
     author_avatar: threadData.author?.profile_picture_url || null,
     author_position: threadData.author?.current_position || null,
     first_message_id: firstMessage.id,
-    body: firstMessage.body, // Add body
+    first_message_body: firstMessage.body,
     attachments: postAttachments || [],
     reactions: postReactions || [],
     comment_count: comments.length, // Calculate count from the comments query
