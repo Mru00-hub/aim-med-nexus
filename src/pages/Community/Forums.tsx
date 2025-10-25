@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Search, Plus, MessageSquare, ThumbsUp , UserPlus, Check, Loader2, Smile } from 'lucide-react';
+import { Search, Plus, MessageSquare, ThumbsUp , UserPlus, Check, Loader2, Smile, Users } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from '@/components/ui/use-toast';
 import { useCommunity } from '@/context/CommunityContext';
@@ -300,8 +300,36 @@ export default function Forums() {
                     )}
                   </div>
                 </TooltipProvider>
-              </div>
+              </div>   
             )}
+          </div>
+          <div className="mt-4 flex items-center gap-4 text-sm text-muted-foreground">
+            <TooltipProvider delayDuration={100}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex items-center gap-1.5">
+                    <MessageSquare className="h-4 w-4" />
+                    <span className="font-medium text-foreground">{space.thread_count}</span>
+                    <span>{space.thread_count === 1 ? 'Post' : 'Posts'}</span>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{space.thread_count} {space.thread_count === 1 ? 'post' : 'posts'} in this space</p>
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex items-center gap-1.5">
+                    <Users className="h-4 w-4" />
+                    <span className="font-medium text-foreground">{space.member_count}</span>
+                    <span>{space.member_count === 1 ? 'Member' : 'Members'}</span>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{space.member_count} {space.member_count === 1 ? 'member' : 'members'} in this space</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
           <div className="mt-4 pt-4 border-t flex flex-wrap justify-end items-center gap-2">
             {membershipStatus === 'ACTIVE' ? (
