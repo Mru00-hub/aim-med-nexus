@@ -62,6 +62,7 @@ export type PostOrThreadSummary = {
   
   // Thread-style fields
   last_message_body: string | null;
+  attachments: SimpleAttachment[] | null;
 };
 
 export type MessageWithDetails = Message & {
@@ -93,6 +94,12 @@ export type AttachmentInput = {
   file_size_bytes: number;
 };
 
+export type SimpleAttachment = {
+  file_url: string;
+  file_name: string;
+  file_type: string;
+};
+
 export type PublicPost = {
   thread_id: string;
   title: string;
@@ -105,6 +112,8 @@ export type PublicPost = {
   author_position: string | null;
   first_message_id: number;
   total_reaction_count: number;
+  first_message_body: string | null;
+  attachments: SimpleAttachment[] | null;
 };
 
 // =================================================================
@@ -286,20 +295,32 @@ export const updateMemberRole = async (membershipId: string, newRole: Enums<'mem
     if (error) throw error;
 };
 
+interface GetPublicThreadsProps {
+  page: number;
+  limit: number;
+}
 /** Fetches all global public threads using the new DB function. */
-export const getPublicThreads = async (): Promise<PublicPost[]> => {
+export const getPublicThreads = async ({ page, limit }: GetPublicThreadsProps): Promise<PublicPost[]> => {
     const { data: { session } } = await supabase.auth.getSession();
-    console.log('[getPublicThreads] No session, returning MOCK_PUBLIC_POSTS.');
-    if (!session) return MOCK_PUBLIC_POSTS as any; // Keep mock for logged-out
+    
+    if (!session) {
+        console.log('[getPublicThreads] No session, returning MOCK_PUBLIC_POSTS.');
+        const start = (page - 1) * limit;
+        const end = start + limit;
+        return (MOCK_PUBLIC_POSTS as any).slice(start, end); 
+    }
 
-    // This now queries our fast, pre-joined VIEW
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+
     const { data, error } = await supabase
-        .from('public_posts_feed')
+        .from('public_posts_feed') // This view now has the new fields
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .range(from, to);
         
     if (error) throw error;
-    return data || [];
+    return (data || []) as PublicPost[]; // Cast to the updated type
 };
 
 export const getPostDetails = async (threadId: string) => {
@@ -432,10 +453,20 @@ export const createThread = async (
 // --- Viewing Threads ---
 
 /** Fetches threads for a specific space using the new DB function. */
-export const getThreadsForSpace = async (spaceId: string): Promise<PostOrThreadSummary[]> => {
-    const { data, error } = await supabase.rpc('get_threads', { p_space_id: spaceId });
-    if (error) throw error;
-    return data; // This now returns the new, richer type
+export const getThreadsForSpace = async (props: {
+  spaceId: string;
+  page: number;
+  limit: number;
+}): Promise<PostOrThreadSummary[]> => {
+  
+  const { data, error } = await supabase.rpc('get_threads', {
+    p_space_id: props.spaceId,
+    p_page: props.page,
+    p_limit: props.limit
+  });
+
+  if (error) throw error;
+  return (data || []) as PostOrThreadSummary[];
 };
 
 export const getThreadDetails = async (
