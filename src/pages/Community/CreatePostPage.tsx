@@ -17,7 +17,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import AuthGuard from '@/components/AuthGuard';
 
 // Import our new API functions
-import { createPost, uploadFilesForPost, AttachmentInput } from '@/integrations/supabase/community.api';
+import { createThread, uploadFilesForPost, AttachmentInput } from '@/integrations/supabase/community.api';
 import { useCommunity } from '@/context/CommunityContext';
 import { Document, Page, pdfjs } from 'react-pdf';
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
@@ -239,6 +239,7 @@ const CreatePostForm: React.FC = () => {
           title,
           body: bodyContent, 
           attachments,
+          spaceId: null, 
       });
       
       toast({
