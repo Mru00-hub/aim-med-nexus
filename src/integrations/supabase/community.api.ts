@@ -39,7 +39,7 @@ export type MemberProfile = {
 };
 
 // Custom type for function return values that include joined data (for Threads list)
-export type ThreadWithDetails = {
+export type PostOrThreadSummary = {
   id: string;
   title: string;
   creator_id: string;
@@ -49,8 +49,19 @@ export type ThreadWithDetails = {
   creator_specialization: string | null;
   created_at: string;
   last_activity_at: string;
-  message_count: number;
   space_id: string;
+  space_type: string; // NEW
+  total_message_count: number; // NEW
+  comment_count: number; // NEW
+  
+  // Post-style fields
+  first_message_id: number | null;
+  first_message_body: string | null;
+  first_message_reaction_count: number | null;
+  first_message_user_reaction: string | null;
+  
+  // Thread-style fields
+  last_message_body: string | null;
 };
 
 export type MessageWithDetails = Message & {
@@ -292,42 +303,53 @@ export const getPublicThreads = async (): Promise<PublicPost[]> => {
 };
 
 export const getPostDetails = async (threadId: string) => {
-  // 1. Get the main post data from our view
-  const { data: postData, error: postError } = await supabase
-    .from('public_posts_feed')
-    .select('*')
-    .eq('thread_id', threadId)
+  // 1. Get thread/author details
+  const { data: threadData, error: threadError } = await supabase
+    .from('threads')
+    .select(`
+      *,
+      author:profiles (
+        id,
+        full_name,
+        profile_picture_url,
+        current_position
+      )
+    `)
+    .eq('id', threadId)
     .single();
 
-  if (postError) throw postError;
-  if (!postData) throw new Error("Post not found.");
+  if (threadError) throw threadError;
+  if (!threadData) throw new Error("Post not found.");
 
+  // 2. Get the first message (the "post" content)
   const { data: firstMessage, error: messageError } = await supabase
     .from('messages')
-    .select('body')
-    .eq('id', postData.first_message_id)
+    .select('*')
+    .eq('thread_id', threadId)
+    .order('created_at', { ascending: true })
+    .limit(1)
     .single();
   
   if (messageError) throw messageError;
   if (!firstMessage) throw new Error("Post content not found.");
 
-  // 2. Get attachments for the main post
+  // 3. Get attachments for the first message
   const { data: postAttachments, error: attachmentsError } = await supabase
     .from('message_attachments')
     .select('*')
-    .eq('message_id', postData.first_message_id);
+    .eq('message_id', firstMessage.id);
   
   if (attachmentsError) throw attachmentsError;
 
-  // 3. Get reactions for the main post
+  // 4. Get reactions for the first message
   const { data: postReactions, error: reactionsError } = await supabase
     .from('message_reactions')
-    .select('reaction_emoji, user_id') // just what we need
-    .eq('message_id', postData.first_message_id);
+    .select('reaction_emoji, user_id, id') // Added 'id' for optimistic updates
+    .eq('message_id', firstMessage.id);
 
   if (reactionsError) throw reactionsError;
 
-  // 4. Get all comments (messages EXCEPT the first one)
+  // 5. Get all comments (messages EXCEPT the first one)
   const { data: comments, error: commentsError } = await supabase
     .from('messages')
     .select(`
@@ -341,14 +363,32 @@ export const getPostDetails = async (threadId: string) => {
       attachments:message_attachments (*)
     `)
     .eq('thread_id', threadId)
-    .neq('id', postData.first_message_id) // Exclude the "post" message
+    .neq('id', firstMessage.id) // Exclude the "post" message
     .order('created_at', { ascending: true });
 
   if (commentsError) throw commentsError;
   
+  // 6. Assemble the 'post' object to match the 'PublicPost' type, plus new fields
+  const postObject: PublicPost & { body: string; attachments: any[]; reactions: any[] } = {
+    thread_id: threadData.id,
+    title: threadData.title,
+    created_at: firstMessage.created_at, // Use first message creation time
+    last_activity_at: threadData.last_activity_at, // From threads table
+    author_id: threadData.creator_id,
+    author_name: threadData.author?.full_name || null,
+    author_avatar: threadData.author?.profile_picture_url || null,
+    author_position: threadData.author?.current_position || null,
+    first_message_id: firstMessage.id,
+    body: firstMessage.body, // Add body
+    attachments: postAttachments || [],
+    reactions: postReactions || [],
+    comment_count: comments.length, // Calculate count from the comments query
+    total_reaction_count: (postReactions || []).length, // Calculate count
+  };
+
   return {
-    post: { ...postData, body: firstMessage.body, attachments: postAttachments || [], reactions: postReactions || [] },
-    comments: (comments || []) as MessageWithDetails[], // Reuse your type
+    post: postObject,
+    comments: (comments || []) as MessageWithDetails[],
   };
 };
 
@@ -374,7 +414,7 @@ export const createSpace = async (
 
 /** Creates a new thread. User must be logged in. */
 export const createThread = async (
-  payload: { title: string; body: string; spaceId: string | null; description?: string; }
+  payload: { title: string; body: string; spaceId: string | null; description?: string; attachments?: AttachmentInput[]; }
 ): Promise<string> => {
     await getSessionOrThrow();
     const { data, error } = await supabase.rpc('create_thread', {
@@ -382,6 +422,7 @@ export const createThread = async (
         p_body: payload.body, 
         p_space_id: payload.spaceId,
         p_description: payload.description,
+        p_attachments: payload.attachments || null
     });
 
     if (error) throw error;
@@ -391,14 +432,12 @@ export const createThread = async (
 // --- Viewing Threads ---
 
 /** Fetches threads for a specific space using the new DB function. */
-export const getThreadsForSpace = async (spaceId: string): Promise<ThreadWithDetails[]> => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return MOCK_PUBLIC_THREADS.slice(0, 2);
-
+export const getThreadsForSpace = async (spaceId: string): Promise<PostOrThreadSummary[]> => {
     const { data, error } = await supabase.rpc('get_threads', { p_space_id: spaceId });
     if (error) throw error;
-    return data;
+    return data; // This now returns the new, richer type
 };
+
 export const getThreadDetails = async (
   threadId: string
 ): Promise<
@@ -646,22 +685,6 @@ export const uploadFilesForPost = async (
   });
 
   return Promise.all(uploadPromises);
-};
-
-export const createPost = async (payload: {
-  title: string;
-  body: string;
-  attachments?: AttachmentInput[];
-}): Promise<string> => {
-  await getSessionOrThrow();
-  const { data, error } = await supabase.rpc('create_post', {
-    p_title: payload.title,
-    p_body: payload.body, 
-    p_attachments: payload.attachments || null,
-  });
-
-  if (error) throw error;
-  return data; // returns the new thread_id
 };
 
 export const updatePost = async (
