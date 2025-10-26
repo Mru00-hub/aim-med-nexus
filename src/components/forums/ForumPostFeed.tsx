@@ -3,6 +3,7 @@ import { PostOrThreadSummary, getThreadsForSpace, toggleReaction } from '@/integ
 import { PostFeedCard } from '@/components/forums/PostFeedCard';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/hooks/useAuth';
@@ -12,10 +13,10 @@ const POSTS_PER_PAGE = 10;
 
 interface ForumPostFeedProps {
   spaceId: string;
-  onPostCreated: () => void; // To refresh the feed
+  refreshKey: number;
 }
 
-export const ForumPostFeed: React.FC<ForumPostFeedProps> = ({ spaceId, onPostCreated }) => {
+export const ForumPostFeed: React.FC<ForumPostFeedProps> = ({ spaceId, refreshKey }) => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -53,7 +54,7 @@ export const ForumPostFeed: React.FC<ForumPostFeedProps> = ({ spaceId, onPostCre
 
   useEffect(() => {
     loadPosts(1);
-  }, [loadPosts, onPostCreated]); // Reload if onPostCreated changes (i.e., a post is created)
+  }, [loadPosts, refreshKey]); // Reload if onPostCreated changes (i.e., a post is created)
 
   const handleOptimisticReaction = useCallback(async (
     postId: string, 
