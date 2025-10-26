@@ -4,6 +4,10 @@ import { PostOrThreadSummary, getThreadsForSpace, deleteThread, updateThreadDeta
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Label } in '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Pencil, Trash2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/components/ui/use-toast';
@@ -14,15 +18,15 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 interface ChatThreadListProps {
   spaceId: string;
   isUserAdminOrMod: boolean;
-  onThreadCreated: () => void; // To refresh the feed
+  refreshKey: number;
 }
 
-export const ChatThreadList: React.FC<ChatThreadListProps> = ({ spaceId, isUserAdminOrMod, onThreadCreated }) => {
+export const ChatThreadList: React.FC<ChatThreadListProps> = ({ spaceId, isUserAdminOrMod, refreshKey }) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [threads, setThreads] = useState<PostOrThreadSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  
+  const [editingThread, setEditingThread] = useState<PostOrThreadSummary | null>(null);
   const fetchThreads = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -38,7 +42,7 @@ export const ChatThreadList: React.FC<ChatThreadListProps> = ({ spaceId, isUserA
 
   useEffect(() => {
     fetchThreads();
-  }, [fetchThreads, onThreadCreated]);
+  }, [fetchThreads, refreshKey]);
 
   const handleDeleteThread = async (threadId: string) => {
     try {
@@ -47,6 +51,29 @@ export const ChatThreadList: React.FC<ChatThreadListProps> = ({ spaceId, isUserA
       fetchThreads(); // Refresh list
     } catch (error: any) {
       toast({ variant: "destructive", title: "Deletion Failed", description: error.message });
+    }
+  };
+
+  const handleUpdateThread = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingThread) return;
+
+    const formData = new FormData(e.target as HTMLFormElement);
+    const title = formData.get('title') as string;
+    const description = formData.get('description') as string;
+    
+    if (!title.trim()) {
+      toast({ title: "Title cannot be empty", variant: "destructive" });
+      return;
+    }
+    
+    try {
+      await updateThreadDetails(editingThread.id, { title, description });
+      toast({ title: "Success", description: "Thread updated." });
+      fetchThreads(); // Refresh list
+      setEditingThread(null);
+    } catch (error: any) {
+      toast({ variant: "destructive", title: "Update Failed", description: error.message });
     }
   };
   
@@ -98,7 +125,7 @@ export const ChatThreadList: React.FC<ChatThreadListProps> = ({ spaceId, isUserA
 
                 {canManageThread && (
                   <div className="flex items-center gap-1 flex-shrink-0 sm:ml-4">
-                    <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => {/* TODO: Open Edit Dialog */}}>
+                    <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditingThread(thread)}>
                       <Pencil className="h-4 w-4 text-muted-foreground hover:text-primary" />
                     </Button>
                     <AlertDialog> 
@@ -126,5 +153,39 @@ export const ChatThreadList: React.FC<ChatThreadListProps> = ({ spaceId, isUserA
         );
       })}
     </div>
+    <Dialog open={!!editingThread} onOpenChange={(isOpen) => !isOpen && setEditingThread(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Thread</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleUpdateThread} className="pt-4 space-y-4">
+            <div>
+              <Label htmlFor="title">Title</Label>
+              <Input 
+                id="title" 
+                name="title" 
+                defaultValue={editingThread?.title} 
+                required 
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="description">Description (Optional)</Label>
+              <Textarea
+                id="description"
+                name="description"
+                defaultValue={editingThread?.description || ''}
+                placeholder="A brief description of this thread..."
+                className="mt-1"
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="ghost" onClick={() => setEditingThread(null)}>Cancel</Button>
+              <Button type="submit">Save Changes</Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };
