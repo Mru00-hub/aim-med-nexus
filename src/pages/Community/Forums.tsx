@@ -6,26 +6,15 @@ import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { useAuth } from '@/hooks/useAuth';
 import { SpaceCreator } from '@/components/forums/SpaceCreator';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Search, Plus, MessageSquare, ThumbsUp , UserPlus, Check, Loader2, Smile, Users, FileText} from 'lucide-react';
+import { Search, Plus, Loader2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from '@/components/ui/use-toast';
 import { useCommunity } from '@/context/CommunityContext';
 import { Enums } from '@/integrations/supabase/types';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import {
   SpaceWithDetails, 
   createSpace,
@@ -40,7 +29,6 @@ import { PostFeedCard } from '@/components/forums/PostFeedCard';
 import { SpaceCard } from '@/components/forums/SpaceCard';
 import { Skeleton } from '@/components/ui/skeleton';
 const POSTS_PER_PAGE = 4;
-const REACTIONS = ['👍', '❤️', '🔥', '🧠', '😂'];
 
 export default function Forums() {
   const { user, profile, refreshProfile } = useAuth();
@@ -49,7 +37,6 @@ export default function Forums() {
 
   const { 
     spaces, 
-    publicThreads, 
     isLoadingSpaces: loadingSpaces,
     refreshSpaces, 
     getMembershipStatus,
@@ -87,14 +74,6 @@ export default function Forums() {
       setFollowingStatus(followingMap);
     }
   }, [profile]);
-  // Define the missing functions
-  const addOptimisticSpace = (space: SpaceWithDetails) => {
-    setOptimisticSpaces(prev => [...prev, space]);
-  };
-
-  const removeOptimisticSpace = (spaceId: string) => {
-    setOptimisticSpaces(prev => prev.filter(s => s.id !== spaceId));
-  };
 
   const filteredSpaces = useMemo(() => {
     return (spaces || [])
