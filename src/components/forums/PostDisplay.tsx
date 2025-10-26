@@ -451,15 +451,17 @@ export const PostDisplay: React.FC<PostDisplayProps> = ({
           </div>
         ) : (
           <>
-            <ReactMarkdown
+            <div
               className={`
                 prose prose-sm dark:prose-invert max-w-none
                 whitespace-pre-wrap
                 ${needsTruncation && !isExpanded ? 'line-clamp-4' : ''}
               `}
             >
-              {post.body || ''}
-            </ReactMarkdown>
+              <ReactMarkdown>
+                {post.body || ''}
+              </ReactMarkdown>
+            </div>
 
             {needsTruncation && (
               <Button
