@@ -12,9 +12,6 @@ interface CommentListProps {
   onCommentDelete: (commentId: number) => void;
 }
 
-// Define the shape of a comment node in the tree
-type CommentNode = MessageWithDetails & { children: CommentNode[] };
-
 // 2. ACCEPT the new props here
 export const CommentList: React.FC<CommentListProps> = ({ 
   comments, 
