@@ -57,7 +57,6 @@ export default function ThreadDetailPage() {
   const { user, profile } = useAuth(); // Get the current user
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { refreshSpaces } = useCommunity(); 
   const [basicDetails, setBasicDetails] =
     useState<BasicThreadDetails | null>(null);
   const [postDetails, setPostDetails] =
