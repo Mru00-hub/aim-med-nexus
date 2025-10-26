@@ -30,7 +30,7 @@ import {
   File as FileIcon,
   Loader2,
   Smile,
-  Edit, MoreHorizontal, Edit2, Trash2, X,
+  Edit, Edit2, Trash2, X,
 } from 'lucide-react';
 import {
   toggleFollow,
