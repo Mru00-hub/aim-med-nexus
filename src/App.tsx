@@ -14,6 +14,7 @@ import { SocialCountsProvider } from './context/SocialCountsContext';
 import { SecureRouteGuard } from './components/SecureRouteGuard';
 import SettingsPage from './pages/SettingsPage';
 import { Loader2 } from 'lucide-react';
+import './App.css';
 
 // --- All Page Imports (remain the same) ---
 import Index from "./pages/Index";
