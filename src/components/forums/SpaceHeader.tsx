@@ -58,7 +58,7 @@ export const SpaceHeader: React.FC<SpaceHeaderProps> = ({
       setEditedDescription(space.description || '');
       setEditedJoinLevel(space.join_level);
     }
-  }, [space]);
+  }, [space, isEditing]);
 
   const potentialNewOwners = useMemo(() => {
     return memberList.filter(member => member.id !== space.creator_id);
@@ -76,20 +76,31 @@ export const SpaceHeader: React.FC<SpaceHeaderProps> = ({
 
   const handleSaveClick = async () => {
     setIsSaving(true);
-    await onSave({
-      name: editedName,
-      description: editedDescription,
-      join_level: editedJoinLevel,
-    });
-    setIsSaving(false);
-    setIsEditing(false);
+    try {
+      await onSave({
+        name: editedName,
+        description: editedDescription,
+        join_level: editedJoinLevel,
+      });
+      setIsEditing(false);
+    } catch (error) {
+      // Error is handled by parent, just stop loading
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleTransferClick = async () => {
     setIsTransferring(true);
-    await onTransfer(selectedNewOwnerId);
-    setIsTransferring(false);
-    setShowTransferDialog(false);
+    try {
+      await onTransfer(selectedNewOwnerId);
+      setShowTransferDialog(false);
+      setSelectedNewOwnerId('');
+    } catch (error) {
+      // Error handled by parent
+    } finally {
+      setIsTransferring(false);
+    }
   };
 
   return (
