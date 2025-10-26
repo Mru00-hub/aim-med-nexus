@@ -333,7 +333,7 @@ export const getPostDetails = async (threadId: string) => {
     .from('threads')
     .select(`
       *,
-      author:creator_id(
+      author:profiles!creator_id(
         id,
         full_name,
         profile_picture_url,
