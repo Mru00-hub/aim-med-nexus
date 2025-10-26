@@ -4,31 +4,24 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { Plus, Users, Hash, Trash2, Pencil, Loader2, Crown } from 'lucide-react';
+import { Plus, Hash } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/components/ui/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/badge';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
 
 // --- IMPORTS ---
 import { useCommunity } from '@/context/CommunityContext';
-import { useSpaceThreads, useSpaceMetrics, useSpaceMemberList } from '@/hooks/useSpaceData';
+import { useSpaceMetrics, useSpaceMemberList } from '@/hooks/useSpaceData';
 import { CreateThreadForm } from './CreateThread'; 
+import { SpaceHeader } from '@/components/forums/SpaceHeader';
 import { ForumPostFeed } from '@/components/forums/ForumPostFeed';
 import { ChatThreadList } from '@/components/forums/ChatThreadList';
 import { 
   updateSpaceDetails, 
   Enums, 
   leaveSpace, 
-  updateThreadDetails, 
   transferSpaceOwnership,
   deleteSpace,
 } from '@/integrations/supabase/community.api';
@@ -85,7 +78,6 @@ export default function SpaceDetailPage() {
   const handleSave = async (payload: { name: string; description?: string | null; join_level: Enums<'space_join_level'> }) => {
     if (!space) return;
     const originalSpace = { ...space };
-    const optimisticSpace = { ...space, ...payload };
     updateLocalSpace(optimisticSpace); // Optimistic update
     try {
       await updateSpaceDetails(space.id, payload);
