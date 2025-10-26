@@ -331,15 +331,7 @@ export const getPostDetails = async (threadId: string) => {
   // 1. Get thread/author details
   const { data: threadData, error: threadError } = await supabase
     .from('threads')
-    .select(`
-      *,
-      author:profiles!creator_id(
-        id,
-        full_name,
-        profile_picture_url,
-        current_position
-      )
-    `)
+    .select('*') // Just get thread columns
     .eq('id', threadId)
     .single();
 
@@ -347,6 +339,14 @@ export const getPostDetails = async (threadId: string) => {
   if (!threadData) throw new Error("Post not found.");
 
   // 2. Get the first message (the "post" content)
+  const { data: authorData, error: authorError } = await supabase
+    .from('profiles')
+    .select('id, full_name, profile_picture_url, current_position')
+    .eq('id', threadData.creator_id) // Use the creator_id to find the profile
+    .single();
+
+  if (authorError) {
+    console.warn("Could not fetch post author profile:", authorError.message);
   const { data: firstMessage, error: messageError } = await supabase
     .from('messages')
     .select('*')
@@ -397,18 +397,18 @@ export const getPostDetails = async (threadId: string) => {
   const postObject: PublicPost & { body: string; attachments: any[]; reactions: any[] } = {
     thread_id: threadData.id,
     title: threadData.title,
-    created_at: firstMessage.created_at, // Use first message creation time
-    last_activity_at: threadData.last_activity_at, // From threads table
+    created_at: firstMessage.created_at, 
+    last_activity_at: threadData.last_activity_at,
     author_id: threadData.creator_id,
-    author_name: threadData.author?.full_name || null,
-    author_avatar: threadData.author?.profile_picture_url || null,
-    author_position: threadData.author?.current_position || null,
+    author_name: authorData?.full_name || null, // Use the new authorData
+    author_avatar: authorData?.profile_picture_url || null, // Use the new authorData
+    author_position: authorData?.current_position || null, // Use the new authorData
     first_message_id: firstMessage.id,
     first_message_body: firstMessage.body,
-    attachments: postAttachments || [],
-    reactions: postReactions || [],
-    comment_count: comments.length, // Calculate count from the comments query
-    total_reaction_count: (postReactions || []).length, // Calculate count
+    attachments: postAttachments || [], // (assuming postAttachments is from your unchanged step 3)
+    reactions: postReactions || [], // (assuming postReactions is from your unchanged step 4)
+    comment_count: comments.length, // (assuming comments is from your unchanged step 5)
+    total_reaction_count: (postReactions || []).length, 
   };
 
   return {
