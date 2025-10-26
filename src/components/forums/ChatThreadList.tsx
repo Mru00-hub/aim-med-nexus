@@ -152,7 +152,6 @@ export const ChatThreadList: React.FC<ChatThreadListProps> = ({ spaceId, isUserA
         })}
       </div>
 
-      {/* --- EDIT DIALOG (TODO Complete) --- */}
       <Dialog open={!!editingThread} onOpenChange={(isOpen) => !isOpen && setEditingThread(null)}>
         <DialogContent>
           <DialogHeader>
