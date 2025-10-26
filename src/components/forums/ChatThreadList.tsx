@@ -105,55 +105,55 @@ export const ChatThreadList: React.FC<ChatThreadListProps> = ({ spaceId, isUserA
           .join(' • ');
         
         return (
-          <Card key={thread.id} className="transition-all hover:shadow-md group">
-            <CardContent className="p-4">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <Link to={`/community/thread/${thread.id}`} className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-lg group-hover:text-primary break-words">{thread.title}</h3>
-                  <p className="text-sm text-muted-foreground mt-1 break-words">
-                    {thread.total_message_count} messages • Started by{' '}
-                    <span className="font-medium">{thread.creator_full_name}</span>
-                    {creatorDetails && <span className="text-xs block sm:inline sm:ml-2 opacity-80">{creatorDetails}</span>}
-                  </p>
-                  {/* For chat, we show the LAST message body */}
-                  {thread.last_message_body && (
-                    <p className="text-sm text-muted-foreground mt-2 truncate">
-                      <strong>Last:</strong> {thread.last_message_body}
+            <Card key={thread.id} className="transition-all hover:shadow-md group">
+              <CardContent className="p-4">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <Link to={`/community/thread/${thread.id}`} className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-lg group-hover:text-primary break-words">{thread.title}</h3>
+                    <p className="text-sm text-muted-foreground mt-1 break-words">
+                      {thread.total_message_count} messages • Started by{' '}
+                      <span className="font-medium">{thread.creator_full_name}</span>
+                      {creatorDetails && <span className="text-xs block sm:inline sm:ml-2 opacity-80">{creatorDetails}</span>}
                     </p>
+                    {thread.last_message_body && (
+                      <p className="text-sm text-muted-foreground mt-2 truncate">
+                        <strong>Last:</strong> {thread.last_message_body}
+                      </p>
+                    )}
+                  </Link>
+                  {canManageThread && (
+                    <div className="flex items-center gap-1 flex-shrink-0 sm:ml-4">
+                      <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditingThread(thread)}>
+                        <Pencil className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                      </Button>
+                      <AlertDialog> 
+                        <AlertDialogTrigger asChild>
+                          <Button size="icon" variant="ghost" className="h-8 w-8">
+                            <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete this thread?</AlertDialogTitle>
+                            <AlertDialogDescription>Permanently delete "{thread.title}"? This cannot be undone.</AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => handleDeleteThread(thread.id)}>Delete</AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
                   )}
-                </Link>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
 
-                {canManageThread && (
-                  <div className="flex items-center gap-1 flex-shrink-0 sm:ml-4">
-                    <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditingThread(thread)}>
-                      <Pencil className="h-4 w-4 text-muted-foreground hover:text-primary" />
-                    </Button>
-                    <AlertDialog> 
-                      <AlertDialogTrigger asChild>
-                        <Button size="icon" variant="ghost" className="h-8 w-8">
-                          <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Delete this thread?</AlertDialogTitle>
-                          <AlertDialogDescription>Permanently delete "{thread.title}"? This cannot be undone.</AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction onClick={() => handleDeleteThread(thread.id)}>Delete</AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        );
-      })}
-    </div>
-    <Dialog open={!!editingThread} onOpenChange={(isOpen) => !isOpen && setEditingThread(null)}>
+      {/* --- EDIT DIALOG (TODO Complete) --- */}
+      <Dialog open={!!editingThread} onOpenChange={(isOpen) => !isOpen && setEditingThread(null)}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Edit Thread</DialogTitle>
