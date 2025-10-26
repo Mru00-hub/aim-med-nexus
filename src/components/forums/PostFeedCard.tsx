@@ -47,6 +47,7 @@ export const PostFeedCard: React.FC<PostFeedCardProps> = ({
   const firstMessageId = post.first_message_id;
 
   const displayReactionCount = optimisticReactionCount ?? reactionCount;
+  const lastActivity = new Date(post.last_activity_at).toLocaleDateString();
 
   const handleCardClick = () => {
     if (!user) navigate('/login');
