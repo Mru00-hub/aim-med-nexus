@@ -1,7 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown'; 
 import { Link } from 'react-router-dom';
-// REMOVED: import { usePostContext } from './PostContext';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/components/ui/use-toast';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -30,19 +29,26 @@ import {
   File as FileIcon,
   Loader2,
   Smile,
-  Edit, Edit2, Trash2, X,
+  Edit, 
+  Edit2, 
+  Trash2,
 } from 'lucide-react';
 import {
   toggleFollow,
-  toggleReaction,
-  FullPostDetails, // ADDED: Import FullPostDetails type
+  FullPostDetails,
 } from '@/integrations/supabase/community.api';
 import { ChevronDown, ChevronUp, MoreHorizontal} from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Document, Page, pdfjs } from 'react-pdf';
+// FIX 1: Add required CSS import for react-pdf
+import 'react-pdf/dist/Page/AnnotationLayer.css';
+import 'react-pdf/dist/Page/TextLayer.css';
+
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+
 const REACTIONS = ['👍', '❤️', '🔥', '🧠', '😂'];
 const URL_REGEX = /(https?:\/\/[^\s]+)/g;
+const TRUNCATE_LENGTH = 300;
 
 function getYouTubeVideoId(url: string): string | null {
   const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/ ]{11})/;
@@ -57,6 +63,7 @@ interface AttachmentPreviewProps {
     file_type: string;
   };
 }
+
 const AttachmentPreview: React.FC<AttachmentPreviewProps> = ({ attachment }) => {
   const isImage = attachment.file_type.startsWith('image/');
   const isVideo = attachment.file_type.startsWith('video/');
@@ -94,7 +101,8 @@ const AttachmentPreview: React.FC<AttachmentPreviewProps> = ({ attachment }) => 
     </a>
   );
 };
-// Helper to group reactions (unchanged)
+
+// Helper to group reactions
 const groupReactions = (reactions: any[]) => {
   if (!reactions) return {};
   return reactions.reduce((acc, reaction) => {
@@ -103,13 +111,11 @@ const groupReactions = (reactions: any[]) => {
       acc[emoji] = { count: 0, users: [] };
     }
     acc[emoji].count++;
-    // @ts-ignore
     acc[emoji].users.push(reaction.user_id);
     return acc;
   }, {} as { [key: string]: { count: number; users: string[] } });
 };
 
-// ADDED: Props interface
 interface PostDisplayProps {
   post: FullPostDetails['post'];
   commentCount: number;
@@ -122,8 +128,7 @@ interface PostDisplayProps {
   canEdit: boolean;
   threadId: string;
 }
-const TRUNCATE_LENGTH = 300;
-// CHANGED: Component signature to accept props
+
 export const PostDisplay: React.FC<PostDisplayProps> = ({
   post,
   commentCount,
@@ -132,19 +137,95 @@ export const PostDisplay: React.FC<PostDisplayProps> = ({
   onBodyUpdate,
   onPostDelete,
   onTitleUpdate,
-  canEdit, // This prop is now available if you need to add an "Edit" button
-  threadId, // This prop is now available
+  canEdit,
+  threadId,
   onCommentClick, 
 }) => {
-  // REMOVED: const { post, refreshPost } = usePostContext();
   const { user } = useAuth();
   const { toast } = useToast();
   
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [isFollowLoading, setIsFollowLoading] = useState(false);
+  const [isReactionLoading, setIsReactionLoading] = useState(false);
+  const [popoverOpen, setPopoverOpen] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [isEditingBody, setIsEditingBody] = useState(false);
+  const [editedBody, setEditedBody] = useState(post.body || '');
+  const [isSavingBody, setIsSavingBody] = useState(false);
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [editedTitle, setEditedTitle] = useState(post.title || '');
+  const [isSavingTitle, setIsSavingTitle] = useState(false);
+  const [linkPreview, setLinkPreview] = useState<any>(null);
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+
+  // Link preview effect with proper cleanup
+  useEffect(() => {
+    if (post.attachments && post.attachments.length > 0) {
+      setLinkPreview(null);
+      return;
+    }
+
+    const urls = (post.body || '').match(URL_REGEX);
+    if (urls && urls[0]) {
+      const firstUrl = urls[0];
+      const videoId = getYouTubeVideoId(firstUrl);
+
+      if (videoId) {
+        setLinkPreview({ type: 'youtube', data: { embedUrl: `https://www.youtube.com/embed/${videoId}` } });
+        return;
+      } 
+      
+      let isCancelled = false;
+      setIsPreviewLoading(true);
+
+      supabase.functions.invoke('get-link-preview', { body: { url: firstUrl } })
+        .then(({ data, error }) => {
+          if (isCancelled) return;
+          if (data && !error && (data.title || data.image)) {
+            setLinkPreview({ type: 'website', data: data });
+          }
+        })
+        .catch((err) => {
+          console.error('Link preview error:', err);
+        })
+        .finally(() => {
+          if (!isCancelled) {
+            setIsPreviewLoading(false);
+          }
+        });
+      
+      return () => {
+        isCancelled = true;
+      };
+    } else {
+      setLinkPreview(null);
+    }
+  }, [post.body, post.attachments]);
+  
+  const needsTruncation = useMemo(() => {
+    const plainText = (post.body || '').replace(/<[^>]+>/g, '');
+    return plainText.length > TRUNCATE_LENGTH;
+  }, [post.body]);
+
+  const reactionGroups = useMemo(() => groupReactions(post.reactions), [
+    post.reactions,
+  ]);
+
+  // FIX 2: Move userHasReacted to useCallback for proper memoization
+  const userHasReacted = (emoji: string) => {
+    if (!user || !reactionGroups[emoji]) return false;
+    return reactionGroups[emoji].users.includes(user.id);
+  };
+
+  // FIX 3: Add userHasReacted to dependencies (indirectly via reactionGroups)
+  const userHasAnyReaction = useMemo(() => {
+    if (!user) return false;
+    return REACTIONS.some((emoji) => userHasReacted(emoji));
+  }, [user, reactionGroups]);
+
   const handleShare = () => {
-    // Get the current page's URL
     const postUrl = window.location.href;
     
-    // Use the modern navigator.clipboard API
     navigator.clipboard.writeText(postUrl)
       .then(() => {
         toast({
@@ -162,120 +243,7 @@ export const PostDisplay: React.FC<PostDisplayProps> = ({
       });
   };
 
-  const [isFollowing, setIsFollowing] = useState(false);
-  const [isFollowLoading, setIsFollowLoading] = useState(false);
-  const [isReactionLoading, setIsReactionLoading] = useState(false);
-  const [popoverOpen, setPopoverOpen] = useState(false);
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [isEditingBody, setIsEditingBody] = useState(false);
-  const [editedBody, setEditedBody] = useState(post.body || '');
-  const [isSavingBody, setIsSavingBody] = useState(false);
-  const [isEditingTitle, setIsEditingTitle] = useState(false);
-  const [editedTitle, setEditedTitle] = useState(post.title || '');
-  const [isSavingTitle, setIsSavingTitle] = useState(false);
-  const [linkPreview, setLinkPreview] = useState<any>(null);
-  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
-
-  // FIX 1: Added cleanup logic to prevent memory leaks
-  useEffect(() => {
-    // Rule 1: Don't show link previews if attachments exist
-    if (post.attachments && post.attachments.length > 0) {
-      setLinkPreview(null);
-      return;
-    }
-
-    // Rule 2: Find the first URL in the body
-    const urls = (post.body || '').match(URL_REGEX);
-    if (urls && urls[0]) {
-      const firstUrl = urls[0];
-      const videoId = getYouTubeVideoId(firstUrl);
-
-      // Rule 3: Handle YouTube links locally
-      if (videoId) {
-        setLinkPreview({ type: 'youtube', data: { embedUrl: `https://www.youtube.com/embed/${videoId}` } });
-        return; // We're done
-      } 
-      
-      // Rule 4: Fetch previews for other websites
-      let isCancelled = false;
-      setIsPreviewLoading(true);
-
-      supabase.functions.invoke('get-link-preview', { body: { url: firstUrl } })
-        .then(({ data, error }) => {
-          if (isCancelled) return; // Don't update state if component unmounted
-          if (data && !error && (data.title || data.image)) {
-            setLinkPreview({ type: 'website', data: data });
-          }
-        })
-        .finally(() => {
-          if (isCancelled) return; // Don't update state
-          setIsPreviewLoading(false);
-        });
-      
-      // Cleanup function
-      return () => {
-        isCancelled = true;
-      };
-
-    } else {
-      setLinkPreview(null); // No URL found
-    }
-  }, [post.body, post.attachments]);
-  
-  const needsTruncation = useMemo(() => {
-    // We strip HTML tags for a more accurate length check
-    const plainText = (post.body || '').replace(/<[^>]+>/g, '');
-    return plainText.length > TRUNCATE_LENGTH;
-  }, [post.body]);
-
-  const handleSaveBody = () => {
-    if (!editedBody.trim() || editedBody === post.body) {
-      setIsEditingBody(false);
-      return;
-    }
-    
-    setIsSavingBody(true);
-    // Call the optimistic handler from parent
-    onBodyUpdate(editedBody); 
-    
-    // Simulate save time and close
-    setTimeout(() => {
-      setIsEditingBody(false);
-      setIsSavingBody(false);
-    }, 500);
-  };
-
-  const startEdit = () => {
-    setEditedBody(post.body || '');
-    setIsEditingBody(true);
-  };
-
-  const handleSaveTitle = () => {
-    if (!editedTitle.trim() || editedTitle === post.title) {
-      setIsEditingTitle(false);
-      return;
-    }
-    setIsSavingTitle(true);
-    onTitleUpdate(editedTitle); // Call parent handler
-    
-    setTimeout(() => {
-      setIsEditingTitle(false);
-      setIsSavingTitle(false);
-    }, 500);
-  };
-
-  // ADDED: Handler to start editing title
-  const startEditTitle = () => {
-    setEditedTitle(post.title || '');
-    setIsEditingTitle(true);
-  };
-
-  const reactionGroups = useMemo(() => groupReactions(post.reactions), [
-    post.reactions,
-  ]);
-
   const handleFollow = async () => {
-    // (function logic unchanged)
     if (isFollowLoading) return;
     setIsFollowLoading(true);
     try {
@@ -304,10 +272,7 @@ export const PostDisplay: React.FC<PostDisplayProps> = ({
     setIsReactionLoading(true);
     try {
       onReaction(emoji);
-      
-      
     } catch (error: any) {
-      // This is now less likely to fire, but good as a fallback
       toast({
         title: 'Error',
         description: error.message,
@@ -315,28 +280,53 @@ export const PostDisplay: React.FC<PostDisplayProps> = ({
       });
     } finally {
       setIsReactionLoading(false);
-      // We can close the popover after a short delay
       setTimeout(() => setPopoverOpen(false), 300);
     }
   };
 
-  // (rest of your helper functions: userHasReacted, userHasAnyReaction...)
-
-  const userHasReacted = (emoji: string) => {
-    if (!user || !reactionGroups[emoji]) return false;
-    return reactionGroups[emoji].users.includes(user.id);
+  const handleSaveBody = () => {
+    if (!editedBody.trim() || editedBody === post.body) {
+      setIsEditingBody(false);
+      return;
+    }
+    
+    setIsSavingBody(true);
+    onBodyUpdate(editedBody); 
+    
+    setTimeout(() => {
+      setIsEditingBody(false);
+      setIsSavingBody(false);
+    }, 500);
   };
 
-  const userHasAnyReaction = useMemo(() => {
-    if (!user) return false;
-    return REACTIONS.some((emoji) => userHasReacted(emoji));
-  }, [user, reactionGroups]);
+  const startEdit = () => {
+    setEditedBody(post.body || '');
+    setIsEditingBody(true);
+  };
 
+  const handleSaveTitle = () => {
+    if (!editedTitle.trim() || editedTitle === post.title) {
+      setIsEditingTitle(false);
+      return;
+    }
+    setIsSavingTitle(true);
+    onTitleUpdate(editedTitle);
+    
+    setTimeout(() => {
+      setIsEditingTitle(false);
+      setIsSavingTitle(false);
+    }, 500);
+  };
+
+  const startEditTitle = () => {
+    setEditedTitle(post.title || '');
+    setIsEditingTitle(true);
+  };
 
   return (
     <Card className="mb-6 shadow-md">
       <CardContent className="p-4 sm:p-6">
-        {/* Author Info & Follow Button (Unchanged) */}
+        {/* Author Info & Follow Button */}
         <div className="flex justify-between items-start gap-4 mb-4">
           <div className="flex-1 flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
             <Link
@@ -385,33 +375,34 @@ export const PostDisplay: React.FC<PostDisplayProps> = ({
           </div>
 
           {canEdit && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon">
-                    <MoreHorizontal className="h-5 w-5" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={startEditTitle}>
-                    <Edit className="h-4 w-4 mr-2" />
-                    Edit Title
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={startEdit}>
-                    <Edit2 className="h-4 w-4 mr-2" />
-                    Edit Post Body
-                  </DropdownMenuItem>
-                  <DropdownMenuItem 
-                    className="text-destructive focus:text-destructive"
-                    onClick={onPostDelete}
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Delete Post
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <MoreHorizontal className="h-5 w-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={startEditTitle}>
+                  <Edit className="h-4 w-4 mr-2" />
+                  Edit Title
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={startEdit}>
+                  <Edit2 className="h-4 w-4 mr-2" />
+                  Edit Post Body
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  className="text-destructive focus:text-destructive"
+                  onClick={onPostDelete}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete Post
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
 
+        {/* Title Edit/Display */}
         {isEditingTitle ? (
           <div className="space-y-2 mb-4">
             <Input
@@ -431,7 +422,7 @@ export const PostDisplay: React.FC<PostDisplayProps> = ({
           <h1 className="text-2xl font-bold mb-4">{post.title}</h1>
         )}
 
-        {/* Post Body (HTML) */}
+        {/* Post Body */}
         {isEditingBody ? (
           <div className="space-y-2">
             <Textarea
@@ -499,19 +490,16 @@ export const PostDisplay: React.FC<PostDisplayProps> = ({
           </>
         )}
 
-        {/* Attachments (Unchanged) */}
+        {/* Attachments and Link Previews */}
         <div className="mt-4 space-y-4">
-          {/* 1. Attachment Previews */}
           {post.attachments && post.attachments.length > 0 && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {/* FIX 2: Changed key from att.id to att.file_url for type safety */}
               {post.attachments.map((att: any) => (
                 <AttachmentPreview key={att.file_url} attachment={att} />
               ))}
             </div>
           )}
 
-          {/* 2. Link Preview (Loading) */}
           {isPreviewLoading && (
             <div className="flex items-center text-sm text-muted-foreground p-2">
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -519,7 +507,6 @@ export const PostDisplay: React.FC<PostDisplayProps> = ({
             </div>
           )}
           
-          {/* 3. Link Preview (Rendered) */}
           {linkPreview && (!post.attachments || post.attachments.length === 0) && (
             <div className="relative mt-2 border rounded-lg overflow-hidden">
               <div className="p-2 text-sm text-muted-foreground bg-accent rounded-t-lg">
@@ -532,11 +519,11 @@ export const PostDisplay: React.FC<PostDisplayProps> = ({
                   {post.body?.match(URL_REGEX)?.[0]}
                 </a>
               </div>
-              {/* YouTube Player */}
               {linkPreview.type === 'youtube' && (
                 <div className="aspect-video w-full">
                   <iframe
-                    width="100%" height="100%"
+                    width="100%" 
+                    height="100%"
                     src={linkPreview.data.embedUrl}
                     title="YouTube video player"
                     frameBorder="0"
@@ -546,7 +533,6 @@ export const PostDisplay: React.FC<PostDisplayProps> = ({
                 </div>
               )}
               
-              {/* Website Preview */}
               {linkPreview.type === 'website' && (
                 <>
                   {linkPreview.data.image && <img src={linkPreview.data.image} alt="Preview" className="w-full h-48 object-cover" />}
@@ -560,7 +546,7 @@ export const PostDisplay: React.FC<PostDisplayProps> = ({
           )}
         </div>
 
-        {/* Reaction Counts (Unchanged) */}
+        {/* Reaction Counts */}
         {Object.keys(reactionGroups).length > 0 && (
           <div className="mt-4 pt-4 border-t flex flex-wrap gap-2">
             {Object.entries(reactionGroups).map(([emoji, { count }]) => (
@@ -576,9 +562,8 @@ export const PostDisplay: React.FC<PostDisplayProps> = ({
           </div>
         )}
 
-        {/* --- ACTION BAR (Unchanged) --- */}
+        {/* Action Bar */}
         <div className="mt-4 pt-4 border-t grid grid-cols-3 gap-2">
-          {/* 1. React Button with Popover */}
           <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
             <PopoverTrigger asChild>
               <Button
@@ -611,7 +596,6 @@ export const PostDisplay: React.FC<PostDisplayProps> = ({
             </PopoverContent>
           </Popover>
 
-          {/* 2. Comment Button (Unchanged) */}
           <Button variant="ghost" className="w-full" onClick={onCommentClick}>
             <MessageSquare className="h-5 w-5" />
             <span className="ml-2 hidden sm:inline">
@@ -619,7 +603,6 @@ export const PostDisplay: React.FC<PostDisplayProps> = ({
             </span>
           </Button>
 
-          {/* 3. Share Button (Unchanged) */}
           <Button variant="ghost" className="w-full" onClick={handleShare}>
             <Share2 className="h-5 w-5" />
             <span className="ml-2 hidden sm:inline">Share</span>
