@@ -175,6 +175,8 @@ export const PostDisplay: React.FC<PostDisplayProps> = ({
   const [isSavingTitle, setIsSavingTitle] = useState(false);
   const [linkPreview, setLinkPreview] = useState<any>(null);
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+
+  // FIX 1: Added cleanup logic to prevent memory leaks
   useEffect(() => {
     // Rule 1: Don't show link previews if attachments exist
     if (post.attachments && post.attachments.length > 0) {
@@ -191,19 +193,30 @@ export const PostDisplay: React.FC<PostDisplayProps> = ({
       // Rule 3: Handle YouTube links locally
       if (videoId) {
         setLinkPreview({ type: 'youtube', data: { embedUrl: `https://www.youtube.com/embed/${videoId}` } });
-      } else {
-        // Rule 4: Fetch previews for other websites
-        setIsPreviewLoading(true);
-        supabase.functions.invoke('get-link-preview', { body: { url: firstUrl } })
-          .then(({ data, error }) => {
-            if (data && !error && (data.title || data.image)) {
-              setLinkPreview({ type: 'website', data: data });
-            }
-          })
-          .finally(() => {
-            setIsPreviewLoading(false);
-          });
-      }
+        return; // We're done
+      } 
+      
+      // Rule 4: Fetch previews for other websites
+      let isCancelled = false;
+      setIsPreviewLoading(true);
+
+      supabase.functions.invoke('get-link-preview', { body: { url: firstUrl } })
+        .then(({ data, error }) => {
+          if (isCancelled) return; // Don't update state if component unmounted
+          if (data && !error && (data.title || data.image)) {
+            setLinkPreview({ type: 'website', data: data });
+          }
+        })
+        .finally(() => {
+          if (isCancelled) return; // Don't update state
+          setIsPreviewLoading(false);
+        });
+      
+      // Cleanup function
+      return () => {
+        isCancelled = true;
+      };
+
     } else {
       setLinkPreview(null); // No URL found
     }
@@ -491,8 +504,9 @@ export const PostDisplay: React.FC<PostDisplayProps> = ({
           {/* 1. Attachment Previews */}
           {post.attachments && post.attachments.length > 0 && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {/* FIX 2: Changed key from att.id to att.file_url for type safety */}
               {post.attachments.map((att: any) => (
-                <AttachmentPreview key={att.id} attachment={att} />
+                <AttachmentPreview key={att.file_url} attachment={att} />
               ))}
             </div>
           )}
