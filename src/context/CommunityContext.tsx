@@ -36,6 +36,7 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
   
   const [spaces, setSpaces] = useState<SpaceWithDetails[]>([]); 
   const [memberships, setMemberships] = useState<Membership[]>([]);
+  const [publicThreads, setPublicThreads] = useState<PublicPost[]>([]); 
   const [isLoadingSpaces, setIsLoadingSpaces] = useState(true);
 
   const addOptimisticSpace = useCallback((space: SpaceWithDetails) => {
@@ -119,11 +120,12 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
     isLoadingSpaces,
     refreshSpaces, // <-- EXPOSED as refreshSpaces
     updateLocalSpace, // <-- EXPOSED the new function
+    updateLocalPost,
     getMembershipStatus,
     setMemberships, 
     addOptimisticSpace,
     removeOptimisticSpace,
-  }), [spaces, memberships, isLoadingSpaces, refreshSpaces, updateLocalSpace, getMembershipStatus]);
+  }), [spaces, memberships, isLoadingSpaces, refreshSpaces, updateLocalSpace, updateLocalPost, getMembershipStatus]);
 
   return (
     <CommunityContext.Provider value={contextValue}>
