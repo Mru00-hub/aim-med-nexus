@@ -37,7 +37,7 @@ import {
   toggleReaction,
   FullPostDetails, // ADDED: Import FullPostDetails type
 } from '@/integrations/supabase/community.api';
-import { ChevronDown, ChevronUp, MoreHorizontal, Edit2, Trash2} from 'lucide-react';
+import { ChevronDown, ChevronUp, MoreHorizontal} from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Document, Page, pdfjs } from 'react-pdf';
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
