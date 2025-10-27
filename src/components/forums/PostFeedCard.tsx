@@ -8,6 +8,8 @@ import { ThumbsUp, MessageSquare, FileText, UserPlus, Check, Loader2, Smile } fr
 import { useAuth } from '@/hooks/useAuth';
 import { ShortenedBody } from './ShortenedBody'; // We will create this
 import { AttachmentPreview } from './AttachmentPreview'; // We will create this
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+
 const URL_REGEX = /(https?:\/\/[^\s]+)/g;
 const REACTIONS = ['👍', '❤️', '🔥', '🧠', '😂'];
 
@@ -125,9 +127,15 @@ export const PostFeedCard: React.FC<PostFeedCardProps> = ({
           <AttachmentPreview attachments={post.attachments} />
           
           <div className="flex flex-col gap-3 text-xs text-muted-foreground">
-            <div>
-              <span className="font-medium text-foreground">{authorName}</span>
-              {authorPosition && <p className="text-xs">{authorPosition}</p>}
+            <div className="flex items-center gap-2">
+              <Avatar className="h-8 w-8">
+                <AvatarImage src={post.author?.profile_picture_url || ''} alt={authorName || 'Author'} />
+                <AvatarFallback>{authorName?.charAt(0) || 'A'}</AvatarFallback>
+              </Avatar>
+              <div>
+                <span className="font-medium text-foreground">{authorName}</span>
+                {authorPosition && <p className="text-xs">{authorPosition}</p>}
+              </div>
             </div>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
               <div className="flex items-center gap-1 font-medium">
@@ -193,9 +201,12 @@ export const PostFeedCard: React.FC<PostFeedCardProps> = ({
             <Button variant="ghost" size="sm" asChild>
               <Link to={user ? `/community/thread/${id}` : '/login'}>
                 <MessageSquare className="h-4 w-4 mr-2" />
-                {post.comment_count}
+                <span>{post.comment_count} comments</span>
               </Link>
             </Button>
+            <div className="flex items-center gap-1">
+              <span>Last activity: {new Date(post.last_activity_at).toLocaleDateString()}</span>
+            </div>
           </div>
         )}
       </CardContent>
