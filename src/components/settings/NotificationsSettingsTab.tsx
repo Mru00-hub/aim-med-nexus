@@ -203,8 +203,24 @@ export const NotificationsSettingsTab: React.FC = () => {
         </p>
 
         <SettingRow
-          title="Forum & Space Updates"
-          description="Notify me about new public threads, spaces, and replies."
+          title="Direct Messages"
+          description="Notify me about new direct messages."
+          checked={preferences.direct_messages}
+          onToggle={(value) => handleToggle('direct_messages', value)}
+          disabled={isSaving}
+        />
+
+        <SettingRow
+          title="Follows Activity"
+          description="Notify me when someone I follow creates a public post or space."
+          checked={preferences.follows_activity}
+          onToggle={(value) => handleToggle('follows_activity', value)}
+          disabled={isSaving}
+        />
+
+        <SettingRow
+          title="Thread Replies" // <-- Make sure you updated this title
+          description="Notify me about replies to my messages." // <-- Make sure you updated this
           checked={preferences.forum_updates}
           onToggle={(value) => handleToggle('forum_updates', value)}
           disabled={isSaving}
