@@ -127,6 +127,7 @@ export const SpaceCard: React.FC<SpaceCardProps> = ({ space, membershipStatus, o
                 </Tooltip>
               </TooltipProvider>
             </div>
+          </div>
           <div className="mt-4 pt-4 border-t flex flex-wrap justify-end items-center gap-2">
             {membershipStatus === 'ACTIVE' ? (
               <Button asChild variant="outline" size="sm">
