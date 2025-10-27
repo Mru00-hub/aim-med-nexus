@@ -130,7 +130,7 @@ export type EditableAward = (TablesInsert<'awards'> | TablesUpdate<'awards'>) & 
 export type EditableTransition = (TablesInsert<'career_transitions'> | TablesUpdate<'career_transitions'>);
 export type EditableVenture = (TablesInsert<'ventures'> | TablesUpdate<'ventures'>) & { id?: string };
 export type EditableContent = (TablesInsert<'content_portfolio'> | TablesUpdate<'content_portfolio'>) & { id?: string };
-
+export type EditableCocurricular = (TablesInsert<'cocurriculars'> | TablesUpdate<'cocurriculars'>) & { id?: string };
 /**
  * Fetches all academic achievements for the *currently logged-in user*.
  */
@@ -230,6 +230,20 @@ export const getMyContentPortfolio = async (): Promise<Tables<'content_portfolio
 };
 
 /**
+ * Fetches all cocurricular items for the *currently logged-in user*.
+ */
+export const getMyCocurriculars = async (): Promise<Tables<'cocurriculars'>[]> => {
+    const session = await getSessionOrThrow();
+    const { data, error } = await supabase
+        .from('cocurriculars')
+        .select('*')
+        .eq('profile_id', session.user.id)
+        .order('activity_date', { ascending: false, nulls: 'last' });
+    if (error) throw error;
+    return data || [];
+};
+
+/**
  * This payload contains all the 1-to-many items to be saved.
  */
 type SaveProfilePayload = {
@@ -240,6 +254,7 @@ type SaveProfilePayload = {
     transitionData: EditableTransition | null;
     ventures: EditableVenture[];
     contentPortfolio: EditableContent[];
+    cocurriculars: EditableCocurricular[];
 };
 
 /**
@@ -252,6 +267,7 @@ type DeletedItemsPayload = {
     awards: string[];
     ventures: string[];
     content_portfolio: string[];
+    cocurriculars: string[];
 };
 
 /**
@@ -299,6 +315,7 @@ export const saveProfileDetails = async (payload: SaveProfilePayload, deletedIte
         { error: awardError },
         { error: ventureError },
         { error: contentError },
+        { error: cocurricularError },
         transitionUpsertData ? supabase.from('career_transitions').upsert(transitionUpsertData) : Promise.resolve({ error: null }),
         // Deletion promises
         { error: delAchError },
@@ -307,6 +324,7 @@ export const saveProfileDetails = async (payload: SaveProfilePayload, deletedIte
         { error: delAwardError },
         { error: delVentureError },
         { error: delContentError },
+        { error: delCocurricularError },
     ] = await Promise.all([
         supabase.from('academic_achievements').upsert(prepareUpsert(payload.achievements)),
         supabase.from('publications').upsert(prepareUpsert(payload.publications)),
@@ -314,6 +332,7 @@ export const saveProfileDetails = async (payload: SaveProfilePayload, deletedIte
         supabase.from('awards').upsert(prepareUpsert(payload.awards)),
         supabase.from('ventures').upsert(prepareUpsert(payload.ventures)),
         supabase.from('content_portfolio').upsert(prepareUpsert(payload.contentPortfolio)),
+        supabase.from('cocurriculars').upsert(prepareUpsert(payload.cocurriculars)),
         // Deletions
         supabase.from('academic_achievements').delete().in('id', deletedItems.academic_achievements),
         supabase.from('publications').delete().in('id', deletedItems.publications),
@@ -321,10 +340,11 @@ export const saveProfileDetails = async (payload: SaveProfilePayload, deletedIte
         supabase.from('awards').delete().in('id', deletedItems.awards),
         supabase.from('ventures').delete().in('id', deletedItems.ventures),
         supabase.from('content_portfolio').delete().in('id', deletedItems.content_portfolio),
+        supabase.from('cocurriculars').delete().in('id', deletedItems.cocurriculars),
     ]);
 
     // Check for any errors
-    const errors = [achError, pubError, certError, awardError,ventureError, contentError, delAchError, delPubError, delCertError, delAwardError, delVentureError, delContentError].filter(Boolean);
+    const errors = [achError, pubError, certError, awardError,ventureError, contentError, cocurricularError,delAchError, delPubError, delCertError, delAwardError, delVentureError, delContentError, delCocurricularError].filter(Boolean);
     if (errors.length > 0) {
         throw new Error(errors.map(e => e.message).join(', '));
     }
