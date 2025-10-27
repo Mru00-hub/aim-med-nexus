@@ -955,3 +955,66 @@ export const getProfileDetails = async (userId: string) => {
     is_followed_by_viewer: !!isFollowingData,
   };
 };
+
+/**
+ * Fetches the list of users who follow the target user.
+ * @param userId - The user whose followers to fetch.
+ */
+export const getFollowers = async (userId: string): Promise<Profile[]> => {
+  const { data, error } = await supabase
+    .from('user_follows')
+    .select(
+      `
+      profiles!inner!follower_id(
+        id,
+        full_name,
+        profile_picture_url,
+        current_position,
+        organization,
+        location_name
+      )
+    `
+    )
+    .eq('followed_id', userId);
+
+  if (error) throw error;
+
+  // Map the data to return an array of Profile objects
+  const profiles = data
+    .map((item: any) => item.profiles)
+    .filter(Boolean) as Profile[];
+
+  return profiles;
+};
+
+/**
+ * Fetches the list of users the target user is following.
+ * @param userId - The user whose followees to fetch.
+ */
+export const getFollowing = async (userId: string): Promise<Profile[]> => {
+  const { data, error } = await supabase
+    .from('user_follows')
+    .select(
+      `
+      profiles!inner!followed_id(
+        id,
+        full_name,
+        profile_picture_url,
+        current_position,
+        organization,
+        location_name
+      )
+    `
+    )
+    .eq('follower_id', userId);
+
+  if (error) throw error;
+
+  // Map the data to return an array of Profile objects
+  const profiles = data
+    .map((item: any) => item.profiles)
+    .filter(Boolean) as Profile[];
+
+  return profiles;
+};
+
