@@ -240,7 +240,7 @@ const useThreadData = (threadId: string, currentUserId: string | undefined, prof
         handleEditMessage,
         handleReaction 
     };
-}; // <-- FIX 2: Removed the stray comma that was here.
+}; 
 
 // ======================================================================
 // THREAD VIEW COMPONENT (Renderer)
