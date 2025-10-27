@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useDebounce } from 'use-debounce';
 import { supabase } from '@/integrations/supabase/client';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { Button } from '@/components/ui/button';
@@ -140,6 +140,7 @@ const CreatePostForm: React.FC = () => {
   const [uploadStatus, setUploadStatus] = useState<string | null>(null);
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const { spaceId } = useParams<{ spaceId?: string }>();
   const { toast } = useToast();
   const { refreshSpaces } = useCommunity(); // To refresh the public threads list
 
@@ -245,7 +246,7 @@ const CreatePostForm: React.FC = () => {
           title,
           body: bodyContent, 
           attachments,
-          spaceId: null, 
+          spaceId: spaceId || null,
           preview: linkPreview 
             ? {
                 title: linkPreview.data.title,
@@ -407,6 +408,9 @@ const CreatePostForm: React.FC = () => {
 
 // The page component that renders the form
 const CreatePostPage = () => {
+  const { spaceId } = useParams<{ spaceId?: string }>();
+  const { spaces } = useCommunity();
+  const space = spaceId ? spaces?.find(s => s.id === spaceId) : null;
     return (
       <AuthGuard>
         <div className="min-h-screen bg-background">
@@ -414,9 +418,14 @@ const CreatePostPage = () => {
           <main className="container mx-auto py-8 px-4">
             <Card className="max-w-3xl mx-auto">
               <CardHeader>
-                <CardTitle className="text-2xl">Create a New Public Post</CardTitle>
+                <CardTitle className="text-2xl">
+                  {space ? `New Post in ${space.name}` : 'Create a New Public Post'}
+                </CardTitle>
                 <CardDescription>
-                  This post will be visible to everyone on the Community Hub.
+                  {space 
+                    ? `This post will be visible to all members of ${space.name}.`
+                    : 'This post will be visible to everyone on the Community Hub.'
+                  }
                 </CardDescription>
               </CardHeader>
               <CardContent>
