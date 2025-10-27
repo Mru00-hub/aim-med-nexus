@@ -1,7 +1,7 @@
 // src/integrations/supabase/community.api.ts
 import { supabase } from './client';
 import { Database, Tables, Enums } from './types';
-
+import { getMyConnections } from './social.api'; 
 // =================================================================
 // Modern, Type-Safe Definitions
 // =================================================================
@@ -14,6 +14,11 @@ export type Membership = Tables<'memberships'>;
 export type MessageReaction = Tables<'message_reactions'>;
 export type MessageAttachment = Tables<'message_attachments'>;
 export type Profile = Tables<'profiles'>;
+export type AcademicAchievement = Tables<'academic_achievements'>;
+export type Publication = Tables<'publications'>;
+export type Certification = Tables<'certifications'>;
+export type Award = Tables<'awards'>;
+export type ProfileAnalytics = Tables<'profile_analytics'>;
 
 export type SpaceWithDetails = Space & {
   creator_full_name: string | null;
@@ -124,6 +129,22 @@ export type PublicPostAuthor = {
   full_name: string;
   profile_picture_url: string | null;
   current_position: string | null; // <-- We added this
+};
+
+export type FullProfile = {
+  profile: ProfileData; // This is the ProfileData type defined at the bottom
+  posts: PublicPost[];
+  spaces: Space[];
+  academic_achievements: AcademicAchievement[];
+  publications: Publication[];
+  certifications: Certification[];
+  awards: Award[];
+  analytics: ProfileAnalytics | null; // Can be null if no views yet
+  // These counts now come directly from the 'profiles' table
+  followers_count: number; 
+  following_count: number;
+  connection_count: number;
+  is_followed_by_viewer: boolean; // This we still check separately
 };
 
 // =================================================================
@@ -307,6 +328,15 @@ export const updateMemberRole = async (membershipId: string, newRole: Enums<'mem
         p_new_role: newRole,
     });
     if (error) throw error;
+};
+
+export const incrementProfileView = async (userId: string): Promise<void> => {
+  // We don't need to await this or handle errors,
+  // it's a "fire and forget" call.
+  supabase.rpc('increment_profile_view', { p_profile_id: userId })
+    .then(({ error }) => {
+      if (error) console.warn('Failed to increment profile view:', error.message);
+    });
 };
 
 interface GetPublicThreadsProps {
@@ -894,65 +924,72 @@ export const toggleFollow = async (userId: string): Promise<void> => {
   if (error) throw error;
 };
 
-export const getProfileDetails = async (userId: string) => {
+export const getProfileDetails = async (userId: string): Promise<FullProfile> => {
   const session = await getSessionOrThrow();
   const currentUserId = session.user.id;
 
-  // 1. Get profile info
-  const { data: profile, error: profileError } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', userId)
-    .single();
+  // 1. Get main profile info (using the privacy-aware RPC)
+  const { data: rpcData, error: rpcError } = await supabase.rpc(
+    'get_profile_with_privacy',
+    {
+      profile_id: userId,
+      viewer_id: currentUserId,
+    }
+  );
+
+  if (rpcError) throw rpcError;
+  const profile = rpcData?.[0];
   
-  if (profileError) throw profileError;
-  if (!profile) throw new Error("Profile not found.");
-
-  // 2. Get their public posts
-  const { data: posts, error: postsError } = await supabase
-    .from('public_posts_feed')
-    .select('*')
-    .eq('author_id', userId)
-    .order('created_at', { ascending: false });
-
-  // 3. Get their created spaces
-  const { data: spaces, error: spacesError } = await supabase
-    .from('spaces')
-    .select('*')
-    .eq('creator_id', userId);
+  if (!profile) throw new Error("Profile not found or you do not have permission.");
   
-  // 4. Get follower/following counts
-  const { count: followersCount, error: followersError } = await supabase
-    .from('user_follows')
-    .select('*', { count: 'exact', head: true })
-    .eq('followed_id', userId);
+  // 2. In parallel, fetch all related data
+  const [
+    { data: posts, error: postsError },
+    { data: spaces, error: spacesError },
+    { data: isFollowingData, error: isFollowingError },
+    { data: achievements, error: achError },
+    { data: publications, error: pubError },
+    { data: certifications, error: certError },
+    { data: awards, error: awardError },
+    { data: analytics, error: analyticsError },
+  ] = await Promise.all([
+    // Activity
+    supabase.from('public_posts_feed').select('*').eq('author_id', userId).order('created_at', { ascending: false }),
+    supabase.from('spaces').select('*').eq('creator_id', userId),
+    // Follow Status (only check if not viewing own profile)
+    currentUserId === userId 
+      ? Promise.resolve({ data: false, error: null }) 
+      : supabase.from('user_follows').select('follower_id').eq('follower_id', currentUserId).eq('followed_id', userId).maybeSingle(),
+    // New Data Tables (RLS handles privacy)
+    supabase.from('academic_achievements').select('*').eq('profile_id', userId).order('year', { ascending: false, nulls: 'last' }),
+    supabase.from('publications').select('*').eq('profile_id', userId).order('publication_date', { ascending: false, nulls: 'last' }),
+    supabase.from('certifications').select('*').eq('profile_id', userId).order('issue_date', { ascending: false, nulls: 'last' }),
+    supabase.from('awards').select('*').eq('profile_id', userId).order('date', { ascending: false, nulls: 'last' }),
+    supabase.from('profile_analytics').select('view_count').eq('profile_id', userId).maybeSingle(),
+  ]);
 
-  const { count: followingCount, error: followingError } = await supabase
-    .from('user_follows')
-    .select('*', { count: 'exact', head: true })
-    .eq('follower_id', userId);
-
-  // 5. Check if the *current* user is following this profile
-  const { data: isFollowingData, error: isFollowingError } = await supabase
-    .from('user_follows')
-    .select('*')
-    .eq('follower_id', currentUserId)
-    .eq('followed_id', userId)
-    .maybeSingle(); // .maybeSingle() returns null instead of erroring
-
-  if (postsError || spacesError || followersError || followingError || isFollowingError) {
-    console.error("Error fetching profile details", {
-      postsError, spacesError, followersError, followingError, isFollowingError
+  // Optional: Log errors if any query failed
+  if (postsError || spacesError || isFollowingError || achError || pubError || certError || awardError || analyticsError) {
+    console.warn("One or more profile detail queries failed.", {
+      postsError, spacesError, isFollowingError, achError, pubError, certError, awardError, analyticsError
     });
   }
 
+  // 3. Return the comprehensive object
   return {
-    profile,
+    profile: profile as ProfileData,
     posts: posts || [],
     spaces: spaces || [],
-    followers_count: followersCount || 0,
-    following_count: followingCount || 0,
-    is_followed_by_viewer: !!isFollowingData,
+    // Get counts directly from the profile table (updated by triggers)
+    followers_count: profile.follower_count || 0,
+    following_count: profile.following_count || 0,
+    connection_count: profile.connection_count || 0,
+    is_followed_by_viewer: !!isFollowingData, // Check if the follow relationship exists
+    academic_achievements: achievements || [],
+    publications: publications || [],
+    certifications: certifications || [],
+    awards: awards || [],
+    analytics: analytics || { profile_id: userId, view_count: 0 }, // Default to 0 views
   };
 };
 
@@ -1018,3 +1055,16 @@ export const getFollowing = async (userId: string): Promise<Profile[]> => {
   return profiles;
 };
 
+type ProfileData = Tables<'profiles'> & {
+  age?: number;
+  current_location: string | null;
+  institution: string | null;
+  course: string | null;
+  specialization: string | null;
+  year_of_study: string | null;
+  years_experience: string | null;
+  // Add trigger-based counts from profile table
+  follower_count?: number;
+  following_count?: number;
+  connection_count?: number;
+};
