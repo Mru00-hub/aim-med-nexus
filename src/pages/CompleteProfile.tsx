@@ -7,17 +7,49 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Save, AlertCircle } from 'lucide-react';
+import { Save, AlertCircle, Award, BookOpen, ShieldCheck, Briefcase, User, GraduationCap, PenTool, Lightbulb, HeartHandshake, Palette, Megaphone } from 'lucide-react';
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Separator } from "@/components/ui/separator";
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 
-// --- Import Refactored Components ---
+// --- Import ALL Profile Edit Components ---
 import { ProfileAvatar } from '@/components/profile-edit/ProfileAvatar';
 import { ProfileBasicInfo } from '@/components/profile-edit/ProfileBasicInfo';
 import { ProfileProfessionalInfo } from '@/components/profile-edit/ProfileProfessionalInfo';
 import { ProfileEducationInfo } from '@/components/profile-edit/ProfileEducationInfo';
 import { ProfileAboutInfo } from '@/components/profile-edit/ProfileAboutInfo';
+// 🚀 PLAN: Import new components
+import { ProfileModeSelector } from '@/components/profile-edit/ProfileModeSelector';
+import { ProfileAchievementsForm } from '@/components/profile-edit/ProfileAchievementsForm';
+import { ProfilePublicationsForm } from '@/components/profile-edit/ProfilePublicationsForm';
+import { ProfileCertificationsForm } from '@/components/profile-edit/ProfileCertificationsForm';
+import { ProfileAwardsForm } from '@/components/profile-edit/ProfileAwardsForm';
+import { ProfileTransitionInfo } from '@/components/profile-edit/ProfileTransitionInfo';
+import { ProfileVenturesForm } from '@/components/profile-edit/ProfileVenturesForm';
+import { ProfileContentForm } from '@/components/profile-edit/ProfileContentForm';
+import { ProfileCocurricularsForm } from '@/components/profile-edit/ProfileCocurricularsForm';
+
+// 🚀 PLAN: Import API functions and types from user.api.ts
+import {
+  getMyAcademicAchievements,
+  getMyPublications,
+  getMyCertifications,
+  getMyAwards,
+  getMyTransitionData,
+  getMyVentures,
+  getMyContentPortfolio,
+  getMyCocurriculars,
+  saveProfileDetails,
+  EditableAchievement,
+  EditablePublication,
+  EditableCertification,
+  EditableAward,
+  EditableTransition,
+  EditableVenture,
+  EditableContent,
+  EditableCocurricular,
+} from '@/integrations/supabase/user.api';
 
 // --- Data Types ---
 type Location = { id: string; label: string; value: string };
@@ -27,6 +59,7 @@ type Specialization = { id: string; label: string; value: string };
 type StudentYear = { value: string; label: string };
 type ExperienceLevel = { value: string; label: string };
 
+// --- (generateUniqueColor and seedDropdownList helpers remain the same) ---
 const generateUniqueColor = (id: string): string => {
   let hash = 0;
   for (let i = 0; i < id.length; i++) {
@@ -38,13 +71,12 @@ const generateUniqueColor = (id: string): string => {
   const lightness = 40 + (hash % 21);
   return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
 };
-
-// --- Helper function to add an item to a list only if it's not already there ---
 function seedDropdownList<T extends { id: string }>(list: T[], item: T | null | undefined): T[] {
   if (!item) return list;
   if (list.find(i => i.id === item.id)) return list;
   return [item, ...list];
 }
+// ---
 
 const CompleteProfile = () => {
   const navigate = useNavigate();
@@ -58,8 +90,11 @@ const CompleteProfile = () => {
   const [avatarPreview, setAvatarPreview] = useState<string>('');
   
   const [userRole, setUserRole] = useState(''); 
+  
+  // 🚀 PLAN: State for profile mode
+  const [profileMode, setProfileMode] = useState<'clinical' | 'non_clinical'>('clinical');
 
-  // --- Form State ---
+  // --- Form State (Base) ---
   const [formData, setFormData] = useState({
     full_name: '',
     phone: '',
@@ -82,28 +117,47 @@ const CompleteProfile = () => {
     experience_level_value: '',
   });
 
-  // --- Dropdown Data States ---
+  // 🚀 PLAN: State for all 1-to-many data
+  // Clinical
+  const [achievements, setAchievements] = useState<EditableAchievement[]>([]);
+  const [publications, setPublications] = useState<EditablePublication[]>([]);
+  const [certifications, setCertifications] = useState<EditableCertification[]>([]);
+  const [awards, setAwards] = useState<EditableAward[]>([]);
+  // Non-Clinical
+  const [transitionData, setTransitionData] = useState<EditableTransition | null>(null);
+  const [ventures, setVentures] = useState<EditableVenture[]>([]);
+  const [contentPortfolio, setContentPortfolio] = useState<EditableContent[]>([]);
+  // Shared
+  const [cocurriculars, setCocurriculars] = useState<EditableCocurricular[]>([]);
+
+  // 🚀 PLAN: State to track deleted items
+  const [deletedItems, setDeletedItems] = useState({
+    academic_achievements: [] as string[],
+    publications: [] as string[],
+    certifications: [] as string[],
+    awards: [] as string[],
+    ventures: [] as string[],
+    content_portfolio: [] as string[],
+    cocurriculars: [] as string[],
+  });
+
+  // --- (Dropdown, Search, and Loading states remain the same) ---
   const [locations, setLocations] = useState<Location[]>([]);
   const [institutions, setInstitutions] = useState<Institution[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
   const [specializations, setSpecializations] = useState<Specialization[]>([]);
   const [studentYears, setStudentYears] = useState<StudentYear[]>([]);
   const [experiences, setExperiences] = useState<ExperienceLevel[]>([]);
-
-  // --- Search States ---
   const [locationSearch, setLocationSearch] = useState("");
   const [institutionSearch, setInstitutionSearch] = useState("");
   const [courseSearch, setCourseSearch] = useState("");
   const [specializationSearch, setSpecializationSearch] = useState("");
-
-  // --- Loading States ---
   const [isLocLoading, setIsLocLoading] = useState(false);
   const [isInstLoading, setIsInstLoading] = useState(false);
   const [isCourseLoading, setIsCourseLoading] = useState(false);
   const [isSpecLoading, setIsSpecLoading] = useState(false);
   const [isPageLoading, setIsPageLoading] = useState(true);
 
-  // --- Fetch Location with Search (Debounced) ---
   useEffect(() => {
     setIsLocLoading(true);
     const searchTimer = setTimeout(() => {
@@ -274,16 +328,12 @@ const CompleteProfile = () => {
         setIsPageLoading(true);
         setError('');
         
-        // --- THIS IS THE FIX ---
-        // 1. Fetch the simple profile data
+        // 1. Fetch the main profile data
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
           .select('*')
           .eq('id', user.id)
           .single();
-
-        console.log('📊 Profile data:', profile);
-        console.log('❌ Profile error:', profileError);
 
         if (profileError) {
           console.error("Error fetching profile:", profileError);
@@ -293,33 +343,40 @@ const CompleteProfile = () => {
         }
 
         if (profile) {
-          // 2. Now, fetch the *labels* for the IDs we just got
-          const [loc, inst, cour, spec] = await Promise.all([
+          // 2. Fetch all related data in parallel using API functions
+          const [
+            loc, inst, cour, spec, // Dropdowns
+            achievementsData, pubData, certData, awardData, // Clinical
+            transData, ventureData, contentData, cocurricularData // Non-Clinical + Shared
+          ] = await Promise.all([
+            // Dropdowns
             profile.location_id ? supabase.from('locations').select('id, label, value').eq('id', profile.location_id).single() : Promise.resolve({ data: null }),
             profile.institution_id ? supabase.from('institutions').select('id, label, value').eq('id', profile.institution_id).single() : Promise.resolve({ data: null }),
             profile.course_id ? supabase.from('courses').select('id, label, value').eq('id', profile.course_id).single() : Promise.resolve({ data: null }),
             profile.specialization_id ? supabase.from('specializations').select('id, label, value').eq('id', profile.specialization_id).single() : Promise.resolve({ data: null }),
+            // API calls
+            getMyAcademicAchievements(),
+            getMyPublications(),
+            getMyCertifications(),
+            getMyAwards(),
+            getMyTransitionData(),
+            getMyVentures(),
+            getMyContentPortfolio(),
+            getMyCocurriculars(),
           ]);
 
-          // 3. Seed the dropdown states with the fetched items
+          // 3. Seed dropdowns
           setLocations(prev => seedDropdownList(prev, loc.data));
           setInstitutions(prev => seedDropdownList(prev, inst.data));
           setCourses(prev => seedDropdownList(prev, cour.data));
           setSpecializations(prev => seedDropdownList(prev, spec.data));
 
-          // 4. Set the user role
+          // 4. Set main form states
           setUserRole(profile.user_role || '');
-
-          // 5. Set the form data (this logic was correct)
-          const determineId = (id: string | null, other: string | null) => {
-            if (id) return id;
-            if (other) return 'other';
-            return '';
-          };
-          const skillsString = Array.isArray(profile.skills) 
-            ? profile.skills.join(', ') 
-            : (profile.skills || '');
-
+          setProfileMode(profile.profile_mode === 'non_clinical' ? 'non_clinical' : 'clinical');
+          
+          const determineId = (id: string | null, other: string | null) => (id ? id : other ? 'other' : '');
+          const skillsString = Array.isArray(profile.skills) ? profile.skills.join(', ') : (profile.skills || '');
           setFormData({
             full_name: profile.full_name || '',
             phone: profile.phone || '',
@@ -342,14 +399,22 @@ const CompleteProfile = () => {
             experience_level_value: profile.experience_level_value || '',
           });
 
-          // Set Avatar
+          // 5. Set 1-to-many form states
+          setAchievements(achievementsData || []);
+          setPublications(pubData.map(p => ({...p, authors: p.authors || []})) as any || []);
+          setCertifications(certData || []);
+          setAwards(awardData || []);
+          setTransitionData(transData || { profile_id: user.id }); // Initialize if null
+          setVentures(ventureData || []);
+          setContentPortfolio(contentData || []);
+          setCocurriculars(cocurricularData || []);
+
+          // 6. Set Avatar
           if (profile.profile_picture_url) {
             setAvatarUrl(profile.profile_picture_url);
           } else if (profile.full_name) {
             const uniqueColor = generateUniqueColor(user.id);
-            const generatedUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(
-              profile.full_name
-            )}&background=${uniqueColor.substring(1)}&color=fff&size=256`;
+            const generatedUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.full_name)}&background=${uniqueColor.substring(1)}&color=fff&size=256`;
             setAvatarUrl(generatedUrl);
           }
           setIsPageLoading(false);
@@ -358,12 +423,105 @@ const CompleteProfile = () => {
       fetchProfileData();
     }
   }, [user, authLoading]);
-  // --- END OF FIX ---
+  // --- END OF FETCH ---
+
+  // --- Input Handlers ---
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
+  
+  const handleProfileModeChange = (mode: 'clinical' | 'non_clinical') => {
+    setProfileMode(mode);
+  };
+  
+  // 🚀 PLAN: Handler for the single transitionData object
+  const handleTransitionChange = (field: string, value: any) => {
+    setTransitionData(prev => ({
+      ...(prev || { profile_id: user?.id }),
+      [field]: value
+    }) as EditableTransition);
+  };
 
+  // 🚀 PLAN: Generic handlers for all 1-to-many lists
+  type ListName = 'achievements' | 'publications' | 'certifications' | 'awards' | 'ventures' | 'contentPortfolio' | 'cocurriculars';
+
+  const handleListChange = (
+    listName: ListName,
+    index: number,
+    field: string,
+    value: any
+  ) => {
+    const setters = {
+      achievements: setAchievements,
+      publications: setPublications,
+      certifications: setCertifications,
+      awards: setAwards,
+      ventures: setVentures,
+      contentPortfolio: setContentPortfolio,
+      cocurriculars: setCocurriculars,
+    };
+    const setter = setters[listName] as React.Dispatch<React.SetStateAction<any[]>>;
+    
+    setter(prev => {
+      const newList = [...prev];
+      let finalValue = value;
+      // Handle array fields
+      if ((listName === 'publications' && field === 'authors') || (listName === 'ventures' && field === 'achievements')) {
+        finalValue = value.split(',').map((s: string) => s.trim()).filter(Boolean);
+      }
+      newList[index] = { ...newList[index], [field]: finalValue };
+      return newList;
+    });
+  };
+
+  const addListItem = (listName: ListName) => {
+    const defaults = {
+      achievements: { exam_name: '', rank: '', percentile: null, year: null },
+      publications: { type: 'journal', title: '', authors: [] },
+      certifications: { certification_name: '', issuing_org: '', issue_date: '' },
+      awards: { type: 'professional', award_name: '', issuing_org: '', date: '' },
+      ventures: { name: '', venture_type: 'business', role: '' },
+      contentPortfolio: { title: '', content_type: 'blog', url: '' },
+      cocurriculars: { title: '', category: 'Organizational' },
+    };
+    const setters = {
+      achievements: setAchievements,
+      publications: setPublications,
+      certifications: setCertifications,
+      awards: setAwards,
+      ventures: setVentures,
+      contentPortfolio: setContentPortfolio,
+      cocurriculars: setCocurriculars,
+    };
+    setters[listName]((prev: any[]) => [...prev, defaults[listName]]);
+  };
+
+  const removeListItem = (listName: ListName, index: number) => {
+    const lists = {
+      achievements, publications, certifications, awards, ventures, contentPortfolio, cocurriculars
+    };
+    const setters = {
+      achievements: setAchievements,
+      publications: setPublications,
+      certifications: setCertifications,
+      awards: setAwards,
+      ventures: setVentures,
+      contentPortfolio: setContentPortfolio,
+      cocurriculars: setCocurriculars,
+    };
+    
+    const item = (lists[listName] as any[])[index];
+    if (item.id) {
+      setDeletedItems(prev => ({
+        ...prev,
+        [listName]: [...prev[listName], item.id],
+      }));
+    }
+    setters[listName]((prev: any[]) => prev.filter((_, i) => i !== index));
+  };
+
+  // --- (Avatar Handlers remain the same) ---
   const handleAvatarChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -453,7 +611,7 @@ const CompleteProfile = () => {
 
       const skillsArray = formData.skills.split(',').map(s => s.trim()).filter(Boolean);
 
-      // 2. Call update_profile RPC
+      // 2. Call update_profile RPC (NOW INCLUDES profile_mode)
       const rpcArgs = {
         p_full_name: formData.full_name,
         p_phone: formData.phone || null,
@@ -476,10 +634,26 @@ const CompleteProfile = () => {
         p_resume_url: formData.resume_url || null,
         p_profile_picture_url: finalAvatarUrl,
         p_is_onboarded: true,
+        p_profile_mode: profileMode, // 🚀 PLAN: Save the profile mode
       };
-
+      
       const { error: rpcError } = await supabase.rpc('update_profile', rpcArgs);
       if (rpcError) throw rpcError;
+
+      // 3. 🚀 PLAN: Call saveProfileDetails for all 1-to-many tables
+      await saveProfileDetails(
+        { // Payload
+          achievements,
+          publications,
+          certifications,
+          awards,
+          transitionData,
+          ventures,
+          contentPortfolio,
+          cocurriculars,
+        },
+        deletedItems // Deleted items
+      );
 
       toast({
         title: "Profile Saved!",
@@ -551,14 +725,14 @@ const CompleteProfile = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      <main className="py-12">
-        <Card className="card-medical max-w-2xl mx-auto">
+      <main className="py-8 sm:py-12">
+        <Card className="card-medical max-w-2xl mx-auto p-0 sm:p-4 md:p-6">
           <CardHeader>
             <CardTitle className="text-2xl sm:text-3xl">
               Edit Your Profile
             </CardTitle>
             <CardDescription>
-              Keep your professional information up to date.
+              Showcase your complete professional identity.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -579,6 +753,7 @@ const CompleteProfile = () => {
                 </Alert>
               )}
 
+              {/* --- Always-Visible Sections --- */}
               <ProfileBasicInfo
                 formData={formData}
                 onInputChange={handleInputChange}
@@ -586,45 +761,220 @@ const CompleteProfile = () => {
                 onLocationSearch={setLocationSearch}
                 isLocLoading={isLocLoading}
               />
-
+              <Separator />
+              <ProfileModeSelector
+                profileMode={profileMode}
+                onModeChange={handleProfileModeChange}
+              />
               <Separator />
 
-              {/* --- Conditional Rendering --- */}
-              {userRole !== 'student' && (
-                <>
-                  <ProfileProfessionalInfo
-                    formData={formData}
-                    onInputChange={handleInputChange}
-                    specializationOptions={specializationOptions}
-                    onSpecializationSearch={setSpecializationSearch}
-                    isSpecLoading={isSpecLoading}
-                    experiences={experiences}
-                  />
-                  <Separator />
-                </>
+              {/* --- Conditional Form Sections --- */}
+              
+              {/* 🚀 PLAN: Clinical Profile Forms */}
+              {profileMode === 'clinical' && (
+                <Accordion type="multiple" collapsible className="w-full space-y-4">
+                  
+                  {userRole !== 'student' && (
+                    <AccordionItem value="clinical-professional">
+                      <AccordionTrigger className="text-lg font-semibold">
+                        <div className="flex items-center gap-2">
+                          <Briefcase className="h-5 w-5 text-primary" />
+                          Professional Details
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent className="pt-4">
+                        <ProfileProfessionalInfo
+                          formData={formData}
+                          onInputChange={handleInputChange}
+                          specializationOptions={specializationOptions}
+                          onSpecializationSearch={setSpecializationSearch}
+                          isSpecLoading={isSpecLoading}
+                          experiences={experiences}
+                        />
+                      </AccordionContent>
+                    </AccordionItem>
+                  )}
+
+                  <AccordionItem value="clinical-education">
+                    <AccordionTrigger className="text-lg font-semibold">
+                      <div className="flex items-center gap-2">
+                        <GraduationCap className="h-5 w-5 text-primary" />
+                        Educational Details
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="pt-4">
+                      <ProfileEducationInfo
+                        formData={formData}
+                        onInputChange={handleInputChange}
+                        institutionOptions={institutionOptions}
+                        onInstitutionSearch={setInstitutionSearch}
+                        isInstLoading={isInstLoading}
+                        courseOptions={courseOptions}
+                        onCourseSearch={setCourseSearch}
+                        isCourseLoading={isCourseLoading}
+                        studentYears={studentYears}
+                        userRole={userRole}
+                      />
+                    </AccordionContent>
+                  </AccordionItem>
+                  
+                  <AccordionItem value="clinical-achievements">
+                    <AccordionTrigger className="text-lg font-semibold">
+                       <div className="flex items-center gap-2">
+                          <Award className="h-5 w-5 text-primary" />
+                          Academic Achievements
+                        </div>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <ProfileAchievementsForm items={achievements} onListChange={handleListChange} onAddItem={addListItem} onRemoveItem={removeListItem} />
+                    </AccordionContent>
+                  </AccordionItem>
+
+                  <AccordionItem value="clinical-publications">
+                    <AccordionTrigger className="text-lg font-semibold">
+                      <div className="flex items-center gap-2">
+                        <BookOpen className="h-5 w-5 text-primary" />
+                        Research & Publications
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <ProfilePublicationsForm items={publications} onListChange={handleListChange} onAddItem={addListItem} onRemoveItem={removeListItem} />
+                    </AccordionContent>
+                  </AccordionItem>
+
+                  <AccordionItem value="clinical-certs">
+                    <AccordionTrigger className="text-lg font-semibold">
+                      <div className="flex items-center gap-2">
+                        <ShieldCheck className="h-5 w-5 text-primary" />
+                        Certifications
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <ProfileCertificationsForm items={certifications} onListChange={handleListChange} onAddItem={addListItem} onRemoveItem={removeListItem} />
+                    </AccordionContent>
+                  </AccordionItem>
+
+                  <AccordionItem value="clinical-awards">
+                    <AccordionTrigger className="text-lg font-semibold">
+                      <div className="flex items-center gap-2">
+                        <Award className="h-5 w-5 text-primary" />
+                        Awards & Honors
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <ProfileAwardsForm items={awards} onListChange={handleListChange} onAddItem={addListItem} onRemoveItem={removeListItem} />
+                    </AccordionContent>
+                  </AccordionItem>
+
+                </Accordion>
               )}
 
-              <ProfileEducationInfo
-                formData={formData}
-                onInputChange={handleInputChange}
-                institutionOptions={institutionOptions}
-                onInstitutionSearch={setInstitutionSearch}
-                isInstLoading={isInstLoading}
-                courseOptions={courseOptions}
-                onCourseSearch={setCourseSearch}
-                isCourseLoading={isCourseLoading}
-                studentYears={studentYears}
-                userRole={userRole}
-              />
+              {/* 🚀 PLAN: Non-Clinical Profile Forms */}
+              {profileMode === 'non_clinical' && (
+                <Accordion type="multiple" collapsible className="w-full space-y-4">
+                  <AccordionItem value="nonclinical-transition">
+                    <AccordionTrigger className="text-lg font-semibold">
+                      <div className="flex items-center gap-2">
+                        <HeartHandshake className="h-5 w-5 text-primary" />
+                        My Transition Journey
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <ProfileTransitionInfo formData={transitionData || { profile_id: user.id }} onTransitionChange={handleTransitionChange} />
+                    </AccordionContent>
+                  </AccordionItem>
+                  
+                  <AccordionItem value="nonclinical-ventures">
+                    <AccordionTrigger className="text-lg font-semibold">
+                      <div className="flex items-center gap-2">
+                        <Lightbulb className="h-5 w-5 text-primary" />
+                        Ventures & Projects
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <ProfileVenturesForm items={ventures} onListChange={handleListChange} onAddItem={addListItem} onRemoveItem={removeListItem} />
+                    </AccordionContent>
+                  </AccordionItem>
+                  
+                  <AccordionItem value="nonclinical-content">
+                    <AccordionTrigger className="text-lg font-semibold">
+                      <div className="flex items-center gap-2">
+                        <Megaphone className="h-5 w-5 text-primary" />
+                        Content Portfolio
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <ProfileContentForm items={contentPortfolio} onListChange={handleListChange} onAddItem={addListItem} onRemoveItem={removeListItem} />
+                    </AccordionContent>
+                  </AccordionItem>
+                  
+                  <AccordionItem value="nonclinical-clinical-bg">
+                    <AccordionTrigger className="text-lg font-semibold">
+                      <div className="flex items-center gap-2">
+                        <Briefcase className="h-5 w-5 text-primary" />
+                        Clinical Background (Foundation)
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="pt-4 space-y-6">
+                      <ProfileProfessionalInfo
+                        formData={formData}
+                        onInputChange={handleInputChange}
+                        specializationOptions={specializationOptions}
+                        onSpecializationSearch={setSpecializationSearch}
+                        isSpecLoading={isSpecLoading}
+                        experiences={experiences}
+                      />
+                      <Separator />
+                      <ProfileEducationInfo
+                        formData={formData}
+                        onInputChange={handleInputChange}
+                        institutionOptions={institutionOptions}
+                        onInstitutionSearch={setInstitutionSearch}
+                        isInstLoading={isInstLoading}
+                        courseOptions={courseOptions}
+                        onCourseSearch={setCourseSearch}
+                        isCourseLoading={isCourseLoading}
+                        studentYears={studentYears}
+                        userRole={userRole}
+                      />
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
+              )}
 
+              {/* --- Shared Sections --- */}
               <Separator />
+              <Accordion type="multiple" collapsible className="w-full space-y-4">
+                <AccordionItem value="shared-cocurriculars">
+                  <AccordionTrigger className="text-lg font-semibold">
+                    <div className="flex items-center gap-2">
+                      <Palette className="h-5 w-5 text-primary" />
+                      Cocurriculars & Organizing
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <ProfileCocurricularsForm items={cocurriculars} onListChange={handleListChange} onAddItem={addListItem} onRemoveItem={removeListItem} />
+                  </AccordionContent>
+                </AccordionItem>
 
-              <ProfileAboutInfo
-                formData={formData}
-                onInputChange={handleInputChange}
-              />
+                <AccordionItem value="shared-about">
+                  <AccordionTrigger className="text-lg font-semibold">
+                    <div className="flex items-center gap-2">
+                      <User className="h-5 w-5 text-primary" />
+                      About & Links
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="pt-4">
+                    <ProfileAboutInfo
+                      formData={formData}
+                      onInputChange={handleInputChange}
+                    />
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
               
-              <div className="flex flex-col sm:flex-row gap-4 pt-4">
+              {/* --- Form Actions --- */}
+              <div className="flex flex-col sm:flex-row gap-4 pt-6">
                 <Button type="submit" size="lg" className="btn-medical w-full sm:flex-1" disabled={isSubmitting}>
                   {isSubmitting ? 'Saving...' : 'Save Profile'}
                   <Save className="ml-2 h-5 w-5" />
@@ -650,6 +1000,7 @@ const CompleteProfile = () => {
   );
 };
 
+// --- (PageSkeleton remains the same) ---
 const PageSkeleton = () => (
   <div className="min-h-screen bg-background">
     <Header />
