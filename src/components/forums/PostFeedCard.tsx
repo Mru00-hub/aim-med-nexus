@@ -8,7 +8,7 @@ import { ThumbsUp, MessageSquare, FileText, UserPlus, Check, Loader2, Smile } fr
 import { useAuth } from '@/hooks/useAuth';
 import { ShortenedBody } from './ShortenedBody'; // We will create this
 import { AttachmentPreview } from './AttachmentPreview'; // We will create this
-
+const URL_REGEX = /(https?:\/\/[^\s]+)/g;
 const REACTIONS = ['👍', '❤️', '🔥', '🧠', '😂'];
 
 interface PostFeedCardProps {
@@ -40,14 +40,30 @@ export const PostFeedCard: React.FC<PostFeedCardProps> = ({
 
   // --- Normalize data between the two types ---
   const id = 'thread_id' in post ? post.thread_id : post.id;
-  const authorId = 'author_id' in post ? post.author_id : post.creator_id;
-  const authorName = 'author_name' in post ? post.author_name : post.creator_full_name;
-  const authorPosition = 'author_position' in post ? post.author_position : post.creator_position;
-  const reactionCount = 'total_reaction_count' in post ? post.total_reaction_count : post.first_message_reaction_count ?? 0;
+  const title = 'thread_title' in post ? post.thread_title : post.title;
   const firstMessageId = post.first_message_id;
 
+  // Author details
+  const authorId = 'author' in post ? post.author.id : post.creator_id;
+  const authorName = 'author' in post ? post.author.full_name : post.creator_full_name;
+  const authorPosition = 'author' in post ? post.author.current_position : post.creator_position;
+  
+  // Reaction details
+  const reactionCount = 'total_reaction_count' in post ? post.total_reaction_count : (post.first_message_reaction_count ?? 0);
+  const userReaction = 'first_message_user_reaction' in post ? post.first_message_user_reaction : (post.first_message_user_reaction ?? null);
   const displayReactionCount = optimisticReactionCount ?? reactionCount;
-  const lastActivity = new Date(post.last_activity_at).toLocaleDateString();
+
+  // Preview & Attachment details
+  const body = 'first_message_body' in post ? post.first_message_body : null;
+  const attachments = post.attachments;
+  const previewTitle = 'preview_title' in post ? post.preview_title : null;
+  const previewImage = 'preview_image_url' in post ? post.preview_image_url : null;
+  const previewDesc = 'preview_description' in post ? post.preview_description : null;
+
+  const hasPreview = previewTitle || previewImage;
+  const hasAttachments = attachments && attachments.length > 0;
+  const bodyUrls = body?.match(URL_REGEX);
+  const firstUrl = (bodyUrls && bodyUrls[0]) ? bodyUrls[0] : '#';
 
   const handleCardClick = () => {
     if (!user) navigate('/login');
@@ -78,7 +94,32 @@ export const PostFeedCard: React.FC<PostFeedCardProps> = ({
         <div className="block cursor-pointer" onClick={handleCardClick}>
           <h3 className="font-semibold text-lg mb-2">{post.title}</h3>
           
-          <ShortenedBody text={post.first_message_body} />
+          <div className="line-clamp-3">
+            <ShortenedBody text={body} />
+          </div>
+          {hasPreview && !hasAttachments && (
+            <a 
+              href={firstUrl}
+              target="_blank" 
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()} 
+              className="block mt-3 border rounded-lg overflow-hidden transition-all duration-300 hover:border-primary/50"
+            >
+              {previewImage && (
+                <img src={previewImage} alt="Preview" className="w-full h-40 object-cover" />
+              )}
+              <div className="p-3">
+                <h4 className="font-semibold text-sm truncate">
+                  {previewTitle || 'No Title'}
+                </h4>
+                {previewDesc && (
+                  <p className="text-xs text-muted-foreground line-clamp-2">
+                    {previewDesc}
+                  </p>
+                )}
+              </div>
+            </a>
+          )}
           <AttachmentPreview attachments={post.attachments} />
           
           <div className="flex flex-col gap-3 text-xs text-muted-foreground">
@@ -100,7 +141,7 @@ export const PostFeedCard: React.FC<PostFeedCardProps> = ({
         </div>
         
         {/* Action Bar */}
-        {user && (
+        {user && firstMessageId && (
           <div className="mt-4 pt-4 border-t flex items-center gap-2">
             {/* Follow Button */}
             {user.id !== authorId && (
@@ -124,7 +165,8 @@ export const PostFeedCard: React.FC<PostFeedCardProps> = ({
             {/* Reaction Button (Popover) */}
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="ghost" size="sm" onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
+                {/* This toggle now works */}
+                <Button variant={userReaction ? 'secondary' : 'ghost'} size="sm" onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
                   <Smile className="h-4 w-4 mr-2" /> React
                 </Button>
               </PopoverTrigger>
@@ -133,7 +175,8 @@ export const PostFeedCard: React.FC<PostFeedCardProps> = ({
                   {REACTIONS.map((emoji) => (
                     <Button
                       key={emoji}
-                      variant="ghost"
+                      {/* This toggle now works */}
+                      variant={userReaction === emoji ? 'default' : 'ghost'}
                       size="icon"
                       className="h-8 w-8 text-lg rounded-full"
                       onClick={(e) => handleReactionClick(e, emoji)}
