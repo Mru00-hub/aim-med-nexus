@@ -75,6 +75,11 @@ const getNotificationDetails = (notification: NotificationWithActor) => {
       title = 'Job Application Update';
       description = `Your application for a job has been updated.`;
       break;
+    case 'new_reply_to_your_message':
+      icon = MessageSquare;
+      title = 'New Reply';
+      description = `${actorName} replied to your message.`;
+      break;
     default:
       console.warn(`Unknown notification type: ${type}`);
   }
@@ -250,6 +255,7 @@ export default function Notifications() {
           n.type === 'new_public_post_by_followed_user' || 
           n.type === 'new_public_space_by_followed_user'
           n.type === 'new_reply'
+          n.type === 'new_reply_to_your_message' ||
       );
     }
     if (activeTab === 'social') {
