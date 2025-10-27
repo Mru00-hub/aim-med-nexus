@@ -102,18 +102,28 @@ export type SimpleAttachment = {
 
 export type PublicPost = {
   thread_id: string;
-  title: string;
-  created_at: string;
+  thread_title: string;
+  first_message_id: number;
+  first_message_body: string | null;
+  author: PublicPostAuthor;
+  thread_created_at: string;
   last_activity_at: string;
   comment_count: number;
-  author_id: string;
-  author_name: string | null;
-  author_avatar: string | null;
-  author_position: string | null;
   first_message_id: number;
   total_reaction_count: number;
+  first_message_user_reaction: string | null;
   first_message_body: string | null;
   attachments: SimpleAttachment[] | null;
+  preview_title: string | null;
+  preview_description: string | null;
+  preview_image_url: string | null;
+};
+
+export type PublicPostAuthor = {
+  id: string;
+  full_name: string;
+  profile_picture_url: string | null;
+  current_position: string | null; // <-- We added this
 };
 
 // =================================================================
