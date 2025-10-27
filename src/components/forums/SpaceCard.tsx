@@ -4,8 +4,9 @@ import { SpaceWithDetails, Enums } from '@/integrations/supabase/community.api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { MessageSquare, Users } from 'lucide-react';
+import { MessageSquare, Users, Loader2} from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useSpaceMetrics } from '@/hooks/useSpaceData';
 
 interface SpaceCardProps {
   space: SpaceWithDetails;
@@ -15,6 +16,7 @@ interface SpaceCardProps {
 
 export const SpaceCard: React.FC<SpaceCardProps> = ({ space, membershipStatus, onJoin }) => {
   const navigate = useNavigate();
+  const { memberCount, threadCount, isLoadingMetrics } = useSpaceMetrics(space.id);
   const isPrivate = space.join_level === 'INVITE_ONLY';
   const creatorDetails = [space.creator_position, space.creator_organization]
     .filter(Boolean)
@@ -31,9 +33,6 @@ export const SpaceCard: React.FC<SpaceCardProps> = ({ space, membershipStatus, o
     e.stopPropagation();
     onJoin(space);
   };
-
-  const threadCount = space.thread_count ?? 0;
-  const memberCount = space.member_count ?? 0;
   const isForum = space.space_type === 'FORUM';
   const threadLabel = isForum 
       ? (threadCount === 1 ? 'Post' : 'Posts') 
@@ -98,34 +97,41 @@ export const SpaceCard: React.FC<SpaceCardProps> = ({ space, membershipStatus, o
             </div>
             
             <div className="mt-4 flex items-center gap-4 text-sm text-muted-foreground">
-              <TooltipProvider delayDuration={100}>
-                
-                {/* --- FIX: This block now shows for BOTH types --- */}
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="flex items-center gap-1.5 cursor-default">
-                      <MessageSquare className="h-4 w-4" />
-                      <span className="font-medium text-foreground">{threadCount}</span>
-                      <span>{threadLabel}</span>
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>{threadCount} {threadLabel} in this space</p>
-                  </TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="flex items-center gap-1.5 cursor-default">
-                      <Users className="h-4 w-4" />
-                      <span className="font-medium text-foreground">{memberCount}</span>
-                      <span>{memberLabel}</span>
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>{memberCount} {memberLabel} in this space</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              {isLoadingMetrics ? (
+                // Show a simple loader while counts fetch
+                <div className="flex items-center gap-1.5 text-xs">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Loading stats...</span>
+                </div>
+              ) : (
+                // Once loaded, show the stats
+                <TooltipProvider delayDuration={100}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="flex items-center gap-1.5 cursor-default">
+                        <MessageSquare className="h-4 w-4" />
+                        <span className="font-medium text-foreground">{threadCount}</span>
+                        <span>{threadLabel}</span>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{threadCount} {threadLabel} in this space</p>
+                    </TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="flex items-center gap-1.5 cursor-default">
+                        <Users className="h-4 w-4" />
+                        <span className="font-medium text-foreground">{memberCount}</span>
+                        <span>{memberLabel}</span>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{memberCount} {memberLabel} in this space</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
             </div>
           </div>
           <div className="mt-4 pt-4 border-t flex flex-wrap justify-end items-center gap-2">
