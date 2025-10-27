@@ -405,6 +405,7 @@ export const getPostDetails = async (threadId: string) => {
     author_position: authorData?.current_position || null, // Use the new authorData
     first_message_id: firstMessage.id,
     first_message_body: firstMessage.body,
+    body: firstMessage.body,   
     attachments: postAttachments || [], // (assuming postAttachments is from your unchanged step 3)
     reactions: postReactions || [], // (assuming postReactions is from your unchanged step 4)
     comment_count: comments.length, // (assuming comments is from your unchanged step 5)
