@@ -16,7 +16,7 @@ export const ProfileAboutInfo: React.FC<ProfileAboutInfoProps> = ({
       <div className="font-semibold text-lg">About & Links</div>
       <div>
         <label className="block text-sm font-medium mb-2">Professional Bio</label>
-        <Textarea value={formData.bio} onChange={(e) => onInputChange('bio', e.targe.value)} placeholder="A brief summary..." rows={4} />
+        <Textarea value={formData.bio} onChange={(e) => onInputChange('bio', e.target.value)} placeholder="A brief summary..." rows={4} />
       </div>
       <div>
         <label className="block text-sm font-medium mb-2">Skills (comma-separated)</label>
