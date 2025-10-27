@@ -144,40 +144,47 @@ const CreatePostForm: React.FC = () => {
   const { refreshSpaces } = useCommunity(); // To refresh the public threads list
 
   useEffect(() => {
+    useEffect(() => {
     const urls = debouncedBody.match(URL_REGEX);
     if (files.length > 0) {
       setLinkPreview(null);
       return;
     }
     
-    // Only fetch if we find a URL, it's a new URL, and we aren't already showing a preview
-    if (urls && urls[0] && urls[0] !== checkedUrl && !linkPreview) {
+    // Only fetch if it's a new URL
+    if (urls && urls[0] && urls[0] !== checkedUrl) {
       const firstUrl = urls[0];
       setCheckedUrl(firstUrl);
-      const videoId = getYouTubeVideoId(firstUrl);
-      if (videoId) {
-        setLinkPreview({
-          type: 'youtube',
-          data: { embedUrl: `https://www.youtube.com/embed/${videoId}` }
-        });
-        setIsPreviewLoading(false); // We're done
-        return; // Stop, don't call Supabase
-      }
+      const videoId = getYouTubeVideoId(firstUrl); // Check for YouTube
       
       setIsPreviewLoading(true);
       setLinkPreview(null);
-      // Call your Supabase function
+      
+      // Call your Supabase function FOR ALL URLs
       supabase.functions.invoke('get-link-preview', { body: { url: firstUrl } })
         .then(({ data, error }) => {
           if (data && !error && (data.title || data.image)) {
-            setLinkPreview({ type: 'website', data: data }); 
+            
+            // Now, check if it's a YouTube link
+            if (videoId) {
+              setLinkPreview({ 
+                type: 'youtube', // For the iframe
+                data: { 
+                  ...data, // This now has { title, description, image }
+                  embedUrl: `https://www.youtube.com/embed/${videoId}` // Add the embedUrl
+                } 
+              });
+            } else {
+              // It's a regular website
+              setLinkPreview({ type: 'website', data: data }); 
+            }
           }
         })
         .finally(() => {
           setIsPreviewLoading(false);
         });
     }
-  }, [debouncedBody, checkedUrl, files.length, linkPreview]);
+  }, [debouncedBody, checkedUrl, files.length]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (linkPreview) {
@@ -235,11 +242,18 @@ const CreatePostForm: React.FC = () => {
 
       setUploadStatus('Creating post...'); // <-- Set status
       toast({ title: "Creating post..." });
-      const newThreadId = await createPost({
+      const newThreadId = await createThread({
           title,
           body: bodyContent, 
           attachments,
           spaceId: null, 
+          preview: linkPreview 
+            ? {
+                title: linkPreview.data.title,
+                description: linkPreview.data.description,
+                image: linkPreview.data.image,
+              }
+            : undefined
       });
       
       toast({
