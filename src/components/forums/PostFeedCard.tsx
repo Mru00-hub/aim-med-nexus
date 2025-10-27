@@ -17,6 +17,7 @@ interface PostFeedCardProps {
   
   // State from parent for optimistic updates
   optimisticReactionCount?: number;
+  optimisticUserReaction?: string | null;
   
   // Handlers from parent
   onReaction: (postId: string, firstMessageId: number, emoji: string) => void;
@@ -30,6 +31,7 @@ interface PostFeedCardProps {
 export const PostFeedCard: React.FC<PostFeedCardProps> = ({ 
   post, 
   optimisticReactionCount,
+  optimisticUserReaction,
   onReaction, 
   onFollow,
   isFollowing,
@@ -50,7 +52,7 @@ export const PostFeedCard: React.FC<PostFeedCardProps> = ({
   
   // Reaction details
   const reactionCount = 'total_reaction_count' in post ? post.total_reaction_count : (post.first_message_reaction_count ?? 0);
-  const userReaction = 'first_message_user_reaction' in post ? post.first_message_user_reaction : (post.first_message_user_reaction ?? null);
+  const userReaction = optimisticUserReaction !== undefined ? optimisticUserReaction : post.first_message_user_reaction;
   const displayReactionCount = optimisticReactionCount ?? reactionCount;
 
   // Preview & Attachment details
