@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import {
@@ -65,11 +66,6 @@ const getNotificationDetails = (notification: NotificationWithActor) => {
       title = 'Connection Accepted';
       description = `${actorName} accepted your connection request.`;
       break;
-    case 'new_reply':
-      icon = MessageSquare;
-      title = 'New Reply';
-      description = `${actorName} replied to a thread you're following.`;
-      break;
     case 'job_application_update':
       icon = Briefcase;
       title = 'Job Application Update';
@@ -78,7 +74,12 @@ const getNotificationDetails = (notification: NotificationWithActor) => {
     case 'new_reply_to_your_message':
       icon = MessageSquare;
       title = 'New Reply';
-      description = `${actorName} replied to your message.`;
+      description = `${actorName} replied to your message on a post / thread.`;
+      break;
+    case 'new_direct_message': // This is for DMs
+      icon = Users; // Use 'Users' icon to distinguish from public posts
+      title = 'New Message';
+      description = `${actorName} sent you a new direct message.`;
       break;
     default:
       console.warn(`Unknown notification type: ${type}`);
@@ -220,6 +221,7 @@ export default function Notifications() {
   const [activeTab, setActiveTab] = useState('all');
   const { toast } = useToast();
   const { refetchNotifCount, markNotificationAsRead } = useSocialCounts();
+  const navigate = useNavigate();
 
   const [notifications, setNotifications] = useState<NotificationWithActor[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -248,18 +250,22 @@ export default function Notifications() {
   const filteredNotifications = useMemo(() => {
     if (activeTab === 'all') return notifications;
     if (activeTab === 'unread') return notifications.filter(n => !n.is_read);
+    
     if (activeTab === 'updates') {
       return notifications.filter(
         n =>
           n.type === 'system_update' ||
           n.type === 'new_public_post_by_followed_user' || 
-          n.type === 'new_public_space_by_followed_user'
-          n.type === 'new_reply'
-          n.type === 'new_reply_to_your_message' ||
+          n.type === 'new_public_space_by_followed_user' ||
+          n.type === 'new_reply_to_your_message' // Replies to posts
       );
     }
     if (activeTab === 'social') {
-      return notifications.filter(n => n.type === 'connection_accepted');
+      return notifications.filter(
+        n => 
+          n.type === 'connection_accepted' ||
+          n.type === 'new_direct_message' // DMs are social
+      );
     }
     return [];
   }, [notifications, activeTab]);
@@ -329,12 +335,51 @@ export default function Notifications() {
     }
 
     if (notification.type === 'system_update') {
-      return;
+      return; // No navigation
     }
 
+    const entityId = (notification as any).entity_id;
+    const actorId = notification.actor_id;
+
+    switch (notification.type) {
+      // Post/Space related
+      case 'new_public_post_by_followed_user':
+      case 'new_reply_to_your_message':
+        if (entityId) {
+          navigate(`/post/${entityId}`); // Navigate to the post
+          return;
+        }
+        break;
+
+      case 'new_public_space_by_followed_user':
+        if (entityId) {
+          navigate(`/space/${entityId}`); // Navigate to the space
+          return;
+        }
+        break;
+
+      // Social related
+      case 'connection_accepted':
+        if (actorId) {
+          navigate(`/profile/${actorId}`); // Navigate to the user's profile
+          return;
+        }
+        break;
+        
+      case 'new_direct_message':
+        if (entityId) {
+          navigate(`/messages/${entityId}`); // Navigate to the conversation
+          return;
+        }
+        break;
+
+      // 'job_application_update' will fall through to the toast
+    }
+
+    // Fallback for types without navigation
     toast({
-      title: 'Navigation Under Construction',
-      description: 'Clicking this notification will take you to the content soon.',
+      title: 'Navigation Not Yet Implemented',
+      description: 'You will soon be able to click this to see the content.',
     });
   };
 
