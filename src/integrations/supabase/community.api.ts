@@ -106,7 +106,7 @@ export type PublicPost = {
   first_message_id: number;
   first_message_body: string | null;
   author: PublicPostAuthor;
-  thread_created_at: string;
+  created_at: string;
   last_activity_at: string;
   comment_count: number;
   first_message_id: number;
