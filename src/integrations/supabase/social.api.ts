@@ -210,6 +210,35 @@ export const getSentPendingRequests = async (): Promise<SentPendingRequest[]> =>
     return flattenedData;
 };
 
+export const getConnectionStatus = async (otherUserId: string): Promise<'connected' | 'pending_sent' | 'pending_received' | 'not_connected'> => {
+  try {
+    const session = await getSessionOrThrow();
+    // Check for a row where the viewer and target are the two parties
+    const { data, error } = await supabase
+      .from('user_connections')
+      .select('status, requester_id')
+      .or(`(requester_id.eq.${session.user.id},addressee_id.eq.${otherUserId}),(requester_id.eq.${otherUserId},addressee_id.eq.${session.user.id})`)
+      .limit(1) // Ensure only one row
+      .maybeSingle(); // .maybeSingle() is key, returns null if no row
+
+    if (error) throw error;
+    if (!data) return 'not_connected';
+    
+    if (data.status === 'accepted') return 'connected';
+    
+    if (data.status === 'pending') {
+      // If I was the requester, the status is 'pending_sent'
+      return data.requester_id === session.user.id ? 'pending_sent' : 'pending_received';
+    }
+
+    // Any other status (ignored, blocked) is treated as not connected
+    return 'not_connected';
+  } catch (e) {
+    // User not logged in or other error
+    return 'not_connected';
+  }
+};
+
 export const getMutualConnections = async (otherUserId: string): Promise<Database['public']['Functions']['get_mutual_connections']['Returns']> => {
     const { data, error } = await supabase.rpc("get_mutual_connections", { other_user_id: otherUserId });
     if (error) throw error; // Mutual connections can still throw as it's called individually
