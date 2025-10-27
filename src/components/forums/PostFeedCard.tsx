@@ -48,26 +48,31 @@ export const PostFeedCard: React.FC<PostFeedCardProps> = ({
   const navigate = useNavigate();
 
   // --- Normalize data between the two types ---
-  const id = 'thread_id' in post ? post.thread_id : post.id;
-  const title = 'thread_title' in post ? post.thread_title : post.title;
-  const firstMessageId = post.first_message_id;
+  const postData = post as PublicPost; // We know this page only gets PublicPost
+
+  const id = postData.thread_id;
+  const title = postData.title; // <-- Uses the simple name
+  const firstMessageId = postData.first_message_id;
 
   // Author details
-  const authorId = 'author' in post ? post.author.id : post.creator_id;
-  const authorName = 'author' in post ? post.author.full_name : post.creator_full_name;
-  const authorPosition = 'author' in post ? post.author.current_position : post.creator_position;
-  
+  const authorId = postData.author.id;
+  const authorName = postData.author.full_name;
+  const authorPosition = postData.author.current_position;
+
   // Reaction details
-  const reactionCount = 'total_reaction_count' in post ? post.total_reaction_count : (post.first_message_reaction_count ?? 0);
-  const userReaction = optimisticUserReaction !== undefined ? optimisticUserReaction : post.first_message_user_reaction;
+  const originalReaction = postData.first_message_user_reaction;
+  const reactionCount = postData.total_reaction_count;
+  const userReaction = optimisticUserReaction !== undefined 
+        ? optimisticUserReaction 
+        : postData.first_message_user_reaction;
   const displayReactionCount = optimisticReactionCount ?? reactionCount;
 
   // Preview & Attachment details
-  const body = 'first_message_body' in post ? post.first_message_body : null;
-  const attachments = post.attachments;
-  const previewTitle = 'preview_title' in post ? post.preview_title : null;
-  const previewImage = 'preview_image_url' in post ? post.preview_image_url : null;
-  const previewDesc = 'preview_description' in post ? post.preview_description : null;
+  const body = postData.first_message_body;
+  const attachments = postData.attachments;
+  const previewTitle = postData.preview_title;
+  const previewImage = postData.preview_image_url;
+  const previewDesc = postData.preview_description;
 
   const hasPreview = previewTitle || previewImage;
   const hasAttachments = attachments && attachments.length > 0;
@@ -99,16 +104,26 @@ export const PostFeedCard: React.FC<PostFeedCardProps> = ({
       key={id} 
       className="transition-all duration-300 hover:border-primary/50 hover:shadow-lg"
     >
-      <CardContent className="p-6">
+      <CardContent className="p-4 sm:p-6">
         {/* Main clickable area */}
         <div className="block cursor-pointer" onClick={handleCardClick}>
-          <h3 className="font-semibold text-lg mb-2">{post.title}</h3>
+          <div className="flex items-center gap-2 mb-3"> {/* Added margin-bottom */}
+            <Avatar className="h-9 w-9">
+              <AvatarImage src={postData.author?.profile_picture_url || ''} alt={authorName || 'Author'} />
+              <AvatarFallback>{authorName?.charAt(0) || 'A'}</AvatarFallback>
+            </Avatar>
+            <div>
+              <span className="font-semibold text-sm text-foreground">{authorName}</span>
+              {authorPosition && <p className="text-xs text-muted-foreground">{authorPosition}</p>}
+            </div>
+          </div>
+          <h3 className="font-semibold text-lg mb-2">{title}</h3>
           
           <div className="line-clamp-3">
             <ShortenedBody text={body} />
           </div>
           {!hasAttachments && (
-            <>
+            <div className="mt-3">
               {videoId ? (
                 // --- YOUTUBE PREVIEW ---
                 <div 
@@ -154,30 +169,20 @@ export const PostFeedCard: React.FC<PostFeedCardProps> = ({
                   </div>
                 </a>
               ) : null}
-            </>
+            </div>
           )}
           <AttachmentPreview attachments={post.attachments} />
-          
-          <div className="flex flex-col gap-3 text-xs text-muted-foreground">
-            <div className="flex items-center gap-2">
-              <Avatar className="h-8 w-8">
-                <AvatarImage src={post.author?.profile_picture_url || ''} alt={authorName || 'Author'} />
-                <AvatarFallback>{authorName?.charAt(0) || 'A'}</AvatarFallback>
-              </Avatar>
-              <div>
-                <span className="font-medium text-foreground">{authorName}</span>
-                {authorPosition && <p className="text-xs">{authorPosition}</p>}
-              </div>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground mt-4">
+            <div className="flex items-center gap-1 font-medium">
+              <ThumbsUp className="h-3 w-3" />
+              <span>{displayReactionCount} Reactions</span>
             </div>
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-              <div className="flex items-center gap-1 font-medium">
-                <ThumbsUp className="h-3 w-3" />
-                <span>{displayReactionCount} Reactions</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <MessageSquare className="h-3 w-3" />
-                <span>{post.comment_count} comments</span>
-              </div>
+            <div className="flex items-center gap-1">
+              <MessageSquare className="h-3 w-3" />
+              <span>{postData.comment_count} comments</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <span>Posted: {new Date(postData.created_at).toLocaleDateString()}</span>
             </div>
           </div>
         </div>
@@ -236,9 +241,6 @@ export const PostFeedCard: React.FC<PostFeedCardProps> = ({
                 <span>{post.comment_count} comments</span>
               </Link>
             </Button>
-            <div className="flex items-center gap-1">
-              <span>Last activity: {new Date(post.last_activity_at).toLocaleDateString()}</span>
-            </div>
           </div>
         )}
       </CardContent>
