@@ -50,15 +50,15 @@ const getNotificationDetails = (notification: NotificationWithActor) => {
       title = notification.announcement?.title || 'System Update';
       description = notification.announcement?.body || 'Check out the latest features and announcements.';
       break;
-    case 'new_thread':
+    case 'new_public_post_by_followed_user': // <-- Keep this
       icon = MessageSquare;
-      title = 'New Public Thread';
-      description = `${actorName} created a new public thread.`;
+      title = 'New Post';
+      description = `${actorName} (who you follow) created a new post.`;
       break;
-    case 'new_space':
+    case 'new_public_space_by_followed_user': // <-- Keep this
       icon = Users;
-      title = 'New Space Created';
-      description = `${actorName} created a new space.`;
+      title = 'New Space';
+      description = `${actorName} (who you follow) created a new space.`;
       break;
     case 'connection_accepted':
       icon = CheckSquare;
@@ -247,8 +247,8 @@ export default function Notifications() {
       return notifications.filter(
         n =>
           n.type === 'system_update' ||
-          n.type === 'new_thread' ||
-          n.type === 'new_space' ||
+          n.type === 'new_public_post_by_followed_user' || 
+          n.type === 'new_public_space_by_followed_user'
           n.type === 'new_reply'
       );
     }
