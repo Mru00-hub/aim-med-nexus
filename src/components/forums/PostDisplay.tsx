@@ -458,7 +458,6 @@ export const PostDisplay: React.FC<PostDisplayProps> = ({
             <div
               className={`
                 prose prose-sm dark:prose-invert max-w-none
-                whitespace-pre-wrap
                 ${needsTruncation && !isExpanded ? 'line-clamp-4' : ''}
               `}
             >
