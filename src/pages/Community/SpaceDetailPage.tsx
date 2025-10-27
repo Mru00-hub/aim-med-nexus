@@ -133,6 +133,21 @@ export default function SpaceDetailPage() {
     navigate(`/community/thread/${newThreadId}`);
   };
 
+  const handleCreateClick = () => {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+
+    if (space.space_type === 'FORUM') {
+    // For Forums, go to the full post creation page
+      navigate(`/community/space/${space.id}/create-post`);
+    } else {
+    // For Community Spaces, open the simple dialog
+      setShowCreateThread(true);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Header />
@@ -165,7 +180,7 @@ export default function SpaceDetailPage() {
                 {space.space_type === 'FORUM' ? 'Posts' : 'Threads'}
               </h2>
               <Button 
-                onClick={() => user ? setShowCreateThread(true) : navigate('/login')} 
+                onClick={handleCreateClick}
                 disabled={!canCreateThread} 
               >
                 <Plus className="h-4 w-4 mr-2" />
