@@ -22,6 +22,7 @@ export type CareerTransition = Tables<'career_transitions'>;
 export type Venture = Tables<'ventures'>;
 export type ContentPortfolio = Tables<'content_portfolio'>;
 export type ProfileAnalytics = Tables<'profile_analytics'>;
+export type Cocurricular = Tables<'cocurriculars'>;
 
 export type SpaceWithDetails = Space & {
   creator_full_name: string | null;
@@ -151,6 +152,7 @@ export type FullProfile = {
   career_transition: CareerTransition | null;
   ventures: Venture[];
   content_portfolio: ContentPortfolio[];
+  cocurriculars: Cocurricular[];
 };
 
 // =================================================================
@@ -961,6 +963,7 @@ export const getProfileDetails = async (userId: string): Promise<FullProfile> =>
     { data: transitionData, error: transitionError },
     { data: ventures, error: ventureError },
     { data: contentData, error: contentError },
+    { data: cocurricularData, error: cocurricularError },
   ] = await Promise.all([
     // Activity
     supabase.from('public_posts_feed').select('*').eq('author_id', userId).order('created_at', { ascending: false }),
@@ -978,6 +981,7 @@ export const getProfileDetails = async (userId: string): Promise<FullProfile> =>
     supabase.from('career_transitions').select('*').eq('profile_id', userId).maybeSingle(),
     supabase.from('ventures').select('*').eq('profile_id', userId).order('start_date', { ascending: false, nulls: 'last' }),
     supabase.from('content_portfolio').select('*').eq('profile_id', userId).order('created_at', { ascending: false }),
+    supabase.from('cocurriculars').select('*').eq('profile_id', userId).order('activity_date', { ascending: false, nulls: 'last' }),
   ]);
 
   // Optional: Log errors if any query failed
@@ -1004,6 +1008,7 @@ export const getProfileDetails = async (userId: string): Promise<FullProfile> =>
     career_transition: transitionData || null,
     ventures: ventures || [],
     content_portfolio: contentData || [],
+    cocurriculars: cocurricularData || [],
   };
 };
 
