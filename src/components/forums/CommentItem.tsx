@@ -22,6 +22,7 @@ import { CommentInput } from './CommentInput';
 import { toggleReaction } from '@/integrations/supabase/community.api';
 import { useToast } from '@/components/ui/use-toast';
 import ReactMarkdown from 'react-markdown';
+import remarkBreaks from 'remark-breaks';
 
 const REACTIONS = ['👍', '❤️', '🔥', '🧠', '😂'];
 
@@ -163,8 +164,8 @@ export const CommentItem: React.FC<CommentItemProps> = ({
             </div>
           ) : (
             <>
-              <div className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-line">
-                <ReactMarkdown>
+              <div className="prose prose-sm dark:prose-invert max-w-none">
+                <ReactMarkdown remarkPlugins={[remarkBreaks]}>
                   {comment.body}
                 </ReactMarkdown>
               </div>
