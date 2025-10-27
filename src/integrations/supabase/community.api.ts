@@ -18,6 +18,9 @@ export type AcademicAchievement = Tables<'academic_achievements'>;
 export type Publication = Tables<'publications'>;
 export type Certification = Tables<'certifications'>;
 export type Award = Tables<'awards'>;
+export type CareerTransition = Tables<'career_transitions'>;
+export type Venture = Tables<'ventures'>;
+export type ContentPortfolio = Tables<'content_portfolio'>;
 export type ProfileAnalytics = Tables<'profile_analytics'>;
 
 export type SpaceWithDetails = Space & {
@@ -145,6 +148,9 @@ export type FullProfile = {
   following_count: number;
   connection_count: number;
   is_followed_by_viewer: boolean; // This we still check separately
+  career_transition: CareerTransition | null;
+  ventures: Venture[];
+  content_portfolio: ContentPortfolio[];
 };
 
 // =================================================================
@@ -952,6 +958,9 @@ export const getProfileDetails = async (userId: string): Promise<FullProfile> =>
     { data: certifications, error: certError },
     { data: awards, error: awardError },
     { data: analytics, error: analyticsError },
+    { data: transitionData, error: transitionError },
+    { data: ventures, error: ventureError },
+    { data: contentData, error: contentError },
   ] = await Promise.all([
     // Activity
     supabase.from('public_posts_feed').select('*').eq('author_id', userId).order('created_at', { ascending: false }),
@@ -966,13 +975,15 @@ export const getProfileDetails = async (userId: string): Promise<FullProfile> =>
     supabase.from('certifications').select('*').eq('profile_id', userId).order('issue_date', { ascending: false, nulls: 'last' }),
     supabase.from('awards').select('*').eq('profile_id', userId).order('date', { ascending: false, nulls: 'last' }),
     supabase.from('profile_analytics').select('view_count').eq('profile_id', userId).maybeSingle(),
+    supabase.from('career_transitions').select('*').eq('profile_id', userId).maybeSingle(),
+    supabase.from('ventures').select('*').eq('profile_id', userId).order('start_date', { ascending: false, nulls: 'last' }),
+    supabase.from('content_portfolio').select('*').eq('profile_id', userId).order('created_at', { ascending: false }),
   ]);
 
   // Optional: Log errors if any query failed
-  if (postsError || spacesError || isFollowingError || achError || pubError || certError || awardError || analyticsError) {
-    console.warn("One or more profile detail queries failed.", {
-      postsError, spacesError, isFollowingError, achError, pubError, certError, awardError, analyticsError
-    });
+  const allErrors = { postsError, spacesError, isFollowingError, achError, pubError, certError, awardError, analyticsError, transitionError, ventureError, contentError };
+  if (Object.values(allErrors).some(Boolean)) {
+    console.warn("One or more profile detail queries failed.", allErrors);
   }
 
   // 3. Return the comprehensive object
@@ -990,6 +1001,9 @@ export const getProfileDetails = async (userId: string): Promise<FullProfile> =>
     certifications: certifications || [],
     awards: awards || [],
     analytics: analytics || { profile_id: userId, view_count: 0 }, // Default to 0 views
+    career_transition: transitionData || null,
+    ventures: ventures || [],
+    content_portfolio: contentData || [],
   };
 };
 
@@ -1067,4 +1081,5 @@ type ProfileData = Tables<'profiles'> & {
   follower_count?: number;
   following_count?: number;
   connection_count?: number;
+  profile_mode?: string;
 };
