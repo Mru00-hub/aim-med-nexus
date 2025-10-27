@@ -376,10 +376,14 @@ export const getPostDetails = async (threadId: string) => {
   if (reactionsError) throw reactionsError;
 
   // 5. Get all comments (messages EXCEPT the first one)
-  const { data: commentsData, error: commentsError } = await supabase
+  const { data: comments, error: commentsError } = await supabase
     .from('messages')
     .select(`
       *,
+      author:profiles!inner ( 
+        full_name,
+        profile_picture_url
+      ),
       reactions:message_reactions (*),
       attachments:message_attachments (*)
     `)
@@ -388,39 +392,6 @@ export const getPostDetails = async (threadId: string) => {
     .order('created_at', { ascending: true });
 
   if (commentsError) throw commentsError;
-  
-  let comments: MessageWithDetails[] = [];
-
-  if (commentsData && commentsData.length > 0) {
-      // 6b. Get unique author IDs for comments
-      const commentAuthorIds = [...new Set(commentsData.map(c => c.user_id).filter(Boolean))];
-      
-      let commentProfileMap = new Map();
-      if (commentAuthorIds.length > 0) {
-          const { data: commentProfiles, error: commentProfileError } = await supabase
-              .from('profiles')
-              .select('id, full_name, profile_picture_url')
-              .in('id', commentAuthorIds as string[]);
-
-          if (commentProfileError) {
-              console.warn("Could not fetch comment authors", commentProfileError);
-          } else {
-              commentProfileMap = new Map(commentProfiles.map(p => [p.id, p]));
-          }
-      }
-
-      // 6c. Manually combine comment data
-      comments = commentsData.map(c => {
-          const profile = c.user_id ? commentProfileMap.get(c.user_id) : null;
-          return {
-              ...c,
-              author: profile ? {
-                  full_name: profile.full_name,
-                  profile_picture_url: profile.profile_picture_url
-              } : null
-          };
-      });
-  }
   
   // 6. Assemble the 'post' object to match the 'PublicPost' type, plus new fields
   const postObject: PublicPost & { body: string; attachments: any[]; reactions: any[] } = {
