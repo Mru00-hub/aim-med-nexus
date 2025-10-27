@@ -163,9 +163,11 @@ export const CommentItem: React.FC<CommentItemProps> = ({
             </div>
           ) : (
             <>
-              <ReactMarkdown className="text-sm prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap">
-                {comment.body}
-              </ReactMarkdown>
+              <div className="prose prose-sm dark:prose-invert max-w-none">
+                <ReactMarkdown>
+                  {comment.body}
+                </ReactMarkdown>
+              </div>
               {comment.is_edited && (
                 <span className="text-xs opacity-70 ml-1">
                   (edited at {new Date(comment.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})
