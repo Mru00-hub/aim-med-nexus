@@ -52,6 +52,7 @@ export default function Forums() {
   // Add state for optimistic updates
   
   const [optimisticReactions, setOptimisticReactions] = useState<Record<string, number>>({});
+  const [optimisticUserReactions, setOptimisticUserReactions] = useState<Record<string, string | null>>({});
   const [followingStatus, setFollowingStatus] = useState<Record<string, boolean>>({});
   const [isFollowLoading, setIsFollowLoading] = useState<Record<string, boolean>>({});
   const [posts, setPosts] = useState<PublicPost[]>([]);
@@ -197,21 +198,56 @@ export default function Forums() {
   ) => {
     if (!user) { navigate('/login'); return; }
 
-    setOptimisticReactions(prev => {
-      const currentCount = prev[postId] ?? posts.find(p => p.thread_id === postId)?.total_reaction_count ?? 0;
-      return { ...prev, [postId]: currentCount + 1 };
-    });
+    const post = posts.find(p => p.thread_id === postId);
+    if (!post) return;
+
+    // 1. Get original state for reverting on failure
+    const originalReaction = post.first_message_user_reaction;
+    const originalCount = post.total_reaction_count;
+
+    // 2. Determine the *current* state (checking optimistic state first)
+    const currentReaction = optimisticUserReactions.hasOwnProperty(postId)
+      ? optimisticUserReactions[postId]
+      : originalReaction;
+    
+    const currentCount = optimisticReactions.hasOwnProperty(postId)
+      ? optimisticReactions[postId]
+      : originalCount;
+
+    // 3. Determine the *next* state
+    let nextReaction: string | null;
+    let nextCount: number;
+
+    if (currentReaction === emoji) {
+      // Case 1: Un-reacting (clicking the same emoji)
+      nextReaction = null;
+      nextCount = currentCount - 1;
+    } else if (currentReaction && currentReaction !== emoji) {
+      // Case 2: Changing reaction (e.g., from 👍 to ❤️)
+      nextReaction = emoji;
+      nextCount = currentCount; // Count stays the same
+    } else {
+      // Case 3: Adding a new reaction
+      nextReaction = emoji;
+      nextCount = currentCount + 1;
+    }
+
+    // 4. Set optimistic state for both reaction and count
+    setOptimisticUserReactions(prev => ({ ...prev, [postId]: nextReaction }));
+    setOptimisticReactions(prev => ({ ...prev, [postId]: nextCount }));
   
     try {
+      // 5. Call the API
       await toggleReaction(firstMessageId, emoji);
+      // Success! The optimistic state is now the "real" state until a refresh.
     } catch (error: any) {
       toast({ variant: 'destructive', title: 'Error', description: error.message });
-      setOptimisticReactions(prev => {
-        const originalCount = posts.find(p => p.thread_id === postId)?.total_reaction_count ?? 0;
-        return { ...prev, [postId]: originalCount };
-      });
+      
+      // 6. Revert on failure
+      setOptimisticUserReactions(prev => ({ ...prev, [postId]: originalReaction }));
+      setOptimisticReactions(prev => ({ ...prev, [postId]: originalCount }));
     }
-  }, [user, navigate, toast, posts]);
+  }, [user, navigate, toast, posts, optimisticUserReactions, optimisticReactions]);
 
   const handleFollow = useCallback(async (authorId: string) => {
     if (!user) { navigate('/login'); return; }
@@ -334,6 +370,7 @@ export default function Forums() {
                     post={post}
                     onReaction={handleOptimisticReaction}
                     optimisticReactionCount={optimisticReactions[post.thread_id]}
+                    optimisticUserReaction={optimisticUserReactions[post.thread_id]}
                     onFollow={handleFollow}
                     isFollowing={!!followingStatus[authorId]}
                     isFollowLoading={!!isFollowLoading[authorId]}
