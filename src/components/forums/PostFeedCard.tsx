@@ -175,7 +175,6 @@ export const PostFeedCard: React.FC<PostFeedCardProps> = ({
                   {REACTIONS.map((emoji) => (
                     <Button
                       key={emoji}
-                      {/* This toggle now works */}
                       variant={userReaction === emoji ? 'default' : 'ghost'}
                       size="icon"
                       className="h-8 w-8 text-lg rounded-full"
