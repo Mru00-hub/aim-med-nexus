@@ -17,7 +17,7 @@ interface ForumPostFeedProps {
 }
 
 export const ForumPostFeed: React.FC<ForumPostFeedProps> = ({ spaceId, refreshKey }) => {
-  const { user } = useAuth();
+  const { user, profile, refreshProfile } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -27,6 +27,9 @@ export const ForumPostFeed: React.FC<ForumPostFeedProps> = ({ spaceId, refreshKe
   const [currentPage, setCurrentPage] = useState(1);
   const [hasMorePosts, setHasMorePosts] = useState(true);
   const [optimisticReactions, setOptimisticReactions] = useState<Record<string, number>>({});
+  const [optimisticUserReactions, setOptimisticUserReactions] = useState<Record<string, string | null>>({});
+  const [followingStatus, setFollowingStatus] = useState<Record<string, boolean>>({});
+  const [isFollowLoading, setIsFollowLoading] = useState<Record<string, boolean>>({});
   
   // Note: Follow logic is handled at the parent (Forums.tsx) level
   // This feed component doesn't know about "following"
@@ -56,6 +59,21 @@ export const ForumPostFeed: React.FC<ForumPostFeedProps> = ({ spaceId, refreshKe
     loadPosts(1);
   }, [loadPosts, refreshKey]); // Reload if onPostCreated changes (i.e., a post is created)
 
+  useEffect(() => {
+    // When the profile loads, initialize the followingStatus state
+    if (profile && profile.following) {
+      const followingMap: Record<string, boolean> = {};
+      profile.following.forEach((follow: { followed_id: string }) => {
+        followingMap[follow.followed_id] = true;
+      });
+      setFollowingStatus(followingMap);
+    }
+  }, [profile]);
+
+  useEffect(() => {
+    loadPosts(1);
+  }, [loadPosts, refreshKey]);
+
   const handleOptimisticReaction = useCallback(async (
     postId: string, 
     firstMessageId: number,
@@ -63,40 +81,67 @@ export const ForumPostFeed: React.FC<ForumPostFeedProps> = ({ spaceId, refreshKe
   ) => {
     if (!user) { navigate('/login'); return; }
 
-    setOptimisticReactions(prev => {
-      const currentCount = prev[postId] ?? posts.find(p => p.id === postId)?.first_message_reaction_count ?? 0;
-      return { ...prev, [postId]: currentCount + 1 };
-    });
+    const post = posts.find(p => p.id === postId); // Note: 'p.id' is correct for this component
+    if (!post) return;
+
+    // 1. Get original state for reverting on failure
+    const originalReaction = post.first_message_user_reaction;
+    const originalCount = post.first_message_reaction_count ?? 0;
+
+    // 2. Determine the *current* state (checking optimistic state first)
+    const currentReaction = optimisticUserReactions.hasOwnProperty(postId)
+      ? optimisticUserReactions[postId]
+      : originalReaction;
+    
+    const currentCount = optimisticReactions.hasOwnProperty(postId)
+      ? optimisticReactions[postId]
+      : originalCount;
+
+    // 3. Determine the *next* state
+    let nextReaction: string | null;
+    let nextCount: number;
+
+    if (currentReaction === emoji) {
+      nextReaction = null;
+      nextCount = currentCount - 1;
+    } else if (currentReaction && currentReaction !== emoji) {
+      nextReaction = emoji;
+      nextCount = currentCount; // Count stays the same
+    } else {
+      nextReaction = emoji;
+      nextCount = currentCount + 1;
+    }
+
+    // 4. Set optimistic state for both
+    setOptimisticUserReactions(prev => ({ ...prev, [postId]: nextReaction }));
+    setOptimisticReactions(prev => ({ ...prev, [postId]: nextCount }));
   
     try {
       await toggleReaction(firstMessageId, emoji);
     } catch (error: any) {
       toast({ variant: 'destructive', title: 'Error', description: error.message });
-      setOptimisticReactions(prev => {
-        const originalCount = posts.find(p => p.id === postId)?.first_message_reaction_count ?? 0;
-        return { ...prev, [postId]: originalCount };
-      });
+      // 6. Revert on failure
+      setOptimisticUserReactions(prev => ({ ...prev, [postId]: originalReaction }));
+      setOptimisticReactions(prev => ({ ...prev, [postId]: originalCount }));
     }
-  }, [user, navigate, toast, posts]);
-  
-  if (isLoading) {
-    return (
-      <div className="space-y-4">
-        <Skeleton className="h-40 w-full" />
-        <Skeleton className="h-40 w-full" />
-      </div>
-    );
-  }
+  }, [user, navigate, toast, posts, optimisticUserReactions, optimisticReactions]);
 
-  if (posts.length === 0) {
-    return (
-      <Card>
-        <CardContent className="p-6 text-center text-muted-foreground">
-          <p>No posts have been started in this forum yet.</p>
-        </CardContent>
-      </Card>
-    );
-  }
+  const handleFollow = useCallback(async (authorId: string) => {
+    if (!user) { navigate('/login'); return; }
+    
+    setIsFollowLoading(prev => ({ ...prev, [authorId]: true }));
+    
+    try {
+      await toggleFollow(authorId);
+      const newFollowingState = !followingStatus[authorId];
+      setFollowingStatus(prev => ({ ...prev, [authorId]: newFollowingState }));
+      refreshProfile(); 
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } finally {
+      setIsFollowLoading(prev => ({ ...prev, [authorId]: false }));
+    }
+  }, [user, navigate, toast, refreshProfile, followingStatus]);
 
   return (
     <div className="space-y-4">
@@ -106,10 +151,11 @@ export const ForumPostFeed: React.FC<ForumPostFeedProps> = ({ spaceId, refreshKe
           post={post}
           onReaction={handleOptimisticReaction}
           optimisticReactionCount={optimisticReactions[post.id]}
+          optimisticUserReaction={optimisticUserReactions[post.id]}
           // Follow logic is not implemented in this feed
-          onFollow={() => {}} 
-          isFollowing={false}
-          isFollowLoading={false}
+          onFollow={handleFollow}
+          isFollowing={!!followingStatus[post.creator_id]} // Use creator_id
+          isFollowLoading={!!isFollowLoading[post.creator_id]}
         />
       ))}
       {hasMorePosts && (
