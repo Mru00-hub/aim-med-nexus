@@ -32,6 +32,9 @@ export const SpaceCard: React.FC<SpaceCardProps> = ({ space, membershipStatus, o
     onJoin(space);
   };
 
+  const threadCount = space.thread_count ?? 0;
+  const memberCount = space.member_count ?? 0;
+
   return (
     <div 
       key={space.id} 
@@ -91,34 +94,34 @@ export const SpaceCard: React.FC<SpaceCardProps> = ({ space, membershipStatus, o
             
             <div className="mt-4 flex items-center gap-4 text-sm text-muted-foreground">
               <TooltipProvider delayDuration={100}>
+                
+                {/* --- FIX: This block now shows for BOTH types --- */}
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <div className="flex items-center gap-1.5 cursor-default">
                       <MessageSquare className="h-4 w-4" />
-                      <span className="font-medium text-foreground">{space.thread_count}</span>
-                      <span>{space.thread_count === 1 ? 'Post' : 'Posts'}</span>
+                      <span className="font-medium text-foreground">{threadCount}</span>
+                      <span>{threadLabel}</span>
                     </div>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>{space.thread_count} {space.thread_count === 1 ? 'post' : 'posts'} in this space</p>
+                    <p>{threadCount} {threadLabel} in this space</p>
                   </TooltipContent>
                 </Tooltip>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <div className="flex items-center gap-1.5 cursor-default">
                       <Users className="h-4 w-4" />
-                      <span className="font-medium text-foreground">{space.member_count}</span>
-                      <span>{space.member_count === 1 ? 'Member' : 'Members'}</span>
+                      <span className="font-medium text-foreground">{memberCount}</span>
+                      <span>{memberLabel}</span>
                     </div>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>{space.member_count} {space.member_count === 1 ? 'member' : 'members'} in this space</p>
+                    <p>{memberCount} {memberLabel} in this space</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
             </div>
-          </div>
-
           <div className="mt-4 pt-4 border-t flex flex-wrap justify-end items-center gap-2">
             {membershipStatus === 'ACTIVE' ? (
               <Button asChild variant="outline" size="sm">
