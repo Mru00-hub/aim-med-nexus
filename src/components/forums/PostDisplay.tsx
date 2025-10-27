@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown'; 
+import remarkBreaks from 'remark-breaks';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/components/ui/use-toast';
@@ -458,11 +459,10 @@ export const PostDisplay: React.FC<PostDisplayProps> = ({
             <div
               className={`
                 prose prose-sm dark:prose-invert max-w-none
-                whitespace-pre-line
                 ${needsTruncation && !isExpanded ? 'line-clamp-4' : ''}
               `}
             >
-              <ReactMarkdown>
+              <ReactMarkdown remarkPlugins={[remarkBreaks]}>
                 {post.body || ''}
               </ReactMarkdown>
             </div>
