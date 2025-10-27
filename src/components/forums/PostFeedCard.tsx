@@ -12,6 +12,11 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const URL_REGEX = /(https?:\/\/[^\s]+)/g;
 const REACTIONS = ['👍', '❤️', '🔥', '🧠', '😂'];
+function getYouTubeVideoId(url: string): string | null {
+  const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/ ]{11})/;
+  const match = url.match(regex);
+  return match ? match[1] : null;
+}
 
 interface PostFeedCardProps {
   // Use a generic type that covers both PublicPost and PostOrThreadSummary
@@ -68,6 +73,7 @@ export const PostFeedCard: React.FC<PostFeedCardProps> = ({
   const hasAttachments = attachments && attachments.length > 0;
   const bodyUrls = body?.match(URL_REGEX);
   const firstUrl = (bodyUrls && bodyUrls[0]) ? bodyUrls[0] : '#';
+  const videoId = body ? getYouTubeVideoId(firstUrl) : null;
 
   const handleCardClick = () => {
     if (!user) navigate('/login');
@@ -101,28 +107,54 @@ export const PostFeedCard: React.FC<PostFeedCardProps> = ({
           <div className="line-clamp-3">
             <ShortenedBody text={body} />
           </div>
-          {hasPreview && !hasAttachments && (
-            <a 
-              href={firstUrl}
-              target="_blank" 
-              rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()} 
-              className="block mt-3 border rounded-lg overflow-hidden transition-all duration-300 hover:border-primary/50"
-            >
-              {previewImage && (
-                <img src={previewImage} alt="Preview" className="w-full h-40 object-cover" />
-              )}
-              <div className="p-3">
-                <h4 className="font-semibold text-sm truncate">
-                  {previewTitle || 'No Title'}
-                </h4>
-                {previewDesc && (
-                  <p className="text-xs text-muted-foreground line-clamp-2">
-                    {previewDesc}
-                  </p>
-                )}
-              </div>
-            </a>
+          {!hasAttachments && (
+            <>
+              {videoId ? (
+                // --- YOUTUBE PREVIEW ---
+                <div 
+                  className="block mt-3 rounded-lg overflow-hidden relative aspect-video cursor-pointer"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    window.open(firstUrl, '_blank');
+                  }}
+                >
+                  {/* Use the YouTube thumbnail service */}
+                  <img 
+                    src={`https://img.youtube.com/vi/${videoId}/mqdefault.jpg`} 
+                    alt="YouTube Preview" 
+                    className="w-full h-full object-cover"
+                  />
+                  {/* Play button overlay */}
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/20 transition-all group-hover:bg-black/40">
+                    <svg className="h-12 w-12 text-white/80" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd"></path></svg>
+                  </div>
+                </div>
+              ) : hasPreview ? (
+                // --- WEBSITE PREVIEW ---
+                <a 
+                  href={firstUrl}
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()} 
+                  className="block mt-3 border rounded-lg overflow-hidden transition-all duration-300 hover:border-primary/50"
+                >
+                  {previewImage && (
+                    <img src={previewImage} alt="Preview" className="w-full h-40 object-cover" />
+                  )}
+                  <div className="p-3">
+                    <h4 className="font-semibold text-sm truncate">
+                      {previewTitle || 'No Title'}
+                    </h4>
+                    {previewDesc && (
+                      <p className="text-xs text-muted-foreground line-clamp-2">
+                        {previewDesc}
+                      </p>
+                    )}
+                  </div>
+                </a>
+              ) : null}
+            </>
           )}
           <AttachmentPreview attachments={post.attachments} />
           
