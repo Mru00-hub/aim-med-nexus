@@ -144,7 +144,6 @@ const CreatePostForm: React.FC = () => {
   const { refreshSpaces } = useCommunity(); // To refresh the public threads list
 
   useEffect(() => {
-    useEffect(() => {
     const urls = debouncedBody.match(URL_REGEX);
     if (files.length > 0) {
       setLinkPreview(null);
