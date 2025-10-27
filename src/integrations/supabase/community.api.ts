@@ -440,7 +440,7 @@ export const createSpace = async (
 
 /** Creates a new thread. User must be logged in. */
 export const createThread = async (
-  payload: { title: string; body: string; spaceId: string | null; description?: string; attachments?: AttachmentInput[]; }
+  payload: { title: string; body: string; spaceId: string | null; description?: string; attachments?: AttachmentInput[]; preview?: {title?: string; description?: string; image?: string; }}
 ): Promise<string> => {
     await getSessionOrThrow();
     const { data, error } = await supabase.rpc('create_thread', {
@@ -448,7 +448,10 @@ export const createThread = async (
         p_body: payload.body, 
         p_space_id: payload.spaceId,
         p_description: payload.description,
-        p_attachments: payload.attachments || null
+        p_attachments: payload.attachments || null,
+        p_preview_title: payload.preview?.title || null,
+        p_preview_description: payload.preview?.description || null,
+        p_preview_image_url: payload.preview?.image || null
     });
 
     if (error) throw error;
