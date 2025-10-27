@@ -213,7 +213,7 @@ export const PostFeedCard: React.FC<PostFeedCardProps> = ({
             <Popover>
               <PopoverTrigger asChild>
                 {/* This toggle now works */}
-                <Button variant={userReaction ? 'secondary' : 'ghost'} size="sm" onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
+                <Button variant={userReaction ? 'secondary' : 'ghost'} size="sm" onClick={(e) => e.stopPropagation()}>
                   <Smile className="h-4 w-4 mr-2" /> React
                 </Button>
               </PopoverTrigger>
