@@ -163,7 +163,7 @@ export const CommentItem: React.FC<CommentItemProps> = ({
             </div>
           ) : (
             <>
-              <div className="prose prose-sm dark:prose-invert max-w-none">
+              <div className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-line">
                 <ReactMarkdown>
                   {comment.body}
                 </ReactMarkdown>
