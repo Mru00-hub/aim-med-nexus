@@ -118,7 +118,7 @@ const AppContent = () => {
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
             <Route path="/community/create-post" element={<CreatePostPage />} />
-            <Route path="/community/space/:spaceId/create-thread" element={<CreateThread />} />
+            <Route path="/community/space/:spaceId/create-post" element={<CreatePostPage />} />
             <Route path="/community/space/:spaceId" element={<SpaceDetailPage />} />
             <Route path="/community/space/:spaceId/members" element={<MembersPage />} />
             <Route path="/community/thread/:threadId" element={<ThreadDetailPage />} />
