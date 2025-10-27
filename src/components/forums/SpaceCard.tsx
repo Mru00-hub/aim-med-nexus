@@ -34,6 +34,11 @@ export const SpaceCard: React.FC<SpaceCardProps> = ({ space, membershipStatus, o
 
   const threadCount = space.thread_count ?? 0;
   const memberCount = space.member_count ?? 0;
+  const isForum = space.space_type === 'FORUM';
+  const threadLabel = isForum 
+      ? (threadCount === 1 ? 'Post' : 'Posts') 
+      : (threadCount === 1 ? 'Thread' : 'Threads');
+  const memberLabel = memberCount === 1 ? 'Member' : 'Members';
 
   return (
     <div 
