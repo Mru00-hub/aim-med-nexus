@@ -102,7 +102,7 @@ export type SimpleAttachment = {
 
 export type PublicPost = {
   thread_id: string;
-  thread_title: string;
+  title: string;
   first_message_id: number;
   first_message_body: string | null;
   author: PublicPostAuthor;
