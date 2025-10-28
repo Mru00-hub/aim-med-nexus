@@ -155,6 +155,18 @@ export type FullProfile = {
   cocurriculars: Cocurricular[];
 };
 
+export type ProfileWithStatus = {
+  id: string;
+  full_name: string;
+  profile_picture_url: string | null;
+  current_position: string | null;
+  organization: string | null;
+  specialization_name: string | null;
+  location_name: string | null;
+  connection_status: 'connected' | 'pending_sent' | 'pending_received' | 'not_connected';
+  is_viewer_following: boolean;
+};
+
 // =================================================================
 // Rich Mock Data for Logged-Out Users
 // =================================================================
@@ -1013,65 +1025,29 @@ export const getProfileDetails = async (userId: string): Promise<FullProfile> =>
 };
 
 /**
- * Fetches the list of users who follow the target user.
+ * Fetches the list of users who follow the target user,
+ * including the viewer's status relative to them.
  * @param userId - The user whose followers to fetch.
  */
-export const getFollowers = async (userId: string): Promise<Profile[]> => {
-  const { data, error } = await supabase
-    .from('user_follows')
-    .select(
-      `
-      profiles!inner!follower_id(
-        id,
-        full_name,
-        profile_picture_url,
-        current_position,
-        organization,
-        location_name
-      )
-    `
-    )
-    .eq('followed_id', userId);
-
+export const getFollowersWithStatus = async (userId: string): Promise<ProfileWithStatus[]> => {
+  const { data, error } = await supabase.rpc('get_followers_with_status', {
+    p_profile_id: userId,
+  });
   if (error) throw error;
-
-  // Map the data to return an array of Profile objects
-  const profiles = data
-    .map((item: any) => item.profiles)
-    .filter(Boolean) as Profile[];
-
-  return profiles;
+  return (data as ProfileWithStatus[]) || [];
 };
 
 /**
- * Fetches the list of users the target user is following.
+ * Fetches the list of users the target user is following,
+ * including the viewer's status relative to them.
  * @param userId - The user whose followees to fetch.
  */
-export const getFollowing = async (userId: string): Promise<Profile[]> => {
-  const { data, error } = await supabase
-    .from('user_follows')
-    .select(
-      `
-      profiles!inner!followed_id(
-        id,
-        full_name,
-        profile_picture_url,
-        current_position,
-        organization,
-        location_name
-      )
-    `
-    )
-    .eq('follower_id', userId);
-
+export const getFollowingWithStatus = async (userId: string): Promise<ProfileWithStatus[]> => {
+  const { data, error } = await supabase.rpc('get_following_with_status', {
+    p_profile_id: userId,
+  });
   if (error) throw error;
-
-  // Map the data to return an array of Profile objects
-  const profiles = data
-    .map((item: any) => item.profiles)
-    .filter(Boolean) as Profile[];
-
-  return profiles;
+  return (data as ProfileWithStatus[]) || [];
 };
 
 type ProfileData = Tables<'profiles'> & {
