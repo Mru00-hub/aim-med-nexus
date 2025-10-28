@@ -278,54 +278,55 @@ export const saveProfileDetails = async (payload: SaveProfilePayload, deletedIte
     const session = await getSessionOrThrow();
     const userId = session.user.id;
 
-    // Helper to prepare data for upsert
-    // Adds profile_id and converts empty strings to null
     const prepareUpsert = (list: any[]) => list.map(item => {
         const newItem = { ...item, profile_id: userId };
         Object.keys(newItem).forEach(key => {
-            if (newItem[key] === '') newItem[key] = null;
+            // Convert empty strings to null unless it's an intended empty array like 'authors'
+            if (newItem[key] === '' && !Array.isArray(item[key])) {
+                newItem[key] = null;
+            }
         });
         // Special handling for authors string-to-array
         if ('authors' in newItem && typeof newItem.authors === 'string') {
             newItem.authors = (newItem.authors as string).split(',').map(s => s.trim()).filter(Boolean);
         }
+        // Special handling for achievements array
+         if ('achievements' in newItem && typeof newItem.achievements === 'string') {
+            newItem.achievements = (newItem.achievements as string).split(',').map(s => s.trim()).filter(Boolean);
+        }
         return newItem;
     });
 
+    // Helper for the single transition data row
     const prepareTransitionUpsert = (data: EditableTransition | null) => {
         if (!data) return null;
-        const newItem = { ...data, profile_id: userId, updated_at: new Date().toISOString() };
+        // Ensure profile_id exists before proceeding
+        const profileId = data.profile_id || userId;
+        const newItem = { ...data, profile_id: profileId, updated_at: new Date().toISOString() };
         Object.keys(newItem).forEach(key => {
-            if (newItem[key] === '') newItem[key] = null;
+            if (newItem[key] === '' && !Array.isArray(data[key as keyof EditableTransition])) {
+                 newItem[key as keyof EditableTransition] = null;
+             }
         });
-        // Handle array fields
+        // Handle array fields specifically
         if ('target_industries' in newItem && typeof newItem.target_industries === 'string') {
              newItem.target_industries = (newItem.target_industries as string).split(',').map(s => s.trim()).filter(Boolean);
+        } else if (!('target_industries' in newItem) || newItem.target_industries === null){
+             newItem.target_industries = []; // Ensure it's an empty array if null/undefined/empty string
         }
         return newItem;
     };
-    
+
     const transitionUpsertData = prepareTransitionUpsert(payload.transitionData);
 
-    // Run all database operations in parallel
-    const [
-        { error: achError },
-        { error: pubError },
-        { error: certError },
-        { error: awardError },
-        { error: ventureError },
-        { error: contentError },
-        { error: cocurricularError },
-        transitionUpsertData ? supabase.from('career_transitions').upsert(transitionUpsertData) : Promise.resolve({ error: null }),
-        // Deletion promises
-        { error: delAchError },
-        { error: delPubError },
-        { error: delCertError },
-        { error: delAwardError },
-        { error: delVentureError },
-        { error: delContentError },
-        { error: delCocurricularError },
-    ] = await Promise.all([
+    // 🚀 FIX: Separate the conditional promise
+    const transitionUpsertPromise = transitionUpsertData
+        ? supabase.from('career_transitions').upsert(transitionUpsertData).select().single()
+        : Promise.resolve({ data: null, error: null }); // Resolve immediately if no data
+
+    // Run array-based database operations in parallel
+    const arrayOpsPromises = [
+        // Upserts
         supabase.from('academic_achievements').upsert(prepareUpsert(payload.achievements)),
         supabase.from('publications').upsert(prepareUpsert(payload.publications)),
         supabase.from('certifications').upsert(prepareUpsert(payload.certifications)),
@@ -333,22 +334,32 @@ export const saveProfileDetails = async (payload: SaveProfilePayload, deletedIte
         supabase.from('ventures').upsert(prepareUpsert(payload.ventures)),
         supabase.from('content_portfolio').upsert(prepareUpsert(payload.contentPortfolio)),
         supabase.from('cocurriculars').upsert(prepareUpsert(payload.cocurriculars)),
-        // Deletions
-        supabase.from('academic_achievements').delete().in('id', deletedItems.academic_achievements),
-        supabase.from('publications').delete().in('id', deletedItems.publications),
-        supabase.from('certifications').delete().in('id', deletedItems.certifications),
-        supabase.from('awards').delete().in('id', deletedItems.awards),
-        supabase.from('ventures').delete().in('id', deletedItems.ventures),
-        supabase.from('content_portfolio').delete().in('id', deletedItems.content_portfolio),
-        supabase.from('cocurriculars').delete().in('id', deletedItems.cocurriculars),
-    ]);
+        // Deletions (only run if there are IDs to delete)
+        deletedItems.academic_achievements.length > 0 ? supabase.from('academic_achievements').delete().in('id', deletedItems.academic_achievements) : Promise.resolve({ error: null }),
+        deletedItems.publications.length > 0 ? supabase.from('publications').delete().in('id', deletedItems.publications) : Promise.resolve({ error: null }),
+        deletedItems.certifications.length > 0 ? supabase.from('certifications').delete().in('id', deletedItems.certifications) : Promise.resolve({ error: null }),
+        deletedItems.awards.length > 0 ? supabase.from('awards').delete().in('id', deletedItems.awards) : Promise.resolve({ error: null }),
+        deletedItems.ventures.length > 0 ? supabase.from('ventures').delete().in('id', deletedItems.ventures) : Promise.resolve({ error: null }),
+        deletedItems.content_portfolio.length > 0 ? supabase.from('content_portfolio').delete().in('id', deletedItems.content_portfolio) : Promise.resolve({ error: null }),
+        deletedItems.cocurriculars.length > 0 ? supabase.from('cocurriculars').delete().in('id', deletedItems.cocurriculars) : Promise.resolve({ error: null }),
+    ];
+
+    // Await all parallel operations
+    const results = await Promise.all(arrayOpsPromises);
+    const transitionResult = await transitionUpsertPromise; // Await the separate promise
 
     // Check for any errors
-    const errors = [achError, pubError, certError, awardError,ventureError, contentError, cocurricularError,delAchError, delPubError, delCertError, delAwardError, delVentureError, delContentError, delCocurricularError].filter(Boolean);
-    if (errors.length > 0) {
-        throw new Error(errors.map(e => e.message).join(', '));
+    const errors = results.map(r => r.error).filter(Boolean);
+    if (transitionResult.error) {
+        errors.push(transitionResult.error);
     }
-    
+
+    if (errors.length > 0) {
+        console.error("Errors saving profile details:", errors);
+        // Combine multiple error messages if needed, or just throw the first one
+        throw new Error(errors.map(e => e?.message || 'Unknown error').join('; '));
+    }
+
     return { success: true };
 };
 
