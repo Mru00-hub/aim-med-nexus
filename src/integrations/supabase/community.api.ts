@@ -23,6 +23,8 @@ export type Venture = Tables<'ventures'>;
 export type ContentPortfolio = Tables<'content_portfolio'>;
 export type ProfileAnalytics = Tables<'profile_analytics'>;
 export type Cocurricular = Tables<'cocurriculars'>;
+export type WorkExperience = Tables<'work_experiences'>;
+export type EducationHistory = Tables<'education_history'>;
 
 export type SpaceWithDetails = Space & {
   creator_full_name: string | null;
@@ -150,6 +152,8 @@ export type FullProfile = {
   connection_count: number;
   is_followed_by_viewer: boolean; // This we still check separately
   career_transition: CareerTransition | null;
+  work_experiences: WorkExperience[];     // <-- ADDED
+  education_history: EducationHistory[];
   ventures: Venture[];
   content_portfolio: ContentPortfolio[];
   cocurriculars: Cocurricular[];
