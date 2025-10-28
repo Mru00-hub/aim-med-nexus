@@ -159,9 +159,10 @@ export const getPendingRequests = async (): Promise<ConnectionRequest[]> => {
 };
 
 export const getMyConnections = async (): Promise<Connection[]> => {
-    const { data, error } = await supabase.rpc('get_my_connections');
+    const { data, error } = await supabase.rpc('get_my_connections_with_status');
     if (error) throw error;
-    return data || [];
+    // We cast to 'any' then back to the specific type to satisfy TypeScript
+    return (data as any) || []; 
 };
 
 export const getBlockedUsers = async (): Promise<BlockedUser[]> => {
@@ -241,10 +242,9 @@ export const getConnectionStatus = async (otherUserId: string): Promise<'connect
 
 export const getMutualConnections = async (otherUserId: string): Promise<Database['public']['Functions']['get_mutual_connections']['Returns']> => {
     const { data, error } = await supabase.rpc("get_mutual_connections", { other_user_id: otherUserId });
-    if (error) throw error; // Mutual connections can still throw as it's called individually
-    return data;
+    if (error) throw error;
+    return (data as any) || [];
 };
-
 //================================================================================
 //  System 2: Direct Messaging API (REFACTORED)
 //================================================================================
