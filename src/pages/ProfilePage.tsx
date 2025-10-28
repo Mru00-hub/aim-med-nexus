@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/components/ui/use-toast';
+import { Card, CardHeader, CardContent } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 
 // 🚀 PLAN: Import all new API functions and types
 import {
@@ -56,6 +58,7 @@ const ProfilePage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [shareUrl, setShareUrl] = useState('');
 
   const isOwnProfile = !userId || (user && user.id === userId);
   const targetUserId = userId || user?.id;
@@ -98,7 +101,12 @@ const ProfilePage = () => {
     if (!authLoading) {
       fetchProfile();
     }
-  }, [userId, user, authLoading, isOwnProfile]); // targetUserId is derived, so not needed
+  }, [targetUserId, authLoading, isOwnProfile]);// targetUserId is derived, so not needed
+  
+  useEffect(() => {
+  // This ensures window is accessed only on the client
+    setShareUrl(window.location.href);
+  }, []);
 
   // --- Button Action Handlers ---
 
@@ -157,12 +165,11 @@ const ProfilePage = () => {
   };
 
   const handleShare = () => {
-    const url = window.location.href;
     if (navigator.share) {
       navigator.share({
         title: `${fullProfile?.profile.full_name}'s Profile`,
         text: `Check out ${fullProfile?.profile.full_name}'s professional profile.`,
-        url: url,
+        url: shareUrl, 
       }).catch((err) => console.error("Share failed", err));
     } else {
       // Fallback for desktop: show modal with link to copy
@@ -171,8 +178,7 @@ const ProfilePage = () => {
   };
   
   const copyShareLink = () => {
-    const url = window.location.href;
-    navigator.clipboard.writeText(url);
+    navigator.clipboard.writeText(shareUrl);
     toast({ title: "Link copied to clipboard!" });
   };
 
@@ -275,7 +281,7 @@ const ProfilePage = () => {
           <div className="flex items-center space-x-2">
             <Input
               id="share-link"
-              value={window.location.href}
+              value={shareUrl}
               readOnly
             />
             <Button type="button" size="sm" onClick={copyShareLink}>
