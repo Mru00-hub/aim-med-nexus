@@ -84,7 +84,9 @@ const SpaceItemCard: React.FC<{ space: Space }> = ({ space }) => (
       </Badge>
       <Link to={`/community/space/${space.id}`}>
         <h4 className="font-semibold text-base mb-1 hover:text-primary">
-      </p>
+          {space.name || 'Untitled Space'} 
+        </h4> 
+      </Link>
     </CardContent>
   </Card>
 );
