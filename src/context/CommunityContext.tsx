@@ -82,12 +82,13 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
       setIsLoadingSpaces(false);
       console.log('--- refreshSpaces END ---');
     }
-  }, [user]);
+  }, []);
 
+  const userId = user?.id;
   // Initial data fetch on user change
   useEffect(() => {
     refreshSpaces();
-  }, [user, refreshSpaces]);
+  }, [userId, refreshSpaces]);
   
   // --- NEW FUNCTION FOR OPTIMISTIC UPDATES ---
   // This function directly updates the local state for a single space.
