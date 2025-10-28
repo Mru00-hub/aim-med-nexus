@@ -18,6 +18,7 @@ type ProfileHeroProps = {
   onConnect: () => void;
   onMessage: () => void;
   onShare: () => void;
+  onShowList: (title: 'Followers' | 'Following' | 'Connections') => void;
 };
 
 export const ProfileHero: React.FC<ProfileHeroProps> = ({
@@ -30,6 +31,7 @@ export const ProfileHero: React.FC<ProfileHeroProps> = ({
   onConnect,
   onMessage,
   onShare,
+  onShowList,
 }) => {
   const { user } = useAuth();
   const { profile, followers_count, following_count, connection_count, analytics } = data;
@@ -86,15 +88,15 @@ export const ProfileHero: React.FC<ProfileHeroProps> = ({
             
             {/* 🚀 PLAN: Clickable Metrics Bar */}
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground mt-3">
-              <Link to={`/profile/${targetUserId}/connections`} className="hover:underline">
+              <button onClick={() => onShowList('Connections')} className="hover:underline">
                 <span className="font-semibold text-foreground">{connection_count}</span> Connections
-              </Link>
-              <Link to={`/profile/${targetUserId}/followers`} className="hover:underline">
+              </button>
+              <button onClick={() => onShowList('Followers')} className="hover:underline">
                 <span className="font-semibold text-foreground">{followers_count}</span> Followers
-              </Link>
-              <Link to={`/profile/${targetUserId}/following`} className="hover:underline">
+              </button>
+              <button onClick={() => onShowList('Following')} className="hover:underline">
                 <span className="font-semibold text-foreground">{following_count}</span> Following
-              </Link>
+              </button>
               <div className="flex items-center gap-1">
                 <Eye className="h-4 w-4" />
                 <span><span className="font-semibold text-foreground">{analytics?.view_count || 0}</span> Views</span>
