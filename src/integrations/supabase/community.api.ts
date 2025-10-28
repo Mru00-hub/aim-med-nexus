@@ -267,14 +267,27 @@ export const getSpacesWithDetails = async (): Promise<SpaceWithDetails[]> => {
     if (!session) {
         // 🚀 FIX: Return the same mapped mock data your context expects
         console.log('[getSpacesWithDetails] No session, returning MOCK_SPACES.');
-        return MOCK_SPACES.map(space => ({
-          ...space,
-          creator_full_name: 'Community Member',
-          moderators: [],
-          creator_position: null,
-          creator_organization: null,
-          creator_specialization: null,
-      }));
+        return MOCK_SPACES.map((space, index) => {
+          // Give each mock space some unique-looking numbers
+          const mockCounts = [
+            { members: 125, threads: 42 },
+            { members: 88, threads: 19 },
+            { members: 302, threads: 76 },
+            { members: 45, threads: 12 }
+          ];
+          
+          return {
+            ...space,
+            creator_full_name: 'Community Member',
+            moderators: [],
+            creator_position: null,
+            creator_organization: null,
+            creator_specialization: null,
+            // Add the mock numbers
+            member_count: mockCounts[index].members,
+            thread_count: mockCounts[index].threads,
+          };
+        });
     }
     const { data, error } = await supabase.rpc('get_spaces_with_details');
 
