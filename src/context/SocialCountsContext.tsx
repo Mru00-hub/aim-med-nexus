@@ -3,19 +3,20 @@
 import React, { createContext, useState, useContext, ReactNode, useEffect, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { getPendingRequests, getUnreadInboxCount } from '@/integrations/supabase/social.api';
+import { getPendingRequests, getUnreadInboxCount, getMyConnections, Connection} from '@/integrations/supabase/social.api';
 import { getNotifications } from '@/integrations/supabase/notifications.api';
 
 interface SocialCountsContextType {
   requestCount: number;
-  setRequestCount: React.Dispatch<React.SetStateAction<number>>;
   unreadInboxCount: number;
   unreadNotifCount: number;
   setUnreadNotifCount: React.Dispatch<React.SetStateAction<number>>;
   setUnreadInboxCount: (count: number) => void;
   refetchNotifCount: () => void;
-  refetchRequestCount: () => void;
   markNotificationAsRead: (notificationId: string) => Promise<void>;
+  isFollowing: (userId: string) => boolean;
+  getConnectionStatus: (userId: string) => 'connected' | 'pending_sent' | 'pending_received' | 'not_connected';
+  refetchSocialGraph: () => Promise<void>;
 }
 
 const SocialCountsContext = createContext<SocialCountsContextType | undefined>(undefined);
@@ -25,17 +26,8 @@ export const SocialCountsProvider = ({ children }: { children: ReactNode }) => {
   const [requestCount, setRequestCount] = useState(0);
   const [unreadInboxCount, setUnreadInboxCount] = useState(0);
   const [unreadNotifCount, setUnreadNotifCount] = useState(0);
-
-  const fetchPendingRequests = useCallback(async () => {
-    if (!user) return;
-    try {
-      // Fetches connection requests
-      const requests = await getPendingRequests();
-      setRequestCount(requests.length || 0);
-    } catch (error) {
-      console.error("Failed to fetch pending requests:", error);
-    }
-  }, [user]);
+  const [followsSet, setFollowsSet] = useState(new Set<string>());
+  const [connectionsMap, setConnectionsMap] = useState(new Map<string, 'connected' | 'pending_sent' | 'pending_received'>());
 
   const fetchUnreadNotifCount = useCallback(async () => {
     if (!user) return;
@@ -56,6 +48,44 @@ export const SocialCountsProvider = ({ children }: { children: ReactNode }) => {
       setUnreadInboxCount(count || 0);
     } catch (error) {
       console.error("Failed to fetch unread inbox count:", error);
+    }
+  }, [user]);
+
+  const fetchSocialGraph = useCallback(async () => {
+    if (!user) return;
+    try {
+      // Fetch follows and connections in parallel
+      const [followsResult, connectionsResult] = await Promise.all([
+        supabase
+          .from('user_follows')
+          .select('followed_id')
+          .eq('follower_id', user.id),
+        getMyConnections() // This RPC call gets all connection statuses
+      ]);
+
+      // Process follows
+      if (followsResult.error) throw followsResult.error;
+      const newFollowsSet = new Set(followsResult.data.map(f => f.followed_id));
+      setFollowsSet(newFollowsSet);
+
+      // Process connections
+      const newConnectionsMap = new Map<string, 'connected' | 'pending_sent' | 'pending_received'>();
+      let pendingRequestCount = 0;
+
+      for (const conn of connectionsResult) {
+        // The `Connection` type from `get_my_connections_with_status`
+        // tells us the status relative to the *other* user.
+        newConnectionsMap.set(conn.other_user_id, conn.status);
+        if (conn.status === 'pending_received') {
+          pendingRequestCount++;
+        }
+      }
+      
+      setConnectionsMap(newConnectionsMap);
+      setRequestCount(pendingRequestCount); // Set the derived request count
+
+    } catch (error) {
+      console.error("Failed to fetch social graph:", error);
     }
   }, [user]);
 
@@ -82,11 +112,13 @@ export const SocialCountsProvider = ({ children }: { children: ReactNode }) => {
       setRequestCount(0);
       setUnreadNotifCount(0);
       setUnreadInboxCount(0);
+      setFollowsSet(new Set());
+      setConnectionsMap(new Map());
       return;
     }
 
     // On login, fetch all counts once
-    fetchPendingRequests();
+    fetchSocialGraph(); 
     fetchUnreadNotifCount();
     fetchUnreadInboxCount();
 
@@ -102,11 +134,19 @@ export const SocialCountsProvider = ({ children }: { children: ReactNode }) => {
       .subscribe();
 
     // 2. Listen for connection request changes
-    const socialChannel = supabase.channel('social-counts-connections')
+    const socialChannel = supabase.channel('social-graph-connections')
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'connections', filter: `addressee_id=eq.${user.id}` },
-        () => fetchPendingRequests()
+        { event: '*', schema: 'public', table: 'user_connections', filter: `or(requester_id.eq.${user.id},addressee_id.eq.${user.id})` },
+        () => fetchSocialGraph() // Refetch the whole graph on any change
+      )
+      .subscribe();
+
+    const followsChannel = supabase.channel('social-graph-follows')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'user_follows', filter: `follower_id.eq.${user.id}`},
+        () => fetchSocialGraph() // Refetch the whole graph on any change
       )
       .subscribe();
 
@@ -114,13 +154,7 @@ export const SocialCountsProvider = ({ children }: { children: ReactNode }) => {
     const inboxChannel = supabase.channel(`social-counts-inbox-${user.id}`)
       .on(
         'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'direct_messages',
-          // Filter to only listen for messages sent *to* this user
-          filter: `recipient_id=eq.${user.id}`
-        },
+        { event: 'INSERT', schema: 'public', table: 'direct_messages', filter: `recipient_id=eq.${user.id}` },
         () => fetchUnreadInboxCount()
       )
       .subscribe();
@@ -129,22 +163,30 @@ export const SocialCountsProvider = ({ children }: { children: ReactNode }) => {
     return () => {
       supabase.removeChannel(notifChannel);
       supabase.removeChannel(socialChannel);
+      supabase.removeChannel(followsChannel); // <-- Add cleanup for new channel
       supabase.removeChannel(inboxChannel);
     };
-  }, [user, fetchPendingRequests, fetchUnreadNotifCount, fetchUnreadInboxCount]);
+  }, [user, fetchSocialGraph, fetchUnreadNotifCount, fetchUnreadInboxCount]);
 
   return (
     <SocialCountsContext.Provider
       value={{
         requestCount,
-        setRequestCount,
         unreadInboxCount,
         unreadNotifCount,
         setUnreadNotifCount,
         setUnreadInboxCount,
         refetchNotifCount: fetchUnreadNotifCount,
-        refetchRequestCount: fetchPendingRequests,
         markNotificationAsRead,
+        refetchSocialGraph: fetchSocialGraph,
+        isFollowing: (userId: string) => followsSet.has(userId),
+        getConnectionStatus: (userId: string) => connectionsMap.get(userId) || 'not_connected',
+
+        // --- Remove old/unused values ---
+        // setRequestCount is no longer needed externally
+        setRequestCount: () => {}, // Provide a dummy function to match type
+        // refetchRequestCount is replaced by refetchSocialGraph
+        refetchRequestCount: fetchSocialGraph,
       }}
     >
       {children}
