@@ -45,6 +45,7 @@ const FunctionalSocial = () => {
   const [loading, setLoading] = useState(true);
   
   // State for all social data
+  const [requests, setRequests] = useState<ConnectionRequest[]>([]);
   const [sentRequests, setSentRequests] = useState<SentPendingRequest[]>([]); // Fixed typo SentRequest -> SentPendingRequest
   const [recommendations, setRecommendations] = useState<RecommendationWithMutuals[]>([]);
   const [myConnections, setMyConnections] = useState<ProfileWithStatus[]>([]); // Changed from Connection[]
