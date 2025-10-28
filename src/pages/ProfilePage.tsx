@@ -38,7 +38,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 
-// (PostItemCard and SpaceItemCard are now part of the Activity section, passed as props)
+import { UserListModal } from '@/components/profile-display/UserListModal';
 
 const ProfilePage = () => {
   const { userId } = useParams<{ userId: string }>();
@@ -59,6 +59,11 @@ const ProfilePage = () => {
   const [error, setError] = useState<string | null>(null);
   const [showShareModal, setShowShareModal] = useState(false);
   const [shareUrl, setShareUrl] = useState('');
+  const [modalState, setModalState] = useState({
+    isOpen: false,
+    title: '',
+    userId: '',
+  });
 
   const isOwnProfile = !userId || (user && user.id === userId);
   const targetUserId = userId || user?.id;
@@ -182,6 +187,28 @@ const ProfilePage = () => {
     toast({ title: "Link copied to clipboard!" });
   };
 
+  const handleShowList = (title: 'Followers' | 'Following' | 'Connections') => {
+    if (!targetUserId) return;
+
+    let modalTitle = title;
+    
+    // On *another* user's profile, clicking 'Connections' shows *Mutual* Connections
+    if (!isOwnProfile && title === 'Connections') {
+      modalTitle = 'Mutual Connections';
+    }
+    
+    // On *my own* profile, clicking 'Connections' shows *My* Connections
+    if (isOwnProfile && title === 'Connections') {
+       modalTitle = 'Connections';
+    }
+
+    setModalState({ 
+      isOpen: true, 
+      title: modalTitle, 
+      userId: targetUserId 
+    });
+  };
+
   // --- Render Logic ---
 
   if (loading) {
@@ -255,6 +282,7 @@ const ProfilePage = () => {
     onConnect: handleConnect,
     onMessage: handleMessage,
     onShare: handleShare,
+    onShowList: handleShowList,
   };
 
   return (
@@ -290,7 +318,12 @@ const ProfilePage = () => {
           </div>
         </DialogContent>
       </Dialog>
-      
+      <UserListModal
+        isOpen={modalState.isOpen}
+        onOpenChange={(open) => setModalState((prev) => ({ ...prev, isOpen: open }))}
+        title={modalState.title}
+        userId={modalState.userId}
+      />
       <Footer />
     </div>
   );
