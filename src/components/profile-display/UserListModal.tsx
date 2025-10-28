@@ -7,8 +7,9 @@ import {
 } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
-  getFollowers,
-  getFollowing,
+  getFollowersWithStatus,
+  getFollowingWithStatus,
+  ProfileWithStatus,
 } from '@/integrations/supabase/community.api';
 import {
   getMyConnections,
@@ -26,7 +27,7 @@ interface UserListModalProps {
 }
 
 // A generic type to handle the different user objects returned by our APIs
-type ApiUser = any;
+type ApiUser = ProfileWithStatus;
 
 export const UserListModal = ({
   isOpen,
@@ -53,16 +54,16 @@ export const UserListModal = ({
         let data: ApiUser[] = [];
         switch (title) {
           case 'Followers':
-            data = await getFollowers(userId);
+            data = await getFollowersWithStatus(userId);
             break;
           case 'Following':
-            data = await getFollowing(userId);
+            data = await getFollowingWithStatus(userId);
             break;
-          case 'Connections': // This always fetches the *viewer's* connections
-            data = await getMyConnections();
+          case 'Connections': 
+            data = await getMyConnections() as ApiUser[]; // Cast to new type
             break;
           case 'Mutual Connections':
-            data = await getMutualConnections(userId);
+            data = await getMutualConnections(userId) as ApiUser[]; // Cast to new type
             break;
           default:
             throw new Error('Invalid list title');
