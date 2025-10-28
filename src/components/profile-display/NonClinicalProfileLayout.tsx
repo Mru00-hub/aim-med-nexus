@@ -10,7 +10,7 @@ import { CocurricularCard } from './CocurricularCard';
 import { ActivitySection } from './ActivitySection';
 import { ClinicalBackground } from './ClinicalBackground';
 import { Card, CardContent } from "@/components/ui/card";
-import { Lightbulb, Megaphone, Star, Palette, ThumbsUp, HeartHandshake } from 'lucide-react';
+import { Lightbulb, Megaphone, Star, Palette, ThumbsUp, HeartHandshake, Briefcase} from 'lucide-react';
 
 type LayoutProps = {
   data: FullProfile;
@@ -22,6 +22,7 @@ type LayoutProps = {
   onConnect: () => void;
   onMessage: () => void;
   onShare: () => void;
+  onShowList: (title: 'Followers' | 'Following' | 'Connections') => void;
 };
 
 export const NonClinicalProfileLayout: React.FC<LayoutProps> = (props) => {
@@ -82,7 +83,7 @@ export const NonClinicalProfileLayout: React.FC<LayoutProps> = (props) => {
         {/* 8. Clinical Background (Collapsible) */}
         <ProfileSection
           title="Clinical Background"
-          icon={Briefcase}
+          icon={Briefcase} // Changed from Briefcase
           items={[...data.academic_achievements, ...data.publications, ...data.certifications, ...data.awards]}
           isCollapsible={true}
           defaultOpen={false}
