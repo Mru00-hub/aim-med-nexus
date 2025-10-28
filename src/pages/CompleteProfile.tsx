@@ -464,7 +464,7 @@ const CompleteProfile = () => {
   type ListNameExisting = 'achievements' | 'publications' | 'certifications' | 'awards' | 'ventures' | 'contentPortfolio' | 'cocurriculars';
 
   const handleListChange = (
-    listName: ListName,
+    listName: ListNameExisting,
     index: number,
     field: string,
     value: any
@@ -492,7 +492,7 @@ const CompleteProfile = () => {
     });
   };
 
-  const addListItem = (listName: ListName) => {
+  const addListItem = (listName: ListNameExisting) => {
     const defaults = {
       achievements: { exam_name: '', rank: '', percentile: null, year: null },
       publications: { type: 'journal', title: '', authors: [] },
@@ -546,33 +546,15 @@ const CompleteProfile = () => {
   type AllListNames = ListNameExisting | 'work_experiences' | 'education_history';
 
   const removeListItem = (listName: AllListNames, index: number) => {
-    const lists = {
-      achievements, publications, certifications, awards, ventures, contentPortfolio, cocurriculars,
-      work_experiences: workExperience, // Use snake_case for consistency with deletedItems keys
-      education_history: educationHistory
-    };
-    const setters = {
-      achievements: setAchievements,
-      publications: setPublications,
-      certifications: setCertifications,
-      awards: setAwards,
-      ventures: setVentures,
-      contentPortfolio: setContentPortfolio,
-      cocurriculars: setCocurriculars,
-      work_experiences: setWorkExperience,
-      education_history: setEducationHistory
-    };
-    
+    const lists = { achievements, publications, certifications, awards, ventures, contentPortfolio, cocurriculars, work_experiences: workExperience, education_history: educationHistory }; // 
+    const setters = { achievements: setAchievements, publications: setPublications, certifications: setCertifications, awards: setAwards, ventures: setVentures, contentPortfolio: setContentPortfolio, cocurriculars: setCocurriculars, work_experiences: setWorkExperience, education_history: setEducationHistory }; // 
     const list = lists[listName];
     const setter = setters[listName];
     const item = list[index];
-    if (item.id) {
-      setDeletedItems(prev => ({
-        ...prev,
-        [listName]: [...prev[listName], item.id],
-      }));
-    }
-    setters[listName]((prev: any[]) => prev.filter((_, i) => i !== index));
+    if (item?.id) { // 
+      setDeletedItems(prev => ({ ...prev, [listName]: [...prev[listName], item.id] }));
+    } // 
+    setter((prev: any[]) => prev.filter((_, i) => i !== index));
   };
 
   // --- (Avatar Handlers remain the same) ---
@@ -826,217 +808,16 @@ const CompleteProfile = () => {
 
               {/* --- Conditional Form Sections --- */}
 
-              {profileMode === 'clinical' && userRole !== 'student' && (
-                 <Accordion type="single" collapsible defaultValue="clinical-current-professional">
-                    <AccordionItem value="clinical-current-professional">
-                       <AccordionTrigger className="text-lg font-semibold">
-                         <div className="flex items-center gap-2"> <Briefcase/> Current Professional Details </div>
-                       </AccordionTrigger>
-                       <AccordionContent className="pt-4">
-                         <ProfileProfessionalInfo />
-                       </AccordionContent>
-                    </AccordionItem>
-                 </Accordion>
-              )}
-               <Separator />
+              <Accordion type="multiple" collapsible className="w-full space-y-4">
 
-              {/* --- CURRENT Education Info --- */}
-              <Accordion type="single" collapsible defaultValue="current-education">
-                 <AccordionItem value="current-education">
-                   <AccordionTrigger className="text-lg font-semibold">
-                     <div className="flex items-center gap-2"> <GraduationCap/> Current Educational Details </div>
-                   </AccordionTrigger>
-                   <AccordionContent className="pt-4">
-                     <ProfileEducationInfo />
-                   </AccordionContent>
-                 </AccordionItem>
-              </Accordion>
-              <Separator />
-
-              {/* --- ADDED: REPEATABLE Work Experience --- */}
-              <Accordion type="multiple" collapsible className="w-full space-y-4"> {/* Changed to multiple */}
-                <AccordionItem value="work-history">
-                    <AccordionTrigger className="text-lg font-semibold">
-                       <div className="flex items-center gap-2"> <Briefcase/> Work Experience History </div>
-                    </AccordionTrigger>
-                    <AccordionContent>
-                       <ProfileWorkExperienceForm
-                         items={workExperience}
-                         onListChange={handleWorkExperienceChange} // Use specific handler
-                         onAddItem={addWorkExperience}           // Use specific handler
-                         onRemoveItem={(index) => removeListItem('work_experiences', index)} // Use generic remove handler
-                       />
-                    </AccordionContent>
-                </AccordionItem>
-
-              {/* --- ADDED: REPEATABLE Education History --- */}
-                <AccordionItem value="education-history">
-                    <AccordionTrigger className="text-lg font-semibold">
-                       <div className="flex items-center gap-2"> <GraduationCap/> Education History </div>
-                    </AccordionTrigger>
-                    <AccordionContent>
-                       <ProfileEducationHistoryForm
-                         items={educationHistory}
-                         onListChange={handleEducationHistoryChange} // Use specific handler
-                         onAddItem={addEducationHistory}           // Use specific handler
-                         onRemoveItem={(index) => removeListItem('education_history', index)} // Use generic remove handler
-                         // Pass dropdown props needed by the component
-                         institutionOptions={institutionOptions}
-                         onInstitutionSearch={setInstitutionSearch}
-                         isInstLoading={isInstLoading}
-                         courseOptions={courseOptions}
-                         onCourseSearch={setCourseSearch}
-                         isCourseLoading={isCourseLoading}
-                       />
-                    </AccordionContent>
-                </AccordionItem>
-              
-              {/* 🚀 PLAN: Clinical Profile Forms */}
-              {profileMode === 'clinical' && (
-                <Accordion type="multiple" collapsible className="w-full space-y-4">
-                  
-                  {userRole !== 'student' && (
-                    <AccordionItem value="clinical-professional">
-                      <AccordionTrigger className="text-lg font-semibold">
-                        <div className="flex items-center gap-2">
-                          <Briefcase className="h-5 w-5 text-primary" />
-                          Professional Details
-                        </div>
-                      </AccordionTrigger>
-                      <AccordionContent className="pt-4">
-                        <ProfileProfessionalInfo
-                          formData={formData}
-                          onInputChange={handleInputChange}
-                          specializationOptions={specializationOptions}
-                          onSpecializationSearch={setSpecializationSearch}
-                          isSpecLoading={isSpecLoading}
-                          experiences={experiences}
-                        />
-                      </AccordionContent>
-                    </AccordionItem>
-                  )}
-
-                  <AccordionItem value="clinical-education">
-                    <AccordionTrigger className="text-lg font-semibold">
-                      <div className="flex items-center gap-2">
-                        <GraduationCap className="h-5 w-5 text-primary" />
-                        Educational Details
-                      </div>
+                {/* --- CURRENT Professional Info (If applicable) --- */}
+                {profileMode === 'clinical' && userRole !== 'student' && (
+                  <AccordionItem value="clinical-current-professional">
+                    <AccordionTrigger className="text-lg font-semibold"> {/* */}
+                      <div className="flex items-center gap-2"> <Briefcase/> Current Professional Details </div>
                     </AccordionTrigger>
                     <AccordionContent className="pt-4">
-                      <ProfileEducationInfo
-                        formData={formData}
-                        onInputChange={handleInputChange}
-                        institutionOptions={institutionOptions}
-                        onInstitutionSearch={setInstitutionSearch}
-                        isInstLoading={isInstLoading}
-                        courseOptions={courseOptions}
-                        onCourseSearch={setCourseSearch}
-                        isCourseLoading={isCourseLoading}
-                        studentYears={studentYears}
-                        userRole={userRole}
-                      />
-                    </AccordionContent>
-                  </AccordionItem>
-                  
-                  <AccordionItem value="clinical-achievements">
-                    <AccordionTrigger className="text-lg font-semibold">
-                       <div className="flex items-center gap-2">
-                          <Award className="h-5 w-5 text-primary" />
-                          Academic Achievements
-                        </div>
-                    </AccordionTrigger>
-                    <AccordionContent>
-                      <ProfileAchievementsForm items={achievements} onListChange={handleListChange} onAddItem={addListItem} onRemoveItem={removeListItem} />
-                    </AccordionContent>
-                  </AccordionItem>
-
-                  <AccordionItem value="clinical-publications">
-                    <AccordionTrigger className="text-lg font-semibold">
-                      <div className="flex items-center gap-2">
-                        <BookOpen className="h-5 w-5 text-primary" />
-                        Research & Publications
-                      </div>
-                    </AccordionTrigger>
-                    <AccordionContent>
-                      <ProfilePublicationsForm items={publications} onListChange={handleListChange} onAddItem={addListItem} onRemoveItem={removeListItem} />
-                    </AccordionContent>
-                  </AccordionItem>
-
-                  <AccordionItem value="clinical-certs">
-                    <AccordionTrigger className="text-lg font-semibold">
-                      <div className="flex items-center gap-2">
-                        <ShieldCheck className="h-5 w-5 text-primary" />
-                        Certifications
-                      </div>
-                    </AccordionTrigger>
-                    <AccordionContent>
-                      <ProfileCertificationsForm items={certifications} onListChange={handleListChange} onAddItem={addListItem} onRemoveItem={removeListItem} />
-                    </AccordionContent>
-                  </AccordionItem>
-
-                  <AccordionItem value="clinical-awards">
-                    <AccordionTrigger className="text-lg font-semibold">
-                      <div className="flex items-center gap-2">
-                        <Award className="h-5 w-5 text-primary" />
-                        Awards & Honors
-                      </div>
-                    </AccordionTrigger>
-                    <AccordionContent>
-                      <ProfileAwardsForm items={awards} onListChange={handleListChange} onAddItem={addListItem} onRemoveItem={removeListItem} />
-                    </AccordionContent>
-                  </AccordionItem>
-
-                </Accordion>
-              )}
-
-              {/* 🚀 PLAN: Non-Clinical Profile Forms */}
-              {profileMode === 'non_clinical' && (
-                <Accordion type="multiple" collapsible className="w-full space-y-4">
-                  <AccordionItem value="nonclinical-transition">
-                    <AccordionTrigger className="text-lg font-semibold">
-                      <div className="flex items-center gap-2">
-                        <HeartHandshake className="h-5 w-5 text-primary" />
-                        My Transition Journey
-                      </div>
-                    </AccordionTrigger>
-                    <AccordionContent>
-                      <ProfileTransitionInfo formData={transitionData || { profile_id: user.id }} onTransitionChange={handleTransitionChange} />
-                    </AccordionContent>
-                  </AccordionItem>
-                  
-                  <AccordionItem value="nonclinical-ventures">
-                    <AccordionTrigger className="text-lg font-semibold">
-                      <div className="flex items-center gap-2">
-                        <Lightbulb className="h-5 w-5 text-primary" />
-                        Ventures & Projects
-                      </div>
-                    </AccordionTrigger>
-                    <AccordionContent>
-                      <ProfileVenturesForm items={ventures} onListChange={handleListChange} onAddItem={addListItem} onRemoveItem={removeListItem} />
-                    </AccordionContent>
-                  </AccordionItem>
-                  
-                  <AccordionItem value="nonclinical-content">
-                    <AccordionTrigger className="text-lg font-semibold">
-                      <div className="flex items-center gap-2">
-                        <Megaphone className="h-5 w-5 text-primary" />
-                        Content Portfolio
-                      </div>
-                    </AccordionTrigger>
-                    <AccordionContent>
-                      <ProfileContentForm items={contentPortfolio} onListChange={handleListChange} onAddItem={addListItem} onRemoveItem={removeListItem} />
-                    </AccordionContent>
-                  </AccordionItem>
-                  
-                  <AccordionItem value="nonclinical-clinical-bg">
-                    <AccordionTrigger className="text-lg font-semibold">
-                      <div className="flex items-center gap-2">
-                        <Briefcase className="h-5 w-5 text-primary" />
-                        Clinical Background (Foundation)
-                      </div>
-                    </AccordionTrigger>
-                    <AccordionContent className="pt-4 space-y-6">
+                      {/* *** CHANGE 3: Add missing props *** */}
                       <ProfileProfessionalInfo
                         formData={formData}
                         onInputChange={handleInputChange}
@@ -1044,9 +825,21 @@ const CompleteProfile = () => {
                         onSpecializationSearch={setSpecializationSearch}
                         isSpecLoading={isSpecLoading}
                         experiences={experiences}
-                      />
-                      <Separator />
-                      <ProfileEducationInfo
+                      /> {/* */}
+                    </AccordionContent>
+                  </AccordionItem>
+                )}
+                 {/* */}
+                 {/* Remove Separator, Accordion handles spacing */}
+
+                {/* --- CURRENT Education Info --- */}
+                <AccordionItem value="current-education">
+                   <AccordionTrigger className="text-lg font-semibold">
+                     <div className="flex items-center gap-2"> <GraduationCap/> Current Educational Details </div> {/* */}
+                   </AccordionTrigger>
+                   <AccordionContent className="pt-4">
+                     {/* *** CHANGE 3: Add missing props *** */}
+                     <ProfileEducationInfo
                         formData={formData}
                         onInputChange={handleInputChange}
                         institutionOptions={institutionOptions}
@@ -1057,59 +850,178 @@ const CompleteProfile = () => {
                         isCourseLoading={isCourseLoading}
                         studentYears={studentYears}
                         userRole={userRole}
-                      />
-                    </AccordionContent>
-                  </AccordionItem>
-                </Accordion>
-              )}
+                     /> {/* */}
+                   </AccordionContent>
+                </AccordionItem> {/* */}
+                {/* Remove Separator */}
 
-              {/* --- Shared Sections --- */}
-              <Separator />
-              <Accordion type="multiple" collapsible className="w-full space-y-4">
-                <AccordionItem value="shared-cocurriculars">
+                {/* --- REPEATABLE Work Experience --- */}
+                <AccordionItem value="work-history">
+                    <AccordionTrigger className="text-lg font-semibold"> {/* */}
+                       <div className="flex items-center gap-2"> <Briefcase/> Work Experience History </div>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                       <ProfileWorkExperienceForm
+                         items={workExperience}
+                         onListChange={handleWorkExperienceChange}
+                         onAddItem={addWorkExperience}
+                         onRemoveItem={(index) => removeListItem('work_experiences', index)}
+                       /> {/* */}
+                    </AccordionContent>
+                </AccordionItem>
+                 {/* Remove Separator */}
+
+                {/* --- REPEATABLE Education History --- */} {/* */}
+                <AccordionItem value="education-history">
+                    <AccordionTrigger className="text-lg font-semibold"> {/* */}
+                       <div className="flex items-center gap-2"> <GraduationCap/> Education History </div>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                       <ProfileEducationHistoryForm
+                         items={educationHistory}
+                         onListChange={handleEducationHistoryChange} // 
+                         onAddItem={addEducationHistory}
+                         onRemoveItem={(index) => removeListItem('education_history', index)}
+                         institutionOptions={institutionOptions} // 
+                         onInstitutionSearch={setInstitutionSearch}
+                         isInstLoading={isInstLoading}
+                         courseOptions={courseOptions} // 
+                         onCourseSearch={setCourseSearch}
+                         isCourseLoading={isCourseLoading}
+                       />
+                    </AccordionContent>
+                </AccordionItem> {/* */}
+                 {/* Remove Separator */}
+
+                {/* --- Conditional Clinical Forms --- */}
+                {profileMode === 'clinical' && ( // 
+                  <> {/* Use Fragment */}
+                    {/* Professional Details (Duplicate?) - REMOVED, covered by "Current" above */}
+                    {/* Education Details (Duplicate?) - REMOVED, covered by "Current" above */}
+                    <AccordionItem value="clinical-achievements"> {/* */}
+                      <AccordionTrigger className="text-lg font-semibold"> {/* */}
+                        <div className="flex items-center gap-2"> <Award/> Academic Achievements </div>
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        <ProfileAchievementsForm items={achievements} onListChange={handleListChange} onAddItem={addListItem} onRemoveItem={(index) => removeListItem('achievements', index)} /> {/* */}
+                      </AccordionContent>
+                    </AccordionItem>
+                    <AccordionItem value="clinical-publications"> {/* */}
+                      <AccordionTrigger className="text-lg font-semibold"> {/* */}
+                        <div className="flex items-center gap-2"> <BookOpen/> Research & Publications </div> {/* */}
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        <ProfilePublicationsForm items={publications} onListChange={handleListChange} onAddItem={addListItem} onRemoveItem={(index) => removeListItem('publications', index)} />
+                      </AccordionContent>
+                    </AccordionItem>
+                    <AccordionItem value="clinical-certs">
+                      <AccordionTrigger className="text-lg font-semibold">
+                        <div className="flex items-center gap-2"> <ShieldCheck/> Certifications </div> {/* */}
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        <ProfileCertificationsForm items={certifications} onListChange={handleListChange} onAddItem={addListItem} onRemoveItem={(index) => removeListItem('certifications', index)} /> {/* */}
+                      </AccordionContent>
+                    </AccordionItem>
+                    <AccordionItem value="clinical-awards"> {/* */}
+                      <AccordionTrigger className="text-lg font-semibold"> {/* */}
+                        <div className="flex items-center gap-2"> <Award/> Awards & Honors </div>
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        <ProfileAwardsForm items={awards} onListChange={handleListChange} onAddItem={addListItem} onRemoveItem={(index) => removeListItem('awards', index)} />
+                      </AccordionContent>
+                    </AccordionItem>
+                  </>
+                )}
+
+                {/* --- Conditional Non-Clinical Forms --- */}
+                {profileMode === 'non_clinical' && (
+                  <> {/* Use Fragment */}
+                     <AccordionItem value="nonclinical-transition"> {/* */}
+                       <AccordionTrigger className="text-lg font-semibold">
+                         <div className="flex items-center gap-2"> <HeartHandshake/> My Transition Journey </div> {/* */}
+                       </AccordionTrigger>
+                       <AccordionContent>
+                         <ProfileTransitionInfo formData={transitionData || { profile_id: user.id }} onTransitionChange={handleTransitionChange} /> {/* */}
+                       </AccordionContent>
+                     </AccordionItem>
+                     <AccordionItem value="nonclinical-ventures"> {/* */}
+                       <AccordionTrigger className="text-lg font-semibold"> {/* */}
+                         <div className="flex items-center gap-2"> <Lightbulb/> Ventures & Projects </div> {/* */}
+                       </AccordionTrigger>
+                       <AccordionContent>
+                         <ProfileVenturesForm items={ventures} onListChange={handleListChange} onAddItem={addListItem} onRemoveItem={(index) => removeListItem('ventures', index)} />
+                       </AccordionContent>
+                     </AccordionItem>
+                     <AccordionItem value="nonclinical-content">
+                       <AccordionTrigger className="text-lg font-semibold">
+                         <div className="flex items-center gap-2"> <Megaphone/> Content Portfolio </div> {/* */}
+                       </AccordionTrigger>
+                       <AccordionContent> {/* */}
+                         <ProfileContentForm items={contentPortfolio} onListChange={handleListChange} onAddItem={addListItem} onRemoveItem={(index) => removeListItem('content_portfolio', index)} />
+                       </AccordionContent>
+                     </AccordionItem>
+                     <AccordionItem value="nonclinical-clinical-bg"> {/* */}
+                       <AccordionTrigger className="text-lg font-semibold">
+                         <div className="flex items-center gap-2"> <Briefcase/> Clinical Background (Foundation) </div> {/* */}
+                       </AccordionTrigger>
+                       <AccordionContent className="pt-4 space-y-6"> {/* */}
+                         {/* *** CHANGE 3: Add missing props *** */}
+                         <ProfileProfessionalInfo
+                           formData={formData} // 
+                           onInputChange={handleInputChange}
+                           specializationOptions={specializationOptions}
+                           onSpecializationSearch={setSpecializationSearch}
+                           isSpecLoading={isSpecLoading} // 
+                           experiences={experiences}
+                         />
+                         <Separator />
+                         {/* *** CHANGE 3: Add missing props *** */}
+                         <ProfileEducationInfo // 
+                           formData={formData}
+                           onInputChange={handleInputChange}
+                           institutionOptions={institutionOptions}
+                           onInstitutionSearch={setInstitutionSearch} // 
+                           isInstLoading={isInstLoading}
+                           courseOptions={courseOptions}
+                           onCourseSearch={setCourseSearch}
+                           isCourseLoading={isCourseLoading}
+                           studentYears={studentYears} // 
+                           userRole={userRole}
+                         />
+                       </AccordionContent>
+                     </AccordionItem>
+                  </>
+                )}
+
+                {/* --- Shared Sections --- */}
+                {/* Remove Separator */}
+                <AccordionItem value="shared-cocurriculars"> {/* */}
                   <AccordionTrigger className="text-lg font-semibold">
-                    <div className="flex items-center gap-2">
-                      <Palette className="h-5 w-5 text-primary" />
-                      Cocurriculars & Organizing
-                    </div>
+                    <div className="flex items-center gap-2"> <Palette/> Cocurriculars & Organizing </div> {/* */}
                   </AccordionTrigger>
                   <AccordionContent>
-                    <ProfileCocurricularsForm items={cocurriculars} onListChange={handleListChange} onAddItem={addListItem} onRemoveItem={removeListItem} />
+                    <ProfileCocurricularsForm items={cocurriculars} onListChange={handleListChange} onAddItem={addListItem} onRemoveItem={(index) => removeListItem('cocurriculars', index)} />
+                  </AccordionContent>
+                </AccordionItem> {/* */}
+                <AccordionItem value="shared-about">
+                  <AccordionTrigger className="text-lg font-semibold">
+                    <div className="flex items-center gap-2"> <User className="h-5 w-5 text-primary"/> About & Links </div> {/* */}
+                  </AccordionTrigger>
+                  <AccordionContent className="pt-4">
+                    <ProfileAboutInfo formData={formData} onInputChange={handleInputChange} /> {/* */}
                   </AccordionContent>
                 </AccordionItem>
 
-                <AccordionItem value="shared-about">
-                  <AccordionTrigger className="text-lg font-semibold">
-                    <div className="flex items-center gap-2">
-                      <User className="h-5 w-5 text-primary" />
-                      About & Links
-                    </div>
-                  </AccordionTrigger>
-                  <AccordionContent className="pt-4">
-                    <ProfileAboutInfo
-                      formData={formData}
-                      onInputChange={handleInputChange}
-                    />
-                  </AccordionContent>
-                </AccordionItem>
-              </Accordion>
-              
+              </Accordion> 
+
               {/* --- Form Actions --- */}
               <div className="flex flex-col sm:flex-row gap-4 pt-6">
                 <Button type="submit" size="lg" className="btn-medical w-full sm:flex-1" disabled={isSubmitting}>
-                  {isSubmitting ? 'Saving...' : 'Save Profile'}
+                  {isSubmitting ? 'Saving...' : 'Save Profile'} 
                   <Save className="ml-2 h-5 w-5" />
                 </Button>
-
-                <Button 
-                  type="button"
-                  variant="outline"
-                  size="lg"
-                  onClick={handleSkip}
-                  disabled={isSubmitting}
-                  className="w-full sm:w-auto"
-                >
-                  Skip for Now
+                <Button type="button" variant="outline" size="lg" onClick={handleSkip} disabled={isSubmitting} className="w-full sm:w-auto"> {/* */}
+                  Skip for Now 
                 </Button>
               </div>
             </form>
@@ -1119,30 +1031,22 @@ const CompleteProfile = () => {
       <Footer />
     </div>
   );
-};
+}; // *** CHANGE 1: Remove extra closing brace here ***
 
-// --- (PageSkeleton remains the same) ---
+// --- PageSkeleton --- // 
 const PageSkeleton = () => (
   <div className="min-h-screen bg-background">
     <Header />
     <main className="py-12">
       <Card className="card-medical max-w-2xl mx-auto">
-        <CardHeader>
-          <Skeleton className="h-8 w-48" />
-          <Skeleton className="h-4 w-64 mt-2" />
-        </CardHeader>
+        <CardHeader> <Skeleton className="h-8 w-48" /> <Skeleton className="h-4 w-64 mt-2" /> </CardHeader>
         <CardContent className="space-y-6">
-          <div className="flex flex-col items-center mb-8 space-y-2">
-            <Skeleton className="h-24 w-24 rounded-full" />
-          </div>
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-24 w-full" />
-          <Skeleton className="h-12 w-full" />
+          <div className="flex flex-col items-center mb-8 space-y-2"> <Skeleton className="h-24 w-24 rounded-full" /> </div> {/* */}
+          <Skeleton className="h-10 w-full" /> <Skeleton className="h-10 w-full" /> <Skeleton className="h-24 w-full" /> <Skeleton className="h-12 w-full" />
         </CardContent>
       </Card>
     </main>
-    <Footer />
+    <Footer /> 
   </div>
 );
 
