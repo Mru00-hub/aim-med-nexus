@@ -167,8 +167,15 @@ export const ClinicalProfileLayout: React.FC<LayoutProps> = (props) => {
         </ProfileSection>
 
         {/* 9. Activity Section */}
-        <ProfileSection title="Activity & Engagement" icon={ThumbsUp} items={[...data.posts, ...data.spaces]}>
-          <ActivitySection posts={data.posts} spaces={data.spaces} />
+        <ProfileSection 
+          title="Activity & Engagement" 
+          icon={ThumbsUp} 
+          items={data.spaces} /* Only pass spaces to the 'items' prop for conditional rendering */
+        >
+          <ActivitySection 
+            posts={[]} /* Pass an empty array for posts */
+            spaces={data.spaces} /* Pass the pre-filtered spaces */
+          />
         </ProfileSection>
 
       </CardContent>
