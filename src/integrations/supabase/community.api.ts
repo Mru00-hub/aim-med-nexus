@@ -980,6 +980,8 @@ export const getProfileDetails = async (userId: string): Promise<FullProfile> =>
     { data: ventures, error: ventureError },
     { data: contentData, error: contentError },
     { data: cocurricularData, error: cocurricularError },
+    { data: workData, error: workError },
+    { data: educationData, error: educationError },
   ] = await Promise.all([
     // Activity
     supabase.from('public_posts_feed').select('*').eq('author_id', userId).order('created_at', { ascending: false }),
@@ -998,10 +1000,12 @@ export const getProfileDetails = async (userId: string): Promise<FullProfile> =>
     supabase.from('ventures').select('*').eq('profile_id', userId).order('start_date', { ascending: false, nulls: 'last' }),
     supabase.from('content_portfolio').select('*').eq('profile_id', userId).order('created_at', { ascending: false }),
     supabase.from('cocurriculars').select('*').eq('profile_id', userId).order('activity_date', { ascending: false, nulls: 'last' }),
+    supabase.from('work_experiences').select('*').eq('profile_id', userId).order('start_date', { ascending: false, nulls: 'last' }),
+    supabase.from('education_history').select('*').eq('profile_id', userId).order('start_year', { ascending: false, nulls: 'last' }),
   ]);
 
   // Optional: Log errors if any query failed
-  const allErrors = { postsError, spacesError, isFollowingError, achError, pubError, certError, awardError, analyticsError, transitionError, ventureError, contentError };
+  const allErrors = { postsError, spacesError, isFollowingError, achError, pubError, certError, awardError, analyticsError, transitionError, ventureError, contentError, workError, educationError };
   if (Object.values(allErrors).some(Boolean)) {
     console.warn("One or more profile detail queries failed.", allErrors);
   }
@@ -1025,6 +1029,8 @@ export const getProfileDetails = async (userId: string): Promise<FullProfile> =>
     ventures: ventures || [],
     content_portfolio: contentData || [],
     cocurriculars: cocurricularData || [],
+    work_experiences: workData || [],
+    education_history: educationData || [],
   };
 };
 
