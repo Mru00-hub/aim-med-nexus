@@ -48,9 +48,11 @@ export const EducationCard: React.FC<EducationCardProps> = ({ profile, education
         )}
         {/* Display Year Range or Current Status Badge */}
         {yearRange && (
+          isCurrent ? (
+            <Badge variant="outline" className="mt-2">{yearRange}</Badge>
+          ) : (
             <p className="text-xs text-muted-foreground mt-1">{yearRange}</p>
-            // Alternative: Use a badge for current status if preferred
-            {isCurrent && profile?.year_of_study && <Badge variant="outline" className="mt-2">{profile.year_of_study}</Badge>}
+          )
         )}
          {/* Display description for history items */}
          {description && (
