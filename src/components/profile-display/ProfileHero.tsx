@@ -61,19 +61,23 @@ export const ProfileHero: React.FC<ProfileHeroProps> = ({
   const headline = getHeadline();
 
   return (
-    <CardHeader className="p-0">
+    // --- Added overflow-hidden to prevent glitches ---
+    <CardHeader className="p-0 overflow-hidden"> 
       <div className="h-32 sm:h-40 bg-gradient-to-r from-primary/20 to-accent/20" />
       
-      <div className="p-4 sm:p-6 pt-0">
-        <div className="flex flex-col sm:flex-row sm:items-end sm:gap-6 -mt-16 sm:-mt-20">
-          <Avatar className="h-28 w-28 sm:h-36 sm:w-36 border-4 border-background shadow-lg bg-background">
+      {/* --- Added relative positioning here --- */}
+      <div className="relative p-4 sm:p-6"> 
+        {/* --- Moved negative margin directly to the Avatar --- */}
+        <div className="flex flex-col sm:flex-row sm:items-end sm:gap-6">
+           <Avatar className="h-28 w-28 sm:h-36 sm:w-36 border-4 border-background shadow-lg bg-background -mt-16 sm:-mt-20 flex-shrink-0"> 
             <AvatarImage src={profile.profile_picture_url || undefined} alt={profile.full_name || ''} />
             <AvatarFallback className="text-5xl">
               {profile.full_name?.split(' ').map((n) => n[0]).join('')}
             </AvatarFallback>
           </Avatar>
           
-          <div className="flex-grow mt-4 sm:pb-2">
+          {/* --- Removed negative margin logic from here, adjusted padding --- */}
+          <div className="flex-grow mt-4 sm:mt-0 sm:pb-2"> 
             <div className="flex items-center gap-2">
               <h1 className="text-2xl sm:text-3xl font-bold">
                 {profile.full_name}
@@ -86,7 +90,6 @@ export const ProfileHero: React.FC<ProfileHeroProps> = ({
               {headline}
             </p>
             
-            {/* 🚀 PLAN: Clickable Metrics Bar */}
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground mt-3">
               <button onClick={() => onShowList('Connections')} className="hover:underline">
                 <span className="font-semibold text-foreground">{connection_count}</span> Connections
@@ -104,9 +107,9 @@ export const ProfileHero: React.FC<ProfileHeroProps> = ({
             </div>
           </div>
 
-          {/* 🚀 PLAN: Functional Action Buttons */}
+          {/* Action Buttons Area */}
           <div className="flex w-full sm:w-auto gap-2 mt-4 sm:mt-0 sm:pb-2 flex-shrink-0">
-            {isOwnProfile ? (
+             {isOwnProfile ? (
               <Button asChild className="flex-1 sm:flex-auto">
                 <Link to="/complete-profile">
                   <Edit className="mr-2 h-4 w-4" /> Edit Profile
