@@ -108,7 +108,6 @@ export const ClinicalProfileLayout: React.FC<LayoutProps> = (props) => {
         </ProfileSection>
 
         {/* 4. Professional Experience Section */}
-        <ProfileSection 
         <ProfileSection
           title="Professional Experience"
           icon={Briefcase}
