@@ -4,14 +4,12 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/components/ui/use-toast';
 import { UserActionCard } from '@/components/social/UserActionCard'; // Adjust path if needed
 import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
 import {
-  getConnectionStatus,
   sendConnectionRequest,
   createOrGetConversation,
 } from '@/integrations/supabase/social.api';
-import { toggleFollow } from '@/integrations/supabase/community.api';
-import { MessageSquare, UserCheck, UserPlus, X } from 'lucide-react';
+import { toggleFollow, ProfileWithStatus } from '@/integrations/supabase/community.api'; 
+import { MessageSquare, UserCheck, UserPlus, X, Loader2, Check } from 'lucide-react'; 
 
 // A generic user type to normalize data from different API endpoints
 interface CardUser {
@@ -35,68 +33,35 @@ export const UserCardWithActions = ({ user }: UserCardWithActionsProps) => {
   const navigate = useNavigate();
 
   // Normalize the user object
-  const normalizedUser: CardUser = {
-    id: user.id || user.user_id, // Handles both Profile and Connection types
+  const normalizedUser = {
+    id: user.id,
     full_name: user.full_name,
     profile_picture_url: user.profile_picture_url,
-    title: user.current_position || user.title,
+    title: user.current_position,
     organization: user.organization,
-    location: user.location_name || user.location,
-    mutuals: user.mutuals,
-    similarity_score: user.similarity_score,
+    location: user.location_name,
   };
 
-  const [connectionStatus, setConnectionStatus] = useState<
-    'connected' | 'pending_sent' | 'pending_received' | 'not_connected'
-  >('not_connected');
+  const [connectionStatus, setConnectionStatus] = useState(user.connection_status);
+  const [isFollowing, setIsFollowing] = useState(user.is_viewer_following);
   
-  // Note: We cannot get follow status for each user without N+1 queries
-  // The provided APIs (getFollowers, etc.) do not return this.
   const [isFollowLoading, setIsFollowLoading] = useState(false);
   const [isConnectionLoading, setIsConnectionLoading] = useState(false);
-  const [isStatusLoading, setIsStatusLoading] = useState(true);
 
   const isOwnCard = viewer?.id === normalizedUser.id;
-
-  useEffect(() => {
-    if (isOwnCard) {
-      setIsStatusLoading(false);
-      return;
-    }
-
-    let isMounted = true;
-    const fetchStatus = async () => {
-      setIsStatusLoading(true);
-      try {
-        const status = await getConnectionStatus(normalizedUser.id);
-        if (isMounted) {
-          setConnectionStatus(status);
-        }
-      } catch (e) {
-        console.error('Failed to get connection status for user card', e);
-      } finally {
-        if (isMounted) {
-          setIsStatusLoading(false);
-        }
-      }
-    };
-
-    fetchStatus();
-    
-    return () => { isMounted = false; };
-  }, [normalizedUser.id, isOwnCard]);
-
-  // --- Action Handlers ---
 
   const handleFollow = async () => {
     if (!viewer) return toast({ title: 'Please log in', variant: 'destructive' });
 
     setIsFollowLoading(true);
+    const wasFollowing = isFollowing;
+    setIsFollowing(!wasFollowing); // Optimistic update
+
     try {
       await toggleFollow(normalizedUser.id);
-      // We can't be specific (Followed/Unfollowed) as we don't know the initial state
-      toast({ title: 'Follow status toggled' }); 
+      toast({ title: wasFollowing ? 'Unfollowed' : 'Followed' });
     } catch (e: any) {
+      setIsFollowing(wasFollowing); // Rollback
       toast({ variant: 'destructive', title: 'Error', description: e.message });
     } finally {
       setIsFollowLoading(false);
@@ -132,9 +97,6 @@ export const UserCardWithActions = ({ user }: UserCardWithActionsProps) => {
   // --- Button Rendering ---
 
   const renderButtons = () => {
-    if (isStatusLoading) {
-      return <Skeleton className="h-9 w-28" />;
-    }
 
     if (isOwnCard) {
       return (
@@ -187,12 +149,21 @@ export const UserCardWithActions = ({ user }: UserCardWithActionsProps) => {
         {connectButton}
         <Button
           size="sm"
-          variant="ghost"
+          variant={isFollowing ? "outline" : "ghost"} // Change variant based on state
           onClick={handleFollow}
           disabled={isFollowLoading}
+          className="w-[100px]" // Give it a fixed width to prevent layout shift
         >
-          {/* We just use a generic 'Follow' as we don't know the state */}
-          Follow
+          {isFollowLoading ? (
+             <Loader2 className="h-4 w-4 animate-spin" />
+          ) : isFollowing ? (
+            <>
+              <Check className="h-4 w-4 mr-2" />
+              Following
+            </>
+          ) : (
+            'Follow'
+          )}
         </Button>
       </>
     );
