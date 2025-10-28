@@ -29,6 +29,8 @@ import { ProfileTransitionInfo } from '@/components/profile-edit/ProfileTransiti
 import { ProfileVenturesForm } from '@/components/profile-edit/ProfileVenturesForm';
 import { ProfileContentForm } from '@/components/profile-edit/ProfileContentForm';
 import { ProfileCocurricularsForm } from '@/components/profile-edit/ProfileCocurricularsForm';
+import { ProfileWorkExperienceForm } from '@/components/profile-edit/ProfileWorkExperienceForm';
+import { ProfileEducationHistoryForm } from '@/components/profile-edit/ProfileEducationHistoryForm';
 
 // 🚀 PLAN: Import API functions and types from user.api.ts
 import {
@@ -40,6 +42,8 @@ import {
   getMyVentures,
   getMyContentPortfolio,
   getMyCocurriculars,
+  getMyWorkExperiences,
+  getMyEducationHistory,
   saveProfileDetails,
   EditableAchievement,
   EditablePublication,
@@ -49,7 +53,12 @@ import {
   EditableVenture,
   EditableContent,
   EditableCocurricular,
+  EditableWorkExperience,
+  EditableEducationHistory,
 } from '@/integrations/supabase/user.api';
+
+export type WorkExperienceItem = EditableWorkExperience;
+export type EducationHistoryItem = EditableEducationHistory;
 
 // --- Data Types ---
 type Location = { id: string; label: string; value: string };
@@ -129,6 +138,8 @@ const CompleteProfile = () => {
   const [contentPortfolio, setContentPortfolio] = useState<EditableContent[]>([]);
   // Shared
   const [cocurriculars, setCocurriculars] = useState<EditableCocurricular[]>([]);
+  const [workExperience, setWorkExperience] = useState<WorkExperienceItem[]>([]);
+  const [educationHistory, setEducationHistory] = useState<EducationHistoryItem[]>([]);
 
   // 🚀 PLAN: State to track deleted items
   const [deletedItems, setDeletedItems] = useState({
@@ -139,6 +150,8 @@ const CompleteProfile = () => {
     ventures: [] as string[],
     content_portfolio: [] as string[],
     cocurriculars: [] as string[],
+    work_experiences: [] as string[],
+    education_history: [] as string[],
   });
 
   // --- (Dropdown, Search, and Loading states remain the same) ---
@@ -347,7 +360,7 @@ const CompleteProfile = () => {
           const [
             loc, inst, cour, spec, // Dropdowns
             achievementsData, pubData, certData, awardData, // Clinical
-            transData, ventureData, contentData, cocurricularData // Non-Clinical + Shared
+            transData, ventureData, contentData, cocurricularData, workData, eduData // Non-Clinical + Shared
           ] = await Promise.all([
             // Dropdowns
             profile.location_id ? supabase.from('locations').select('id, label, value').eq('id', profile.location_id).single() : Promise.resolve({ data: null }),
@@ -363,6 +376,8 @@ const CompleteProfile = () => {
             getMyVentures(),
             getMyContentPortfolio(),
             getMyCocurriculars(),
+            getMyWorkExperiences(),
+            getMyEducationHistory(),
           ]);
 
           // 3. Seed dropdowns
@@ -408,6 +423,8 @@ const CompleteProfile = () => {
           setVentures(ventureData || []);
           setContentPortfolio(contentData || []);
           setCocurriculars(cocurricularData || []);
+          setWorkExperience(workData || []);
+          setEducationHistory(eduData || []);
 
           // 6. Set Avatar
           if (profile.profile_picture_url) {
@@ -444,7 +461,7 @@ const CompleteProfile = () => {
   };
 
   // 🚀 PLAN: Generic handlers for all 1-to-many lists
-  type ListName = 'achievements' | 'publications' | 'certifications' | 'awards' | 'ventures' | 'contentPortfolio' | 'cocurriculars';
+  type ListNameExisting = 'achievements' | 'publications' | 'certifications' | 'awards' | 'ventures' | 'contentPortfolio' | 'cocurriculars';
 
   const handleListChange = (
     listName: ListName,
@@ -497,9 +514,42 @@ const CompleteProfile = () => {
     setters[listName]((prev: any[]) => [...prev, defaults[listName]]);
   };
 
-  const removeListItem = (listName: ListName, index: number) => {
+  const handleWorkExperienceChange = (index: number, field: string, value: any) => {
+    setWorkExperience(prev => {
+      const newList = [...prev];
+      newList[index] = { ...newList[index], [field]: value };
+      return newList;
+    });
+  };
+  const addWorkExperience = () => {
+    setWorkExperience(prev => [...prev, { position: '', organization: '', start_date: '', end_date: null, description: '' }]);
+  };
+
+  const handleEducationHistoryChange = (index: number, field: string, value: any) => {
+    setEducationHistory(prev => {
+      const newList = [...prev];
+      // Clear associated 'other' field if a dropdown ID is selected
+      if (field === 'institution_id' && value !== 'other') {
+          newList[index] = { ...newList[index], [field]: value, institution_name: '' };
+      } else if (field === 'course_id' && value !== 'other') { // Example if using course_id
+          newList[index] = { ...newList[index], [field]: value, field_of_study: '' };
+      } else {
+         newList[index] = { ...newList[index], [field]: value };
+      }
+      return newList;
+    });
+  };
+   const addEducationHistory = () => {
+    setEducationHistory(prev => [...prev, { institution_name: '', degree: '', field_of_study: '', start_year: null, end_year: null, description: '' }]);
+  };
+
+  type AllListNames = ListNameExisting | 'work_experiences' | 'education_history';
+
+  const removeListItem = (listName: AllListNames, index: number) => {
     const lists = {
-      achievements, publications, certifications, awards, ventures, contentPortfolio, cocurriculars
+      achievements, publications, certifications, awards, ventures, contentPortfolio, cocurriculars,
+      work_experiences: workExperience, // Use snake_case for consistency with deletedItems keys
+      education_history: educationHistory
     };
     const setters = {
       achievements: setAchievements,
@@ -509,9 +559,13 @@ const CompleteProfile = () => {
       ventures: setVentures,
       contentPortfolio: setContentPortfolio,
       cocurriculars: setCocurriculars,
+      work_experiences: setWorkExperience,
+      education_history: setEducationHistory
     };
     
-    const item = (lists[listName] as any[])[index];
+    const list = lists[listName];
+    const setter = setters[listName];
+    const item = list[index];
     if (item.id) {
       setDeletedItems(prev => ({
         ...prev,
@@ -651,6 +705,8 @@ const CompleteProfile = () => {
           ventures,
           contentPortfolio,
           cocurriculars,
+          workExperiences: workExperience,
+          educationHistory: educationHistory,
         },
         deletedItems // Deleted items
       );
@@ -769,6 +825,71 @@ const CompleteProfile = () => {
               <Separator />
 
               {/* --- Conditional Form Sections --- */}
+
+              {profileMode === 'clinical' && userRole !== 'student' && (
+                 <Accordion type="single" collapsible defaultValue="clinical-current-professional">
+                    <AccordionItem value="clinical-current-professional">
+                       <AccordionTrigger className="text-lg font-semibold">
+                         <div className="flex items-center gap-2"> <Briefcase/> Current Professional Details </div>
+                       </AccordionTrigger>
+                       <AccordionContent className="pt-4">
+                         <ProfileProfessionalInfo {/* ... passes formData for current info */} />
+                       </AccordionContent>
+                    </AccordionItem>
+                 </Accordion>
+              )}
+               <Separator />
+
+              {/* --- CURRENT Education Info --- */}
+              <Accordion type="single" collapsible defaultValue="current-education">
+                 <AccordionItem value="current-education">
+                   <AccordionTrigger className="text-lg font-semibold">
+                     <div className="flex items-center gap-2"> <GraduationCap/> Current Educational Details </div>
+                   </AccordionTrigger>
+                   <AccordionContent className="pt-4">
+                     <ProfileEducationInfo {/* ... passes formData for current info */} />
+                   </AccordionContent>
+                 </AccordionItem>
+              </Accordion>
+              <Separator />
+
+              {/* --- ADDED: REPEATABLE Work Experience --- */}
+              <Accordion type="multiple" collapsible className="w-full space-y-4"> {/* Changed to multiple */}
+                <AccordionItem value="work-history">
+                    <AccordionTrigger className="text-lg font-semibold">
+                       <div className="flex items-center gap-2"> <Briefcase/> Work Experience History </div>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                       <ProfileWorkExperienceForm
+                         items={workExperience}
+                         onListChange={handleWorkExperienceChange} // Use specific handler
+                         onAddItem={addWorkExperience}           // Use specific handler
+                         onRemoveItem={(index) => removeListItem('work_experiences', index)} // Use generic remove handler
+                       />
+                    </AccordionContent>
+                </AccordionItem>
+
+              {/* --- ADDED: REPEATABLE Education History --- */}
+                <AccordionItem value="education-history">
+                    <AccordionTrigger className="text-lg font-semibold">
+                       <div className="flex items-center gap-2"> <GraduationCap/> Education History </div>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                       <ProfileEducationHistoryForm
+                         items={educationHistory}
+                         onListChange={handleEducationHistoryChange} // Use specific handler
+                         onAddItem={addEducationHistory}           // Use specific handler
+                         onRemoveItem={(index) => removeListItem('education_history', index)} // Use generic remove handler
+                         // Pass dropdown props needed by the component
+                         institutionOptions={institutionOptions}
+                         onInstitutionSearch={setInstitutionSearch}
+                         isInstLoading={isInstLoading}
+                         courseOptions={courseOptions}
+                         onCourseSearch={setCourseSearch}
+                         isCourseLoading={isCourseLoading}
+                       />
+                    </AccordionContent>
+                </AccordionItem>
               
               {/* 🚀 PLAN: Clinical Profile Forms */}
               {profileMode === 'clinical' && (
