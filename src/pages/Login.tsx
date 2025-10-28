@@ -12,7 +12,9 @@ import {
   Mail, 
   Lock, 
   Shield,
-  AlertCircle
+  AlertCircle,
+  Eye,      // --- ADDED ---
+  EyeOff 
 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
@@ -31,6 +33,7 @@ const Login = () => {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleInputChange = (field: string, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -133,18 +136,30 @@ const Login = () => {
                   </div>
                 </div>
 
+                
+
                 <div>
                   <label className="block text-sm font-medium mb-2">Password</label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input 
-                      type="password"
+                      type={showPassword ? "text" : "password"}
                       value={formData.password}
                       onChange={(e) => handleInputChange('password', e.target.value)}
                       placeholder="Enter your password"
-                      className="pl-10"
+                      className="pl-10 pr-10"
                       required
                     />
+                    <Button
+                      type="button" 
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground"
+                      onClick={() => setShowPassword(!showPassword)}
+                      tabIndex={-1} 
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </Button>
                   </div>
                 </div>
 
