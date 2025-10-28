@@ -218,7 +218,7 @@ export const getConnectionStatus = async (otherUserId: string): Promise<'connect
     const { data, error } = await supabase
       .from('user_connections')
       .select('status, requester_id')
-      .or(`(requester_id.eq.${session.user.id},addressee_id.eq.${otherUserId}),(requester_id.eq.${otherUserId},addressee_id.eq.${session.user.id})`)
+      .or(`and(requester_id.eq.${session.user.id},addressee_id.eq.${otherUserId}),and(requester_id.eq.${otherUserId},addressee_id.eq.${session.user.id})`)
       .limit(1) // Ensure only one row
       .maybeSingle(); // .maybeSingle() is key, returns null if no row
 
