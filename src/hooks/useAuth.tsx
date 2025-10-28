@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
@@ -399,7 +399,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const value = {
+  const value = useMemo(() => ({
     user,
     session,
     profile,
@@ -415,7 +415,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     signIn,
     signOut,
     signInWithGoogle,
-  };
+  }), [
+    user,
+    session,
+    profile,
+    loading,
+    loadingMessage,
+    initialUnreadCount,
+    personalKey,
+    userMasterKey,
+    generateAndSetKeys,
+    refreshProfile,
+    fetchUnreadCount,
+    signUp,
+    signIn,
+    signOut,
+    signInWithGoogle
+  ]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-};
