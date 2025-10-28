@@ -373,18 +373,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [toast]); 
 
-  const signOut = async () => {
+  const signOut = useCallback(async () => {
     isAuthOperationInProgress.current = true;
     setLoadingMessage('Signing out...');
-    
+  
     try {
       await supabase.removeAllChannels();
       console.log('All Supabase channels removed.');
-      
+    
       // Clear encryption keys BEFORE signing out
       setPersonalKey(null);
       setUserMasterKey(null);
-      
+    
       await supabase.auth.signOut();
       navigate('/'); 
     } catch (error) {
