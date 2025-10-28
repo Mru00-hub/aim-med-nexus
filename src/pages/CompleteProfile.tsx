@@ -847,7 +847,7 @@ const CompleteProfile = () => {
                      <div className="flex items-center gap-2"> <GraduationCap/> Current Educational Details </div>
                    </AccordionTrigger>
                    <AccordionContent className="pt-4">
-                     <ProfileEducationInfo {/* ... passes formData for current info */} />
+                     <ProfileEducationInfo />
                    </AccordionContent>
                  </AccordionItem>
               </Accordion>
