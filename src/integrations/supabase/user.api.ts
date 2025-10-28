@@ -1,6 +1,6 @@
 import { supabase } from './client';
 import type { Database, Enums, Tables, TablesInsert, TablesUpdate } from "./types"; 
-
+import { WorkExperience, EducationHistory } from './supabase/integrations/community.api';
 /**
  * Calls the 'delete_own_user' RPC function in Supabase
  * to securely delete the currently authenticated user.
@@ -131,6 +131,8 @@ export type EditableTransition = (TablesInsert<'career_transitions'> | TablesUpd
 export type EditableVenture = (TablesInsert<'ventures'> | TablesUpdate<'ventures'>) & { id?: string };
 export type EditableContent = (TablesInsert<'content_portfolio'> | TablesUpdate<'content_portfolio'>) & { id?: string };
 export type EditableCocurricular = (TablesInsert<'cocurriculars'> | TablesUpdate<'cocurriculars'>) & { id?: string };
+export type EditableWorkExperience = (TablesInsert<'work_experiences'> | TablesUpdate<'work_experiences'>) & { id?: string };
+export type EditableEducationHistory = (TablesInsert<'education_history'> | TablesUpdate<'education_history'>) & { id?: string };
 /**
  * Fetches all academic achievements for the *currently logged-in user*.
  */
@@ -255,6 +257,8 @@ type SaveProfilePayload = {
     ventures: EditableVenture[];
     contentPortfolio: EditableContent[];
     cocurriculars: EditableCocurricular[];
+    workExperiences: EditableWorkExperience[];   // <-- ADDED
+    educationHistory: EditableEducationHistory[];
 };
 
 /**
@@ -268,6 +272,8 @@ type DeletedItemsPayload = {
     ventures: string[];
     content_portfolio: string[];
     cocurriculars: string[];
+    work_experiences: string[];   // <-- ADDED
+    education_history: string[];
 };
 
 /**
@@ -281,9 +287,13 @@ export const saveProfileDetails = async (payload: SaveProfilePayload, deletedIte
     const prepareUpsert = (list: any[]) => list.map(item => {
         const newItem = { ...item, profile_id: userId };
         Object.keys(newItem).forEach(key => {
-            // Convert empty strings to null unless it's an intended empty array like 'authors'
             if (newItem[key] === '' && !Array.isArray(item[key])) {
-                newItem[key] = null;
+                // Handle potential empty date strings specifically if necessary
+                if (key.includes('date') || key.includes('year')) {
+                     newItem[key] = null; // Ensure empty dates become NULL
+                } else {
+                     newItem[key] = null;
+                }
             }
         });
         // Special handling for authors string-to-array
@@ -334,6 +344,8 @@ export const saveProfileDetails = async (payload: SaveProfilePayload, deletedIte
         supabase.from('ventures').upsert(prepareUpsert(payload.ventures)),
         supabase.from('content_portfolio').upsert(prepareUpsert(payload.contentPortfolio)),
         supabase.from('cocurriculars').upsert(prepareUpsert(payload.cocurriculars)),
+        supabase.from('work_experiences').upsert(prepareUpsert(payload.workExperiences)),   // <-- ADDED
+        supabase.from('education_history').upsert(prepareUpsert(payload.educationHistory)),
         // Deletions (only run if there are IDs to delete)
         deletedItems.academic_achievements.length > 0 ? supabase.from('academic_achievements').delete().in('id', deletedItems.academic_achievements) : Promise.resolve({ error: null }),
         deletedItems.publications.length > 0 ? supabase.from('publications').delete().in('id', deletedItems.publications) : Promise.resolve({ error: null }),
@@ -342,6 +354,8 @@ export const saveProfileDetails = async (payload: SaveProfilePayload, deletedIte
         deletedItems.ventures.length > 0 ? supabase.from('ventures').delete().in('id', deletedItems.ventures) : Promise.resolve({ error: null }),
         deletedItems.content_portfolio.length > 0 ? supabase.from('content_portfolio').delete().in('id', deletedItems.content_portfolio) : Promise.resolve({ error: null }),
         deletedItems.cocurriculars.length > 0 ? supabase.from('cocurriculars').delete().in('id', deletedItems.cocurriculars) : Promise.resolve({ error: null }),
+        deletedItems.work_experiences.length > 0 ? supabase.from('work_experiences').delete().in('id', deletedItems.work_experiences) : Promise.resolve({ error: null }),     // <-- ADDED
+        deletedItems.education_history.length > 0 ? supabase.from('education_history').delete().in('id', deletedItems.education_history) : Promise.resolve({ error: null }),
     ];
 
     // Await all parallel operations
@@ -374,4 +388,32 @@ export const updateProfileMode = async (mode: 'clinical' | 'non_clinical') => {
         
     if (error) throw error;
     return data;
+};
+
+/**
+ * Fetches all work experiences for the *currently logged-in user*.
+ */
+export const getMyWorkExperiences = async (): Promise<WorkExperience[]> => {
+    const session = await getSessionOrThrow();
+    const { data, error } = await supabase
+        .from('work_experiences')
+        .select('*')
+        .eq('profile_id', session.user.id)
+        .order('start_date', { ascending: false, nulls: 'last' }); // Or order by end_date
+    if (error) throw error;
+    return data || [];
+};
+
+/**
+ * Fetches all education history for the *currently logged-in user*.
+ */
+export const getMyEducationHistory = async (): Promise<EducationHistory[]> => {
+    const session = await getSessionOrThrow();
+    const { data, error } = await supabase
+        .from('education_history')
+        .select('*')
+        .eq('profile_id', session.user.id)
+        .order('start_year', { ascending: false, nulls: 'last' }); // Or order by end_year
+    if (error) throw error;
+    return data || [];
 };
