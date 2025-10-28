@@ -14,7 +14,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Plus, Users, Hash, Trash2, Pencil, Loader2, Crown } from 'lucide-react';
 
 interface SpaceHeaderProps {
-  space: SpaceWithDetails;
+  space: SpaceWithDetails | null;
   memberList: MemberProfile[];
   memberCount: number;
   threadCount: number;
@@ -53,16 +53,22 @@ export const SpaceHeader: React.FC<SpaceHeaderProps> = ({
   const [isTransferring, setIsTransferring] = useState(false);
 
   useEffect(() => {
-    if (space) {
+    if (space && !isEditing) {
       setEditedName(space.name);
       setEditedDescription(space.description || '');
       setEditedJoinLevel(space.join_level);
     }
-  }, [space, isEditing]);
+    else if (space && isEditing === false) {
+       setEditedName(space.name);
+       setEditedDescription(space.description || '');
+       setEditedJoinLevel(space.join_level);
+    }
+
+  }, [space, isEditing]); 
 
   const potentialNewOwners = useMemo(() => {
-    return memberList.filter(member => member.id !== space.creator_id);
-  }, [memberList, space.creator_id]);
+    return memberList.filter(member => member.id !== space?.creator_id);
+  }, [memberList, space?.creator_id]);
 
   const isUserAdminOrMod = currentUserRole === 'ADMIN' || currentUserRole === 'MODERATOR';
 
@@ -91,17 +97,28 @@ export const SpaceHeader: React.FC<SpaceHeaderProps> = ({
   };
 
   const handleTransferClick = async () => {
+    if (!selectedNewOwnerId) return;
     setIsTransferring(true);
     try {
       await onTransfer(selectedNewOwnerId);
       setShowTransferDialog(false);
       setSelectedNewOwnerId('');
     } catch (error) {
+      console.error("Failed to transfer ownership:", error);
       // Error handled by parent
     } finally {
       setIsTransferring(false);
     }
   };
+
+  if (!space) {
+    return (
+      <Card className="mb-8">
+        <CardHeader><Skeleton className="h-10 w-3/4" /></CardHeader>
+        <CardContent><Skeleton className="h-20 w-full" /></CardContent>
+      </Card>
+    );
+  }
 
   return (
     <>
@@ -140,13 +157,13 @@ export const SpaceHeader: React.FC<SpaceHeaderProps> = ({
               <div className="flex-1 min-w-0">
                 <CardTitle className="text-3xl break-words">{space.name}</CardTitle>
                 <div className="text-sm text-muted-foreground flex items-center gap-2 flex-wrap mt-2">
-                  <span>{space.description}</span>
+                  <span>{space.description ?? 'No description.'}</span>
                   <Badge variant={space.join_level === 'INVITE_ONLY' ? 'secondary' : 'default'}>
-                    {space.join_level.replace('_', ' ')}
+                    {(space.join_level ?? '').replace('_', ' ')}
                   </Badge>
-                </div> 
+                </div>
               </div>
-              <div className="flex items-center gap-2 flex-shrink-0 sm:ml-4">
+              <div className="flex items-center gap-2 flex-shrink-0 sm:ml-4 w-full sm:w-auto">
                 {isUserCreator ? (
                   <>
                     <Button size="sm" variant="outline" onClick={() => setShowTransferDialog(true)}><Crown className="h-4 w-4 mr-2" /> Transfer</Button>
@@ -181,32 +198,50 @@ export const SpaceHeader: React.FC<SpaceHeaderProps> = ({
             <div className="flex items-center gap-1.5">
               <Users className="h-4 w-4 text-primary" />
               <Link to={`/community/space/${space.id}/members`} className="hover:underline">
-                {isLoadingMetrics ? <Skeleton className="h-4 w-24 inline-block" /> : <span>{memberCount} Members</span>}
+                {isLoadingMetrics ? <Skeleton className="h-4 w-16 inline-block" /> : <span>{memberCount} Members</span>}
               </Link>
             </div>
             <div className="flex items-center gap-1.5">
               <Hash className="h-4 w-4 text-primary" />
-              {isLoadingMetrics ? <Skeleton className="h-4 w-24 inline-block" /> : <span>{threadCount} Threads</span>}
+              {isLoadingMetrics ? <Skeleton className="h-4 w-16 inline-block" /> : <span>{threadCount} Threads</span>}
             </div>
           </div>
           {memberList && memberList.length > 0 && (
             <div className="mt-4 pt-4 border-t">
               <h4 className="font-semibold text-base mb-3">Key Members</h4>
               {isLoadingList ? (
-                <Skeleton className="h-6 w-full" />
+                 <div className="flex flex-wrap gap-2">
+                   <Skeleton className="h-6 w-20 rounded-full" />
+                   <Skeleton className="h-6 w-24 rounded-full" />
+                   <Skeleton className="h-6 w-16 rounded-full" />
+                 </div>
               ) : (
                 <div className="flex flex-wrap gap-2">
                   {memberList
-                    .filter(member => member.role === 'ADMIN' || member.role === 'MODERATOR')
-                    .slice(0, 5) 
+                    // Prioritize Admins and Mods
+                    .sort((a, b) => {
+                      if (a.role === 'ADMIN') return -1;
+                      if (b.role === 'ADMIN') return 1;
+                      if (a.role === 'MODERATOR') return -1;
+                      if (b.role === 'MODERATOR') return 1;
+                      return 0;
+                    })
+                    .slice(0, 5) // Show top 5 key members
                     .map(member => (
                       <Link to={`/profile/${member.id}`} key={member.id}>
                         <Badge variant={getRoleBadgeVariant(member.role)} className="hover:opacity-80 transition-opacity">
-                          {member.full_name}
-                          <span className="ml-1.5 opacity-75">({member.role.charAt(0)})</span>
+                          {member.full_name}       
+                          {(member.role === 'ADMIN' || member.role === 'MODERATOR') &&
+                           <span className="ml-1.5 opacity-75">({member.role.charAt(0)})</span>
+                          }
                         </Badge>
                       </Link>
                     ))}
+                    {memberList.length > 5 && (
+                       <Link to={`/community/space/${space.id}/members`}>
+                           <Badge variant="outline" className="hover:bg-accent">+ {memberList.length - 5} more</Badge>
+                       </Link>
+                    )}
                 </div>
               )}
             </div>
