@@ -156,7 +156,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [fetchProfile, toast]);
 
-  const generateAndSetKeys = async (password: string, profile: Profile, salt: string): Promise<boolean> => {
+  const generateAndSetKeys = useCallback(async (password: string, profile: Profile, salt: string): Promise<boolean> => {
     if (!password || !salt) {
       console.error('❌ Missing password or salt');
       toast({ title: "Key Generation Failed", description: "Missing required data", variant: "destructive" });
@@ -263,9 +263,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
       return false;
     }
-  };
+  }, [toast]); 
 
-  const signUp = async (email: string, password: string, metadata?: any) => {
+  const signUp = useCallback(async (email: string, password: string, metadata?: any) => {
     isAuthOperationInProgress.current = true;
     setLoadingMessage('Creating your account...');
     
@@ -305,9 +305,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoadingMessage('');
       isAuthOperationInProgress.current = false;
     }
-  };
+  }, [toast]); 
   
-  const signIn = async (email: string, password: string) => {
+  const signIn = useCallback(async (email: string, password: string) => {
     isAuthOperationInProgress.current = true;
     setLoadingMessage('Signing you in...');
     
@@ -337,9 +337,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setLoadingMessage('');
     }
-  };
+  }, [toast]); 
 
-  const signInWithGoogle = async () => {
+  const signInWithGoogle = useCallback(async () => {
     isAuthOperationInProgress.current = true;
     setLoadingMessage('Redirecting to Google...');
     
@@ -371,7 +371,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setLoadingMessage('');
     }
-  };
+  }, [toast]); 
 
   const signOut = async () => {
     isAuthOperationInProgress.current = true;
@@ -397,7 +397,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setLoadingMessage('');
     }
-  };
+  }, [navigate, toast]);
 
   const value = useMemo(() => ({
     user,
