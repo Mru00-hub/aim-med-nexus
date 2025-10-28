@@ -92,49 +92,49 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     let mounted = true;
-    const init = async () => {
-      const { data, error } = await supabase.auth.getSession();
-      if (mounted && data.session) {
-        setSession(data.session);
-        setUser(data.session.user);
-        const userProfile = await fetchProfile(data.session.user.id);
-        setProfile(userProfile);
-        if (userProfile) {
-          await fetchUnreadCount();
-        }
-      }
-      setLoading(false);
-    };
+    // We set loading to true once at the start.
+    setLoading(true);
 
-    init();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
       if (!mounted) return;
+      
       if (newSession) {
+        // Fetch all data *before* setting state
+        const userProfile = await fetchProfile(newSession.user.id);
+        let unreadCount = null;
+        if (userProfile) {
+          try {
+            // We do this manually to avoid the separate 'fetchUnreadCount' render
+            const { data } = await supabase.rpc('get_my_unread_inbox_count');
+            unreadCount = data;
+          } catch (e) { console.error("Error fetching unread count:", e); }
+        }
+        
+        // Now, set all state at once
         setSession(newSession);
         setUser(newSession.user);
-        fetchProfile(newSession.user.id).then(async (userProfile) => {
-          setProfile(userProfile);
-          if (userProfile) {
-            await fetchUnreadCount();
-          }
-        });
+        setProfile(userProfile);
+        setInitialUnreadCount(unreadCount);
+
       } else {
+        // User is logged out, clear all state at once
         setSession(null);
         setUser(null);
         setProfile(null);
         setInitialUnreadCount(null);
-        // CRITICAL: Clear encryption keys on logout
         setPersonalKey(null);
         setUserMasterKey(null);
       }
+
+      // No matter what, loading is done after the first auth event.
+      setLoading(false); 
     });
 
     return () => {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, [fetchProfile, fetchUnreadCount]);
+  }, [fetchProfile]);
     
   const refreshProfile = useCallback(async () => {
     try {
