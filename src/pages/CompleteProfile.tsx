@@ -833,7 +833,7 @@ const CompleteProfile = () => {
                          <div className="flex items-center gap-2"> <Briefcase/> Current Professional Details </div>
                        </AccordionTrigger>
                        <AccordionContent className="pt-4">
-                         <ProfileProfessionalInfo {/* ... passes formData for current info */} />
+                         <ProfileProfessionalInfo />
                        </AccordionContent>
                     </AccordionItem>
                  </Accordion>
