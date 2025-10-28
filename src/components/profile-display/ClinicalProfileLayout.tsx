@@ -27,6 +27,7 @@ type LayoutProps = {
   onConnect: () => void;
   onMessage: () => void;
   onShare: () => void;
+  onShowList: (title: 'Followers' | 'Following' | 'Connections') => void;
 };
 
 // 🚀 PLAN: Helper to calculate completeness
@@ -45,6 +46,11 @@ export const ClinicalProfileLayout: React.FC<LayoutProps> = (props) => {
   const { data } = props;
   const profileCompleteness = calculateCompleteness(data);
   const citationCount = data.publications.reduce((acc, p) => acc + (p.citation_count || 0), 0);
+  const hasPublications = data.publications.length > 0;
+  const hasCitations = citationCount > 0;
+  const hasExperience = data.profile.years_experience && data.profile.years_experience !== '0';
+  const hasCertifications = data.certifications.length > 0;
+  const hasAnyHighlights = hasPublications || hasCitations || hasExperience || hasCertifications;
 
   return (
     <Card className="card-medical max-w-4xl mx-auto rounded-none sm:rounded-lg shadow-none sm:shadow-md border-0 sm:border">
@@ -69,12 +75,16 @@ export const ClinicalProfileLayout: React.FC<LayoutProps> = (props) => {
         )}
 
         {/* 1. Highlights Section */}
-        <ProfileSection title="Professional Highlights" icon={Star} hasData={true}>
+        <ProfileSection 
+          title="Professional Highlights" 
+          icon={Star} 
+          hasData={hasAnyHighlights} // Only render section if there's data
+        >
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
-            <StatCard icon={BookOpen} label="Publications" value={data.publications.length} />
-            <StatCard icon={BarChart} label="Total Citations" value={citationCount} />
-            <StatCard icon={Briefcase} label="Experience" value={data.profile.years_experience || 'N/A'} isString />
-            <StatCard icon={ShieldCheck} label="Certifications" value={data.certifications.length} />
+            {hasPublications && <StatCard icon={BookOpen} label="Publications" value={data.publications.length} />}
+            {hasCitations && <StatCard icon={BarChart} label="Total Citations" value={citationCount} />}
+            {hasExperience && <StatCard icon={Briefcase} label="Experience" value={data.profile.years_experience || 'N/A'} isString />}
+            {hasCertifications && <StatCard icon={ShieldCheck} label="Certifications" value={data.certifications.length} />}
           </div>
         </ProfileSection>
 
