@@ -56,7 +56,9 @@ export const useSpaceMetrics = (spaceId: string) => {
 
     useEffect(() => {
         const fetchMetrics = async () => {
-            if (!spaceId) {
+            if (!spaceId || spaceId.startsWith('mock-')) {
+                setMemberCount(0);
+                setThreadCount(0);
                 setIsLoadingMetrics(false);
                 return;
             }
