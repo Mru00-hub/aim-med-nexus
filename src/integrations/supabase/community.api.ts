@@ -984,7 +984,7 @@ export const getProfileDetails = async (userId: string): Promise<FullProfile> =>
     { data: educationData, error: educationError },
   ] = await Promise.all([
     // Activity
-    supabase.from('public_posts_feed').select('*').eq('author_id', userId).order('created_at', { ascending: false }),
+    supabase.from('public_posts_feed').select('*').eq('thread_creator_id', userId).order('created_at', { ascending: false }),
     supabase.from('spaces').select('*').eq('creator_id', userId),
     // Follow Status (only check if not viewing own profile)
     currentUserId === userId 
