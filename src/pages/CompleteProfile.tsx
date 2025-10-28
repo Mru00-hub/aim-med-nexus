@@ -808,7 +808,7 @@ const CompleteProfile = () => {
 
               {/* --- Conditional Form Sections --- */}
 
-              <Accordion type="multiple" collapsible className="w-full space-y-4">
+              <Accordion type="multiple" className="w-full space-y-4">
 
                 {/* --- CURRENT Professional Info (If applicable) --- */}
                 {profileMode === 'clinical' && userRole !== 'student' && (
