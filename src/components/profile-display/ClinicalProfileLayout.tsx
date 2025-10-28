@@ -109,32 +109,47 @@ export const ClinicalProfileLayout: React.FC<LayoutProps> = (props) => {
 
         {/* 4. Professional Experience Section */}
         <ProfileSection 
-          title="Professional Experience" 
+        <ProfileSection
+          title="Professional Experience"
           icon={Briefcase}
+          // Update items check to include history
           items={[
-            (data.profile.current_position ? 1 : 0), 
-            ...(data.profile.work_experience as any[] || [])
+            (data.profile.current_position ? 1 : 0),
+            ...data.work_experiences // Use new history array
           ]}
         >
           <div className="space-y-5">
+            {/* Show Current Experience First */}
             <ExperienceCard profile={data.profile} isCurrent={true} />
-            {(data.profile.work_experience as any[])?.map((exp, index) => (
-              <ExperienceCard key={index} experience={exp} isCurrent={false} />
+            {/* Map over History */}
+            {data.work_experiences.map((exp) => (
+              <ExperienceCard key={exp.id} experience={exp} isCurrent={false} />
             ))}
           </div>
         </ProfileSection>
 
         {/* 5. Education & Certifications Section */}
-        <ProfileSection 
-          title="Education & Certifications" 
+        <ProfileSection
+          title="Education & Certifications"
           icon={GraduationCap}
-          items={[data.profile.institution ? 1 : 0, ...data.certifications]}
+          // Update items check to include history
+          items={[
+              (data.profile.institution ? 1 : 0),
+              ...data.education_history, // Use new history array
+              ...data.certifications
+          ]}
         >
           <h3 className="text-lg font-semibold mb-3">Education</h3>
           <div className="space-y-4 mb-6">
-            <EducationCard profile={data.profile} />
+             {/* Show Current Education First */}
+            <EducationCard profile={data.profile} isCurrent={true} />
+             {/* Map over History */}
+            {data.education_history.map((edu) => (
+                <EducationCard key={edu.id} education={edu} isCurrent={false} />
+            ))}
           </div>
-          
+
+          {/* Certifications part remains the same */}
           {data.certifications.length > 0 && (
             <>
               <h3 className="text-lg font-semibold mb-3 mt-6">Certifications</h3>
