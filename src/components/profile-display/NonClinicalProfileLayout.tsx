@@ -86,7 +86,8 @@ export const NonClinicalProfileLayout: React.FC<LayoutProps> = (props) => {
           icon={Briefcase} // Changed from Briefcase
           items={[...data.academic_achievements, ...data.publications, ...data.certifications, ...data.awards]}
           isCollapsible={true}
-          defaultOpen={false}
+          defaultOpen={true}
+          hasData={true}
         >
           <ClinicalBackground data={data} />
         </ProfileSection>
