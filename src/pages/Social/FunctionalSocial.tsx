@@ -24,6 +24,7 @@ import {
     BlockedUser,
     SentPendingRequest
 } from '@/integrations/supabase/social.api';
+import { ProfileWithStatus } from '@/integrations/supabase/community.api';
 
 // Import the tab components
 import { DiscoverTab } from '@/components/social/DiscoverTab';
@@ -34,7 +35,7 @@ import type { Database, Tables } from '@/integrations/supabase/types';
 
 type UserRecommendation = Database['public']['Functions']['get_user_recommendations']['Returns'][number];
 type RecommendationWithMutuals = UserRecommendation & {
-    mutuals?: any[]; // The array of mutual connections
+    mutuals?: ProfileWithStatus[];// The array of mutual connections
 };
 
 const FunctionalSocial = () => {
@@ -44,10 +45,9 @@ const FunctionalSocial = () => {
   const [loading, setLoading] = useState(true);
   
   // State for all social data
-  const [requests, setRequests] = useState<ConnectionRequest[]>([]);
-  const [sentRequests, setSentRequests] = useState<SentRequest[]>([]);
+  const [sentRequests, setSentRequests] = useState<SentPendingRequest[]>([]); // Fixed typo SentRequest -> SentPendingRequest
   const [recommendations, setRecommendations] = useState<RecommendationWithMutuals[]>([]);
-  const [myConnections, setMyConnections] = useState<Connection[]>([]);
+  const [myConnections, setMyConnections] = useState<ProfileWithStatus[]>([]); // Changed from Connection[]
   const [blockedUsers, setBlockedUsers] = useState<BlockedUser[]>([]);
   
   const fetchData = async () => {
@@ -86,9 +86,10 @@ const FunctionalSocial = () => {
         try {
           const mutualsPromises = initialRecommendations.map(rec => getMutualConnections(rec.id));
           const mutualsResults = await Promise.all(mutualsPromises);
+          
           const recommendationsWithMutuals = initialRecommendations.map((rec, index) => ({
             ...rec,
-            mutuals: mutualsResults[index] || [],
+            mutuals: mutualsResults[index] || [], // This is now ProfileWithStatus[]
           }));
           setRecommendations(recommendationsWithMutuals);
         } catch (error) {
