@@ -20,6 +20,9 @@ export const ActivitySection: React.FC<ActivitySectionProps> = ({ posts, spaces 
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const filteredSpaces = spaces.filter(
+    (space) => space.space_type === 'FORUM' || space.space_type === 'COMMUNITY_SPACE'
+  );
   const handleJoinSpace = async (space: Space) => {
     if (!user) {
       navigate('/login');
@@ -60,8 +63,8 @@ export const ActivitySection: React.FC<ActivitySectionProps> = ({ posts, spaces 
         <TabsTrigger value="posts" disabled={posts.length === 0}>
           Posts ({posts.length})
         </TabsTrigger>
-        <TabsTrigger value="spaces" disabled={spaces.length === 0}>
-          Spaces ({spaces.length})
+        <TabsTrigger value="spaces" disabled={filteredSpaces.length === 0}>
+          Spaces ({filteredSpaces.length})
         </TabsTrigger>
       </TabsList>
       
@@ -80,18 +83,18 @@ export const ActivitySection: React.FC<ActivitySectionProps> = ({ posts, spaces 
       </TabsContent>
       
       <TabsContent value="spaces" className="mt-4">
-        {spaces.length > 0 ? (
+        {filteredSpaces.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {spaces.map((space) => {
-              // --- Get status for each space ---
+            {filteredSpaces.map((space) => { // Use filteredSpaces here
               const membershipStatus = getMembershipStatus(space.id);
+              // Public type spaces should not appear here, so no need for specific check
               return (
                 <SpaceItemCard
                   key={space.id}
                   space={space}
-                  membershipStatus={membershipStatus} // Pass status
-                  onJoin={handleJoinSpace} // Pass join handler
-                  isLoggedIn={!!user} // Pass login status
+                  membershipStatus={membershipStatus}
+                  onJoin={handleJoinSpace}
+                  isLoggedIn={!!user}
                 />
               );
             })}
@@ -143,14 +146,6 @@ const SpaceItemCard: React.FC<SpaceItemCardProps> = ({ space, membershipStatus, 
   const navigate = useNavigate();
 
   const renderAction = () => {
-    // Public spaces are always accessible
-    if (space.space_type === 'PUBLIC') {
-      return (
-        <Button size="sm" variant="outline" asChild>
-          <Link to={`/community/space/${space.id}`}>View Space</Link>
-        </Button>
-      );
-    }
 
     // Handle Forum/Community based on membership
     switch (membershipStatus) {
@@ -175,7 +170,6 @@ const SpaceItemCard: React.FC<SpaceItemCardProps> = ({ space, membershipStatus, 
 
   const getSpaceTypeIcon = () => {
      switch(space.space_type) {
-        case 'PUBLIC': return <MessageSquare className="h-3 w-3 mr-1.5" />;
         case 'FORUM': return <LayoutGrid className="h-3 w-3 mr-1.5" />;
         case 'COMMUNITY_SPACE': return <Users className="h-3 w-3 mr-1.5" />;
         default: return null;
@@ -185,11 +179,11 @@ const SpaceItemCard: React.FC<SpaceItemCardProps> = ({ space, membershipStatus, 
   return (
     <Card className="transition-all hover:shadow-md flex flex-col justify-between">
       <CardContent className="p-4 flex-grow">
-        <Badge variant={space.space_type === 'PUBLIC' ? 'default' : space.space_type === 'FORUM' ? 'secondary' : 'outline'} className="mb-2 capitalize">
+        <Badge variant={space.space_type === 'FORUM' ? 'secondary' : 'outline'} className="mb-2 capitalize">
           {getSpaceTypeIcon()}
           {space.space_type.replace('_', ' ').toLowerCase()}
         </Badge>
-        <Link to={`/community/space/${space.id}`} className={membershipStatus === 'ACTIVE' || space.space_type === 'PUBLIC' ? 'hover:text-primary' : 'pointer-events-none'}>
+        <Link to={`/community/space/${space.id}`} className={membershipStatus === 'ACTIVE' ? 'hover:text-primary' : 'pointer-events-none'}>
           <h4 className="font-semibold text-base mb-1">
             {space.name || 'Untitled Space'}
           </h4>
