@@ -4,6 +4,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -85,6 +86,9 @@ export const UserListModal = ({
       <DialogContent className="sm:max-w-lg max-h-[80vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>
+            A list of {title.toLowerCase()} for this profile.
+          </DialogDescription>
         </DialogHeader>
         <div className="flex-grow overflow-y-auto pr-2 space-y-3">
           {loading && (
