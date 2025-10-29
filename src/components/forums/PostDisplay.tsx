@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef} from 'react';
 import ReactMarkdown from 'react-markdown'; 
 import remarkBreaks from 'remark-breaks';
 import { Link } from 'react-router-dom';
@@ -33,6 +33,8 @@ import {
   Edit, 
   Edit2, 
   Trash2,
+  Bold,
+  Italic
 } from 'lucide-react';
 import {
   FullPostDetails,
@@ -159,6 +161,7 @@ export const PostDisplay: React.FC<PostDisplayProps> = ({
   const [isSavingTitle, setIsSavingTitle] = useState(false);
   const [linkPreview, setLinkPreview] = useState<any>(null);
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const authorProfile: AvatarProfile = useMemo(() => ({
     id: post.author_id,
@@ -267,6 +270,58 @@ export const PostDisplay: React.FC<PostDisplayProps> = ({
       setIsReactionLoading(false);
       setTimeout(() => setPopoverOpen(false), 300);
     }
+  };
+
+  const applyFormat = (format: 'bold' | 'italic') => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selectedText = editedBody.substring(start, end);
+
+    if (selectedText.length === 0) {
+      textarea.focus();
+      return;
+    }
+
+    const symbols = format === 'bold' ? '**' : '*';
+    const symbolLength = symbols.length;
+
+    const textBefore = editedBody.substring(start - symbolLength, start);
+    const textAfter = editedBody.substring(end, end + symbolLength);
+
+    let newValue: string;
+    let newSelectionStart: number;
+    let newSelectionEnd: number;
+
+    // Check if text is already formatted (toggle off)
+    if (textBefore === symbols && textAfter === symbols) {
+      newValue =
+        editedBody.substring(0, start - symbolLength) +
+        selectedText +
+        editedBody.substring(end + symbolLength);
+
+      newSelectionStart = start - symbolLength;
+      newSelectionEnd = end - symbolLength;
+    } else {
+      // Apply formatting (toggle on)
+      newValue =
+        editedBody.substring(0, start) +
+        symbols +
+        selectedText +
+        symbols +
+        editedBody.substring(end);
+
+      newSelectionStart = start + symbolLength;
+      newSelectionEnd = end + symbolLength;
+    }
+
+    // Sync state and manually update textarea for immediate selection
+    textarea.value = newValue;
+    setEditedBody(newValue);
+    textarea.focus();
+    textarea.setSelectionRange(newSelectionStart, newSelectionEnd);
   };
 
   const handleSaveBody = () => {
@@ -418,11 +473,39 @@ export const PostDisplay: React.FC<PostDisplayProps> = ({
         {/* Post Body */}
         {isEditingBody ? (
           <div className="space-y-2">
+            <div className="border rounded-md rounded-b-none p-1 flex items-center space-x-1 bg-muted/50">
+              <Button 
+                type="button"
+                variant="ghost" 
+                size="icon" 
+                className="h-8 w-8"
+                onClick={() => applyFormat('bold')}
+                aria-label="Bold"
+                title="Bold (Ctrl+B)"
+                disabled={isSavingBody}
+              >
+                <Bold className="h-4 w-4" />
+              </Button>
+              <Button 
+                type="button" 
+                variant="ghost" 
+                size="icon" 
+                className="h-8 w-8"
+                onClick={() => applyFormat('italic')}
+                aria-label="Italic"
+                title="Italic (Ctrl+I)"
+                disabled={isSavingBody}
+              >
+                <Italic className="h-4 w-4" />
+              </Button>
+            </div>
             <Textarea
+              ref={textareaRef} // <-- Add the ref
               value={editedBody}
               onChange={(e) => setEditedBody(e.target.value)}
               rows={10}
               autoFocus
+              className="rounded-t-none mt-0 focus-visible:ring-offset-0" // <-- Style adjustments
             />
             <div className="flex justify-end gap-2">
               <Button 
