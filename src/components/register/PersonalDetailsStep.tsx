@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, ChangeEvent } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage, AvatarProfile} from "@/components/ui/avatar";
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CircleX, Upload, Eye, EyeOff } from 'lucide-react';
@@ -77,16 +77,21 @@ export const PersonalDetailsStep: React.FC<PersonalDetailsStepProps> = ({
     locations.map(loc => ({ value: loc.id, label: loc.label })),
     [locations] // Only re-run when the 'locations' state changes
   );
+
+  const formProfile: AvatarProfile = useMemo(() => ({
+    // Use a placeholder ID. It won't be used if avatarPreview exists.
+    id: formData.email || 'preview-user', 
+    full_name: `${formData.firstName || ''} ${formData.lastName || ''}`.trim(),
+    profile_picture_url: avatarPreview || null // Pass the preview URL here
+  }), [formData.firstName, formData.lastName, formData.email, avatarPreview]);
   
   return (
     <>
       <div className="flex flex-col items-center gap-4">
         <div className="relative">
-          <Avatar className="w-24 h-24 border-2 border-primary/20">
-            <AvatarImage src={avatarPreview} alt="Profile preview" />
-            <AvatarFallback className="text-3xl">
-              {formData.firstName?.[0]}{formData.lastName?.[0]}
-            </AvatarFallback>
+          <Avatar profile={formProfile} className="w-24 h-24 border-2 border-primary/20">
+            <AvatarImage alt="Profile preview" />
+            <AvatarFallback className="text-3xl" />
           </Avatar>
           {avatarPreview && (
             <button 
