@@ -11,15 +11,15 @@ import { EducationHistoryItem } from '@/pages/CompleteProfile';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 
 type ProfileEducationHistoryFormProps = {
-  items: EducationHistoryItem[];
+  // 1. UPDATE PROP TYPE for 'items'
+  items: (EducationHistoryItem & { client_id?: string })[];
   onListChange: (index: number, field: string, value: any) => void;
   onAddItem: () => void;
-  onRemoveItem: (index: number) => void;
-  // --- ADD DROPDOWN PROPS ---
+  // 2. UPDATE PROP TYPE for 'onRemoveItem'
+  onRemoveItem: (id: string) => void;
   institutionOptions: { value: string; label: string }[];
   onInstitutionSearch: (search: string) => void;
   isInstLoading: boolean;
-  // Optional: Add props for course/specialization if making 'Field of Study' searchable
   courseOptions?: { value: string; label: string }[];
   onCourseSearch?: (search: string) => void;
   isCourseLoading?: boolean;
@@ -30,7 +30,6 @@ export const ProfileEducationHistoryForm: React.FC<ProfileEducationHistoryFormPr
   onListChange,
   onAddItem,
   onRemoveItem,
-  // --- Destructure new props ---
   institutionOptions,
   onInstitutionSearch,
   isInstLoading,
@@ -52,14 +51,14 @@ export const ProfileEducationHistoryForm: React.FC<ProfileEducationHistoryFormPr
   return (
     <div className="space-y-4">
       {items.map((item, index) => (
-        <Card key={item.id || index}>
+        <Card key={item.id || item.client_id}>
           <CardContent className="p-4 space-y-3 relative">
             <Button
               type="button"
               variant="ghost"
               size="icon"
               className="absolute top-2 right-2 h-6 w-6 text-muted-foreground hover:text-destructive"
-              onClick={() => onRemoveItem(index)}
+              onClick={() => onRemoveItem(item.id || item.client_id!)}
             >
               <X className="h-4 w-4" />
             </Button>
@@ -101,8 +100,6 @@ export const ProfileEducationHistoryForm: React.FC<ProfileEducationHistoryFormPr
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Field of Study</label>
-                {/* --- EXAMPLE: Use SearchableSelect for Field of Study (using courseOptions) --- */}
-                {/* Adjust props/logic if using specializations or just Input */}
                 {courseOptions && onCourseSearch && typeof isCourseLoading !== 'undefined' ? (
                    <>
                     <SearchableSelect
