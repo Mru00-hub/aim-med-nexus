@@ -50,26 +50,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const isAuthOperationInProgress = useRef(false);
 
   const fetchProfile = useCallback(async (userId: string): Promise<Profile | null> => {
+    console.log('[fetchProfile] START - Fetching for userId:', userId);
     try {
+      console.log('[fetchProfile] Querying Supabase profiles table...');
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
         .single();
-      
+      console.log('[fetchProfile] Supabase query FINISHED.');
       if (error) {
-        console.error("Profile fetch error:", error);
+        console.error("[fetchProfile] Supabase ERROR:", error);
         toast({
           title: "Profile Error",
           description: "Could not load your profile. Please refresh the page.",
           variant: "destructive",
         });
+        console.log('[fetchProfile] END - Returning NULL due to error');
         return null;
       }
-      
+      console.log('[fetchProfile] END - Returning data:', data ? 'OK' : 'NULL');
       return data;
     } catch (error) {
-      console.error("Unexpected error fetching profile:", error);
+      console.error("[fetchProfile] UNEXPECTED CATCH ERROR:", error); // <-- LOG G (Catch Error)
+      console.log('[fetchProfile] END - Returning NULL due to catch error');
       return null;
     }
   }, [toast]); 
