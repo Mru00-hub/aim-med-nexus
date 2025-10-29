@@ -1,6 +1,6 @@
 // src/pages/community/CreatePostPage.tsx
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useDebounce } from 'use-debounce';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -12,7 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
-import { Loader2, AlertCircle, Upload, X, File as FileIcon } from 'lucide-react';
+import { Loader2, AlertCircle, Upload, X, File as FileIcon, Bold, Italic} from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import AuthGuard from '@/components/AuthGuard';
 
@@ -143,6 +143,7 @@ const CreatePostForm: React.FC = () => {
   const { spaceId } = useParams<{ spaceId?: string }>();
   const { toast } = useToast();
   const { refreshSpaces } = useCommunity(); // To refresh the public threads list
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     const urls = debouncedBody.match(URL_REGEX);
@@ -186,6 +187,62 @@ const CreatePostForm: React.FC = () => {
     }
   }, [debouncedBody, checkedUrl, files.length]);
 
+  const applyFormat = (format: 'bold' | 'italic') => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selectedText = body.substring(start, end);
+
+    // Don't do anything if no text is selected
+    if (selectedText.length === 0) {
+      textarea.focus();
+      return;
+    }
+
+    const symbols = format === 'bold' ? '**' : '*';
+    const symbolLength = symbols.length;
+
+    const textBefore = body.substring(start - symbolLength, start);
+    const textAfter = body.substring(end, end + symbolLength);
+
+    let newValue: string;
+    let newSelectionStart: number;
+    let newSelectionEnd: number;
+
+    // Check if text is already formatted (toggle off)
+    if (textBefore === symbols && textAfter === symbols) {
+      newValue =
+        body.substring(0, start - symbolLength) +
+        selectedText +
+        body.substring(end + symbolLength);
+
+      newSelectionStart = start - symbolLength;
+      newSelectionEnd = end - symbolLength;
+    } else {
+      // Apply formatting (toggle on)
+      newValue =
+        body.substring(0, start) +
+        symbols +
+        selectedText +
+        symbols +
+        body.substring(end);
+
+      newSelectionStart = start + symbolLength;
+      newSelectionEnd = end + symbolLength;
+    }
+
+    // This is the key:
+    // 1. Manually update the textarea's value.
+    textarea.value = newValue;
+    // 2. Sync React's state with the new value.
+    setBody(newValue);
+    // 3. Immediately focus and set the selection.
+    textarea.focus();
+    textarea.setSelectionRange(newSelectionStart, newSelectionEnd);
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (linkPreview) {
       toast({
@@ -215,6 +272,8 @@ const CreatePostForm: React.FC = () => {
   const removeFile = (indexToRemove: number) => {
     setFiles(prev => prev.filter((_, index) => index !== indexToRemove));
   };
+
+  
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -295,14 +354,42 @@ const CreatePostForm: React.FC = () => {
 
       <div className="space-y-2">
         <Label htmlFor="body" className="text-lg font-semibold">Body (Optional)</Label>
+        <div className="border rounded-md rounded-b-none p-1 flex items-center space-x-1 bg-muted/50">
+          <Button 
+            type="button" // Important! Prevents form submission
+            variant="ghost" 
+            size="icon" 
+            className="h-8 w-8"
+            onClick={() => applyFormat('bold')}
+            aria-label="Bold"
+            title="Bold (Ctrl+B)" // Tooltip for accessibility
+            disabled={isLoading}
+          >
+            <Bold className="h-4 w-4" />
+          </Button>
+          <Button 
+            type="button" 
+            variant="ghost" 
+            size="icon" 
+            className="h-8 w-8"
+            onClick={() => applyFormat('italic')}
+            aria-label="Italic"
+            title="Italic (Ctrl+I)" // Tooltip for accessibility
+            disabled={isLoading}
+          >
+            <Italic className="h-4 w-4" />
+          </Button>
+        </div>
         <Textarea 
+          ref={textareaRef} // <-- Add the ref here
           id="body" 
-          placeholder="Write the main content of your post or paste a link to preview.. You can use Markdown for **bold** and *italic* text. You can add images or files below." 
+          placeholder="Write the main content or paste a link... Select text and use the tools above to format." // <-- Updated placeholder
           rows={10} 
           value={body} 
           onChange={(e) => setBody(e.target.value)} 
           disabled={isLoading} 
-          maxLength={POST_BODY_MAX_LENGTH} 
+          maxLength={POST_BODY_MAX_LENGTH}
+          className="rounded-t-none mt-0 focus-visible:ring-offset-0" // <-- Style adjustments
         />
         {isPreviewLoading && (
           <div className="flex items-center text-sm text-muted-foreground p-2">
