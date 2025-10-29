@@ -1,14 +1,15 @@
 // src/pages/community/ThreadDetailPage.tsx
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { ThreadView } from '@/components/messaging/ThreadView'; // We will put all the logic here
 import AuthGuard from '@/components/AuthGuard'; // Protect this page
-import { getThreadDetails,getPostDetails,updatePost, updateThreadDetails, getViewerRoleForSpace, Thread, Enums, getThreadSummary, SummaryResponse, postMessage, uploadAttachment, MessageWithDetails, PublicPost,setUserReaction,toggleReaction, editMessage, deleteMessage, deletePost} from '@/integrations/supabase/community.api';
+import { getThreadDetails,getPostDetails,updatePost, updateThreadDetails, getViewerRoleForSpace, Thread, Enums, getThreadSummary, SummaryResponse, postMessage, uploadAttachment, MessageWithDetails, PublicPost,setUserReaction,toggleReaction, toggleFollow,editMessage, deleteMessage, deletePost} from '@/integrations/supabase/community.api';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/components/ui/use-toast';
 import { useCommunity } from '@/context/CommunityContext';
+import { useSocialCounts } from '@/context/SocialCountsContext';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -76,6 +77,8 @@ export default function ThreadDetailPage() {
   const [editedDescription, setEditedDescription] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const { refreshSpaces, updateLocalPost } = useCommunity();
+  const { isFollowing, refetchSocialGraph } = useSocialCounts();
+  const [followLoadingMap, setFollowLoadingMap] = useState<Record<string, boolean>>({});
 
   const fetchDetails = async () => {
     if (!threadId) return;
@@ -495,6 +498,21 @@ export default function ThreadDetailPage() {
         // We could show a global toast here if we had a global context
       });
   };
+
+  const handleFollow = useCallback(async (authorId: string) => {
+    if (!user) { navigate('/login'); return; }
+    
+    setFollowLoadingMap(prev => ({ ...prev, [authorId]: true }));
+    
+    try {
+      await toggleFollow(authorId);
+      await refetchSocialGraph(); // Refetch global state
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } finally {
+      setFollowLoadingMap(prev => ({ ...prev, [authorId]: false }));
+    }
+  }, [user, navigate, toast, refetchSocialGraph]);
     
   return (
     <AuthGuard>
@@ -729,6 +747,9 @@ export default function ThreadDetailPage() {
                   onCommentReaction={handleOptimisticCommentReaction} // <-- ADDED
                   onCommentEdit={handleOptimisticCommentEdit}       // <-- ADDED
                   onCommentDelete={handleOptimisticCommentDelete}
+                  isFollowing={isFollowing(postDetails.post.author_id)}
+                  isFollowLoading={!!followLoadingMap[postDetails.post.author_id]}
+                  onFollow={() => handleFollow(postDetails.post.author_id)}
                 />
               ) : !isPublicPost ? (
                 // --- OLD: Render the Slack-style Chat UI ---
