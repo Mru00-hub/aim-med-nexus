@@ -41,7 +41,7 @@ type RecommendationWithMutuals = UserRecommendation & {
 const FunctionalSocial = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const { refetchRequestCount } = useSocialCounts();
+  const { requestCount, refetchSocialGraph } = useSocialCounts();
   const [loading, setLoading] = useState(true);
   
   // State for all social data
@@ -54,7 +54,7 @@ const FunctionalSocial = () => {
   const fetchData = async () => {
     if (!user) return;
     setLoading(true);
-    refetchRequestCount(); 
+    refetchSocialGraph(); 
     
     try {
       const [
@@ -115,6 +115,7 @@ const FunctionalSocial = () => {
         await action();
         toast({ title: "Success", description: successMessage });
         await fetchData(); // Re-fetch all data to ensure UI is consistent
+        await refetchSocialGraph();
     } catch (error: any) {
         toast({ title: "Error", description: error.message, variant: "destructive" });
     }
@@ -142,7 +143,7 @@ const FunctionalSocial = () => {
             <TabsList className="w-full justify-start overflow-x-auto">
                 <TabsTrigger value="discover" className="whitespace-nowrap">Discover</TabsTrigger>
                 <TabsTrigger value="network" className="whitespace-nowrap">My Network ({myConnections.length})</TabsTrigger>
-                <TabsTrigger value="requests" className="whitespace-nowrap">Requests ({requests.length})</TabsTrigger>
+                <TabsTrigger value="requests" className="whitespace-nowrap">Requests ({requestCount})</TabsTrigger>
                 <TabsTrigger value="blocked" className="whitespace-nowrap">Blocked ({blockedUsers.length})</TabsTrigger>
             </TabsList>
             
