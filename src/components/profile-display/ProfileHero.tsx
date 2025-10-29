@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { FullProfile } from '@/integrations/supabase/community.api';
 import { CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,6 +7,9 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Edit, CheckCircle, Loader2, UserPlus, UserCheck, Send, Clock, Share2, Users, Eye } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { useSocialCounts } from '@/context/SocialCountsContext';
+import { useToast } from '@/components/ui/use-toast';
+import { toggleFollow, sendConnectionRequest, createOrGetConversation } from '@/integrations/supabase/social.api';
 
 type ProfileHeroProps = {
   data: FullProfile;
@@ -24,18 +27,30 @@ type ProfileHeroProps = {
 export const ProfileHero: React.FC<ProfileHeroProps> = ({
   data,
   isOwnProfile,
-  connectionStatus,
-  isFollowLoading,
-  isConnectionLoading,
-  onFollow,
-  onConnect,
-  onMessage,
+  connectionStatus: staleConnectionStatus,
+  isFollowLoading: staleFollowLoading,
+  isConnectionLoading: staleConnectionLoading,
+  onFollow: staleOnFollow,
+  onConnect: staleOnConnect,
+  onMessage: staleOnMessage,
   onShare,
   onShowList,
 }) => {
   const { user } = useAuth();
   const { profile, followers_count, following_count, connection_count, analytics } = data;
   const targetUserId = profile.id;
+
+  const { isFollowing, getConnectionStatus, refetchSocialGraph } = useSocialCounts();
+  const { toast } = useToast();
+  const navigate = useNavigate();
+
+  // --- 6. Create NEW internal loading state ---
+  const [isFollowLoading, setIsFollowLoading] = useState(false);
+  const [isConnectionLoading, setIsConnectionLoading] = useState(false);
+
+  // --- 7. Get REAL-TIME status from context ---
+  const liveIsFollowing = isFollowing(targetUserId);
+  const liveConnectionStatus = getConnectionStatus(targetUserId);
 
   // 🚀 PLAN: Create the non-clinical headline
   const getHeadline = () => {
@@ -59,6 +74,37 @@ export const ProfileHero: React.FC<ProfileHeroProps> = ({
   };
   
   const headline = getHeadline();
+
+  const handleFollow = async () => {
+    setIsFollowLoading(true);
+    try {
+      await toggleFollow(targetUserId);
+      await refetchSocialGraph(); // Refresh the global state
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
+    setIsFollowLoading(false);
+  };
+
+  const handleConnect = async () => {
+    setIsConnectionLoading(true);
+    try {
+      await sendConnectionRequest(targetUserId);
+      await refetchSocialGraph(); // Refresh the global state
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
+    setIsConnectionLoading(false);
+  };
+
+  const handleMessage = async () => {
+    try {
+      const conversationId = await createOrGetConversation(targetUserId);
+      navigate(`/inbox?convo=${conversationId}`);
+    } catch (error: any) {
+      toast({ title: "Error", description: `Could not start conversation: ${error.message}`, variant: "destructive" });
+    }
+  };
 
   return (
     // --- Added overflow-hidden to prevent glitches ---
@@ -119,31 +165,31 @@ export const ProfileHero: React.FC<ProfileHeroProps> = ({
               user && (
                 <>
                   <Button
-                    variant={data.is_followed_by_viewer ? 'outline' : 'default'}
+                    variant={liveIsFollowing ? 'outline' : 'default'}
                     className="flex-1 sm:flex-auto"
-                    onClick={onFollow}
+                    onClick={handleFollow} // Use new handler
                     disabled={isFollowLoading}
                   >
                     {isFollowLoading ? (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : data.is_followed_by_viewer ? (
+                    ) : liveIsFollowing ? (
                       <UserCheck className="mr-2 h-4 w-4" />
                     ) : (
                       <UserPlus className="mr-2 h-4 w-4" />
                     )}
-                    {data.is_followed_by_viewer ? 'Following' : 'Follow'}
+                    {liveIsFollowing ? 'Following' : 'Follow'}
                   </Button>
                   
-                  {connectionStatus === 'connected' ? (
-                    <Button variant="outline" className="flex-1 sm:flex-auto" onClick={onMessage}>
+                  {liveConnectionStatus === 'connected' ? (
+                    <Button variant="outline" className="flex-1 sm:flex-auto" onClick={handleMessage}>
                       <Send className="mr-2 h-4 w-4" /> Message
                     </Button>
-                  ) : connectionStatus === 'pending_sent' ? (
+                  ) : liveConnectionStatus === 'pending_sent' ? (
                     <Button variant="outline" className="flex-1 sm:flex-auto" disabled>
                       <Clock className="mr-2 h-4 w-4" /> Pending
                     </Button>
                   ) : (
-                    <Button variant="outline" className="flex-1 sm:flex-auto" onClick={onConnect} disabled={isConnectionLoading}>
+                    <Button variant="outline" className="flex-1 sm:flex-auto" onClick={handleConnect} disabled={isConnectionLoading}>
                       {isConnectionLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UserPlus className="mr-2 h-4 w-4" />}
                       Connect
                     </Button>
