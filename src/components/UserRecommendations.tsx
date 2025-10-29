@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo} from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage, AvatarProfile} from '@/components/ui/avatar';
 import { Users, MapPin, Briefcase, UserPlus, Loader2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -150,70 +150,78 @@ const UserRecommendations: React.FC = () => {
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {recommendations.slice(0, 5).map((recommendation) => (
-            <div 
-              key={recommendation.user_id}
-              className="flex items-center justify-between p-4 border border-border rounded-lg hover:bg-muted/50 transition-colors"
-            >
-              <div className="flex items-center gap-4">
-                <Avatar className="h-12 w-12">
-                  <AvatarImage src="" alt={recommendation.full_name} />
-                  <AvatarFallback>
-                    {recommendation.full_name.split(' ').map(n => n[0]).join('').toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                
-                <div className="flex-1">
-                  <h4 className="font-medium">{recommendation.full_name}</h4>
+          {recommendations.slice(0, 5).map((recommendation) => {
+            // Create profile object inside map
+            const recProfile: AvatarProfile = {
+              id: recommendation.user_id,
+              full_name: recommendation.full_name,
+              profile_picture_url: null // This data doesn't have it, so we pass null
+            };
+
+            return (
+              <div 
+                key={recommendation.user_id}
+                className="flex items-center justify-between p-4 border border-border rounded-lg hover:bg-muted/50 transition-colors"
+              >
+                <div className="flex items-center gap-4">
+                  {/* Apply smart avatar */}
+                  <Avatar profile={recProfile} className="h-12 w-12">
+                    <AvatarImage alt={recommendation.full_name} />
+                    <AvatarFallback />
+                  </Avatar>
                   
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
-                    {recommendation.specialization && (
-                      <div className="flex items-center gap-1">
-                        <Briefcase className="h-3 w-3" />
-                        <span className="capitalize">
-                          {recommendation.specialization.replace('_', ' ')}
-                        </span>
-                      </div>
-                    )}
+                  <div className="flex-1">
+                    <h4 className="font-medium">{recommendation.full_name}</h4>
                     
-                    {recommendation.current_location && (
-                      <div className="flex items-center gap-1">
-                        <MapPin className="h-3 w-3" />
-                        <span>{recommendation.current_location}</span>
-                      </div>
-                    )}
-                  </div>
-                  
-                  <div className="flex items-center gap-2 mt-2">
-                    {recommendation.years_experience && (
-                      <Badge variant="secondary" className="text-xs">
-                        {recommendation.years_experience.replace('_', '-')} years
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
+                      {recommendation.specialization && (
+                        <div className="flex items-center gap-1">
+                          <Briefcase className="h-3 w-3" />
+                          <span className="capitalize">
+                            {recommendation.specialization.replace('_', ' ')}
+                          </span>
+                        </div>
+                      )}
+                      
+                      {recommendation.current_location && (
+                        <div className="flex items-center gap-1">
+                          <MapPin className="h-3 w-3" />
+                          <span>{recommendFendation.current_location}</span>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="flex items-center gap-2 mt-2">
+                      {recommendation.years_experience && (
+                        <Badge variant="secondary" className="text-xs">
+                          {recommendation.years_experience.replace('_', '-')} years
+                        </Badge>
+                      )}
+                      <Badge variant="outline" className="text-xs">
+                        {Math.round(recommendation.similarity_score)}% match
                       </Badge>
-                    )}
-                    <Badge variant="outline" className="text-xs">
-                      {Math.round(recommendation.similarity_score)}% match
-                    </Badge>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <Button 
-                size="sm"
-                onClick={() => sendConnectionRequest(recommendation.user_id, recommendation.full_name)}
-                disabled={connecting === recommendation.user_id}
-                className="btn-medical"
-              >
-                {connecting === recommendation.user_id ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <>
-                    <UserPlus className="h-4 w-4 mr-1" />
-                    Connect
-                  </>
-                )}
-              </Button>
-            </div>
-          ))}
+                <Button 
+                  size="sm"
+                  onClick={() => sendConnectionRequest(recommendation.user_id, recommendation.full_name)}
+                  disabled={connecting === recommendation.user_id}
+                  className="btn-medical"
+                >
+                  {connecting === recommendation.user_id ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <>
+                      <UserPlus className="h-4 w-4 mr-1" />
+                      Connect
+                    </>
+                  )}
+                </Button>
+              </div>
+            );
+          })}
         </div>
 
         {recommendations.length > 5 && (
