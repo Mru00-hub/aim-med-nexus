@@ -725,6 +725,128 @@ const CompleteProfile = () => {
       });
       return;
     }
+
+    const isItemEmpty = (item: any, keyFields: string[]) => {
+      return keyFields.every(field => {
+        const value = item[field];
+        if (typeof value === 'string') return !value.trim();
+        if (typeof value === 'number') return value === null || value === 0;
+        if (Array.isArray(value)) return value.length === 0;
+        return !value; // For null, undefined
+      });
+    };
+
+    const findInvalidItems = (list: any[], isEmptyCheck: (item: any) => boolean, isValidCheck: (item: any) => boolean, name: string) => {
+      const invalid = list.filter(item => !isEmptyCheck(item) && !isValidCheck(item));
+      return invalid.length > 0 ? name : null;
+    };
+
+    const workKeyFields = ['position', 'organization', 'start_date', 'description'];
+    const eduKeyFields = ['institution_name', 'institution_id', 'degree', 'field_of_study', 'start_year', 'end_year', 'description'];
+    const achievementKeyFields = ['exam_name', 'rank', 'percentile', 'year'];
+    const pubKeyFields = ['title', 'authors', 'journal_name', 'url', 'publication_date', 'description'];
+    const certKeyFields = ['certification_name', 'issuing_org', 'issue_date', 'credential_id', 'url'];
+    const awardKeyFields = ['award_name', 'issuing_org', 'date', 'description'];
+    const ventureKeyFields = ['name', 'role', 'description', 'achievements', 'url'];
+    const contentKeyFields = ['title', 'url', 'description', 'publication_date'];
+    const cocurricularKeyFields = ['title', 'role', 'description', 'start_date', 'end_date'];
+
+    // --- Work Experience ---
+    const workIsEmpty = (item: WorkExperienceItem) => isItemEmpty(item, workKeyFields);
+    const workIsValid = (item: WorkExperienceItem) => 
+      item.position?.trim() && item.organization?.trim() && item.start_date?.trim();
+      
+    // --- Education History ---
+    const eduIsEmpty = (item: EducationHistoryItem) => isItemEmpty(item, eduKeyFields);
+    const eduIsValid = (item: EducationHistoryItem) =>
+      (item.institution_name?.trim() || (item.institution_id && item.institution_id !== 'other')) &&
+      item.degree?.trim() &&
+      item.start_year;
+
+    // --- Other Lists (using simple "name/title" validation) ---
+    const achIsEmpty = (item: EditableAchievement) => isItemEmpty(item, achievementKeyFields);
+    const achIsValid = (item: EditableAchievement) => item.exam_name?.trim();
+
+    const pubIsEmpty = (item: EditablePublication) => isItemEmpty(item, pubKeyFields);
+    const pubIsValid = (item: EditablePublication) => item.title?.trim();
+
+    const certIsEmpty = (item: EditableCertification) => isItemEmpty(item, certKeyFields);
+    const certIsValid = (item: EditableCertification) => item.certification_name?.trim();
+
+    const awdIsEmpty = (item: EditableAward) => isItemEmpty(item, awardKeyFields);
+    const awdIsValid = (item: EditableAward) => item.award_name?.trim();
+
+    const venIsEmpty = (item: EditableVenture) => isItemEmpty(item, ventureKeyFields);
+    const venIsValid = (item: EditableVenture) => item.name?.trim();
+
+    const conIsEmpty = (item: EditableContent) => isItemEmpty(item, contentKeyFields);
+    const conIsValid = (item: EditableContent) => item.title?.trim() || item.url?.trim();
+
+    const cocIsEmpty = (item: EditableCocurricular) => isItemEmpty(item, cocurricularKeyFields);
+    const cocIsValid = (item: EditableCocurricular) => item.title?.trim();
+
+    const skillsArray = formData.skills.split(',').map(s => s.trim()).filter(Boolean);
+    // --- Transition Data (Single Object) ---
+    // (Run transformation first)
+    let finalTransitionData = transitionData ? { ...transitionData } : null;
+    if (finalTransitionData && typeof finalTransitionData.target_industries === 'string') {
+      (finalTransitionData as any).target_industries = (finalTransitionData.target_industries as string)
+        .split(',')
+        .map(s => s.trim())
+        .filter(Boolean);
+    }
+    
+    const transIsEmpty = (data: EditableTransition | null) =>
+      !data || (!data.transition_status &&
+               !(data.target_industries as any)?.length &&
+               !data.challenges?.trim() &&
+               !data.support_needed?.trim());
+    
+    // A transition is "valid" if it's not empty and has at least a status.
+    const transIsValid = (data: EditableTransition | null) => data?.transition_status;
+    
+    // --- 3. Run Validation and Show Errors ---
+    const validationErrors: (string | null)[] = [];
+
+    validationErrors.push(findInvalidItems(workExperience, workIsEmpty, workIsValid, "Work Experience (requires Position, Organization, Start Date)"));
+    validationErrors.push(findInvalidItems(educationHistory, eduIsEmpty, eduIsValid, "Education History (requires Institution, Degree, Start Year)"));
+    validationErrors.push(findInvalidItems(achievements, achIsEmpty, achIsValid, "Academic Achievements (requires Exam Name)"));
+    validationErrors.push(findInvalidItems(publications, pubIsEmpty, pubIsValid, "Publications (requires Title)"));
+    validationErrors.push(findInvalidItems(certifications, certIsEmpty, certIsValid, "Certifications (requires Name)"));
+    validationErrors.push(findInvalidItems(awards, awdIsEmpty, awdIsValid, "Awards (requires Name)"));
+    validationErrors.push(findInvalidItems(ventures, venIsEmpty, venIsValid, "Ventures (requires Name)"));
+    validationErrors.push(findInvalidItems(contentPortfolio, conIsEmpty, conIsValid, "Content Portfolio (requires Title or URL)"));
+    validationErrors.push(findInvalidItems(cocurriculars, cocIsEmpty, cocIsValid, "Cocurriculars (requires Title)"));
+
+    // Check transition data
+    if (!transIsEmpty(finalTransitionData) && !transIsValid(finalTransitionData)) {
+      validationErrors.push("Transition Journey (requires Transition Status)");
+    }
+
+    const finalErrors = validationErrors.filter(Boolean); // Remove nulls
+    if (finalErrors.length > 0) {
+      const errorMsg = `Please complete or remove the following items: ${finalErrors.join(', ')}`;
+      setError(errorMsg);
+      toast({
+        title: "Incomplete Information",
+        description: errorMsg,
+        variant: "destructive",
+      });
+      return; // Stop submission
+    }
+
+    // --- 4. Create Filtered Lists for Saving ---
+    // (These variables will be used inside the try...catch block)
+    const filteredWorkExperience = workExperience.filter(item => !workIsEmpty(item));
+    const filteredEducationHistory = educationHistory.filter(item => !eduIsEmpty(item));
+    const filteredAchievements = achievements.filter(item => !achIsEmpty(item));
+    const filteredPublications = publications.filter(item => !pubIsEmpty(item));
+    const filteredCertifications = certifications.filter(item => !certIsEmpty(item));
+    const filteredAwards = awards.filter(item => !awdIsEmpty(item));
+    const filteredVentures = ventures.filter(item => !venIsEmpty(item));
+    const filteredContentPortfolio = contentPortfolio.filter(item => !conIsEmpty(item));
+    const filteredCocurriculars = cocurriculars.filter(item => !cocIsEmpty(item));
+    const validTransitionData = transIsEmpty(finalTransitionData) ? null : finalTransitionData;
     // --- End Validation ---
 
     setIsSubmitting(true);
@@ -749,14 +871,6 @@ const CompleteProfile = () => {
         finalAvatarUrl = publicUrlData.publicUrl;
       }
 
-      const skillsArray = formData.skills.split(',').map(s => s.trim()).filter(Boolean);
-      const finalTransitionData = transitionData ? { ...transitionData } : null;
-      if (finalTransitionData && typeof finalTransitionData.target_industries === 'string') {
-        (finalTransitionData as any).target_industries = (finalTransitionData.target_industries as string)
-          .split(',')
-          .map(s => s.trim())
-          .filter(Boolean);
-      }
       // 2. Call update_profile RPC (NOW INCLUDES profile_mode)
       const rpcArgs = {
         p_full_name: formData.full_name,
@@ -789,16 +903,16 @@ const CompleteProfile = () => {
       // 3. 🚀 PLAN: Call saveProfileDetails for all 1-to-many tables
       await saveProfileDetails(
         { // Payload
-          achievements,
-          publications,
-          certifications,
-          awards,
-          transitionData: finalTransitionData,
-          ventures,
-          contentPortfolio,
-          cocurriculars,
-          workExperiences: workExperience,
-          educationHistory: educationHistory,
+          achievements: filteredAchievements,
+          publications: filteredPublications,
+          certifications: filteredCertifications,
+          awards: filteredAwards,
+          transitionData: validTransitionData,
+          ventures: filteredVentures,
+          contentPortfolio: filteredContentPortfolio,
+          cocurriculars: filteredCocurriculars,
+          workExperiences: filteredWorkExperience,
+          educationHistory: filteredEducationHistory,
         },
         deletedItems // Deleted items
       );
