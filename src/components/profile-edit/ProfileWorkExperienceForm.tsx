@@ -19,6 +19,7 @@ export const ProfileWorkExperienceForm: React.FC<ProfileWorkExperienceFormProps>
   onAddItem,
   onRemoveItem,
 }) => {
+  const today = new Date().toISOString().split('T')[0];
   return (
     <div className="space-y-4">
       {items.map((item, index) => (
@@ -62,6 +63,7 @@ export const ProfileWorkExperienceForm: React.FC<ProfileWorkExperienceFormProps>
                   type="date"
                   value={item.start_date || ''}
                   onChange={(e) => onListChange(index, 'start_date', e.target.value || null)}
+                  max={today}
                 />
               </div>
               <div>
@@ -70,6 +72,7 @@ export const ProfileWorkExperienceForm: React.FC<ProfileWorkExperienceFormProps>
                   type="date"
                   value={item.end_date || ''}
                   onChange={(e) => onListChange(index, 'end_date', e.target.value || null)}
+                  max={today}
                 />
               </div>
             </div>
