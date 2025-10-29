@@ -750,7 +750,13 @@ const CompleteProfile = () => {
       }
 
       const skillsArray = formData.skills.split(',').map(s => s.trim()).filter(Boolean);
-
+      const finalTransitionData = transitionData ? { ...transitionData } : null;
+      if (finalTransitionData && typeof finalTransitionData.target_industries === 'string') {
+        (finalTransitionData as any).target_industries = (finalTransitionData.target_industries as string)
+          .split(',')
+          .map(s => s.trim())
+          .filter(Boolean);
+      }
       // 2. Call update_profile RPC (NOW INCLUDES profile_mode)
       const rpcArgs = {
         p_full_name: formData.full_name,
@@ -787,7 +793,7 @@ const CompleteProfile = () => {
           publications,
           certifications,
           awards,
-          transitionData,
+          transitionData: finalTransitionData,
           ventures,
           contentPortfolio,
           cocurriculars,
