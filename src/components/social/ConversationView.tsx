@@ -9,7 +9,7 @@ import { DirectMessage } from './DirectMessage';
 import { DirectMessageInput } from './DirectMessageInput';
 import { useAuth } from '@/hooks/useAuth';
 import { decryptMessage } from '@/lib/crypto'; 
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage, AvatarProfile} from '@/components/ui/avatar';
 import { useConversationData } from '@/hooks/useConversationData'; // NEW: Using our powerful hook
 import { cn } from '@/lib/utils';
 import { Database, Tables } from '@/integrations/supabase/types';
@@ -120,6 +120,12 @@ export const ConversationView = ({ conversation, onConversationUpdate, onBack}: 
       messagesEndRef.current?.scrollIntoView();
   }
 
+  const avatarProfile: AvatarProfile = {
+    id: conversation.participant_id,
+    full_name: conversation.participant_full_name,
+    profile_picture_url: conversation.participant_avatar_url,
+  };
+
   return (
     <>
       <CardHeader className="pb-3 md:pb-4 px-4 md:px-6 border-b border-border">
@@ -140,9 +146,9 @@ export const ConversationView = ({ conversation, onConversationUpdate, onBack}: 
                 to={`/profile/${conversation.participant_id}`} 
                 className="flex items-center gap-3 transition-smooth hover:opacity-80 group"
               >
-                <Avatar className="h-10 w-10 md:h-12 md:w-12 border shadow-card">
-                    <AvatarImage src={conversation.participant_avatar_url || undefined} />
-                    <AvatarFallback>{conversation.participant_full_name?.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                <Avatar profile={avatarProfile} className="h-10 w-10 md:h-12 md:w-12 border shadow-card">
+                    <AvatarImage />
+                    <AvatarFallback />
                 </Avatar>
                 <div>
                     <h3 className="text-base md:text-xl font-semibold tracking-tight">
