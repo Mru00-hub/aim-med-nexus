@@ -19,6 +19,7 @@ export const ProfileAwardsForm: React.FC<ProfileAwardsFormProps> = ({
   onAddItem,
   onRemoveItem
 }) => {
+  const today = new Date().toISOString().split('T')[0];
   return (
     <div className="p-1 pt-4 space-y-4">
       {items.map((award, index) => (
@@ -54,6 +55,7 @@ export const ProfileAwardsForm: React.FC<ProfileAwardsFormProps> = ({
                 type="date"
                 value={award.date || ''}
                 onChange={(e) => onListChange('awards', index, 'date', e.target.value)}
+                max={today}
               />
             </div>
           </div>
