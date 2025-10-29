@@ -44,6 +44,7 @@ export const PostFeedCard: React.FC<PostFeedCardProps> = ({
   const { toast } = useToast();
   const { isFollowing, refetchSocialGraph } = useSocialCounts();
   const [localFollowLoading, setLocalFollowLoading] = useState(false);
+  const [popoverOpen, setPopoverOpen] = useState(false);
 
   const isPublicPost = 'thread_id' in post;
   const title = post.title;
@@ -116,6 +117,7 @@ export const PostFeedCard: React.FC<PostFeedCardProps> = ({
     e.stopPropagation();
     if (!user || !firstMessageId) navigate('/login');
     else onReaction(id, firstMessageId, emoji);
+    setTimeout(() => setPopoverOpen(false), 300);
   };
 
   const handleFollowClick = async (e: React.MouseEvent) => {
@@ -247,7 +249,7 @@ export const PostFeedCard: React.FC<PostFeedCardProps> = ({
             )}
             
             {/* Reaction Button (Popover) */}
-            <Popover>
+            <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
               <PopoverTrigger asChild>
                 {/* This toggle now works */}
                 <Button variant={userReaction ? 'secondary' : 'ghost'} size="sm" onClick={(e) => e.stopPropagation()}>
