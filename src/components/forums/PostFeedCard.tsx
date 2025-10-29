@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { PublicPost, PostOrThreadSummary, SimpleAttachment } from '@/integrations/supabase/community.api';
 import { Card, CardContent } from '@/components/ui/card';
@@ -9,6 +9,9 @@ import { useAuth } from '@/hooks/useAuth';
 import { ShortenedBody } from './ShortenedBody'; // We will create this
 import { AttachmentPreview } from './AttachmentPreview'; // We will create this
 import { Avatar, AvatarFallback, AvatarImage, AvatarProfile } from "@/components/ui/avatar";
+import { useSocialCounts } from '@/context/SocialCountsContext';
+import { toggleFollow } from '@/integrations/supabase/community.api';
+import { useToast } from "@/components/ui/use-toast";
 
 const URL_REGEX = /(https?:\/\/[^\s]+)/g;
 const REACTIONS = ['👍', '❤️', '🔥', '🧠', '😂'];
@@ -28,11 +31,6 @@ interface PostFeedCardProps {
   
   // Handlers from parent
   onReaction: (postId: string, firstMessageId: number, emoji: string) => void;
-  onFollow: (authorId: string) => void;
-
-  // Follow button state from parent
-  isFollowing: boolean;
-  isFollowLoading: boolean;
 }
 
 export const PostFeedCard: React.FC<PostFeedCardProps> = ({ 
@@ -40,12 +38,12 @@ export const PostFeedCard: React.FC<PostFeedCardProps> = ({
   optimisticReactionCount,
   optimisticUserReaction,
   onReaction, 
-  onFollow,
-  isFollowing,
-  isFollowLoading,
 }) => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const { isFollowing, refetchSocialGraph } = useSocialCounts();
+  const [localFollowLoading, setLocalFollowLoading] = useState(false);
 
   const isPublicPost = 'thread_id' in post;
   const title = post.title;
@@ -100,6 +98,7 @@ export const PostFeedCard: React.FC<PostFeedCardProps> = ({
   const bodyUrls = body?.match(URL_REGEX);
   const firstUrl = (bodyUrls && bodyUrls[0]) ? bodyUrls[0] : '#';
   const videoId = body ? getYouTubeVideoId(firstUrl) : null;
+  const liveIsFollowing = isFollowing(authorId);
 
   const authorProfile: AvatarProfile = useMemo(() => ({
       id: authorId,
@@ -119,11 +118,22 @@ export const PostFeedCard: React.FC<PostFeedCardProps> = ({
     else onReaction(id, firstMessageId, emoji);
   };
 
-  const handleFollowClick = (e: React.MouseEvent) => {
+  const handleFollowClick = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!user) navigate('/login');
-    else onFollow(authorId);
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+    
+    setLocalFollowLoading(true);
+    try {
+      await toggleFollow(authorId);
+      await refetchSocialGraph(); // Refresh the global state
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
+    setLocalFollowLoading(false);
   };
 
   return (
@@ -220,19 +230,19 @@ export const PostFeedCard: React.FC<PostFeedCardProps> = ({
             {/* Follow Button */}
             {user.id !== authorId && (
               <Button
-                variant={isFollowing ? 'secondary' : 'outline'}
+                variant={liveIsFollowing ? 'secondary' : 'outline'}
                 size="sm"
                 onClick={handleFollowClick}
-                disabled={isFollowLoading}
+                disabled={localFollowLoading}
               >
-                {isFollowLoading ? (
+                {localFollowLoading ? (
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                ) : isFollowing ? (
+                ) : liveIsFollowing ? (
                   <Check className="h-4 w-4 mr-2" />
                 ) : (
                   <UserPlus className="h-4 w-4 mr-2" />
                 )}
-                {isFollowing ? 'Following' : 'Follow'}
+                {liveIsFollowing ? 'Following' : 'Follow'}
               </Button>
             )}
             
