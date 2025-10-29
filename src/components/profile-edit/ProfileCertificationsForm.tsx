@@ -18,6 +18,7 @@ export const ProfileCertificationsForm: React.FC<ProfileCertificationsFormProps>
   onAddItem,
   onRemoveItem
 }) => {
+  const today = new Date().toISOString().split('T')[0];
   return (
     <div className="p-1 pt-4 space-y-4">
       {items.map((cert, index) => (
@@ -61,6 +62,7 @@ export const ProfileCertificationsForm: React.FC<ProfileCertificationsFormProps>
                 type="date"
                 value={cert.issue_date || ''}
                 onChange={(e) => onListChange('certifications', index, 'issue_date', e.target.value)}
+                max={today}
               />
             </div>
             <div className="space-y-2">
