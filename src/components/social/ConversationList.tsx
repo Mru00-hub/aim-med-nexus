@@ -69,49 +69,58 @@ export const ConversationList = ({ conversations, loading, onSelectConversation,
           </div>
         ) : (
           <div className="space-y-1">
-            {filteredConversations.map((convo) => (
-              <div
-                key={convo.conversation_id}
-                onClick={() => onSelectConversation(convo)}
-                className={`flex items-center justify-between p-3 cursor-pointer hover:bg-muted/50 transition-colors border-l-2 ${selectedConversationId === convo.conversation_id ? 'bg-primary/5 border-l-primary' : 'border-l-transparent'}`}>
-                <div className="flex items-start gap-3 flex-1 min-w-0">
-                    <Avatar className="h-10 w-10 border">
-                        <AvatarImage src={convo.participant_avatar_url || undefined} />
-                        <AvatarFallback>{convo.participant_full_name?.split(' ').map(n => n[0]).join('')}</AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between mb-1">
-                            <h4 className="font-medium text-sm truncate pr-2">{convo.participant_full_name}</h4>
-                            <span className="text-xs text-muted-foreground flex-shrink-0">
-                                {convo.last_message_at && <TimeAgo date={convo.last_message_at} />}
-                            </span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                            <p className="text-xs text-muted-foreground truncate pr-2 flex-1 flex items-center gap-1.5">
-                              {convo.last_message_content ? (
-                                <>
-                                  <Lock className="h-3 w-3 flex-shrink-0" />
-                                  <span>Encrypted Message</span>
-                                </>
-                              ) : (
-                                <span>No messages yet</span>
+            {filteredConversations.map((convo) => {
+              // 1. Create the profile object inside the map
+              const avatarProfile: AvatarProfile = {
+                id: convo.participant_id,
+                full_name: convo.participant_full_name,
+                profile_picture_url: convo.participant_avatar_url,
+              };
+
+              return (
+                <div
+                  key={convo.conversation_id}
+                  onClick={() => onSelectConversation(convo)}
+                  className={`flex items-center justify-between p-3 cursor-pointer hover:bg-muted/50 transition-colors border-l-2 ${selectedConversationId === convo.conversation_id ? 'bg-primary/5 border-l-primary' : 'border-l-transparent'}`}>
+                  <div className="flex items-start gap-3 flex-1 min-w-0">
+                      <Avatar profile={avatarProfile} className="h-10 w-10 border">
+                          <AvatarImage alt={convo.participant_full_name} />
+                          <AvatarFallback />
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between mb-1">
+                              <h4 className="font-medium text-sm truncate pr-2">{convo.participant_full_name}</h4>
+                              <span className="text-xs text-muted-foreground flex-shrink-0">
+                                  {convo.last_message_at && <TimeAgo date={convo.last_message_at} />}
+                              </span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                              <p className="text-xs text-muted-foreground truncate pr-2 flex-1 flex items-center gap-1.5">
+                                {convo.last_message_content ? (
+                                  <>
+                                    <Lock className="h-3 w-3 flex-shrink-0" />
+                                    <span>Encrypted Message</span>
+                                  </>
+                                ) : (
+                                  <span>No messages yet</span>
+                                )}
+                              </p>
+                              {convo.unread_count > 0 && (
+                                  <Badge variant="destructive" className="h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs flex-shrink-0">
+                                      {convo.unread_count}
+                                  </Badge>
                               )}
-                            </p>
-                            {convo.unread_count > 0 && (
-                                <Badge variant="destructive" className="h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs flex-shrink-0">
-                                    {convo.unread_count}
-                                </Badge>
-                            )}
-                        </div>
-                    </div>
-                </div>
-                {convo.is_starred && (
-                  <div className="ml-2 flex-shrink-0">
-                    <Star className="h-4 w-4 text-yellow-500 fill-current" />
+                          </div>
+                      </div>
                   </div>
-                )}
-              </div>
-            ))}
+                  {convo.is_starred && (
+                    <div className="ml-2 flex-shrink-0">
+                      <Star className="h-4 w-4 text-yellow-500 fill-current" />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
       </CardContent>
