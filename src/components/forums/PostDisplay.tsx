@@ -40,6 +40,8 @@ import {
 import { ChevronDown, ChevronUp, MoreHorizontal} from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Document, Page, pdfjs } from 'react-pdf';
+import { useSocialCounts } from '@/context/SocialCountsContext';
+import { toggleFollow } from '@/integrations/supabase/community.api';
 // FIX 1: Add required CSS import for react-pdf
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
@@ -127,9 +129,6 @@ interface PostDisplayProps {
   onCommentClick: () => void;
   canEdit: boolean;
   threadId: string;
-  isFollowing: boolean;
-  isFollowLoading: boolean;
-  onFollow: () => void;
 }
 
 export const PostDisplay: React.FC<PostDisplayProps> = ({
@@ -143,12 +142,11 @@ export const PostDisplay: React.FC<PostDisplayProps> = ({
   canEdit,
   threadId,
   onCommentClick,
-  isFollowing,
-  isFollowLoading,
-  onFollow,
 }) => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { isFollowing, refetchSocialGraph } = useSocialCounts();
+  const [localFollowLoading, setLocalFollowLoading] = useState(false);
   
   const [isReactionLoading, setIsReactionLoading] = useState(false);
   const [popoverOpen, setPopoverOpen] = useState(false);
@@ -167,6 +165,7 @@ export const PostDisplay: React.FC<PostDisplayProps> = ({
     full_name: post.author_name,
     profile_picture_url: post.author_avatar
   }), [post.author_id, post.author_name, post.author_avatar]);
+  const liveIsFollowing = isFollowing(post.author_id);
 
   // Link preview effect with proper cleanup
   useEffect(() => {
@@ -309,6 +308,19 @@ export const PostDisplay: React.FC<PostDisplayProps> = ({
     setIsEditingTitle(true);
   };
 
+  const handleFollow = async () => {
+    if (!user) return; // Auth check
+    
+    setLocalFollowLoading(true);
+    try {
+      await toggleFollow(post.author_id);
+      await refetchSocialGraph();
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
+    setLocalFollowLoading(false);
+  };
+
   return (
     <Card className="mb-6 shadow-md">
       <CardContent className="p-4 sm:p-6">
@@ -337,20 +349,20 @@ export const PostDisplay: React.FC<PostDisplayProps> = ({
             </Link>
             {user && user.id !== post.author_id && (
               <Button
-                variant={isFollowing ? 'secondary' : 'outline'}
+                variant={liveIsFollowing ? 'secondary' : 'outline'}
                 size="sm"
-                onClick={onFollow}
-                disabled={isFollowLoading}
+                onClick={handleFollow}
+                disabled={localFollowLoading}
                 className="w-full sm:w-auto"
               >
-                {isFollowLoading ? (
+                {localFollowLoading ? (
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                ) : isFollowing ? (
+                ) : liveIsFollowing ? (
                   <Check className="h-4 w-4 mr-2" />
                 ) : (
                   <UserPlus className="h-4 w-4 mr-2" />
                 )}
-                {isFollowing ? 'Following' : 'Follow'}
+                {liveIsFollowing ? 'Following' : 'Follow'}
               </Button>
             )}
           </div>
