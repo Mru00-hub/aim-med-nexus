@@ -124,7 +124,7 @@ interface PostDisplayProps {
   post: FullPostDetails['post'];
   commentCount: number;
   refresh: () => void;
-  onReaction: (emoji: string) => void; 
+  onReaction: (emoji: string) => Promise<void> | void; 
   onBodyUpdate: (newBody: string) => void;
   onPostDelete: () => void; 
   onTitleUpdate: (newTitle: string) => void;
@@ -259,7 +259,7 @@ export const PostDisplay: React.FC<PostDisplayProps> = ({
     if (isReactionLoading || !user) return;
     setIsReactionLoading(true);
     try {
-      onReaction(emoji);
+      await onReaction(emoji); 
     } catch (error: any) {
       toast({
         title: 'Error',
