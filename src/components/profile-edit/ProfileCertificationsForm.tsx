@@ -6,10 +6,12 @@ import { Trash2, Plus } from 'lucide-react';
 import { EditableCertification } from '@/integrations/supabase/user.api';
 
 type ProfileCertificationsFormProps = {
-  items: EditableCertification[];
+  // 1. UPDATE PROP TYPE for 'items'
+  items: (EditableCertification & { client_id?: string })[];
   onListChange: (listName: 'certifications', index: number, field: string, value: any) => void;
   onAddItem: (listName: 'certifications') => void;
-  onRemoveItem: (listName: 'certifications', index: number) => void;
+  // 2. UPDATE PROP TYPE for 'onRemoveItem'
+  onRemoveItem: (listName: 'certifications', id: string) => void;
 };
 
 export const ProfileCertificationsForm: React.FC<ProfileCertificationsFormProps> = ({
@@ -22,13 +24,13 @@ export const ProfileCertificationsForm: React.FC<ProfileCertificationsFormProps>
   return (
     <div className="p-1 pt-4 space-y-4">
       {items.map((cert, index) => (
-        <div key={index} className="p-4 border rounded-lg space-y-4 relative bg-muted/30">
+        <div key={item.id || item.client_id} className="p-4 border rounded-lg space-y-4 relative bg-muted/30">
           <Button
             type="button"
             variant="ghost"
             size="icon"
             className="absolute top-2 right-2 h-7 w-7 text-muted-foreground hover:text-destructive"
-            onClick={() => onRemoveItem('certifications', index)}
+            onClick={() => onRemoveItem('certifications', item.id || item.client_id!)}
           >
             <Trash2 className="h-4 w-4" />
           </Button>
