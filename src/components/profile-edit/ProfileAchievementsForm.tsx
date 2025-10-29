@@ -6,10 +6,10 @@ import { Trash2, Plus } from 'lucide-react';
 import { EditableAchievement } from '@/integrations/supabase/user.api'; // Assuming you exported this type
 
 type ProfileAchievementsFormProps = {
-  items: EditableAchievement[];
+  items: (EditableAchievement & { client_id?: string })[]; // 1. Update item type
   onListChange: (listName: 'achievements', index: number, field: string, value: any) => void;
   onAddItem: (listName: 'achievements') => void;
-  onRemoveItem: (listName: 'achievements', index: number) => void;
+  onRemoveItem: (listName: 'achievements', id: string) => void; // 2. Update to expect 'id: string'
 };
 
 export const ProfileAchievementsForm: React.FC<ProfileAchievementsFormProps> = ({
@@ -21,13 +21,13 @@ export const ProfileAchievementsForm: React.FC<ProfileAchievementsFormProps> = (
   return (
     <div className="p-1 pt-4 space-y-4">
       {items.map((ach, index) => (
-        <div key={index} className="p-4 border rounded-lg space-y-4 relative bg-muted/30">
+        <div key={item.id || item.client_id} className="p-4 border rounded-lg space-y-4 relative bg-muted/30">
           <Button
             type="button"
             variant="ghost"
             size="icon"
             className="absolute top-2 right-2 h-7 w-7 text-muted-foreground hover:text-destructive"
-            onClick={() => onRemoveItem('achievements', index)}
+            onClick={() => onRemoveItem('achievements', item.id || item.client_id!)}
           >
             <Trash2 className="h-4 w-4" />
           </Button>
