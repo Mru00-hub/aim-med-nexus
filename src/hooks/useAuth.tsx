@@ -127,26 +127,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setLoadingMessage('Loading profile...');
          
           // Fetch profile
-          const { data: profileData, error: profileError } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', currentSession.user.id)
-            .single();
-
+          const profileData = await fetchProfile(currentSession.user.id);
           console.log('[Auth] Profile result:', { hasProfile: !!profileData, error: profileError });
 
           if (!isMounted) return;
 
           if (profileData) {
-            setProfile(profileData);
-          
-            // Fetch unread count
-            try {
-              const { data: count } = await supabase.rpc('get_my_unread_inbox_count');
-              if (isMounted) setInitialUnreadCount(count);
-            } catch (e) {
-              console.error('[Auth] Unread count error:', e);
-            }
+            setProfile(profileData); 
+            await fetchUnreadCount();
           }
 
           if (isMounted) {
@@ -179,16 +167,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         if (newSession?.user) {
-          const { data: profileData } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', newSession.user.id)
-            .single();
+          const profileData = await fetchProfile(newSession.user.id);
 
-          if (isMounted) {
+          if (isMounted && profileData) {
             setSession(newSession);
             setUser(newSession.user);
             setProfile(profileData);
+            await fetchUnreadCount();
           }
         }
       } else if (event === 'SIGNED_OUT') {
@@ -208,7 +193,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       isMounted = false;
       subscription.unsubscribe();
     };
-  }, [toast]);
+  }, [toast, fetchProfile]);
     
   const refreshProfile = useCallback(async () => {
     try {
