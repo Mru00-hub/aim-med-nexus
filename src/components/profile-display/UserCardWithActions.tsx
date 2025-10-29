@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import {
   sendConnectionRequest,
   createOrGetConversation,
-  toggleFollow,
 } from '@/integrations/supabase/social.api';
 import { toggleFollow, ProfileWithStatus } from '@/integrations/supabase/community.api'; 
 import { MessageSquare, UserCheck, UserPlus, X, Loader2, Check } from 'lucide-react'; 
