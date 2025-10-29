@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 // REMOVED: import { usePostContext } from './PostContext';
 import { MessageWithDetails } from '@/integrations/supabase/community.api';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage, AvatarProfile} from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { 
@@ -110,13 +110,20 @@ export const CommentItem: React.FC<CommentItemProps> = ({
     }
   };
 
+  const authorProfile: AvatarProfile | null = useMemo(() => {
+    if (!comment.author) return null;
+    return {
+      id: comment.user_id,
+      full_name: comment.author.full_name,
+      profile_picture_url: comment.author.profile_picture_url
+    }
+  }, [comment.author, comment.user_id]);
+
   return (
     <div className="flex gap-2 sm:gap-3">
-      <Avatar className="h-8 w-8 sm:h-10 sm:w-10">
-        <AvatarImage src={comment.author?.profile_picture_url || ''} />
-        <AvatarFallback>
-          {comment.author?.full_name?.charAt(0) || 'U'}
-        </AvatarFallback>
+      <Avatar profile={authorProfile} className="h-8 w-8 sm:h-10 sm:w-10">
+        <AvatarImage />
+        <AvatarFallback />
       </Avatar>
       <div className="flex-1">
         <div className="bg-muted rounded-lg px-3 py-2 relative">
