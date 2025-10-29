@@ -21,7 +21,6 @@ export const ForumPostFeed: React.FC<ForumPostFeedProps> = ({ spaceId, refreshKe
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { isFollowing, refetchSocialGraph } = useSocialCounts();
 
   const [posts, setPosts] = useState<PostOrThreadSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -30,7 +29,6 @@ export const ForumPostFeed: React.FC<ForumPostFeedProps> = ({ spaceId, refreshKe
   const [hasMorePosts, setHasMorePosts] = useState(true);
   const [optimisticReactions, setOptimisticReactions] = useState<Record<string, number>>({});
   const [optimisticUserReactions, setOptimisticUserReactions] = useState<Record<string, string | null>>({});
-  const [followLoadingMap, setFollowLoadingMap] = useState<Record<string, boolean>>({});
   
   // Note: Follow logic is handled at the parent (Forums.tsx) level
   // This feed component doesn't know about "following"
@@ -112,22 +110,6 @@ export const ForumPostFeed: React.FC<ForumPostFeedProps> = ({ spaceId, refreshKe
     }
   }, [user, navigate, toast, posts, optimisticUserReactions, optimisticReactions]);
 
-  const handleFollow = useCallback(async (authorId: string) => {
-    if (!user) { navigate('/login'); return; }
-    
-    setFollowLoadingMap(prev => ({ ...prev, [authorId]: true }));
-    
-    try {
-      await toggleFollow(authorId);
-      // Refetch the entire social graph to update all components
-      await refetchSocialGraph();
-    } catch (error: any) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
-    } finally {
-      setFollowLoadingMap(prev => ({ ...prev, [authorId]: false }));
-    }
-  }, [user, navigate, toast, refetchSocialGraph]);
-
   return (
     <div className="space-y-4">
       {posts.map(post => (
@@ -137,10 +119,6 @@ export const ForumPostFeed: React.FC<ForumPostFeedProps> = ({ spaceId, refreshKe
           onReaction={handleOptimisticReaction}
           optimisticReactionCount={optimisticReactions[post.id]}
           optimisticUserReaction={optimisticUserReactions[post.id]}
-          // Follow logic is not implemented in this feed
-          onFollow={handleFollow}
-          isFollowing={isFollowing(post.creator_id)}
-          isFollowLoading={!!followLoadingMap[post.creator_id]}
         />
       ))}
       {hasMorePosts && (
