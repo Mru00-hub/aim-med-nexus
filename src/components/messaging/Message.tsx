@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage, AvatarProfile} from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/use-toast';
@@ -95,7 +95,11 @@ export const Message: React.FC<MessageProps> = ({
 
     const isCurrentUser = message.user_id === currentUserId;
     const displayName = message.author?.full_name || 'User';
-    const avatarUrl = message.author?.profile_picture_url;
+    const authorProfile: AvatarProfile | null = message.author ? {
+      id: message.user_id,
+      full_name: message.author.full_name,
+      profile_picture_url: message.author.profile_picture_url,
+    } : null;
     
     const reactionCounts = useMemo(() => {
         return message.reactions.reduce((acc, reaction) => {
@@ -172,9 +176,9 @@ export const Message: React.FC<MessageProps> = ({
         <div className={cn("flex w-full gap-2 sm:gap-3 min-w-0", isCurrentUser ? "justify-end" : "justify-start")}>
             {!isCurrentUser && (
                 <Link to={`/profile/${message.user_id}`} className="flex-shrink-0">
-                    <Avatar className="h-8 w-8 sm:h-10 sm:w-10 flex-shrink-0">
-                        <AvatarImage src={avatarUrl ?? undefined} alt={displayName} />
-                        <AvatarFallback>{displayName?.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                    <Avatar profile={authorProfile} className="h-8 w-8 sm:h-10 sm:w-10 flex-shrink-0">
+                        <AvatarImage alt={displayName} />
+                        <AvatarFallback />
                     </Avatar>
                 </Link>
             )}           
@@ -231,9 +235,9 @@ export const Message: React.FC<MessageProps> = ({
             
             {isCurrentUser && (
                 <Link to={`/profile/${message.user_id}`} className="flex-shrink-0">
-                    <Avatar className="h-8 w-8 sm:h-10 sm:w-10 flex-shrink-0">
-                        <AvatarImage src={avatarUrl ?? undefined} alt={displayName} />
-                        <AvatarFallback>{displayName?.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                    <Avatar profile={authorProfile} className="h-8 w-8 sm:h-10 sm:w-10 flex-shrink-0">
+                        <AvatarImage alt={displayName} />
+                        <AvatarFallback />
                     </Avatar>
                 </Link>
             )}
