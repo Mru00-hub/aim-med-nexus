@@ -1,14 +1,47 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Users, Search, Sparkles, UserPlus, MoreHorizontal, Ban } from 'lucide-react';
+import { Users, Search, Sparkles, UserPlus, MoreHorizontal, Ban, Loader2, Check, Clock, MessageSquare } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { UserActionCard } from './UserActionCard';
+import { useSocialCounts } from '@/context/SocialCountsContext';
+import { toggleFollow } from '@/integrations/supabase/community.api'; // <-- Import toggleFollow
+import { useAuth } from '@/hooks/useAuth'; // <-- Import useAuth
+import { useToast } from '@/components/ui/use-toast'; // <-- Import useToast
+import { useNavigate } from 'react-router-dom'; // <-- Import useNavigate
+import { createOrGetConversation } from '@/integrations/supabase/social.api';
 
 export const DiscoverTab = ({ recommendations, loading, onSendRequest, onBlockUser }) => {
   const [searchTerm, setSearchTerm] = useState('');
+  const { user } = useAuth(); // Needed for user ID
+  const { isFollowing, getConnectionStatus, refetchSocialGraph } = useSocialCounts();
+  const [followLoadingMap, setFollowLoadingMap] = useState<Record<string, boolean>>({});
+  const { toast } = useToast();
+  const navigate = useNavigate();
+
+  const handleFollow = useCallback(async (userId: string) => {
+    if (!user) return;
+    setFollowLoadingMap(prev => ({ ...prev, [userId]: true }));
+    try {
+      await toggleFollow(userId);
+      await refetchSocialGraph(); // Refresh global state
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } finally {
+      setFollowLoadingMap(prev => ({ ...prev, [userId]: false }));
+    }
+  }, [user, refetchSocialGraph, toast]);
+
+  const handleMessage = async (userId: string) => {
+    try {
+      const conversationId = await createOrGetConversation(userId);
+      navigate(`/inbox?convo=${conversationId}`);
+    } catch (error: any) {
+      toast({ title: "Error", description: `Could not start conversation: ${error.message}`, variant: "destructive" });
+    }
+  };
 
   const filteredRecommendations = useMemo(() => {
     if (!searchTerm) return recommendations;
