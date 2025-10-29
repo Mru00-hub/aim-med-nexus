@@ -95,8 +95,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   useEffect(() => {
-    console.log('[Auth Effect - Revised] START'); // Log 1
-    let mounted = true;    
+    console.log('[Auth] Effect mounted');
+    let isMounted = true;
+
     const initAuth = async () => {
       console.log('[Auth] Starting initialization...');
     
@@ -124,7 +125,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (currentSession?.user) {
           console.log('[Auth] User found, loading profile...');
           setLoadingMessage('Loading profile...');
-        
+         
           // Fetch profile
           const { data: profileData, error: profileError } = await supabase
             .from('profiles')
@@ -134,7 +135,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
           console.log('[Auth] Profile result:', { hasProfile: !!profileData, error: profileError });
 
-          if (isMounted && profileData) {
+          if (!isMounted) return;
+
+          if (profileData) {
             setProfile(profileData);
           
             // Fetch unread count
