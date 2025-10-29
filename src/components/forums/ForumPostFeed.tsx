@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { PostOrThreadSummary, getThreadsForSpace, toggleReaction } from '@/integrations/supabase/community.api';
+import { PostOrThreadSummary, getThreadsForSpace, toggleReaction, toggleFollow } from '@/integrations/supabase/community.api';
 import { PostFeedCard } from '@/components/forums/PostFeedCard';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,7 @@ import { Loader2 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
+import { useSocialCounts } from '@/context/SocialCountsContext';
 
 const POSTS_PER_PAGE = 10;
 
@@ -17,9 +18,10 @@ interface ForumPostFeedProps {
 }
 
 export const ForumPostFeed: React.FC<ForumPostFeedProps> = ({ spaceId, refreshKey }) => {
-  const { user, profile, refreshProfile } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { isFollowing, refetchSocialGraph } = useSocialCounts();
 
   const [posts, setPosts] = useState<PostOrThreadSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -28,8 +30,7 @@ export const ForumPostFeed: React.FC<ForumPostFeedProps> = ({ spaceId, refreshKe
   const [hasMorePosts, setHasMorePosts] = useState(true);
   const [optimisticReactions, setOptimisticReactions] = useState<Record<string, number>>({});
   const [optimisticUserReactions, setOptimisticUserReactions] = useState<Record<string, string | null>>({});
-  const [followingStatus, setFollowingStatus] = useState<Record<string, boolean>>({});
-  const [isFollowLoading, setIsFollowLoading] = useState<Record<string, boolean>>({});
+  const [followLoadingMap, setFollowLoadingMap] = useState<Record<string, boolean>>({});
   
   // Note: Follow logic is handled at the parent (Forums.tsx) level
   // This feed component doesn't know about "following"
@@ -58,21 +59,6 @@ export const ForumPostFeed: React.FC<ForumPostFeedProps> = ({ spaceId, refreshKe
   useEffect(() => {
     loadPosts(1);
   }, [loadPosts, refreshKey]); // Reload if onPostCreated changes (i.e., a post is created)
-
-  useEffect(() => {
-    // When the profile loads, initialize the followingStatus state
-    if (profile && profile.following) {
-      const followingMap: Record<string, boolean> = {};
-      profile.following.forEach((follow: { followed_id: string }) => {
-        followingMap[follow.followed_id] = true;
-      });
-      setFollowingStatus(followingMap);
-    }
-  }, [profile]);
-
-  useEffect(() => {
-    loadPosts(1);
-  }, [loadPosts, refreshKey]);
 
   const handleOptimisticReaction = useCallback(async (
     postId: string, 
@@ -129,19 +115,18 @@ export const ForumPostFeed: React.FC<ForumPostFeedProps> = ({ spaceId, refreshKe
   const handleFollow = useCallback(async (authorId: string) => {
     if (!user) { navigate('/login'); return; }
     
-    setIsFollowLoading(prev => ({ ...prev, [authorId]: true }));
+    setFollowLoadingMap(prev => ({ ...prev, [authorId]: true }));
     
     try {
       await toggleFollow(authorId);
-      const newFollowingState = !followingStatus[authorId];
-      setFollowingStatus(prev => ({ ...prev, [authorId]: newFollowingState }));
-      refreshProfile(); 
+      // Refetch the entire social graph to update all components
+      await refetchSocialGraph();
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     } finally {
-      setIsFollowLoading(prev => ({ ...prev, [authorId]: false }));
+      setFollowLoadingMap(prev => ({ ...prev, [authorId]: false }));
     }
-  }, [user, navigate, toast, refreshProfile, followingStatus]);
+  }, [user, navigate, toast, refetchSocialGraph]);
 
   return (
     <div className="space-y-4">
@@ -154,8 +139,8 @@ export const ForumPostFeed: React.FC<ForumPostFeedProps> = ({ spaceId, refreshKe
           optimisticUserReaction={optimisticUserReactions[post.id]}
           // Follow logic is not implemented in this feed
           onFollow={handleFollow}
-          isFollowing={!!followingStatus[post.creator_id]} // Use creator_id
-          isFollowLoading={!!isFollowLoading[post.creator_id]}
+          isFollowing={isFollowing(post.creator_id)}
+          isFollowLoading={!!followLoadingMap[post.creator_id]}
         />
       ))}
       {hasMorePosts && (
