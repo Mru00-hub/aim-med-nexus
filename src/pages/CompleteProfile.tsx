@@ -12,7 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Separator } from "@/components/ui/separator";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
-
+import { generateAvatarUrl } from '@/lib/utils';
 // --- Import ALL Profile Edit Components ---
 import { ProfileAvatar } from '@/components/profile-edit/ProfileAvatar';
 import { ProfileBasicInfo } from '@/components/profile-edit/ProfileBasicInfo';
@@ -68,18 +68,6 @@ type Specialization = { id: string; label: string; value: string };
 type StudentYear = { value: string; label: string };
 type ExperienceLevel = { value: string; label: string };
 
-// --- (generateUniqueColor and seedDropdownList helpers remain the same) ---
-const generateUniqueColor = (id: string): string => {
-  let hash = 0;
-  for (let i = 0; i < id.length; i++) {
-    hash = id.charCodeAt(i) + ((hash << 5) - hash);
-    hash = hash & hash;
-  }
-  const hue = hash % 360;
-  const saturation = 70 + (hash % 21);
-  const lightness = 40 + (hash % 21);
-  return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
-};
 function seedDropdownList<T extends { id: string }>(list: T[], item: T | null | undefined): T[] {
   if (!item) return list;
   if (list.find(i => i.id === item.id)) return list;
@@ -430,8 +418,7 @@ const CompleteProfile = () => {
           if (profile.profile_picture_url) {
             setAvatarUrl(profile.profile_picture_url);
           } else if (profile.full_name) {
-            const uniqueColor = generateUniqueColor(user.id);
-            const generatedUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.full_name)}&background=${uniqueColor.substring(1)}&color=fff&size=256`;
+            const generatedUrl = generateAvatarUrl(profile.full_name, user.id);
             setAvatarUrl(generatedUrl);
           }
           setIsPageLoading(false);
@@ -570,9 +557,15 @@ const CompleteProfile = () => {
     }
   };
 
-  const removeAvatar = () => {
+  const handleClearPreview = () => {
     setAvatarFile(null);
     setAvatarPreview('');
+  };
+
+  const handleRemoveSavedAvatar = () => {
+    setAvatarFile(null);
+    setAvatarPreview('');
+    setAvatarUrl(''); // This is the new line
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -779,7 +772,8 @@ const CompleteProfile = () => {
               avatarUrl={avatarUrl}
               fullName={formData.full_name}
               onAvatarChange={handleAvatarChange}
-              onRemoveAvatar={removeAvatar}
+              onClearPreview={handleClearPreview} 
+              onRemoveSavedAvatar={handleRemoveSavedAvatar}
             />
 
             <form onSubmit={handleSubmit} className="space-y-6">
