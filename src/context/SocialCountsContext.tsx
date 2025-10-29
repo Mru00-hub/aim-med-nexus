@@ -60,7 +60,11 @@ export const SocialCountsProvider = ({ children }: { children: ReactNode }) => {
           .from('user_follows')
           .select('followed_id')
           .eq('follower_id', user.id),
-        getMyConnections() // This RPC call gets all connection statuses
+        supabase
+          .from('user_connections')
+          .select('requester_id, addressee_id, status')
+          .or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`) // Get all rows I'm a part of
+          .in('status', ['pending', 'accepted']) // Only get active/pending statuses
       ]);
 
       // Process follows
@@ -68,16 +72,25 @@ export const SocialCountsProvider = ({ children }: { children: ReactNode }) => {
       const newFollowsSet = new Set(followsResult.data.map(f => f.followed_id));
       setFollowsSet(newFollowsSet);
 
-      // Process connections
+      if (connectionsResult.error) throw connectionsResult.error; // Handle error from new query
+      
       const newConnectionsMap = new Map<string, 'connected' | 'pending_sent' | 'pending_received'>();
       let pendingRequestCount = 0;
 
-      for (const conn of connectionsResult) {
-        // The `Connection` type from `get_my_connections_with_status`
-        // tells us the status relative to the *other* user.
-        newConnectionsMap.set(conn.other_user_id, conn.status);
-        if (conn.status === 'pending_received') {
-          pendingRequestCount++;
+      for (const conn of connectionsResult.data) {
+        if (conn.status === 'accepted') {
+          // Find the *other* user's ID
+          const otherUserId = conn.requester_id === user.id ? conn.addressee_id : conn.requester_id;
+          newConnectionsMap.set(otherUserId, 'connected');
+        } else if (conn.status === 'pending') {
+          if (conn.requester_id === user.id) {
+            // I sent the request
+            newConnectionsMap.set(conn.addressee_id, 'pending_sent');
+          } else {
+            // I received the request
+            newConnectionsMap.set(conn.requester_id, 'pending_received');
+            pendingRequestCount++;
+          }
         }
       }
       
