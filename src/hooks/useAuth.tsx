@@ -100,7 +100,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLoading(true);
     setLoadingMessage('Initializing session...');
     const handleSession = async (session: Session) => {
-      console.log('[Auth] User found, loading profile...');
+      console.log('[Auth] Session found. Forcing auth token into client...');
+      await supabase.auth.setSession(session); 
+      
+      console.log('[Auth] Token set. Now loading profile...');
       setLoadingMessage('Loading profile...');
       
       const profileData = await fetchProfile(session.user.id);
@@ -124,27 +127,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log(`[Auth] Auth state changed: ${event}`);
     
       // Handle initial load, sign-in, or token refresh
-      if (event === 'INITIAL_SESSION') {
-        if (newSession) {
-          // THE FIX: On initial load, wait a moment for the client
-          // to set its auth headers before we query RLS-protected tables.
-          console.log('[Auth] Initial session found. Adding tiny delay for auth header setup...');
-          setTimeout(() => {
-            handleSession(newSession);
-          }, 50); // 50-100ms is usually enough
-        } else {
-          // No user, just stop loading
-          console.log('[Auth] Initial session, no user.');
-          setLoading(false);
-          setLoadingMessage('');
-        }
-      } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-        if (newSession) {
-          // No delay needed for these events
-          await handleSession(newSession);
-        }
-      } else if (event === 'SIGNED_OUT') {
-        console.log('[Auth] User signed out, clearing state.');
+      if ((event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && newSession) {
+        // The handleSession function now contains the fix for the race condition
+        await handleSession(newSession);
+
+      } else if (event === 'SIGNED_OUT' || (event === 'INITIAL_SESSION' && !newSession)) {
+        // This handles both "logged out" and "initial load with no user"
+        console.log('[Auth] No session found or user signed out.');
         setSession(null);
         setUser(null);
         setProfile(null);
