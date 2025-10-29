@@ -96,60 +96,70 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     console.log('[Auth] Effect mounted');
-    
     setLoading(true);
     setLoadingMessage('Initializing session...');
-    const handleSession = async (session: Session) => {
-      console.log('[Auth] Session found. Forcing auth token into client...');
-      await supabase.auth.setSession(session); 
-      
-      console.log('[Auth] Token set. Now loading profile...');
-      setLoadingMessage('Loading profile...');
-      
+
+    // Helper function to load profile and unread count
+    const loadUserProfile = async (session: Session) => {
+      console.log(`[Auth] Loading profile for ${session.user.id}`);
       const profileData = await fetchProfile(session.user.id);
-      
       if (profileData) {
         setProfile(profileData);
         await fetchUnreadCount();
       }
-      
-      setSession(session);
-      setUser(session.user);
-      console.log('[Auth] User and profile set.');
-      
-      setLoading(false);
-      setLoadingMessage('');
     };
 
-    // Set up auth listener
-    console.log('[Auth] Setting up auth state listener...');
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
-      console.log(`[Auth] Auth state changed: ${event}`);
-    
-      // Handle initial load, sign-in, or token refresh
-      if ((event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && newSession) {
-        // The handleSession function now contains the fix for the race condition
-        await handleSession(newSession);
+      console.log(`[Auth] Auth event: ${event}`);
 
+      if (newSession) {
+        // These events establish a new session (e.g., login, initial load)
+        if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
+          console.log('[Auth] Setting session and loading profile...');
+          
+          // THE FIX (for reload hang):
+          // Force-set the session for the client *before* fetching the profile.
+          await supabase.auth.setSession(newSession); 
+          
+          setSession(newSession);
+          setUser(newSession.user);
+          await loadUserProfile(newSession);
+          
+        } else if (event === 'TOKEN_REFRESHED') {
+          // THE FIX (for tab-switching):
+          // Just update our local state. Do *not* call setSession.
+          // Supabase handles this refresh internally.
+          console.log('[Auth] Token refreshed, updating local state.');
+          setSession(newSession);
+          setUser(newSession.user); // Ensure user is also in sync
+
+        } else if (event === 'USER_UPDATED') {
+          // User changed email/password, refresh their profile data
+          console.log('[Auth] User updated, refreshing profile.');
+          setUser(newSession.user);
+          await loadUserProfile(newSession);
+        }
       } else if (event === 'SIGNED_OUT' || (event === 'INITIAL_SESSION' && !newSession)) {
-        // This handles both "logged out" and "initial load with no user"
-        console.log('[Auth] No session found or user signed out.');
+        // Handles both explicit sign-out and initial load with no user
+        console.log('[Auth] No session or user signed out. Clearing state.');
         setSession(null);
         setUser(null);
         setProfile(null);
         setInitialUnreadCount(null);
         setPersonalKey(null);
         setUserMasterKey(null);
-        setLoading(false);
-        setLoadingMessage('');
       }
+
+      // Always stop loading after the event is handled
+      setLoading(false);
+      setLoadingMessage('');
     });
 
     return () => {
-      console.log('[Auth] Cleaning up subscription...');
+      console.log('[Auth] Cleaning up subscription.');
       subscription.unsubscribe();
     };
-  }, [toast, fetchProfile, fetchUnreadCount]); 
+  }, [fetchProfile, fetchUnreadCount]); 
     
   const refreshProfile = useCallback(async () => {
     try {
