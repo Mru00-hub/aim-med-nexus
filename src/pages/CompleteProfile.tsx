@@ -61,6 +61,7 @@ export type WorkExperienceItem = EditableWorkExperience;
 export type EducationHistoryItem = EditableEducationHistory;
 
 // --- Data Types ---
+type ClientItem<T> = T & { client_id?: string };
 type Location = { id: string; label: string; value: string };
 type Institution = { id: string; label: string; value: string };
 type Course = { id: string; label: string; value: string };
@@ -117,18 +118,18 @@ const CompleteProfile = () => {
 
   // 🚀 PLAN: State for all 1-to-many data
   // Clinical
-  const [achievements, setAchievements] = useState<EditableAchievement[]>([]);
-  const [publications, setPublications] = useState<EditablePublication[]>([]);
-  const [certifications, setCertifications] = useState<EditableCertification[]>([]);
-  const [awards, setAwards] = useState<EditableAward[]>([]);
+  const [achievements, setAchievements] = useState<ClientItem<EditableAchievement>[]>([]);
+  const [publications, setPublications] = useState<ClientItem<EditablePublication>[]>([]);
+  const [certifications, setCertifications] = useState<ClientItem<EditableCertification>[]>([]);
+  const [awards, setAwards] = useState<ClientItem<EditableAward>[]>([]);
   // Non-Clinical
-  const [transitionData, setTransitionData] = useState<EditableTransition | null>(null);
-  const [ventures, setVentures] = useState<EditableVenture[]>([]);
-  const [contentPortfolio, setContentPortfolio] = useState<EditableContent[]>([]);
+  const [transitionData, setTransitionData] = useState<EditableTransition | null>(null); // No change here
+  const [ventures, setVentures] = useState<ClientItem<EditableVenture>[]>([]);
+  const [contentPortfolio, setContentPortfolio] = useState<ClientItem<EditableContent>[]>([]);
   // Shared
-  const [cocurriculars, setCocurriculars] = useState<EditableCocurricular[]>([]);
-  const [workExperience, setWorkExperience] = useState<WorkExperienceItem[]>([]);
-  const [educationHistory, setEducationHistory] = useState<EducationHistoryItem[]>([]);
+  const [cocurriculars, setCocurriculars] = useState<ClientItem<EditableCocurricular>[]>([]);
+  const [workExperience, setWorkExperience] = useState<ClientItem<WorkExperienceItem>[]>([]);
+  const [educationHistory, setEducationHistory] = useState<ClientItem<EducationHistoryItem>[]>([]);
 
   // 🚀 PLAN: State to track deleted items
   const [deletedItems, setDeletedItems] = useState({
@@ -578,6 +579,7 @@ const CompleteProfile = () => {
       contentPortfolio: { title: '', content_type: 'blog', url: '' },
       cocurriculars: { title: '', category: 'Organizational' },
     };
+    const newItem = { ...defaults[listName], client_id: crypto.randomUUID() };
     const setters = {
       achievements: setAchievements,
       publications: setPublications,
@@ -598,7 +600,7 @@ const CompleteProfile = () => {
     });
   };
   const addWorkExperience = () => {
-    setWorkExperience(prev => [...prev, { position: '', organization: '', start_date: '', end_date: null, description: '' }]);
+    setWorkExperience(prev => [...prev, { position: '', organization: '', start_date: '', end_date: null, description: '', client_id: crypto.randomUUID()}]);
   };
 
   const handleEducationHistoryChange = (index: number, field: string, value: any) => {
@@ -615,22 +617,24 @@ const CompleteProfile = () => {
       return newList;
     });
   };
-   const addEducationHistory = () => {
-    setEducationHistory(prev => [...prev, { institution_name: '', degree: '', field_of_study: '', start_year: null, end_year: null, description: '' }]);
+  const addEducationHistory = () => {
+    setEducationHistory(prev => [...prev, { institution_name: '', degree: '', field_of_study: '', start_year: null, end_year: null, description: '', client_id: crypto.randomUUID()}]);
   };
 
   type AllListNames = ListNameExisting | 'work_experiences' | 'education_history';
 
-  const removeListItem = (listName: AllListNames, index: number) => {
+  const removeListItem = (listName: AllListNames, idToRemove: string) => {
     const lists = { achievements, publications, certifications, awards, ventures, contentPortfolio, cocurriculars, work_experiences: workExperience, education_history: educationHistory }; // 
     const setters = { achievements: setAchievements, publications: setPublications, certifications: setCertifications, awards: setAwards, ventures: setVentures, contentPortfolio: setContentPortfolio, cocurriculars: setCocurriculars, work_experiences: setWorkExperience, education_history: setEducationHistory }; // 
-    const list = lists[listName];
-    const setter = setters[listName];
-    const item = list[index];
-    if (item?.id) { // 
+    const list = lists[listName] as (ClientItem<any> & { id?: string })[];
+    const setter = setters[listName] as React.Dispatch<React.SetStateAction<any[]>>;
+    const item = list.find((it) => (it.id || it.client_id) === idToRemove);
+    if (item && item.id) { // If it has a DB id, mark it for deletion
       setDeletedItems(prev => ({ ...prev, [listName]: [...prev[listName], item.id] }));
-    } // 
-    setter((prev: any[]) => prev.filter((_, i) => i !== index));
+    } 
+    
+    // Filter the list by the unique ID (client_id OR id), NOT by index
+    setter((prev: any[]) => prev.filter((it: any) => (it.id || it.client_id) !== idToRemove));
   };
 
   const displaySrc = useMemo(() => {
@@ -1098,7 +1102,7 @@ const CompleteProfile = () => {
                          items={workExperience}
                          onListChange={handleWorkExperienceChange}
                          onAddItem={addWorkExperience}
-                         onRemoveItem={(index) => removeListItem('work_experiences', index)}
+                         onRemoveItem={(id) => removeListItem('work_experiences', id)}
                        /> {/* */}
                     </AccordionContent>
                 </AccordionItem>
@@ -1114,7 +1118,7 @@ const CompleteProfile = () => {
                          items={educationHistory}
                          onListChange={handleEducationHistoryChange} // 
                          onAddItem={addEducationHistory}
-                         onRemoveItem={(index) => removeListItem('education_history', index)}
+                         onRemoveItem={(id) => removeListItem('education_history', id)}
                          institutionOptions={institutionOptions} // 
                          onInstitutionSearch={setInstitutionSearch}
                          isInstLoading={isInstLoading}
@@ -1128,15 +1132,13 @@ const CompleteProfile = () => {
 
                 {/* --- Conditional Clinical Forms --- */}
                 {profileMode === 'clinical' && ( // 
-                  <> {/* Use Fragment */}
-                    {/* Professional Details (Duplicate?) - REMOVED, covered by "Current" above */}
-                    {/* Education Details (Duplicate?) - REMOVED, covered by "Current" above */}
+                  <>                     
                     <AccordionItem value="clinical-achievements"> {/* */}
                       <AccordionTrigger className="text-lg font-semibold"> {/* */}
                         <div className="flex items-center gap-2"> <Award/> Academic Achievements </div>
                       </AccordionTrigger>
                       <AccordionContent>
-                        <ProfileAchievementsForm items={achievements} onListChange={handleListChange} onAddItem={addListItem} onRemoveItem={(index) => removeListItem('achievements', index)} /> {/* */}
+                        <ProfileAchievementsForm items={achievements} onListChange={handleListChange} onAddItem={addListItem} onRemoveItem={(id) => removeListItem('achievements', id)} /> {/* */}
                       </AccordionContent>
                     </AccordionItem>
                     <AccordionItem value="clinical-publications"> {/* */}
@@ -1144,7 +1146,7 @@ const CompleteProfile = () => {
                         <div className="flex items-center gap-2"> <BookOpen/> Research & Publications </div> {/* */}
                       </AccordionTrigger>
                       <AccordionContent>
-                        <ProfilePublicationsForm items={publications} onListChange={handleListChange} onAddItem={addListItem} onRemoveItem={(index) => removeListItem('publications', index)} />
+                        <ProfilePublicationsForm items={publications} onListChange={handleListChange} onAddItem={addListItem} onRemoveItem={(id) => removeListItem('publications', id)} />
                       </AccordionContent>
                     </AccordionItem>
                     <AccordionItem value="clinical-certs">
@@ -1152,7 +1154,7 @@ const CompleteProfile = () => {
                         <div className="flex items-center gap-2"> <ShieldCheck/> Certifications </div> {/* */}
                       </AccordionTrigger>
                       <AccordionContent>
-                        <ProfileCertificationsForm items={certifications} onListChange={handleListChange} onAddItem={addListItem} onRemoveItem={(index) => removeListItem('certifications', index)} /> {/* */}
+                        <ProfileCertificationsForm items={certifications} onListChange={handleListChange} onAddItem={addListItem} onRemoveItem={(id) => removeListItem('certifications', id)} /> {/* */}
                       </AccordionContent>
                     </AccordionItem>
                     <AccordionItem value="clinical-awards"> {/* */}
@@ -1160,7 +1162,7 @@ const CompleteProfile = () => {
                         <div className="flex items-center gap-2"> <Award/> Awards & Honors </div>
                       </AccordionTrigger>
                       <AccordionContent>
-                        <ProfileAwardsForm items={awards} onListChange={handleListChange} onAddItem={addListItem} onRemoveItem={(index) => removeListItem('awards', index)} />
+                        <ProfileAwardsForm items={awards} onListChange={handleListChange} onAddItem={addListItem} onRemoveItem={(id) => removeListItem('awards', id)} />
                       </AccordionContent>
                     </AccordionItem>
                   </>
@@ -1182,7 +1184,7 @@ const CompleteProfile = () => {
                          <div className="flex items-center gap-2"> <Lightbulb/> Ventures & Projects </div> {/* */}
                        </AccordionTrigger>
                        <AccordionContent>
-                         <ProfileVenturesForm items={ventures} onListChange={handleListChange} onAddItem={addListItem} onRemoveItem={(index) => removeListItem('ventures', index)} />
+                         <ProfileVenturesForm items={ventures} onListChange={handleListChange} onAddItem={addListItem} onRemoveItem={(id) => removeListItem('ventures', id)} />
                        </AccordionContent>
                      </AccordionItem>
                      <AccordionItem value="nonclinical-content">
@@ -1190,7 +1192,7 @@ const CompleteProfile = () => {
                          <div className="flex items-center gap-2"> <Megaphone/> Content Portfolio </div> {/* */}
                        </AccordionTrigger>
                        <AccordionContent> {/* */}
-                         <ProfileContentForm items={contentPortfolio} onListChange={handleListChange} onAddItem={addListItem} onRemoveItem={(index) => removeListItem('content_portfolio', index)} />
+                         <ProfileContentForm items={contentPortfolio} onListChange={handleListChange} onAddItem={addListItem} onRemoveItem={(id) => removeListItem('content_portfolio', id)} />
                        </AccordionContent>
                      </AccordionItem>
                      <AccordionItem value="nonclinical-clinical-bg"> {/* */}
@@ -1233,7 +1235,7 @@ const CompleteProfile = () => {
                     <div className="flex items-center gap-2"> <Palette/> Cocurriculars & Organizing </div> {/* */}
                   </AccordionTrigger>
                   <AccordionContent>
-                    <ProfileCocurricularsForm items={cocurriculars} onListChange={handleListChange} onAddItem={addListItem} onRemoveItem={(index) => removeListItem('cocurriculars', index)} />
+                    <ProfileCocurricularsForm items={cocurriculars} onListChange={handleListChange} onAddItem={addListItem} onRemoveItem={(id) => removeListItem('cocurriculars', id)} />
                   </AccordionContent>
                 </AccordionItem> {/* */}
                 <AccordionItem value="shared-about">
