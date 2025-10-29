@@ -69,12 +69,7 @@ export const UserListModal = ({
             })) as ApiUser[];
             break;
           case 'Mutual Connections':
-            const mutualData = await getMutualConnections(userId); 
-            data = mutualData.map(conn => ({
-              ...conn, // Spread all other fields (full_name, profile_picture_url, etc.)
-              id: conn.other_user_id, // Map the ID field
-              connection_status: conn.status, 
-            })) as ApiUser[];
+            data = await getMutualConnections(userId) as ApiUser[]; 
             break;
           default:
             throw new Error('Invalid list title');
