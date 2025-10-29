@@ -28,6 +28,8 @@ export const ProfileAvatar: React.FC<ProfileAvatarProps> = ({ className }) => {
     return profile.profile_picture_url || generateAvatarUrl(profile.full_name, user.id);
   }, [profile?.profile_picture_url, profile?.full_name, user?.id]);
 
+  console.log('Generated Avatar URL:', finalAvatarUrl); 
+
   if (loading) {
     // Use the passed className for consistent sizing
     return <Skeleton className={`rounded-full ${className}`} />;
