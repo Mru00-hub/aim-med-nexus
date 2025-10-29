@@ -7,10 +7,12 @@ import { X, Plus } from 'lucide-react';
 import { WorkExperienceItem } from '@/pages/CompleteProfile'; // Import the type
 
 type ProfileWorkExperienceFormProps = {
-  items: WorkExperienceItem[];
+  // 1. UPDATE PROP TYPE for 'items'
+  items: (WorkExperienceItem & { client_id?: string })[];
   onListChange: (index: number, field: string, value: any) => void;
   onAddItem: () => void;
-  onRemoveItem: (index: number) => void;
+  // 2. UPDATE PROP TYPE for 'onRemoveItem'
+  onRemoveItem: (id: string) => void;
 };
 
 export const ProfileWorkExperienceForm: React.FC<ProfileWorkExperienceFormProps> = ({
@@ -23,14 +25,14 @@ export const ProfileWorkExperienceForm: React.FC<ProfileWorkExperienceFormProps>
   return (
     <div className="space-y-4">
       {items.map((item, index) => (
-        <Card key={item.id || index}> 
+        <Card key={item.id || item.client_id}> 
           <CardContent className="p-4 space-y-3 relative">
             <Button
               type="button"
               variant="ghost"
               size="icon"
               className="absolute top-2 right-2 h-6 w-6 text-muted-foreground hover:text-destructive"
-              onClick={() => onRemoveItem(index)}
+              onClick={() => onRemoveItem(item.id || item.client_id!)}
             >
               <X className="h-4 w-4" />
             </Button>
