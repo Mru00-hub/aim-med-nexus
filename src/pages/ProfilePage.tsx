@@ -8,15 +8,9 @@ import { Separator } from "@/components/ui/separator";
 // 🚀 PLAN: Import all new API functions and types
 import {
   getProfileDetails,
-  toggleFollow,
   incrementProfileView,
   FullProfile, // The comprehensive type
 } from '@/integrations/supabase/community.api';
-import {
-  getConnectionStatus,
-  createOrGetConversation,
-  sendConnectionRequest, // 🚀 PLAN: For 'Connect' button
-} from '@/integrations/supabase/social.api';
 
 // 🚀 PLAN: Import Layouts
 import { Header } from '@/components/layout/Header';
@@ -48,11 +42,6 @@ const ProfilePage = () => {
 
   // 🚀 PLAN: State for all profile data
   const [fullProfile, setFullProfile] = useState<FullProfile | null>(null);
-  
-  // 🚀 PLAN: State for button logic
-  const [connectionStatus, setConnectionStatus] = useState<'connected' | 'pending_sent' | 'pending_received' | 'not_connected'>('not_connected');
-  const [isFollowLoading, setIsFollowLoading] = useState(false);
-  const [isConnectionLoading, setIsConnectionLoading] = useState(false);
 
   // 🚀 PLAN: General page state
   const [loading, setLoading] = useState(true);
@@ -90,10 +79,6 @@ const ProfilePage = () => {
         if (!isOwnProfile) {
           // Increment view count (fire and forget)
           incrementProfileView(targetUserId);
-          
-          // Fetch connection status for button logic
-          const status = await getConnectionStatus(targetUserId);
-          setConnectionStatus(status);
         }
       } catch (e: any) {
         console.error('Error loading full profile data:', e);
@@ -113,61 +98,7 @@ const ProfilePage = () => {
     setShareUrl(window.location.href);
   }, []);
 
-  // --- Button Action Handlers ---
-
-  const handleFollow = async () => {
-    if (!user) return toast({ title: 'Please log in', variant: 'destructive' });
-    if (!fullProfile) return;
-
-    setIsFollowLoading(true);
-    const wasFollowing = fullProfile.is_followed_by_viewer;
-
-    // Optimistic update
-    setFullProfile(prev => prev ? ({
-      ...prev,
-      is_followed_by_viewer: !wasFollowing,
-      followers_count: wasFollowing ? prev.followers_count - 1 : prev.followers_count + 1,
-    }) : null);
-
-    try {
-      await toggleFollow(fullProfile.profile.id);
-      toast({ title: wasFollowing ? 'Unfollowed' : 'Followed!' });
-    } catch (e: any) {
-      // Rollback
-      setFullProfile(prev => prev ? ({
-        ...prev,
-        is_followed_by_viewer: wasFollowing,
-        followers_count: wasFollowing ? prev.followers_count + 1 : prev.followers_count - 1,
-      }) : null);
-      toast({ variant: 'destructive', title: 'Error', description: e.message });
-    } finally {
-      setIsFollowLoading(false);
-    }
-  };
-
-  const handleMessage = async () => {
-    if (!fullProfile) return;
-    try {
-      const conversationId = await createOrGetConversation(fullProfile.profile.id);
-      navigate(`/messages/${conversationId}`);
-    } catch (e: any) {
-      toast({ variant: 'destructive', title: 'Error', description: `Could not start conversation: ${e.message}` });
-    }
-  };
-
-  const handleConnect = async () => {
-    if (!fullProfile) return;
-    setIsConnectionLoading(true);
-    try {
-      await sendConnectionRequest(fullProfile.profile.id);
-      setConnectionStatus('pending_sent'); // Optimistic update
-      toast({ title: 'Connection request sent!' });
-    } catch (e: any) {
-      toast({ variant: 'destructive', title: 'Error', description: e.message });
-    } finally {
-      setIsConnectionLoading(false);
-    }
-  };
+  // --- Button Action Handlers --
 
   const handleShare = () => {
     if (navigator.share) {
@@ -275,12 +206,6 @@ const ProfilePage = () => {
   const layoutProps = {
     data: fullProfile,
     isOwnProfile,
-    connectionStatus,
-    isFollowLoading,
-    isConnectionLoading,
-    onFollow: handleFollow,
-    onConnect: handleConnect,
-    onMessage: handleMessage,
     onShare: handleShare,
     onShowList: handleShowList,
   };
