@@ -1,13 +1,13 @@
 // src/components/layout/Header.tsx
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Heart, Bell, MessageSquare, Users, MessageCircle, Menu, X, Handshake, LogIn, UserPlus,UserIcon, LogOut, Settings, Shield, CreditCard, Trash2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { getLoveCount, incrementLoveCount } from '@/integrations/supabase/engagement';
-import { ProfileAvatar } from './ProfileAvatar';
+import { ProfileAvatar, AvatarProfile } from './ProfileAvatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
 import { 
@@ -53,6 +53,15 @@ export const Header = () => {
     { icon: Users, label: 'Social', href: '/social', showBadge: true, badge: requestCount, color: 'text-primary hover:text-primary/80' },
     { icon: MessageCircle, label: 'Inbox', href: '/inbox', showBadge: true, badge: unreadInboxCount, color: 'text-premium hover:text-premium/80' }
   ];
+
+  const avatarProfile = useMemo((): AvatarProfile | null => {
+    if (!user || !profile) return null;
+    return {
+      id: user.id,
+      full_name: profile.full_name,
+      profile_picture_url: profile.profile_picture_url
+    };
+  }, [user, profile]);
 
   const handleMobileNav = (path: string) => {
     navigate(path);
@@ -118,13 +127,13 @@ export const Header = () => {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-                  <ProfileAvatar className="h-10 w-10" />
+                  <ProfileAvatar profile={avatarProfile} loading={loading} className="h-10 w-10" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-56" align="end" forceMount>
                 <DropdownMenuLabel className="font-normal">
                   <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">{user.user_metadata?.full_name || 'User'}</p>
+                    <p className="text-sm font-medium leading-none">{profile?.full_name || 'User'}</p>
                     <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
                   </div>
                 </DropdownMenuLabel>
@@ -173,9 +182,9 @@ export const Header = () => {
       return (
         <div className="flex flex-col gap-2 p-4">
           <Button variant="ghost" className="justify-start h-auto" onClick={() => handleMobileNav(`/profile/${user.id}`)}>
-            <ProfileAvatar className="h-8 w-8 mr-3" />
+            <ProfileAvatar profile={avatarProfile} loading={loading} className="h-8 w-8 mr-3" />
             <div className="flex flex-col items-start">
-                <span className="font-semibold">My Profile</span>
+                <span className="font-semibold">{profile?.full_name || 'My Profile'}</span>
                 <span className="text-xs text-muted-foreground">{user.email}</span>
             </div>
           </Button>
