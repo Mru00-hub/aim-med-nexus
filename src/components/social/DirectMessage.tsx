@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { Trash2, Pencil, Reply, Loader2, AlertCircle, Download, File as FileIcon, SmilePlus } from 'lucide-react';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage, AvatarProfile } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { EmojiPicker } from './EmojiPicker';
 import { DirectMessageAttachment, DirectMessageWithDetails } from '@/integrations/supabase/social.api';
@@ -149,6 +149,11 @@ export const DirectMessage = ({ message, currentUserId, conversationKey, onReply
 
     const isMe = message.sender_id === currentUserId;
     const displayName = message.author?.full_name || 'User';
+    const authorProfile: AvatarProfile | null = message.author ? {
+      id: message.sender_id, // Use sender_id from message
+      full_name: message.author.full_name,
+      profile_picture_url: message.author.profile_picture_url,
+    } : null;
     
     const reactionCounts = useMemo(() => {
         return (message.reactions || []).reduce((acc, reaction) => {
@@ -221,9 +226,9 @@ export const DirectMessage = ({ message, currentUserId, conversationKey, onReply
                 to={`/profile/${message.sender_id}`} 
                 className="flex-shrink-0 transition-smooth hover:opacity-80"
               >
-                <Avatar className="h-8 w-8 md:h-10 md:w-10 flex-shrink-0">
-                  <AvatarImage src={message.author?.profile_picture_url || undefined} />
-                  <AvatarFallback>{displayName.charAt(0)}</AvatarFallback>
+                <Avatar profile={authorProfile} className="h-8 w-8 md:h-10 md:w-10 flex-shrink-0">
+                  <AvatarImage />
+                  <AvatarFallback />
                 </Avatar>
               </Link>
             )}
@@ -298,7 +303,17 @@ export const DirectMessage = ({ message, currentUserId, conversationKey, onReply
                 )}
             </div>
 
-            {isMe && <Avatar className="h-8 w-8 md:h-10 md:w-10 flex-shrink-0"><AvatarImage src={message.author?.profile_picture_url || undefined} /><AvatarFallback>{displayName.charAt(0)}</AvatarFallback></Avatar>}
+            {isMe && (
+              <Link 
+                to={`/profile/${message.sender_id}`} 
+                className="flex-shrink-0 transition-smooth hover:opacity-80"
+              >
+                <Avatar profile={authorProfile} className="h-8 w-8 md:h-10 md:w-10 flex-shrink-0">
+                  <AvatarImage />
+                  <AvatarFallback />
+                </Avatar>
+              </Link>
+            )}
         </div>
     );
 };
