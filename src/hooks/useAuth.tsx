@@ -96,59 +96,64 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     console.log('[Auth] Effect mounted');
-    let isMounted = true;
     
-    // Start loading
     setLoading(true);
     setLoadingMessage('Initializing session...');
 
     // Set up auth listener
     console.log('[Auth] Setting up auth state listener...');
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
-      console.log('[Auth] Auth state changed:', event);
+      console.log(`[Auth] Auth state changed: ${event}`);
     
-      if (!isMounted) return;
-
       // Handle initial load, sign-in, or token refresh
       if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         if (newSession?.user) {
           console.log('[Auth] User found, loading profile...');
           setLoadingMessage('Loading profile...');
           
+          // We await these so setLoading(false) doesn't run too early
           const profileData = await fetchProfile(newSession.user.id);
-
-          if (isMounted && profileData) {
-            setSession(newSession);
-            setUser(newSession.user);
+          
+          if (profileData) {
             setProfile(profileData);
             await fetchUnreadCount();
           }
+          
+          // Set user/session *after* profile is loaded
+          setSession(newSession);
+          setUser(newSession.user);
+          console.log('[Auth] User and profile set.');
+
+        } else if (event === 'INITIAL_SESSION') {
+            // This handles the case where the app loads and there is no user
+            console.log('[Auth] Initial session loaded, no user found.');
+            setLoading(false);
+            setLoadingMessage('');
         }
       } else if (event === 'SIGNED_OUT') {
-        if (isMounted) {
-          console.log('[Auth] User signed out, clearing state.');
-          setSession(null);
-          setUser(null);
-          setProfile(null);
-          setInitialUnreadCount(null);
-          setPersonalKey(null);
-          setUserMasterKey(null);
-        }
+        console.log('[Auth] User signed out, clearing state.');
+        setSession(null);
+        setUser(null);
+        setProfile(null);
+        setInitialUnreadCount(null);
+        setPersonalKey(null);
+        setUserMasterKey(null);
       }
       
-      // IMPORTANT: Stop loading *after* the event is processed
-      if (isMounted) {
+      // Stop loading *after* the event is processed
+      // (except for the 'no user on initial load' case, handled above)
+      if (event !== 'INITIAL_SESSION' || newSession?.user) {
+        console.log('[Auth] Event processed, setting loading=false');
         setLoading(false);
         setLoadingMessage('');
       }
     });
 
     return () => {
-      console.log('[Auth] Cleaning up...');
-      isMounted = false;
+      console.log('[Auth] Cleaning up subscription...');
       subscription.unsubscribe();
     };
-  }, [toast, fetchProfile, fetchUnreadCount]);
+  }, [toast, fetchProfile, fetchUnreadCount]); 
     
   const refreshProfile = useCallback(async () => {
     try {
