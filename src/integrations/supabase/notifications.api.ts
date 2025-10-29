@@ -9,11 +9,13 @@ import { supabase } from './client';
 //
 export type NotificationType =
   | 'connection_accepted'
-  | 'new_thread'
-  | 'new_space'
-  | 'new_reply'
+  | 'new_public_post_by_followed_user' // [!code --] | 'new_thread'
+  | 'new_public_space_by_followed_user' // [!code --] | 'new_space'
+  | 'new_reply_to_your_message' // [!code --] | 'new_reply'
+  | 'new_direct_message' // [!code ++]
+  | 'space_join_request' // [!code ++]
   | 'system_update'
-  | 'job_application_update'; // Kept for the 'coming soon' tab
+  | 'job_application_update';
 
 // This is the main type for a notification, joining the actor's profile info
 export type NotificationWithActor = {
@@ -21,7 +23,7 @@ export type NotificationWithActor = {
   user_id: string;
   actor_id: string;
   type: NotificationType;
-  entity_id: string | null; // e.g., thread_id, user_id, job_id
+  entity_id: string | null; // e.g., thread_id, user_id, job_id, space_id
   announcement_id: string | null;
   is_read: boolean;
   created_at: string;
@@ -30,9 +32,13 @@ export type NotificationWithActor = {
     full_name: string | null;
     profile_picture_url: string | null;
   } | null;
-  announcement: { // [!code ++]
-    title: string; // [!code ++]
-    body: string | null; // [!code ++]
+  announcement: {
+    title: string;
+    body: string | null;
+  } | null;
+  space: { // [!code ++]
+    // Joined from spaces table (entity_id -> spaces.id) // [!code ++]
+    name: string | null; // [!code ++]
   } | null; // [!code ++]
 };
 
@@ -61,6 +67,9 @@ export const getNotifications = async (): Promise<NotificationWithActor[]> => {
       announcement:announcements ( 
         title, 
         body 
+      ),
+      space:spaces (
+        name
       )
     `
     )
@@ -75,9 +84,11 @@ export const getNotifications = async (): Promise<NotificationWithActor[]> => {
   // just in case the DB has old types (e.g., 'new_connection_request')
   const knownTypes: NotificationType[] = [
     'connection_accepted',
-    'new_thread',
-    'new_space',
-    'new_reply',
+    'new_public_post_by_followed_user', // [!code --] 'new_thread',
+    'new_public_space_by_followed_user', // [!code --] 'new_space',
+    'new_reply_to_your_message', // [!code --] 'new_reply',
+    'new_direct_message', // [!code ++]
+    'space_join_request', // [!code ++]
     'system_update',
     'job_application_update',
   ];
