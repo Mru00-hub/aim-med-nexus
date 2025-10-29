@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage, AvatarProfile} from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Check, X, ShieldX, UserCog, UserCheck, UserX } from 'lucide-react';
@@ -32,13 +32,6 @@ interface MemberCardProps {
   onBan?: (membershipId: string) => void;
 }
 
-const getInitials = (name: string) => {
-  const names = name.split(' ');
-  return names.length > 1
-    ? `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase()
-    : name.substring(0, 2).toUpperCase();
-};
-
 const getBadgeVariant = (role: DisplayMember['role']) => {
     switch (role) {
       case 'ADMIN': return 'destructive';
@@ -68,13 +61,19 @@ export const MemberCard: React.FC<MemberCardProps> = ({ member, spaceType, isCur
     const showPendingControls = onApprove && onReject;
     const showActiveMemberControls = onRoleChange && member.membership_id;
 
+    const avatarProfile: AvatarProfile = {
+      id: member.user_id,
+      full_name: member.full_name,
+      profile_picture_url: member.profile_picture_url,
+    };
+
     return (
         <Card className="transition-all hover:shadow-md group">
             <CardContent className="p-4 flex items-center justify-between space-x-4">
                 <Link to={`/profile/${member.user_id}`} className="flex items-center space-x-4 flex-grow min-w-0">
-                    <Avatar className="h-12 w-12">
-                        <AvatarImage src={member.profile_picture_url || ''} alt={member.full_name} />
-                        <AvatarFallback>{getInitials(member.full_name)}</AvatarFallback>
+                    <Avatar profile={avatarProfile} className="h-12 w-12">
+                        <AvatarImage alt={member.full_name} />
+                        <AvatarFallback />
                     </Avatar>
                     <div className="flex-1 min-w-0">
                         <p className="font-semibold text-lg group-hover:text-primary truncate">{member.full_name}</p>
