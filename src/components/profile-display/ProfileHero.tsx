@@ -59,19 +59,31 @@ export const ProfileHero: React.FC<ProfileHeroProps> = ({
   const getHeadline = () => {
     if (profile.profile_mode === 'non_clinical') {
       const parts = [];
-      if (data.career_transition?.target_industries?.[0]) {
-        parts.push(data.career_transition.target_industries[0]);
-      } else if (data.ventures[0]?.role) {
+      if (data.career_transition?.transition_status && data.career_transition?.target_industries?.[0]) {
+        parts.push(`${data.career_transition.transition_status} to ${data.career_transition.target_industries[0]}`);
+      } 
+      // Fallback: Show Venture Role + Name
+      else if (data.ventures[0]?.role && data.ventures[0]?.name) {
+        parts.push(`${data.ventures[0].role} @ ${data.ventures[0].name}`);
+      }
+      // Fallback: Show just Venture Role
+      else if (data.ventures[0]?.role) {
         parts.push(data.ventures[0].role);
       }
-      if (data.content_portfolio[0]?.content_type) {
-        parts.push(data.content_portfolio[0].content_type);
+
+      // --- FIX 2: Use the content's TITLE, not its TYPE ---
+      if (data.content_portfolio[0]?.title) {
+        parts.push(data.content_portfolio[0].title);
       }
+      
+      // This part was correct and remains
       if (profile.current_position) {
         parts.push(`Former ${profile.specialization || profile.current_position}`);
       }
+
       return parts.slice(0, 3).join(' | ');
     }
+    
     // Clinical Headline
     return `${profile.current_position || ''}${profile.current_position && profile.organization ? ' @ ' : ''}${profile.organization || ''}`;
   };
