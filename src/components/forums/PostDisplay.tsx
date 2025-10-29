@@ -4,7 +4,7 @@ import remarkBreaks from 'remark-breaks';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/components/ui/use-toast';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage, AvatarProfile} from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
@@ -162,6 +162,12 @@ export const PostDisplay: React.FC<PostDisplayProps> = ({
   const [linkPreview, setLinkPreview] = useState<any>(null);
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
 
+  const authorProfile: AvatarProfile = useMemo(() => ({
+    id: post.author_id,
+    full_name: post.author_name,
+    profile_picture_url: post.author_avatar
+  }), [post.author_id, post.author_name, post.author_avatar]);
+
   // Link preview effect with proper cleanup
   useEffect(() => {
     if (post.attachments && post.attachments.length > 0) {
@@ -313,14 +319,9 @@ export const PostDisplay: React.FC<PostDisplayProps> = ({
               to={`/profile/${post.author_id}`}
               className="flex items-center gap-3 group"
             >
-              <Avatar className="h-10 w-10">
-                <AvatarImage
-                  src={post.author_avatar || ''}
-                  alt={post.author_name || 'Author'}
-                />
-                <AvatarFallback>
-                  {post.author_name?.charAt(0) || 'A'}
-                </AvatarFallback>
+              <Avatar profile={authorProfile} className="h-10 w-10">
+                <AvatarImage alt={post.author_name || 'Author'} />
+                <AvatarFallback />
               </Avatar>
               <div>
                 <p className="font-semibold group-hover:underline">
