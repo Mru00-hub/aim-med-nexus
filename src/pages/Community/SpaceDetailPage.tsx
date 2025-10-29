@@ -6,11 +6,11 @@ import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { Plus, Hash } from 'lucide-react';
+import { Plus, Hash, Share2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/components/ui/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-
+import { Input } from '@/components/ui/input';
 // --- IMPORTS ---
 import { useCommunity } from '@/context/CommunityContext';
 import { useSpaceMetrics, useSpaceMemberList } from '@/hooks/useSpaceData';
@@ -43,6 +43,8 @@ export default function SpaceDetailPage() {
   // --- UI STATE ---
   const [showCreateThread, setShowCreateThread] = useState(false);
   const [threadCreatedCount, setThreadCreatedCount] = useState(0);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [shareUrl, setShareUrl] = useState('');
   
   // --- LOGIC & EFFECTS ---
   const loading = isLoadingSpaces || !spaceId;
@@ -73,6 +75,10 @@ export default function SpaceDetailPage() {
     }
   }, [isLoadingSpaces, space, navigate, toast]);
 
+  useEffect(() => {
+    // This ensures window is accessed only on the client
+    setShareUrl(window.location.href);
+  }, []);
   // --- ASYNCHRONOUS ACTIONS ---
 
   const handleSave = async (payload: { name: string; description?: string | null; join_level: Enums<'space_join_level'> }) => {
@@ -148,6 +154,26 @@ export default function SpaceDetailPage() {
     }
   };
 
+  const handleShare = () => {
+    if (!space) return;
+
+    if (navigator.share) {
+      navigator.share({
+        title: space.name,
+        text: `Check out the ${space.name} space.`,
+        url: shareUrl,
+      }).catch((err) => console.error("Share failed", err));
+    } else {
+      // Fallback for desktop: show modal with link to copy
+      setShowShareModal(true);
+    }
+  };
+  
+  const copyShareLink = () => {
+    navigator.clipboard.writeText(shareUrl);
+    toast({ title: "Link copied to clipboard!" });
+  };
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Header />
@@ -179,13 +205,18 @@ export default function SpaceDetailPage() {
                 <Hash className="h-6 w-6" />
                 {space.space_type === 'FORUM' ? 'Posts' : 'Threads'}
               </h2>
-              <Button 
-                onClick={handleCreateClick}
-                disabled={!canCreateThread} 
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                {space.space_type === 'FORUM' ? 'Start New Post' : 'Start New Thread'}
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button 
+                  onClick={handleCreateClick}
+                  disabled={!canCreateThread} 
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  {space.space_type === 'FORUM' ? 'Start New Post' : 'Start New Thread'}
+                </Button>
+                <Button variant="outline" size="icon" title="Share Space" onClick={handleShare}>
+                  <Share2 className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
             
             {/* --- The Conditional "Chameleon" Render --- */}
@@ -229,8 +260,28 @@ export default function SpaceDetailPage() {
               />
             </div>
           </DialogContent>
-        </Dialog>
+        </Dialog>        
       )}
+      <Dialog open={showShareModal} onOpenChange={setShowShareModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Share this space</DialogTitle>
+            <DialogDescription>
+              Copy the link below to share this space.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex items-center space-x-2">
+            <Input
+              id="share-link"
+              value={shareUrl}
+              readOnly
+            />
+            <Button type="button" size="sm" onClick={copyShareLink}>
+              Copy
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
