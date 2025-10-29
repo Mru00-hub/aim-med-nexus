@@ -544,6 +544,28 @@ const CompleteProfile = () => {
     setter((prev: any[]) => prev.filter((_, i) => i !== index));
   };
 
+  const displaySrc = useMemo(() => {
+    // 1. If there's a preview, show it.
+    if (avatarPreview) {
+      return avatarPreview;
+    }
+    // 2. If there's a saved URL, show it.
+    if (avatarUrl) {
+      return avatarUrl;
+    }
+    // 3. If no preview and no saved URL, but we have a name/ID, generate one.
+    if (formData.full_name && user?.id) {
+      return generateAvatarUrl(formData.full_name, user.id);
+    }
+    // 4. As a last resort, return undefined (will show initials)
+    return undefined;
+  }, [avatarPreview, avatarUrl, formData.full_name, user?.id]);
+
+  const showClearPreview = !!avatarPreview; // Show if avatarPreview exists
+
+  // 3. Determine when to show the 'Remove' (Trash) button
+  const showRemoveButton = !!avatarUrl && !avatarPreview;
+
   // --- (Avatar Handlers remain the same) ---
   const handleAvatarChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -768,12 +790,13 @@ const CompleteProfile = () => {
           </CardHeader>
           <CardContent>
             <ProfileAvatar
-              avatarPreview={avatarPreview}
-              avatarUrl={avatarUrl}
+              displaySrc={displaySrc}
               fullName={formData.full_name}
               onAvatarChange={handleAvatarChange}
-              onClearPreview={handleClearPreview} 
+              onClearPreview={handleClearPreview}
               onRemoveSavedAvatar={handleRemoveSavedAvatar}
+              showClearPreview={showClearPreview}
+              showRemoveButton={showRemoveButton}
             />
 
             <form onSubmit={handleSubmit} className="space-y-6">
