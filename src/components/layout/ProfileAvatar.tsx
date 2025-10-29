@@ -14,7 +14,7 @@ export type AvatarProfile = {
 
 // This component is now JUST the avatar, not the dropdown.
 // It accepts a className to be sized by its parent (the Header).
-type UserAvatarProps = {
+type ProfileAvatarProps = {
   /** The profile object containing id, name, and pic url */
   profile: AvatarProfile | null | undefined;
   /** Pass true to show a skeleton shimmer */
@@ -23,7 +23,7 @@ type UserAvatarProps = {
   className?: string;
 };
 
-export const UserAvatar: React.FC<UserAvatarProps> = ({ 
+export const ProfileAvatar: React.FC<ProfileAvatarProps> = ({
   profile, 
   loading, 
   className 
