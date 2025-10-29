@@ -4,9 +4,10 @@ import { SpaceWithDetails, Enums } from '@/integrations/supabase/community.api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { MessageSquare, Users, Loader2} from 'lucide-react';
+import { MessageSquare, Users, Loader2, Share2} from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useSpaceMetrics } from '@/hooks/useSpaceData';
+import { useToast } from '@/components/ui/use-toast';
 
 interface SpaceCardProps {
   space: SpaceWithDetails;
@@ -16,6 +17,7 @@ interface SpaceCardProps {
 
 export const SpaceCard: React.FC<SpaceCardProps> = ({ space, membershipStatus, onJoin }) => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const { memberCount, threadCount, isLoadingMetrics } = useSpaceMetrics(space.id);
   const isPrivate = space.join_level === 'INVITE_ONLY';
   const creatorDetails = [space.creator_position, space.creator_organization]
@@ -33,6 +35,26 @@ export const SpaceCard: React.FC<SpaceCardProps> = ({ space, membershipStatus, o
     e.stopPropagation();
     onJoin(space);
   };
+
+  const handleShareClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation(); // Prevent card navigation
+
+    const url = `${window.location.origin}/community/space/${space.id}`;
+
+    if (navigator.share) {
+      navigator.share({
+        title: space.name,
+        text: `Check out the ${space.name} space.`,
+        url: url,
+      }).catch((err) => console.error("Share failed", err));
+    } else {
+      // Fallback: Copy to clipboard and show toast
+      navigator.clipboard.writeText(url);
+      toast({ title: "Link copied to clipboard!" });
+    }
+  };
+  
   const isForum = space.space_type === 'FORUM';
   const threadLabel = isForum 
       ? (threadCount === 1 ? 'Post' : 'Posts') 
@@ -135,6 +157,18 @@ export const SpaceCard: React.FC<SpaceCardProps> = ({ space, membershipStatus, o
             </div>
           </div>
           <div className="mt-4 pt-4 border-t flex flex-wrap justify-end items-center gap-2">
+            <TooltipProvider delayDuration={100}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" onClick={handleShareClick}>
+                    <Share2 className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Share space</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
             {membershipStatus === 'ACTIVE' ? (
               <Button asChild variant="outline" size="sm">
                 <Link to={`/community/space/${space.id}`}>Go to Space</Link>
