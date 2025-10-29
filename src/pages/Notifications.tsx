@@ -25,6 +25,7 @@ import {
   AlertCircle,
   CheckSquare,
   Loader2,
+  UserPlus, 
 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import {
@@ -38,8 +39,9 @@ import { useSocialCounts } from '@/context/SocialCountsContext';
 import { formatDistanceToNow } from 'date-fns';
 
 const getNotificationDetails = (notification: NotificationWithActor) => {
-  const { type, actor } = notification;
+  const { type, actor, space } = notification; // [!code ++] (add space)
   const actorName = actor?.full_name || 'Someone';
+  const spaceName = space?.name || 'your space'; // [!code ++]
 
   let icon: React.ElementType = Bell;
   let title = 'New Notification';
@@ -81,6 +83,11 @@ const getNotificationDetails = (notification: NotificationWithActor) => {
       title = 'New Message';
       description = `${actorName} sent you a new direct message.`;
       break;
+    case 'space_join_request': // [!code ++]
+      icon = UserPlus; // [!code ++]
+      title = 'Pending Request'; // [!code ++]
+      description = `${actorName} requested to join ${spaceName}.`; // [!code ++]
+      break; // [!code ++]
     default:
       console.warn(`Unknown notification type: ${type}`);
   }
@@ -371,6 +378,13 @@ export default function Notifications() {
           navigate(`/messages/${entityId}`); // Navigate to the conversation
           return;
         }
+        break;
+
+      case 'space_join_request': // [!code ++]
+        if (entityId) { // [!code ++]
+          navigate(`/space/${entityId}/members`); // Navigate to the space's member management page [!code ++]
+          return; // [!code ++]
+        } // [!code ++]
         break;
 
       // 'job_application_update' will fall through to the toast
