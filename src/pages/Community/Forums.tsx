@@ -14,6 +14,7 @@ import { Search, Plus, Loader2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from '@/components/ui/use-toast';
 import { useCommunity } from '@/context/CommunityContext';
+import { useSocialCounts } from '@/context/SocialCountsContext';
 import { Enums } from '@/integrations/supabase/types';
 import {
   SpaceWithDetails, 
@@ -44,7 +45,9 @@ export default function Forums() {
     addOptimisticSpace, 
     removeOptimisticSpace,
   } = useCommunity();
-
+  
+  const { isFollowing, refetchSocialGraph } = useSocialCounts();
+  const [followLoadingMap, setFollowLoadingMap] = useState<Record<string, boolean>>({});
   const [showSpaceCreator, setShowSpaceCreator] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [threadSearchQuery, setThreadSearchQuery] = useState('');
@@ -53,29 +56,12 @@ export default function Forums() {
   
   const [optimisticReactions, setOptimisticReactions] = useState<Record<string, number>>({});
   const [optimisticUserReactions, setOptimisticUserReactions] = useState<Record<string, string | null>>({});
-  const [followingStatus, setFollowingStatus] = useState<Record<string, boolean>>({});
-  const [isFollowLoading, setIsFollowLoading] = useState<Record<string, boolean>>({});
   const [posts, setPosts] = useState<PublicPost[]>([]);
   const [isLoadingPosts, setIsLoadingPosts] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [hasMorePosts, setHasMorePosts] = useState(true);
   
-  useEffect(() => {
-    // When the profile loads, initialize the followingStatus state
-    if (profile && profile.following) {
-      const followingMap: Record<string, boolean> = {};
-      
-      // Assuming profile.following is an array like [{ followed_id: 'uuid-123' }, ...]
-      // Adjust this line if your profile.following structure is different
-      profile.following.forEach((follow: { followed_id: string }) => {
-        followingMap[follow.followed_id] = true;
-      });
-      
-      setFollowingStatus(followingMap);
-    }
-  }, [profile]);
-
   const filteredSpaces = useMemo(() => {
     return (spaces || [])
       .filter(space => space.space_type !== 'PUBLIC')
@@ -252,19 +238,19 @@ export default function Forums() {
   const handleFollow = useCallback(async (authorId: string) => {
     if (!user) { navigate('/login'); return; }
     
-    setIsFollowLoading(prev => ({ ...prev, [authorId]: true }));
+    setFollowLoadingMap(prev => ({ ...prev, [authorId]: true }));
     
     try {
       await toggleFollow(authorId);
-      const newFollowingState = !followingStatus[authorId];
-      setFollowingStatus(prev => ({ ...prev, [authorId]: newFollowingState }));
-      refreshProfile(); 
+      // --- THIS IS THE KEY ---
+      // Instead of setting local state, just refetch the global graph.
+      await refetchSocialGraph(); 
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     } finally {
-      setIsFollowLoading(prev => ({ ...prev, [authorId]: false }));
+      setFollowLoadingMap(prev => ({ ...prev, [authorId]: false }));
     }
-  }, [user, navigate, toast, refreshProfile, followingStatus]);
+  }, [user, navigate, toast, refetchSocialGraph]);
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -372,11 +358,12 @@ export default function Forums() {
                     optimisticReactionCount={optimisticReactions[post.thread_id]}
                     optimisticUserReaction={optimisticUserReactions[post.thread_id]}
                     onFollow={handleFollow}
-                    isFollowing={!!followingStatus[authorId]}
-                    isFollowLoading={!!isFollowLoading[authorId]}
+                    isFollowing={isFollowing(authorId)}
+                    isFollowLoading={!!followLoadingMap[authorId]}
                   />
                 );
-              })}
+           
+            })}
             </div>
           )}
 
