@@ -159,6 +159,7 @@ const CompleteProfile = () => {
   const [isCourseLoading, setIsCourseLoading] = useState(false);
   const [isSpecLoading, setIsSpecLoading] = useState(false);
   const [isPageLoading, setIsPageLoading] = useState(true);
+  const DRAFT_KEY = useMemo(() => `profile-draft-${user?.id}`, [user?.id]);
 
   useEffect(() => {
     setIsLocLoading(true);
@@ -305,6 +306,42 @@ const CompleteProfile = () => {
     fetchStaticData();
   }, []);
 
+  useEffect(() => {
+    // Don't save while loading or if user isn't set
+    if (isPageLoading || authLoading || !user) {
+      return;
+    }
+
+    try {
+      const draftData = {
+        formData,
+        profileMode,
+        userRole, // Save userRole
+        achievements,
+        publications,
+        certifications,
+        awards,
+        transitionData,
+        ventures,
+        contentPortfolio,
+        cocurriculars,
+        workExperience,
+        educationHistory,
+        deletedItems,
+        avatarUrl // Save avatar URL
+      };
+  
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(draftData));
+    } catch (error) {
+      console.warn("Failed to save profile draft:", error);
+    }
+    
+  }, [
+    formData, profileMode, userRole, achievements, publications, certifications, awards, 
+    transitionData, ventures, contentPortfolio, cocurriculars, workExperience, 
+    educationHistory, deletedItems, avatarUrl, isPageLoading, authLoading, user, DRAFT_KEY
+  ]);
+
   // --- Memoized Options ---
   const locationOptions = useMemo(() => 
     locations.map(loc => ({ value: loc.id, label: loc.label })),
@@ -326,6 +363,7 @@ const CompleteProfile = () => {
   // --- Fetch Profile Data ---
   useEffect(() => {
     if (!authLoading && user) {
+      const savedDraft = localStorage.getItem(DRAFT_KEY);
       const fetchProfileData = async () => {
         setIsPageLoading(true);
         setError('');
@@ -425,9 +463,59 @@ const CompleteProfile = () => {
           setIsPageLoading(false);
         }
       };
-      fetchProfileData();
+      const loadDraftData = async () => {
+        setIsPageLoading(true);
+        try {
+          const draft = JSON.parse(savedDraft!);
+          
+          // 1. Restore all states from draft
+          setFormData(draft.formData);
+          setProfileMode(draft.profileMode);
+          setUserRole(draft.userRole); // Restore role
+          setAchievements(draft.achievements || []);
+          setPublications(draft.publications.map((p: any) => ({...p, authors: p.authors || []})) || []);
+          setCertifications(draft.certifications || []);
+          setAwards(draft.awards || []);
+          setTransitionData(draft.transitionData || { profile_id: user.id });
+          setVentures(draft.ventures || []);
+          setContentPortfolio(draft.contentPortfolio || []);
+          setCocurriculars(draft.cocurriculars || []);
+          setWorkExperience(draft.workExperience || []);
+          setEducationHistory(draft.educationHistory || []);
+          setDeletedItems(draft.deletedItems || { /* ... initial empty object ... */ });
+          setAvatarUrl(draft.avatarUrl || '');
+
+          // 2. Fetch dropdown labels based on draft's formData
+          const [loc, inst, cour, spec] = await Promise.all([
+            draft.formData.location_id && draft.formData.location_id !== 'other' ? supabase.from('locations').select('id, label, value').eq('id', draft.formData.location_id).single() : Promise.resolve({ data: null }),
+            draft.formData.institution_id && draft.formData.institution_id !== 'other' ? supabase.from('institutions').select('id, label, value').eq('id', draft.formData.institution_id).single() : Promise.resolve({ data: null }),
+            draft.formData.course_id && draft.formData.course_id !== 'other' ? supabase.from('courses').select('id, label, value').eq('id', draft.formData.course_id).single() : Promise.resolve({ data: null }),
+            draft.formData.specialization_id && draft.formData.specialization_id !== 'other' ? supabase.from('specializations').select('id, label, value').eq('id', draft.formData.specialization_id).single() : Promise.resolve({ data: null }),
+          ]);
+
+          // 3. Seed dropdowns
+          setLocations(prev => seedDropdownList(prev, loc.data));
+          setInstitutions(prev => seedDropdownList(prev, inst.data));
+          setCourses(prev => seedDropdownList(prev, cour.data));
+          setSpecializations(prev => seedDropdownList(prev, spec.data));
+
+          setIsPageLoading(false);
+          toast({ title: "Draft Restored", description: "Your unsaved changes have been loaded." });
+        } catch (e) {
+          console.error("Failed to load draft, fetching from server:", e);
+          localStorage.removeItem(DRAFT_KEY); // Clear bad draft
+          fetchProfileData(); // Fallback to normal fetch
+        }
+      };
+
+      // --- MODIFICATION: Logic to decide whether to load draft or fetch ---
+      if (savedDraft) {
+        loadDraftData();
+      } else {
+        fetchProfileData();
+      }
     }
-  }, [user, authLoading]);
+  }, [user, authLoading, DRAFT_KEY, toast]);
   // --- END OF FETCH ---
 
   // --- Input Handlers ---
@@ -716,6 +804,7 @@ const CompleteProfile = () => {
 
       await refreshProfile();
       queryClient.invalidateQueries({ queryKey: ['fullProfile', user.id] });
+      localStorage.removeItem(DRAFT_KEY);
       navigate('/community', { replace: true });
 
     } catch (err: any) {
@@ -749,6 +838,7 @@ const CompleteProfile = () => {
       setIsSubmitting(false);
     } else {
       await refreshProfile();
+      localStorage.removeItem(DRAFT_KEY);
       navigate('/community', { replace: true });
     }
   };
@@ -776,6 +866,10 @@ const CompleteProfile = () => {
   if (!user) {
     return <PageSkeleton />;
   }
+
+  const educationLabel = userRole === 'student' 
+    ? 'Current Education Details' 
+    : 'Latest Education Details';
 
   return (
     <div className="min-h-screen bg-background">
@@ -854,7 +948,7 @@ const CompleteProfile = () => {
                 {/* --- CURRENT Education Info --- */}
                 <AccordionItem value="current-education">
                    <AccordionTrigger className="text-lg font-semibold">
-                     <div className="flex items-center gap-2"> <GraduationCap/> Current Educational Details </div> {/* */}
+                     <div className="flex items-center gap-2"> <GraduationCap/> {educationLabel} </div>
                    </AccordionTrigger>
                    <AccordionContent className="pt-4">
                      {/* *** CHANGE 3: Add missing props *** */}
