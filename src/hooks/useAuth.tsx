@@ -96,126 +96,116 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     console.log('[Auth Effect - Revised] START'); // Log 1
-    let mounted = true;
-    setLoading(true);
-    setLoadingMessage('Initializing session...');
-
-    // --- Initial Load Check using getSession ---
-    const checkInitialSession = async () => {
-      console.log('[Auth Effect - Revised] Checking initial session with getSession()...'); // Log 2
+    let mounted = true;    
+    const initAuth = async () => {
+      console.log('[Auth] Starting initialization...');
+    
       try {
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        
-        if (!mounted) return; // Check if component unmounted during async call
+        // Get initial session
+        const { data: { session: currentSession }, error } = await supabase.auth.getSession();
+        console.log('[Auth] getSession result:', { hasSession: !!currentSession, error });
 
-        if (sessionError) {
-          console.error('[Auth Effect - Revised] Error fetching initial session:', sessionError); // Log 3 (Error)
-          throw sessionError; // Throw to be caught below
+        if (!isMounted) {
+          console.log('[Auth] Component unmounted, aborting');
+          return;
         }
 
-        if (session) {
-          console.log('[Auth Effect - Revised] Initial session FOUND. Fetching profile/counts...'); // Log 4
+        if (error) {
+          console.error('[Auth] Session error:', error);
+          toast({
+            title: "Session Error",
+            description: "Failed to load session. Please refresh.",
+            variant: "destructive",
+          });
+          setLoading(false);
+          return;
+        }
+
+        if (currentSession?.user) {
+          console.log('[Auth] User found, loading profile...');
           setLoadingMessage('Loading profile...');
-          // Fetch profile and count (similar to before)
-          const userProfile = await fetchProfile(session.user.id);
-          let unreadCount = null;
-          if (userProfile) {
+        
+          // Fetch profile
+          const { data: profileData, error: profileError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', currentSession.user.id)
+            .single();
+
+          console.log('[Auth] Profile result:', { hasProfile: !!profileData, error: profileError });
+
+          if (isMounted && profileData) {
+            setProfile(profileData);
+          
+            // Fetch unread count
             try {
-              const { data, error: countError } = await supabase.rpc('get_my_unread_inbox_count');
-              if (countError) console.error("[Auth Effect - Revised] Error fetching unread count:", countError); // Log error but continue
-              else unreadCount = data;
-            } catch (e) { console.error("[Auth Effect - Revised] CATCH fetching unread count:", e); }
+              const { data: count } = await supabase.rpc('get_my_unread_inbox_count');
+              if (isMounted) setInitialUnreadCount(count);
+            } catch (e) {
+              console.error('[Auth] Unread count error:', e);
+            }
           }
-          // Set initial state if still mounted
-          if (mounted) {
-            console.log('[Auth Effect - Revised] Setting initial logged-in state.'); // Log 5
-            setSession(session);
-            setUser(session.user);
-            setProfile(userProfile);
-            setInitialUnreadCount(unreadCount);
+
+          if (isMounted) {
+            setSession(currentSession);
+            setUser(currentSession.user);
           }
         } else {
-          console.log('[Auth Effect - Revised] No initial session found.'); // Log 6
-          // Ensure state is cleared if no session (might already be null, but good practice)
-          if (mounted) {
-             setSession(null);
-             setUser(null);
-             setProfile(null);
-             setInitialUnreadCount(null);
-             setPersonalKey(null);
-             setUserMasterKey(null);
-          }
+          console.log('[Auth] No session found');
         }
-      } catch (error) {
-         console.error('[Auth Effect - Revised] CRITICAL ERROR during initial check:', error); // Log 7 (Critical Error)
-         if (mounted) {
-           toast({
-             title: "Session Error",
-             description: "Failed to initialize session. Please refresh the page.",
-             variant: "destructive",
-           });
-         }
+      } catch (err) {
+        console.error('[Auth] Init error:', err);
       } finally {
-         // --- CRUCIAL: Set loading false AFTER initial check ---
-         if (mounted) {
-           console.log('[Auth Effect - Revised] Initial check complete. Setting loading: false.'); // Log 8
-           setLoading(false);
-           setLoadingMessage('');
-         }
+        if (isMounted) {
+          console.log('[Auth] Initialization complete, setting loading=false');
+          setLoading(false);
+          setLoadingMessage('');
+        }
       }
     };
 
-    checkInitialSession(); // Run the initial check
+    // Run initialization
+    initAuth();
 
-    // --- Setup Listener for Subsequent Changes ---
-    console.log('[Auth Effect - Revised] Subscribing to onAuthStateChange for UPDATES...'); // Log 9
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, newSession) => {
-        if (!mounted) return;
-        console.log('[Auth Effect - Revised] onAuthStateChange FIRED (Update):', _event); // Log 10
+    // Set up auth listener
+    console.log('[Auth] Setting up auth state listener...');
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
+      console.log('[Auth] Auth state changed:', event);
+    
+      if (!isMounted) return;
 
-        // This listener now ONLY handles updates *after* the initial load
-        if (newSession) {
-           // User logged IN (or token refreshed)
-           console.log('[Auth Effect - Revised] AuthChange: Session updated. Refetching profile/counts...'); // Log 11
-           setLoadingMessage('Refreshing session...'); // Show brief message
-           const userProfile = await fetchProfile(newSession.user.id);
-           let unreadCount = null;
-           if (userProfile) {
-             try {
-               const { data } = await supabase.rpc('get_my_unread_inbox_count');
-               unreadCount = data;
-             } catch (e) { console.error("[Auth Effect - Revised] Error fetching unread count on update:", e); }
-           }
-           if (mounted) {
-             setSession(newSession);
-             setUser(newSession.user);
-             setProfile(userProfile);
-             setInitialUnreadCount(unreadCount);
-             setLoadingMessage(''); // Clear message quickly
-           }
-        } else {
-           // User logged OUT
-           console.log('[Auth Effect - Revised] AuthChange: No session. Clearing state...'); // Log 12
-           if (mounted) {
-              setSession(null);
-              setUser(null);
-              setProfile(null);
-              setInitialUnreadCount(null);
-              setPersonalKey(null);
-              setUserMasterKey(null);
-           }
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        if (newSession?.user) {
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', newSession.user.id)
+            .single();
+
+          if (isMounted) {
+            setSession(newSession);
+            setUser(newSession.user);
+            setProfile(profileData);
+          }
+        }
+      } else if (event === 'SIGNED_OUT') {
+        if (isMounted) {
+          setSession(null);
+          setUser(null);
+          setProfile(null);
+          setInitialUnreadCount(null);
+          setPersonalKey(null);
+          setUserMasterKey(null);
         }
       }
-    );
+    });
 
-    // Cleanup
     return () => {
-      console.log('[Auth Effect - Revised] CLEANUP running. Unsubscribing...'); // Log 13
-      mounted = false;
+      console.log('[Auth] Cleaning up...');
+      isMounted = false;
       subscription.unsubscribe();
     };
-  }, [fetchProfile, toast]);
+  }, [toast]);
     
   const refreshProfile = useCallback(async () => {
     try {
