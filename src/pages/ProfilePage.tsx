@@ -11,6 +11,7 @@ import {
   incrementProfileView,
   FullProfile, // The comprehensive type
 } from '@/integrations/supabase/community.api';
+import { generateAvatarUrl } from '@/lib/utils';
 
 // 🚀 PLAN: Import Layouts
 import { Header } from '@/components/layout/Header';
@@ -97,6 +98,23 @@ const ProfilePage = () => {
   // This ensures window is accessed only on the client
     setShareUrl(window.location.href);
   }, []);
+
+  const displaySrc = useMemo(() => {
+    if (!fullProfile) return undefined;
+
+    const { profile } = fullProfile;
+
+    // 1. If a saved picture exists, use it.
+    if (profile.profile_picture_url) {
+      return profile.profile_picture_url;
+    }
+    // 2. If no saved pic, but we have a name/ID, generate one.
+    if (profile.full_name && profile.id) {
+      return generateAvatarUrl(profile.full_name, profile.id);
+    }
+    // 3. As a last resort, return undefined (will show initials)
+    return undefined;
+  }, [fullProfile]);
 
   // --- Button Action Handlers --
 
@@ -205,6 +223,7 @@ const ProfilePage = () => {
   // 🚀 PLAN: Consolidate all props for layouts
   const layoutProps = {
     data: fullProfile,
+    displaySrc: displaySrc,
     isOwnProfile,
     onShare: handleShare,
     onShowList: handleShowList,
