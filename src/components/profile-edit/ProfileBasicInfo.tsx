@@ -17,6 +17,7 @@ export const ProfileBasicInfo: React.FC<ProfileBasicInfoProps> = ({
   onLocationSearch,
   isLocLoading
 }) => {
+  const today = new Date().toISOString().split('T')[0];
   return (
     <div className="space-y-6">
       <div className="font-semibold text-lg">Basic Information</div>
@@ -27,7 +28,7 @@ export const ProfileBasicInfo: React.FC<ProfileBasicInfoProps> = ({
         </div>
         <div>
           <label className="block text-sm font-medium mb-2">Date of Birth *</label>
-          <Input type="date" value={formData.date_of_birth} onChange={(e) => onInputChange('date_of_birth', e.target.value)} required />
+          <Input type="date" value={formData.date_of_birth} onChange={(e) => onInputChange('date_of_birth', e.target.value)} max={today} required />
         </div>
       </div>
       
