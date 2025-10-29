@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo} from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage, AvatarProfile} from '@/components/ui/avatar';
 import { Send, Loader2, Paperclip, X, File as FileIcon } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 
@@ -81,6 +81,15 @@ export const CommentInput: React.FC<CommentInputProps> = ({
   const { toast } = useToast();
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
+  const currentUserProfile: AvatarProfile | null = useMemo(() => {
+    if (!user || !profile) return null;
+    return {
+      id: user.id,
+      full_name: profile.full_name,
+      profile_picture_url: profile.profile_picture_url
+    }
+  }, [user, profile]);
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const newFiles = Array.from(e.target.files);
@@ -141,14 +150,9 @@ export const CommentInput: React.FC<CommentInputProps> = ({
       className={`flex gap-2 ${isReply ? 'mt-2' : 'items-start'}`}
     >
       {!isReply && (
-        <Avatar className="h-10 w-10 hidden sm:block">
-          <AvatarImage
-            src={profile?.profile_picture_url || ''}
-            alt={profile?.full_name || 'Your avatar'}
-          />
-          <AvatarFallback>
-            {profile?.full_name?.charAt(0) || 'U'}
-          </AvatarFallback>
+        <Avatar profile={currentUserProfile} className="h-10 w-10 hidden sm:block">
+          <AvatarImage alt={profile?.full_name || 'Your avatar'} />
+          <AvatarFallback />
         </Avatar>
       )}
       <div className="flex-1 space-y-2">
