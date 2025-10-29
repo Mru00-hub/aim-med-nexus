@@ -9,7 +9,8 @@ import { Edit, CheckCircle, Loader2, UserPlus, UserCheck, Send, Clock, Share2, U
 import { useAuth } from '@/hooks/useAuth';
 import { useSocialCounts } from '@/context/SocialCountsContext';
 import { useToast } from '@/components/ui/use-toast';
-import { toggleFollow, sendConnectionRequest, createOrGetConversation } from '@/integrations/supabase/social.api';
+import { sendConnectionRequest, createOrGetConversation } from '@/integrations/supabase/social.api';
+import { toggleFollow } from '@/integrations/supabase/community.api';
 
 type ProfileHeroProps = {
   data: FullProfile;
