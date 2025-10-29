@@ -61,10 +61,20 @@ export const UserListModal = ({
             data = await getFollowingWithStatus(userId);
             break;
           case 'Connections': 
-            data = await getMyConnections() as ApiUser[]; // Cast to new type
+            const connectionsData = await getMyConnections();
+            data = connectionsData.map(conn => ({
+              ...conn, // Spread all other fields (full_name, profile_picture_url, etc.)
+              id: conn.other_user_id, // Map the ID field
+              connection_status: conn.status, // Pass this along (UserCard doesn't use it, but good practice)
+            })) as ApiUser[];
             break;
           case 'Mutual Connections':
-            data = await getMutualConnections(userId) as ApiUser[]; // Cast to new type
+            const mutualData = await getMutualConnections(userId); 
+            data = mutualData.map(conn => ({
+              ...conn, // Spread all other fields (full_name, profile_picture_url, etc.)
+              id: conn.other_user_id, // Map the ID field
+              connection_status: conn.status, 
+            })) as ApiUser[];
             break;
           default:
             throw new Error('Invalid list title');
