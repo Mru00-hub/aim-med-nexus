@@ -1,13 +1,36 @@
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, Ban } from 'lucide-react';
+import { MoreHorizontal, Ban, Loader2, Check } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { UserActionCard } from './UserActionCard';
+import { useSocialCounts } from '@/context/SocialCountsContext';
+import { toggleFollow } from '@/integrations/supabase/community.api';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/components/ui/use-toast';
 
 export const RequestsTab = ({ requests, sentRequests, loading, onRespondRequest, onBlockUser, onWithdrawRequest }) => {
+  const { user } = useAuth();
+  const { isFollowing, refetchSocialGraph } = useSocialCounts();
+  const [followLoadingMap, setFollowLoadingMap] = useState<Record<string, boolean>>({});
+  const { toast } = useToast();
+
+  // --- 3. Add handleFollow function ---
+  const handleFollow = useCallback(async (userId: string) => {
+    if (!user) return;
+    setFollowLoadingMap(prev => ({ ...prev, [userId]: true }));
+    try {
+      await toggleFollow(userId);
+      await refetchSocialGraph(); // Refresh global state
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } finally {
+      setFollowLoadingMap(prev => ({ ...prev, [userId]: false }));
+    }
+  }, [user, refetchSocialGraph, toast]);
+  
   return (
     <Tabs defaultValue="incoming" className="w-full">
       <TabsList className="grid w-full grid-cols-2">
