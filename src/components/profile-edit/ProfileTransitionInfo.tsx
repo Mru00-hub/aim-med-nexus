@@ -15,6 +15,7 @@ export const ProfileTransitionInfo: React.FC<ProfileTransitionInfoProps> = ({
   formData,
   onTransitionChange
 }) => {
+  const today = new Date().toISOString().split('T')[0];
   return (
     <div className="p-1 pt-4 space-y-6">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -40,6 +41,7 @@ export const ProfileTransitionInfo: React.FC<ProfileTransitionInfoProps> = ({
             type="date"
             value={formData.transition_date || ''}
             onChange={(e) => onTransitionChange('transition_date', e.target.value)}
+            max={today}
           />
         </div>
       </div>
@@ -60,7 +62,11 @@ export const ProfileTransitionInfo: React.FC<ProfileTransitionInfoProps> = ({
         <Input
           id="target-industries"
           value={Array.isArray(formData.target_industries) ? formData.target_industries.join(', ') : ''}
-          onChange={(e) => onTransitionChange('target_industries', e.target.value)}
+          onChange={(e) => {
+            const stringValue = e.target.value;
+            const arrayValue = stringValue.split(',').map(s => s.trim()).filter(Boolean);
+            onTransitionChange('target_industries', arrayValue);
+          }}
           placeholder="e.g., Medtech, Healthcare Consulting, Medical Writing"
         />
       </div>
