@@ -7,9 +7,11 @@ import { Button } from '@/components/ui/button';
 import {
   sendConnectionRequest,
   createOrGetConversation,
+  toggleFollow,
 } from '@/integrations/supabase/social.api';
 import { toggleFollow, ProfileWithStatus } from '@/integrations/supabase/community.api'; 
 import { MessageSquare, UserCheck, UserPlus, X, Loader2, Check } from 'lucide-react'; 
+import { useSocialCounts } from '@/context/SocialCountsContext';
 
 // A generic user type to normalize data from different API endpoints
 interface CardUser {
@@ -31,6 +33,7 @@ export const UserCardWithActions = ({ user }: UserCardWithActionsProps) => {
   const { user: viewer } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { isFollowing, getConnectionStatus, refetchSocialGraph } = useSocialCounts();
 
   // Normalize the user object
   const normalizedUser = {
@@ -42,9 +45,9 @@ export const UserCardWithActions = ({ user }: UserCardWithActionsProps) => {
     location: user.location_name,
   };
 
-  const [connectionStatus, setConnectionStatus] = useState(user.connection_status);
-  const [isFollowing, setIsFollowing] = useState(user.is_viewer_following);
-  
+  const liveConnectionStatus = getConnectionStatus(normalizedUser.id);
+  const liveIsFollowing = isFollowing(normalizedUser.id);
+
   const [isFollowLoading, setIsFollowLoading] = useState(false);
   const [isConnectionLoading, setIsConnectionLoading] = useState(false);
 
@@ -54,14 +57,11 @@ export const UserCardWithActions = ({ user }: UserCardWithActionsProps) => {
     if (!viewer) return toast({ title: 'Please log in', variant: 'destructive' });
 
     setIsFollowLoading(true);
-    const wasFollowing = isFollowing;
-    setIsFollowing(!wasFollowing); // Optimistic update
-
     try {
       await toggleFollow(normalizedUser.id);
-      toast({ title: wasFollowing ? 'Unfollowed' : 'Followed' });
+      await refetchSocialGraph(); // Refresh the global state
+      toast({ title: liveIsFollowing ? 'Unfollowed' : 'Followed' }); // Toast based on *old* state
     } catch (e: any) {
-      setIsFollowing(wasFollowing); // Rollback
       toast({ variant: 'destructive', title: 'Error', description: e.message });
     } finally {
       setIsFollowLoading(false);
@@ -71,7 +71,7 @@ export const UserCardWithActions = ({ user }: UserCardWithActionsProps) => {
   const handleMessage = async () => {
     try {
       const conversationId = await createOrGetConversation(normalizedUser.id);
-      navigate(`/messages/${conversationId}`);
+      navigate(`/inbox?convo=${conversationId}`); 
     } catch (e: any) {
       toast({
         variant: 'destructive',
@@ -85,7 +85,7 @@ export const UserCardWithActions = ({ user }: UserCardWithActionsProps) => {
     setIsConnectionLoading(true);
     try {
       await sendConnectionRequest(normalizedUser.id);
-      setConnectionStatus('pending_sent'); // Optimistic update
+      await refetchSocialGraph(); // Refresh the global state
       toast({ title: 'Connection request sent!' });
     } catch (e: any) {
       toast({ variant: 'destructive', title: 'Error', description: e.message });
@@ -107,7 +107,7 @@ export const UserCardWithActions = ({ user }: UserCardWithActionsProps) => {
     }
 
     let connectButton;
-    switch (connectionStatus) {
+    switch (liveConnectionStatus) {
       case 'connected':
         connectButton = (
           <Button size="sm" variant="outline" onClick={handleMessage}>
@@ -126,7 +126,7 @@ export const UserCardWithActions = ({ user }: UserCardWithActionsProps) => {
       case 'pending_received':
         connectButton = (
           <Button size="sm" asChild>
-            <Link to="/connections">Respond</Link>
+            <Link to="/social">Respond</Link>
           </Button>
         );
         break;
@@ -149,14 +149,14 @@ export const UserCardWithActions = ({ user }: UserCardWithActionsProps) => {
         {connectButton}
         <Button
           size="sm"
-          variant={isFollowing ? "outline" : "ghost"} // Change variant based on state
+          variant={liveIsFollowing ? "outline" : "ghost"} // Change variant based on state
           onClick={handleFollow}
           disabled={isFollowLoading}
           className="w-[100px]" // Give it a fixed width to prevent layout shift
         >
           {isFollowLoading ? (
              <Loader2 className="h-4 w-4 animate-spin" />
-          ) : isFollowing ? (
+          ) : liveIsFollowing ? (
             <>
               <Check className="h-4 w-4 mr-2" />
               Following
