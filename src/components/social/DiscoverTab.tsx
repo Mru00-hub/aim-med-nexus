@@ -58,30 +58,73 @@ export const DiscoverTab = ({ recommendations, loading, onSendRequest, onBlockUs
         </div>
       </CardHeader>
       <CardContent className="space-y-2 max-h-[60vh] overflow-y-auto">
-        {loading ? <Skeleton className="h-20 w-full" /> : filteredRecommendations.map(rec => (
-          <UserActionCard 
-            key={rec.id} 
-            // CHANGED: Passing more details from the 'rec' object
-            user={{ 
-              id: rec.id, 
-              full_name: rec.full_name, 
-              profile_picture_url: rec.profile_picture_url, 
-              title: rec.specialization || rec.course,
-              organization: rec.organization,
-              location: rec.current_location,
-              mutuals: rec.mutuals, 
-              similarity_score: rec.similarity_score,
-            }}
-          >
-            <Button size="sm" onClick={() => onSendRequest(rec.id)}><UserPlus className="h-4 w-4 mr-2" />Connect</Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal /></Button></DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuItem onSelect={() => onBlockUser(rec.id)} className="text-destructive focus:bg-destructive/10 focus:text-destructive"><Ban className="h-4 w-4 mr-2" />Block User</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </UserActionCard>
-        ))}
+        {loading ? <Skeleton className="h-20 w-full" /> : filteredRecommendations.map(rec => {
+          // --- Get LIVE status inside the map ---
+          const liveConnectionStatus = getConnectionStatus(rec.id);
+          const liveIsFollowing = isFollowing(rec.id);
+          const isFollowLoading = !!followLoadingMap[rec.id];
+
+          return (
+            <UserActionCard
+              key={rec.id}
+              user={{
+                id: rec.id,
+                full_name: rec.full_name,
+                profile_picture_url: rec.profile_picture_url,
+                title: rec.specialization || rec.course,
+                organization: rec.organization,
+                location: rec.current_location,
+                mutuals: rec.mutuals,
+                similarity_score: rec.similarity_score,
+              }}
+            >
+              {/* --- Render buttons based on LIVE status --- */}
+              {liveConnectionStatus === 'connected' ? (
+                 <Button size="sm" variant="outline" onClick={() => handleMessage(rec.id)}>
+                   <MessageSquare className="h-4 w-4 mr-2" /> Message
+                 </Button>
+              ) : liveConnectionStatus === 'pending_sent' ? (
+                 <Button size="sm" variant="outline" disabled>
+                   <Clock className="h-4 w-4 mr-2" /> Pending
+                 </Button>
+              ) : liveConnectionStatus === 'pending_received' ? (
+                 <Button size="sm" variant="outline" onClick={() => navigate('/social')}> {/* Go to requests tab */}
+                    Respond
+                 </Button>
+              ) : (
+                 <Button size="sm" onClick={() => onSendRequest(rec.id)}> {/* Use prop function */}
+                   <UserPlus className="h-4 w-4 mr-2" />Connect
+                 </Button>
+              )}
+              {/* Follow Button */}
+              <Button
+                 size="sm"
+                 variant={liveIsFollowing ? "outline" : "ghost"}
+                 onClick={() => handleFollow(rec.id)} // Use local handler
+                 disabled={isFollowLoading}
+                 className="w-[100px]"
+              >
+                 {isFollowLoading ? (
+                   <Loader2 className="h-4 w-4 animate-spin" />
+                 ) : liveIsFollowing ? (
+                   <>
+                     <Check className="h-4 w-4 mr-2" />
+                     Following
+                   </>
+                 ) : (
+                   'Follow'
+                 )}
+              </Button>
+              {/* Dropdown Menu */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal /></Button></DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem onSelect={() => onBlockUser(rec.id)} className="text-destructive focus:bg-destructive/10 focus:text-destructive"><Ban className="h-4 w-4 mr-2" />Block User</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </UserActionCard>
+          );
+        })}
       </CardContent>
     </Card>
   );
