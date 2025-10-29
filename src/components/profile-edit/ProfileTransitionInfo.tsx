@@ -61,12 +61,9 @@ export const ProfileTransitionInfo: React.FC<ProfileTransitionInfoProps> = ({
         <Label htmlFor="target-industries">Target Industries (comma-separated)</Label>
         <Input
           id="target-industries"
-          value={Array.isArray(formData.target_industries) ? formData.target_industries.join(', ') : ''}
-          onChange={(e) => {
-            const stringValue = e.target.value;
-            const arrayValue = stringValue.split(',').map(s => s.trim()).filter(Boolean);
-            onTransitionChange('target_industries', arrayValue);
-          }}
+          value={formData.target_industries as string || ''}
+          // --- CHANGE: Pass the raw string value on change ---
+          onChange={(e) => onTransitionChange('target_industries', e.target.value)}
           placeholder="e.g., Medtech, Healthcare Consulting, Medical Writing"
         />
       </div>
