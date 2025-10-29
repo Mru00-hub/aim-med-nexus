@@ -13,7 +13,7 @@ interface PostAndCommentsViewProps {
   postDetails: FullPostDetails;
   canEdit: boolean;
   refresh: () => void;
-  onReaction: (emoji: string) => void;
+  onReaction: (emoji: string) => Promise<void> | void;
   onComment: (body: string, files: File[], parentMessageId?: number | null) => void; 
   onCommentReaction: (commentId: number, emoji: string) => void; 
   onCommentEdit: (commentId: number, newBody: string) => void; 
