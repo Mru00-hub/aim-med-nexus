@@ -37,9 +37,9 @@ export const UserActionCard = ({ user, children }: UserActionCardProps) => {
       <CardContent className="p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
         <div className="flex items-center gap-4 min-w-0">
           <Link to={`/profile/${user.id}`}>
-            <Avatar className="flex-shrink-0"> 
-              <AvatarImage src={user.profile_picture_url || undefined} />
-              <AvatarFallback>{user.full_name?.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+            <Avatar profile={user} className="flex-shrink-0"> 
+              <AvatarImage />
+              <AvatarFallback />
             </Avatar>
           </Link>
           <div className="min-w-0">
