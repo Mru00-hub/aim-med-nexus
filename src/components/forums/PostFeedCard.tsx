@@ -47,32 +47,53 @@ export const PostFeedCard: React.FC<PostFeedCardProps> = ({
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  // --- Normalize data between the two types ---
-  const postData = post as PublicPost; // We know this page only gets PublicPost
+  const isPublicPost = 'thread_id' in post;
+  const title = post.title;
+  const firstMessageId = post.first_message_id;
+  const body = post.first_message_body;
+  const attachments = post.attachments;
+  const commentCount = post.comment_count;
+  const createdAt = post.created_at;
 
-  const id = postData.thread_id;
-  const title = postData.title; // <-- Uses the simple name
-  const firstMessageId = postData.first_message_id;
+  // 3. Get type-specific data
+  const id = isPublicPost 
+    ? (post as PublicPost).thread_id 
+    : (post as PostOrThreadSummary).id;
+    
+  const authorId = isPublicPost 
+    ? (post as PublicPost).author.id 
+    : (post as PostOrThreadSummary).creator_id;
+    
+  const authorName = isPublicPost 
+    ? (post as PublicPost).author.full_name 
+    : (post as PostOrThreadSummary).creator_full_name;
+    
+  const authorPosition = isPublicPost 
+    ? (post as PublicPost).author.current_position 
+    : (post as PostOrThreadSummary).creator_position;
+    
+  const authorAvatar = isPublicPost 
+    ? (post as PublicPost).author.profile_picture_url 
+    : ''; // PostOrThreadSummary type doesn't have an avatar, so we default to empty.
 
-  // Author details
-  const authorId = postData.author.id;
-  const authorName = postData.author.full_name;
-  const authorPosition = postData.author.current_position;
+  const reactionCount = isPublicPost
+    ? (post as PublicPost).total_reaction_count
+    : (post as PostOrThreadSummary).first_message_reaction_count ?? 0;
 
-  // Reaction details
-  const originalReaction = postData.first_message_user_reaction;
-  const reactionCount = postData.total_reaction_count;
+  const originalReaction = post.first_message_user_reaction;
+
+  // 4. Preview logic (only PublicPost has this)
+  const previewTitle = isPublicPost ? (post as PublicPost).preview_title : null;
+  const previewImage = isPublicPost ? (post as PublicPost).preview_image_url : null;
+  const previewDesc = isPublicPost ? (post as PublicPost).preview_description : null;
+
+  // --- END FIX ---
+
+  // Reaction details (This logic is now correct)
   const userReaction = optimisticUserReaction !== undefined 
         ? optimisticUserReaction 
-        : postData.first_message_user_reaction;
+        : originalReaction;
   const displayReactionCount = optimisticReactionCount ?? reactionCount;
-
-  // Preview & Attachment details
-  const body = postData.first_message_body;
-  const attachments = postData.attachments;
-  const previewTitle = postData.preview_title;
-  const previewImage = postData.preview_image_url;
-  const previewDesc = postData.preview_description;
 
   const hasPreview = previewTitle || previewImage;
   const hasAttachments = attachments && attachments.length > 0;
@@ -109,7 +130,7 @@ export const PostFeedCard: React.FC<PostFeedCardProps> = ({
         <div className="block cursor-pointer" onClick={handleCardClick}>
           <div className="flex items-center gap-2 mb-3"> {/* Added margin-bottom */}
             <Avatar className="h-9 w-9">
-              <AvatarImage src={postData.author?.profile_picture_url || ''} alt={authorName || 'Author'} />
+              <AvatarImage src={authorAvatar || ''} alt={authorName || 'Author'} />
               <AvatarFallback>{authorName?.charAt(0) || 'A'}</AvatarFallback>
             </Avatar>
             <div>
@@ -179,10 +200,10 @@ export const PostFeedCard: React.FC<PostFeedCardProps> = ({
             </div>
             <div className="flex items-center gap-1">
               <MessageSquare className="h-3 w-3" />
-              <span>{postData.comment_count} comments</span>
+              <span>{commentCount} comments</span>
             </div>
             <div className="flex items-center gap-1">
-              <span>Posted: {new Date(postData.created_at).toLocaleDateString()}</span>
+              <span>Posted: {new Date(createdAt).toLocaleDateString()}</span>
             </div>
           </div>
         </div>
@@ -238,7 +259,7 @@ export const PostFeedCard: React.FC<PostFeedCardProps> = ({
             <Button variant="ghost" size="sm" asChild>
               <Link to={user ? `/community/thread/${id}` : '/login'}>
                 <MessageSquare className="h-4 w-4 mr-2" />
-                <span>{post.comment_count} comments</span>
+                <span>{commentCount} comments</span>
               </Link>
             </Button>
           </div>
