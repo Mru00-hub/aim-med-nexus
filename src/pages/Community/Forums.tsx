@@ -47,7 +47,6 @@ export default function Forums() {
   } = useCommunity();
   
   const { isFollowing, refetchSocialGraph } = useSocialCounts();
-  const [followLoadingMap, setFollowLoadingMap] = useState<Record<string, boolean>>({});
   const [showSpaceCreator, setShowSpaceCreator] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [threadSearchQuery, setThreadSearchQuery] = useState('');
@@ -235,23 +234,6 @@ export default function Forums() {
     }
   }, [user, navigate, toast, posts, optimisticUserReactions, optimisticReactions]);
 
-  const handleFollow = useCallback(async (authorId: string) => {
-    if (!user) { navigate('/login'); return; }
-    
-    setFollowLoadingMap(prev => ({ ...prev, [authorId]: true }));
-    
-    try {
-      await toggleFollow(authorId);
-      // --- THIS IS THE KEY ---
-      // Instead of setting local state, just refetch the global graph.
-      await refetchSocialGraph(); 
-    } catch (error: any) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
-    } finally {
-      setFollowLoadingMap(prev => ({ ...prev, [authorId]: false }));
-    }
-  }, [user, navigate, toast, refetchSocialGraph]);
-
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <Header />
@@ -357,9 +339,6 @@ export default function Forums() {
                     onReaction={handleOptimisticReaction}
                     optimisticReactionCount={optimisticReactions[post.thread_id]}
                     optimisticUserReaction={optimisticUserReactions[post.thread_id]}
-                    onFollow={handleFollow}
-                    isFollowing={isFollowing(authorId)}
-                    isFollowLoading={!!followLoadingMap[authorId]}
                   />
                 );
            
