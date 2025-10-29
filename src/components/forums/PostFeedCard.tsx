@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { PublicPost, PostOrThreadSummary, SimpleAttachment } from '@/integrations/supabase/community.api';
 import { Card, CardContent } from '@/components/ui/card';
@@ -8,7 +8,7 @@ import { ThumbsUp, MessageSquare, FileText, UserPlus, Check, Loader2, Smile } fr
 import { useAuth } from '@/hooks/useAuth';
 import { ShortenedBody } from './ShortenedBody'; // We will create this
 import { AttachmentPreview } from './AttachmentPreview'; // We will create this
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage, AvatarProfile } from "@/components/ui/avatar";
 
 const URL_REGEX = /(https?:\/\/[^\s]+)/g;
 const REACTIONS = ['👍', '❤️', '🔥', '🧠', '😂'];
@@ -101,6 +101,12 @@ export const PostFeedCard: React.FC<PostFeedCardProps> = ({
   const firstUrl = (bodyUrls && bodyUrls[0]) ? bodyUrls[0] : '#';
   const videoId = body ? getYouTubeVideoId(firstUrl) : null;
 
+  const authorProfile: AvatarProfile = useMemo(() => ({
+      id: authorId,
+      full_name: authorName,
+      profile_picture_url: authorAvatar
+  }), [authorId, authorName, authorAvatar]);
+
   const handleCardClick = () => {
     if (!user) navigate('/login');
     else navigate(`/community/thread/${id}`);
@@ -129,9 +135,9 @@ export const PostFeedCard: React.FC<PostFeedCardProps> = ({
         {/* Main clickable area */}
         <div className="block cursor-pointer" onClick={handleCardClick}>
           <div className="flex items-center gap-2 mb-3"> {/* Added margin-bottom */}
-            <Avatar className="h-9 w-9">
-              <AvatarImage src={authorAvatar || ''} alt={authorName || 'Author'} />
-              <AvatarFallback>{authorName?.charAt(0) || 'A'}</AvatarFallback>
+            <Avatar profile={authorProfile} className="h-9 w-9">
+              <AvatarImage alt={authorName || 'Author'} />
+              <AvatarFallback />
             </Avatar>
             <div>
               <span className="font-semibold text-sm text-foreground">{authorName}</span>
