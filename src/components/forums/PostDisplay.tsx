@@ -35,7 +35,6 @@ import {
   Trash2,
 } from 'lucide-react';
 import {
-  toggleFollow,
   FullPostDetails,
 } from '@/integrations/supabase/community.api';
 import { ChevronDown, ChevronUp, MoreHorizontal} from 'lucide-react';
@@ -128,6 +127,9 @@ interface PostDisplayProps {
   onCommentClick: () => void;
   canEdit: boolean;
   threadId: string;
+  isFollowing: boolean;
+  isFollowLoading: boolean;
+  onFollow: () => void;
 }
 
 export const PostDisplay: React.FC<PostDisplayProps> = ({
@@ -140,13 +142,14 @@ export const PostDisplay: React.FC<PostDisplayProps> = ({
   onTitleUpdate,
   canEdit,
   threadId,
-  onCommentClick, 
+  onCommentClick,
+  isFollowing,
+  isFollowLoading,
+  onFollow,
 }) => {
   const { user } = useAuth();
   const { toast } = useToast();
   
-  const [isFollowing, setIsFollowing] = useState(false);
-  const [isFollowLoading, setIsFollowLoading] = useState(false);
   const [isReactionLoading, setIsReactionLoading] = useState(false);
   const [popoverOpen, setPopoverOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -244,30 +247,6 @@ export const PostDisplay: React.FC<PostDisplayProps> = ({
       });
   };
 
-  const handleFollow = async () => {
-    if (isFollowLoading) return;
-    setIsFollowLoading(true);
-    try {
-      await toggleFollow(post.author_id);
-      const newFollowingState = !isFollowing;
-      setIsFollowing(newFollowingState); 
-      toast({
-        title: newFollowingState ? 'Followed' : 'Unfollowed',
-        description: newFollowingState
-          ? `You are now following ${post.author_name}.`
-          : `You are no longer following ${post.author_name}.`,
-      });
-    } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: error.message,
-        variant: 'destructive',
-      });
-    } finally {
-      setIsFollowLoading(false);
-    }
-  };
-
   const handleReaction = async (emoji: string) => {
     if (isReactionLoading || !user) return;
     setIsReactionLoading(true);
@@ -359,7 +338,7 @@ export const PostDisplay: React.FC<PostDisplayProps> = ({
               <Button
                 variant={isFollowing ? 'secondary' : 'outline'}
                 size="sm"
-                onClick={handleFollow}
+                onClick={onFollow}
                 disabled={isFollowLoading}
                 className="w-full sm:w-auto"
               >
