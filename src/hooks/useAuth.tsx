@@ -95,14 +95,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   useEffect(() => {
+    let mounted = true;
     console.log('[Auth] Effect mounted');
     setLoading(true);
     setLoadingMessage('Initializing session...');
 
     // Helper function to load profile and unread count
     const loadUserProfile = async (session: Session) => {
+      if (!mounted) return; 
+      
       console.log(`[Auth] Loading profile for ${session.user.id}`);
       const profileData = await fetchProfile(session.user.id);
+      
+      // Check if still mounted *after* fetching
+      if (!mounted) return;
+
       if (profileData) {
         setProfile(profileData);
         await fetchUnreadCount();
@@ -110,53 +117,56 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
+      if (!mounted) {
+        console.log(`[Auth] Event ${event} received by unmounted listener. Ignoring.`);
+        return; 
+      }
+      
       console.log(`[Auth] Auth event: ${event}`);
 
-      if (newSession) {
-        // These events establish a new session (e.g., login, initial load)
-        if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
-          console.log('[Auth] Setting session and loading profile...');
-          
-          // THE FIX (for reload hang):
-          // Force-set the session for the client *before* fetching the profile.
-          await supabase.auth.setSession(newSession); 
-          
-          setSession(newSession);
-          setUser(newSession.user);
-          await loadUserProfile(newSession);
-          
-        } else if (event === 'TOKEN_REFRESHED') {
-          // THE FIX (for tab-switching):
-          // Just update our local state. Do *not* call setSession.
-          // Supabase handles this refresh internally.
-          console.log('[Auth] Token refreshed, updating local state.');
-          setSession(newSession);
-          setUser(newSession.user); // Ensure user is also in sync
-
-        } else if (event === 'USER_UPDATED') {
-          // User changed email/password, refresh their profile data
-          console.log('[Auth] User updated, refreshing profile.');
-          setUser(newSession.user);
-          await loadUserProfile(newSession);
+      try {
+        if (newSession) {
+          if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
+            console.log('[Auth] Setting session and loading profile...');
+            await supabase.auth.setSession(newSession); 
+            
+            if (mounted) {
+              setSession(newSession);
+              setUser(newSession.user);
+              await loadUserProfile(newSession);
+            }
+          } else if (event === 'TOKEN_REFRESHED') {
+            console.log('[Auth] Token refreshed, updating local state.');
+            setSession(newSession);
+            setUser(newSession.user);
+          } else if (event === 'USER_UPDATED') {
+            console.log('[Auth] User updated, refreshing profile.');
+            setUser(newSession.user);
+            await loadUserProfile(newSession);
+          }
+        } else if (event === 'SIGNED_OUT' || (event === 'INITIAL_SESSION' && !newSession)) {
+          console.log('[Auth] No session or user signed out. Clearing state.');
+          setSession(null);
+          setUser(null);
+          setProfile(null);
+          setInitialUnreadCount(null);
+          setPersonalKey(null);
+          setUserMasterKey(null);
         }
-      } else if (event === 'SIGNED_OUT' || (event === 'INITIAL_SESSION' && !newSession)) {
-        // Handles both explicit sign-out and initial load with no user
-        console.log('[Auth] No session or user signed out. Clearing state.');
-        setSession(null);
-        setUser(null);
-        setProfile(null);
-        setInitialUnreadCount(null);
-        setPersonalKey(null);
-        setUserMasterKey(null);
+      } catch (error) {
+        console.error('[Auth] Error in auth state change handler:', error);
+      } finally {
+        // Only the mounted listener can stop the loading
+        if (mounted) {
+          setLoading(false);
+          setLoadingMessage('');
+        }
       }
-
-      // Always stop loading after the event is handled
-      setLoading(false);
-      setLoadingMessage('');
     });
 
     return () => {
       console.log('[Auth] Cleaning up subscription.');
+      mounted = false; // <-- This flags the first listener as "unmounted"
       subscription.unsubscribe();
     };
   }, [fetchProfile, fetchUnreadCount]); 
