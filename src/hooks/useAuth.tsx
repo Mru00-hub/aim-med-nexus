@@ -97,66 +97,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     console.log('[Auth] Effect mounted');
     let isMounted = true;
-
-    const initAuth = async () => {
-      console.log('[Auth] Starting initialization...');
     
-      try {
-        // Get initial session
-        const { data: { session: currentSession }, error } = await supabase.auth.getSession();
-        console.log('[Auth] getSession result:', { hasSession: !!currentSession, error });
-
-        if (!isMounted) {
-          console.log('[Auth] Component unmounted, aborting');
-          return;
-        }
-
-        if (error) {
-          console.error('[Auth] Session error:', error);
-          toast({
-            title: "Session Error",
-            description: "Failed to load session. Please refresh.",
-            variant: "destructive",
-          });
-          setLoading(false);
-          return;
-        }
-
-        if (currentSession?.user) {
-          console.log('[Auth] User found, loading profile...');
-          setLoadingMessage('Loading profile...');
-         
-          // Fetch profile
-          const profileData = await fetchProfile(currentSession.user.id);
-          console.log('[Auth] Profile result:', { hasProfile: !!profileData, error: profileError });
-
-          if (!isMounted) return;
-
-          if (profileData) {
-            setProfile(profileData); 
-            await fetchUnreadCount();
-          }
-
-          if (isMounted) {
-            setSession(currentSession);
-            setUser(currentSession.user);
-          }
-        } else {
-          console.log('[Auth] No session found');
-        }
-      } catch (err) {
-        console.error('[Auth] Init error:', err);
-      } finally {
-        if (isMounted) {
-          console.log('[Auth] Initialization complete, setting loading=false');
-          setLoading(false);
-          setLoadingMessage('');
-        }
-      }
-    };
-
-    // Run initialization
-    initAuth();
+    // Start loading
+    setLoading(true);
+    setLoadingMessage('Initializing session...');
 
     // Set up auth listener
     console.log('[Auth] Setting up auth state listener...');
@@ -165,8 +109,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
       if (!isMounted) return;
 
-      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+      // Handle initial load, sign-in, or token refresh
+      if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         if (newSession?.user) {
+          console.log('[Auth] User found, loading profile...');
+          setLoadingMessage('Loading profile...');
+          
           const profileData = await fetchProfile(newSession.user.id);
 
           if (isMounted && profileData) {
@@ -178,6 +126,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       } else if (event === 'SIGNED_OUT') {
         if (isMounted) {
+          console.log('[Auth] User signed out, clearing state.');
           setSession(null);
           setUser(null);
           setProfile(null);
@@ -186,6 +135,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setUserMasterKey(null);
         }
       }
+      
+      // IMPORTANT: Stop loading *after* the event is processed
+      if (isMounted) {
+        setLoading(false);
+        setLoadingMessage('');
+      }
     });
 
     return () => {
@@ -193,7 +148,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       isMounted = false;
       subscription.unsubscribe();
     };
-  }, [toast, fetchProfile]);
+  }, [toast, fetchProfile, fetchUnreadCount]);
     
   const refreshProfile = useCallback(async () => {
     try {
