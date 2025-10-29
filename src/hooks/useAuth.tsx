@@ -148,7 +148,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       } catch (error) {
          console.error('[Auth Effect - Revised] CRITICAL ERROR during initial check:', error); // Log 7 (Critical Error)
-         if (mounted) setError('Failed to initialize session.'); // Set an error state if you have one
+         if (mounted) {
+           toast({
+             title: "Session Error",
+             description: "Failed to initialize session. Please refresh the page.",
+             variant: "destructive",
+           });
+         }
       } finally {
          // --- CRUCIAL: Set loading false AFTER initial check ---
          if (mounted) {
@@ -209,7 +215,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       mounted = false;
       subscription.unsubscribe();
     };
-  }, [fetchProfile]);
+  }, [fetchProfile, toast]);
     
   const refreshProfile = useCallback(async () => {
     try {
