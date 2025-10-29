@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage, AvatarProfile } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { MapPin, Briefcase, Award } from 'lucide-react';
@@ -45,6 +45,15 @@ export const UserProfileCard = ({ userId, children }: UserProfileCardProps) => {
     setLoading(false);
   };
 
+  const avatarProfile: AvatarProfile | null = useMemo(() => {
+    if (!profile) return null;
+    return {
+      id: userId, // Use the ID passed from props
+      full_name: profile.full_name || 'User',
+      profile_picture_url: profile.profile_picture_url
+    }
+  }, [profile, userId]);
+
   return (
     <HoverCard openDelay={200} onOpenChange={(open) => { if (open) fetchProfile() }}>
       <HoverCardTrigger asChild>
@@ -54,11 +63,9 @@ export const UserProfileCard = ({ userId, children }: UserProfileCardProps) => {
         {loading && <ProfileCardSkeleton />}
         {profile && !loading && (
           <div className="flex gap-4">
-            <Avatar className="h-12 w-12">
-              <AvatarImage src={profile.profile_picture_url || undefined} />
-              <AvatarFallback>
-                {profile.full_name?.split(' ').map(n => n[0]).join('')}
-              </AvatarFallback>
+            <Avatar profile={avatarProfile} className="h-12 w-12">
+              <AvatarImage />
+              <AvatarFallback />
             </Avatar>
             <div className="space-y-1.5 flex-grow">
               <h4 className="text-sm font-semibold">{profile.full_name}</h4>
