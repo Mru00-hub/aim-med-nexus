@@ -410,12 +410,16 @@ export const updateMemberRole = async (membershipId: string, newRole: Enums<'mem
 };
 
 export const incrementProfileView = async (userId: string): Promise<void> => {
-  // We don't need to await this or handle errors,
-  // it's a "fire and forget" call.
-  supabase.rpc('increment_profile_view', { p_profile_id: userId })
-    .then(({ error }) => {
-      if (error) console.warn('Failed to increment profile view:', error.message);
-    });
+  // 🚀 FIX: Await the call so we can properly catch errors
+  const { error } = await supabase.rpc('increment_profile_view', { p_profile_id: userId });
+
+  if (error) {
+    // This will now be a red error in your browser console
+    console.error("Error incrementing profile view:", error);
+  } else {
+    // You can optionally add this to confirm it worked
+    console.log("Profile view incremented successfully.");
+  }
 };
 
 interface GetPublicThreadsProps {
