@@ -49,35 +49,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   
   const isAuthOperationInProgress = useRef(false);
 
+  // --- Using useCallback as in your first file ---
   const fetchProfile = useCallback(async (userId: string): Promise<Profile | null> => {
-    console.log('[fetchProfile] START - Fetching for userId:', userId);
     try {
-      console.log('[fetchProfile] Querying Supabase profiles table...');
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
         .single();
-      console.log('[fetchProfile] Supabase query FINISHED.');
+      
       if (error) {
-        console.error("[fetchProfile] Supabase ERROR:", error);
+        console.error("Profile fetch error:", error);
         toast({
           title: "Profile Error",
           description: "Could not load your profile. Please refresh the page.",
           variant: "destructive",
         });
-        console.log('[fetchProfile] END - Returning NULL due to error');
         return null;
       }
-      console.log('[fetchProfile] END - Returning data:', data ? 'OK' : 'NULL');
+      
       return data;
     } catch (error) {
-      console.error("[fetchProfile] UNEXPECTED CATCH ERROR:", error); // <-- LOG G (Catch Error)
-      console.log('[fetchProfile] END - Returning NULL due to catch error');
+      console.error("Unexpected error fetching profile:", error);
       return null;
     }
   }, [toast]); 
 
+  // --- Using useCallback as in your first file ---
   const fetchUnreadCount = useCallback(async () => {
     try {
       const { data, error } = await supabase.rpc('get_my_unread_inbox_count');
@@ -92,85 +90,69 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error("RPC call failed:", rpcError.message);
       setInitialUnreadCount(null);
     }
-  }, []);
+  }, []); // Empty dependency array is correct here
 
+  // =================================================================
+  // START: YOUR ORIGINAL useEffect (Restored)
+  // =================================================================
   useEffect(() => {
     let mounted = true;
-    console.log('[Auth] Effect mounted');
-    setLoading(true);
-    setLoadingMessage('Initializing session...');
-
-    // Helper function to load profile and unread count
-    const loadUserProfile = async (session: Session) => {
-      if (!mounted) return; 
-      
-      console.log(`[Auth] Loading profile for ${session.user.id}`);
-      const profileData = await fetchProfile(session.user.id);
-      
-      // Check if still mounted *after* fetching
-      if (!mounted) return;
-
-      if (profileData) {
-        setProfile(profileData);
-        await fetchUnreadCount();
+    const init = async () => {
+      // This getSession() is what causes the reload hang
+      const { data, error } = await supabase.auth.getSession();
+      if (mounted && data.session) {
+        setSession(data.session);
+        setUser(data.session.user);
+        // This fetchProfile() is the race condition
+        const userProfile = await fetchProfile(data.session.user.id);
+        setProfile(userProfile);
+        if (userProfile) {
+          await fetchUnreadCount();
+        }
+      }
+      // This will set loading false, even if the profile fetch failed/hanged
+      if (mounted) {
+        setLoading(false);
       }
     };
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
-      if (!mounted) {
-        console.log(`[Auth] Event ${event} received by unmounted listener. Ignoring.`);
-        return; 
-      }
-      
-      console.log(`[Auth] Auth event: ${event}`);
+    init();
 
-      try {
-        if (newSession) {
-          if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
-            console.log('[Auth] Setting session and loading profile...');
-            await supabase.auth.setSession(newSession); 
-            
-            if (mounted) {
-              setSession(newSession);
-              setUser(newSession.user);
-              await loadUserProfile(newSession);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      if (!mounted) return;
+      
+      if (newSession) {
+        setSession(newSession);
+        setUser(newSession.user);
+        // This is not awaited, which is fine for the listener
+        fetchProfile(newSession.user.id).then(async (userProfile) => {
+          if (mounted) { // Check mounted again inside async callback
+            setProfile(userProfile);
+            if (userProfile) {
+              await fetchUnreadCount();
             }
-          } else if (event === 'TOKEN_REFRESHED') {
-            console.log('[Auth] Token refreshed, updating local state.');
-            setSession(newSession);
-            setUser(newSession.user);
-          } else if (event === 'USER_UPDATED') {
-            console.log('[Auth] User updated, refreshing profile.');
-            setUser(newSession.user);
-            await loadUserProfile(newSession);
           }
-        } else if (event === 'SIGNED_OUT' || (event === 'INITIAL_SESSION' && !newSession)) {
-          console.log('[Auth] No session or user signed out. Clearing state.');
-          setSession(null);
-          setUser(null);
-          setProfile(null);
-          setInitialUnreadCount(null);
-          setPersonalKey(null);
-          setUserMasterKey(null);
-        }
-      } catch (error) {
-        console.error('[Auth] Error in auth state change handler:', error);
-      } finally {
-        // Only the mounted listener can stop the loading
-        if (mounted) {
-          setLoading(false);
-          setLoadingMessage('');
-        }
+        });
+      } else {
+        setSession(null);
+        setUser(null);
+        setProfile(null);
+        setInitialUnreadCount(null);
+        setPersonalKey(null);
+        setUserMasterKey(null);
       }
     });
 
     return () => {
-      console.log('[Auth] Cleaning up subscription.');
-      mounted = false; // <-- This flags the first listener as "unmounted"
+      mounted = false;
       subscription.unsubscribe();
     };
-  }, [fetchProfile, fetchUnreadCount]); 
+  }, [fetchProfile, fetchUnreadCount]); // Added dependencies
+  // =================================================================
+  // END: YOUR ORIGINAL useEffect
+  // =================================================================
     
+  // --- Using useCallback as in your first file ---
   const refreshProfile = useCallback(async () => {
     try {
       const { data: { session: currentSession } } = await supabase.auth.getSession();
@@ -191,6 +173,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [fetchProfile, toast]);
 
+  // --- Using useCallback as in your first file ---
   const generateAndSetKeys = useCallback(async (password: string, profile: Profile, salt: string): Promise<boolean> => {
     if (!password || !salt) {
       console.error('❌ Missing password or salt');
@@ -200,39 +183,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     try {
       console.log('🔐 === KEY GENERATION START ===');
-      console.log('Salt from profile:', salt);
-      console.log('Encrypted master key exists:', !!profile.encrypted_user_master_key);
-
-      // Step 1: ALWAYS derive the personalKey from password + salt
-      console.log('⚙️ Deriving personal key from password...');
       const derivedPersonalKey = await deriveKey(password, salt);
       setPersonalKey(derivedPersonalKey);
       console.log('✅ Personal key derived successfully');
 
-      // Step 2: Check if user has an encrypted master key stored
       if (profile.encrypted_user_master_key) {
         console.log('🔓 MODE: DECRYPTION (existing user)');
-        console.log('Encrypted key to decrypt:', profile.encrypted_user_master_key.substring(0, 50) + '...');
-        
         try {
-          // Decrypt the stored master key using the personal key
           const masterKeyJwkString = await decryptMessage(
             profile.encrypted_user_master_key, 
             derivedPersonalKey
           );
-          console.log('✅ Master key decrypted successfully');
-          console.log('JWK string length:', masterKeyJwkString.length);
-          
-          // Import the JWK back into a CryptoKey
           const masterKey = await importConversationKey(masterKeyJwkString);
           setUserMasterKey(masterKey);
           console.log('✅ Master key imported and set');
           console.log('🔐 === KEY GENERATION SUCCESS ===');
           return true;
-
         } catch (decryptError: any) {
           console.error('❌ DECRYPTION FAILED:', decryptError.message);
-          console.error('This usually means the password is incorrect');
           toast({ 
             title: "Incorrect Password", 
             description: "Could not unlock your encryption keys. Please check your password.",
@@ -240,26 +208,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           });
           return false;
         }
-
       } else {
         console.log('🔒 MODE: ENCRYPTION (first-time setup)');
-        
-        // Generate a brand new master key for this user
-        console.log('⚙️ Generating new master key...');
         const newMasterKey = await generateConversationKey();
-        console.log('✅ New master key generated');
-
-        // Export it to JWK string
         const masterKeyJwkString = await exportConversationKey(newMasterKey);
-        console.log('✅ Master key exported to JWK');
-        console.log('JWK string length:', masterKeyJwkString.length);
-
-        // Encrypt the JWK with the personal key
         const encryptedMasterKey = await encryptMessage(masterKeyJwkString, derivedPersonalKey);
-        console.log('✅ Master key encrypted');
-        console.log('Encrypted string:', encryptedMasterKey.substring(0, 50) + '...');
 
-        // Save to database
         console.log('⚙️ Saving encrypted master key to database...');
         const { error } = await supabase
           .from('profiles')
@@ -272,25 +226,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
         
         console.log('✅ Encrypted master key saved to database');
-
-        // Update local state
-        setProfile(currentProfile => {
-          if (currentProfile) {
-            return { ...currentProfile, encrypted_user_master_key: encryptedMasterKey };
-          }
-          return null;
-        });
+        setProfile(currentProfile => currentProfile ? { ...currentProfile, encrypted_user_master_key: encryptedMasterKey } : null);
         setUserMasterKey(newMasterKey);
         
         console.log('✅ First-time setup complete');
         console.log('🔐 === KEY GENERATION SUCCESS ===');
         return true;
       }
-
     } catch (error: any) {
       console.error('❌ === KEY GENERATION FAILED ===');
       console.error('Error:', error.message);
-      console.error('Stack:', error.stack);
       toast({ 
         title: "Encryption Error", 
         description: "Failed to set up encryption keys. Please try again.",
@@ -300,6 +245,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [toast]); 
 
+  // --- Using useCallback as in your first file ---
   const signUp = useCallback(async (email: string, password: string, metadata?: any) => {
     isAuthOperationInProgress.current = true;
     setLoadingMessage('Creating your account...');
@@ -342,6 +288,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [toast]); 
   
+  // --- Using useCallback as in your first file ---
   const signIn = useCallback(async (email: string, password: string) => {
     isAuthOperationInProgress.current = true;
     setLoadingMessage('Signing you in...');
@@ -374,6 +321,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [toast]); 
 
+  // --- Using useCallback as in your first file ---
   const signInWithGoogle = useCallback(async () => {
     isAuthOperationInProgress.current = true;
     setLoadingMessage('Redirecting to Google...');
@@ -408,6 +356,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [toast]); 
 
+  // --- Using useCallback as in your first file ---
   const signOut = useCallback(async () => {
     isAuthOperationInProgress.current = true;
     setLoadingMessage('Signing out...');
@@ -416,7 +365,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await supabase.removeAllChannels();
       console.log('All Supabase channels removed.');
     
-      // Clear encryption keys BEFORE signing out
       setPersonalKey(null);
       setUserMasterKey(null);
     
@@ -434,6 +382,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [navigate, toast]);
 
+  // --- Using useMemo as in your first file ---
   const value = useMemo(() => ({
     user,
     session,
