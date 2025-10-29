@@ -86,7 +86,7 @@ export const PartnershipSection = () => {
                 <div className="w-12 h-12 bg-gradient-primary rounded-lg flex items-center justify-center mb-4 mx-auto">
                   <partnership.icon className="h-6 w-6 text-primary-foreground" />
                 </div>
-                <CardTitle className="text-lg md:text-xl">{partnership.title}</CardTitle>
+                <CardTitle className="text-sm sm:text-base md:text-lg">{partnership.title}</CardTitle>
               </CardHeader>
             </Card>
           ))}
