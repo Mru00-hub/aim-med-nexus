@@ -589,7 +589,7 @@ const CompleteProfile = () => {
       contentPortfolio: setContentPortfolio,
       cocurriculars: setCocurriculars,
     };
-    setters[listName]((prev: any[]) => [...prev, defaults[listName]]);
+    setters[listName]((prev: any[]) => [...prev, newItem]);
   };
 
   const handleWorkExperienceChange = (index: number, field: string, value: any) => {
