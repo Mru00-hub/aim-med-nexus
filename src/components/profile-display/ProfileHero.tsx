@@ -14,6 +14,7 @@ import { toggleFollow } from '@/integrations/supabase/community.api';
 
 type ProfileHeroProps = {
   data: FullProfile;
+  displaySrc: string | undefined;
   isOwnProfile: boolean;
   connectionStatus: 'connected' | 'pending_sent' | 'pending_received' | 'not_connected';
   isFollowLoading: boolean;
@@ -27,6 +28,7 @@ type ProfileHeroProps = {
 
 export const ProfileHero: React.FC<ProfileHeroProps> = ({
   data,
+  displaySrc,
   isOwnProfile,
   connectionStatus: staleConnectionStatus,
   isFollowLoading: staleFollowLoading,
@@ -117,7 +119,7 @@ export const ProfileHero: React.FC<ProfileHeroProps> = ({
         {/* --- Moved negative margin directly to the Avatar --- */}
         <div className="flex flex-col sm:flex-row sm:items-end sm:gap-6">
            <Avatar className="h-28 w-28 sm:h-36 sm:w-36 border-4 border-background shadow-lg bg-background -mt-16 sm:-mt-20 flex-shrink-0"> 
-            <AvatarImage src={profile.profile_picture_url || undefined} alt={profile.full_name || ''} />
+            <AvatarImage src={displaySrc} alt={profile.full_name || ''} />
             <AvatarFallback className="text-5xl">
               {profile.full_name?.split(' ').map((n) => n[0]).join('')}
             </AvatarFallback>
