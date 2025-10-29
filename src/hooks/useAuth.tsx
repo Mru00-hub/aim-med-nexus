@@ -99,6 +99,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     setLoading(true);
     setLoadingMessage('Initializing session...');
+    const handleSession = async (session: Session) => {
+      console.log('[Auth] User found, loading profile...');
+      setLoadingMessage('Loading profile...');
+      
+      const profileData = await fetchProfile(session.user.id);
+      
+      if (profileData) {
+        setProfile(profileData);
+        await fetchUnreadCount();
+      }
+      
+      setSession(session);
+      setUser(session.user);
+      console.log('[Auth] User and profile set.');
+      
+      setLoading(false);
+      setLoadingMessage('');
+    };
 
     // Set up auth listener
     console.log('[Auth] Setting up auth state listener...');
@@ -106,29 +124,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log(`[Auth] Auth state changed: ${event}`);
     
       // Handle initial load, sign-in, or token refresh
-      if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-        if (newSession?.user) {
-          console.log('[Auth] User found, loading profile...');
-          setLoadingMessage('Loading profile...');
-          
-          // We await these so setLoading(false) doesn't run too early
-          const profileData = await fetchProfile(newSession.user.id);
-          
-          if (profileData) {
-            setProfile(profileData);
-            await fetchUnreadCount();
-          }
-          
-          // Set user/session *after* profile is loaded
-          setSession(newSession);
-          setUser(newSession.user);
-          console.log('[Auth] User and profile set.');
-
-        } else if (event === 'INITIAL_SESSION') {
-            // This handles the case where the app loads and there is no user
-            console.log('[Auth] Initial session loaded, no user found.');
-            setLoading(false);
-            setLoadingMessage('');
+      if (event === 'INITIAL_SESSION') {
+        if (newSession) {
+          // THE FIX: On initial load, wait a moment for the client
+          // to set its auth headers before we query RLS-protected tables.
+          console.log('[Auth] Initial session found. Adding tiny delay for auth header setup...');
+          setTimeout(() => {
+            handleSession(newSession);
+          }, 50); // 50-100ms is usually enough
+        } else {
+          // No user, just stop loading
+          console.log('[Auth] Initial session, no user.');
+          setLoading(false);
+          setLoadingMessage('');
+        }
+      } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        if (newSession) {
+          // No delay needed for these events
+          await handleSession(newSession);
         }
       } else if (event === 'SIGNED_OUT') {
         console.log('[Auth] User signed out, clearing state.');
@@ -138,12 +151,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setInitialUnreadCount(null);
         setPersonalKey(null);
         setUserMasterKey(null);
-      }
-      
-      // Stop loading *after* the event is processed
-      // (except for the 'no user on initial load' case, handled above)
-      if (event !== 'INITIAL_SESSION' || newSession?.user) {
-        console.log('[Auth] Event processed, setting loading=false');
         setLoading(false);
         setLoadingMessage('');
       }
