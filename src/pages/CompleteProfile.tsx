@@ -31,7 +31,7 @@ import { ProfileContentForm } from '@/components/profile-edit/ProfileContentForm
 import { ProfileCocurricularsForm } from '@/components/profile-edit/ProfileCocurricularsForm';
 import { ProfileWorkExperienceForm } from '@/components/profile-edit/ProfileWorkExperienceForm';
 import { ProfileEducationHistoryForm } from '@/components/profile-edit/ProfileEducationHistoryForm';
-
+import { useQueryClient } from '@tanstack/react-query'; 
 // 🚀 PLAN: Import API functions and types from user.api.ts
 import {
   getMyAcademicAchievements,
@@ -79,6 +79,7 @@ const CompleteProfile = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading, refreshProfile } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -714,6 +715,7 @@ const CompleteProfile = () => {
       });
 
       await refreshProfile();
+      queryClient.invalidateQueries({ queryKey: ['fullProfile', user.id] });
       navigate('/community', { replace: true });
 
     } catch (err: any) {
