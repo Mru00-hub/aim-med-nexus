@@ -1,19 +1,38 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search, UserX, MessageSquare } from 'lucide-react';
+import { Search, UserX, MessageSquare, Loader2, Check} from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { UserActionCard } from './UserActionCard';
 import { createOrGetConversation } from '@/integrations/supabase/social.api';
 import { useToast } from '@/components/ui/use-toast';
+import { useSocialCounts } from '@/context/SocialCountsContext';
+import { toggleFollow } from '@/integrations/supabase/community.api';
+import { useAuth } from '@/hooks/useAuth';
 
 // The props are passed correctly from FunctionalSocial.tsx
 export const NetworkTab = ({ myConnections, loading, onRemoveConnection }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
+  const { isFollowing, refetchSocialGraph } = useSocialCounts();
+  const [followLoadingMap, setFollowLoadingMap] = useState<Record<string, boolean>>({});
+
+  const handleFollow = useCallback(async (userId: string) => {
+    if (!user) return;
+    setFollowLoadingMap(prev => ({ ...prev, [userId]: true }));
+    try {
+      await toggleFollow(userId);
+      await refetchSocialGraph(); // Refresh global state
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } finally {
+      setFollowLoadingMap(prev => ({ ...prev, [userId]: false }));
+    }
+  }, [user, refetchSocialGraph, toast]);
 
   const handleStartConversation = async (connection) => {
     toast({ title: "Opening conversation..." });
