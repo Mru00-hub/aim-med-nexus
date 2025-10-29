@@ -44,7 +44,7 @@ const AvatarImage = React.forwardRef<
   const profile = React.useContext(AvatarContext);
 
   // 7. Implement the fallback logic
-  const finalSrc = useMemo(() => {
+  const finalSrc = React.useMemo(() => {
     // If a 'src' prop is passed directly, it wins.
     if (src) return src;
     // If no 'src' is passed, but 'profile' exists, use it.
@@ -75,7 +75,7 @@ const AvatarFallback = React.forwardRef<
   const profile = React.useContext(AvatarContext);
 
   // 10. Auto-generate initials if no children are provided
-  const finalChildren = useMemo(() => {
+  const finalChildren = React.useMemo(() => {
     // If 'children' are passed directly (e.g., <AvatarFallback>JD</AvatarFallback>), they win.
     if (children) return children;
     // If no 'children', but 'profile' exists, generate initials.
