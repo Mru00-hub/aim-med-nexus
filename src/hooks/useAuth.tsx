@@ -95,91 +95,119 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   useEffect(() => {
-    console.log('[Auth Effect] START - Setting loading: true'); 
+    console.log('[Auth Effect - Revised] START'); // Log 1
     let mounted = true;
-    // We set loading to true once at the start.
     setLoading(true);
     setLoadingMessage('Initializing session...');
-    console.log('[Auth Effect] Subscribing to onAuthStateChange...');
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
-      console.log('[Auth Effect] onAuthStateChange FIRED. Mounted:', mounted, 'Event:', _event);
-      if (!mounted) {
-        console.log('[Auth Effect] Listener fired but component unmounted. Aborting.'); // LOG 4
-        return;
-      }
-      
-      try { // Added try...catch around the whole async block
-        if (newSession) {
-          console.log('[Auth Effect] User SESSION FOUND. Fetching profile...'); // LOG 5
-          setLoadingMessage('Loading profile...'); // Update message
+    // --- Initial Load Check using getSession ---
+    const checkInitialSession = async () => {
+      console.log('[Auth Effect - Revised] Checking initial session with getSession()...'); // Log 2
+      try {
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (!mounted) return; // Check if component unmounted during async call
 
-          // Fetch all data *before* setting state
-          const userProfile = await fetchProfile(newSession.user.id);
-          console.log('[Auth Effect] Profile fetched:', userProfile ? 'OK' : 'NULL / Error in fetchProfile'); // LOG 6
-
-          let unreadCount = null;
-          if (userProfile) {
-            console.log('[Auth Effect] Profile OK. Fetching unread count...'); // LOG 7
-            setLoadingMessage('Loading notifications...'); // Update message
-            try {
-              const { data, error: countError } = await supabase.rpc('get_my_unread_inbox_count');
-              if (countError) throw countError; // Throw if RPC fails
-              unreadCount = data;
-              console.log('[Auth Effect] Unread count fetched:', unreadCount); // LOG 8
-            } catch (e) {
-              console.error("[Auth Effect] ERROR fetching unread count:", e); // LOG 9 (Error)
-              // Decide if you want to proceed without the count or stop
-            }
-          } else {
-             console.log('[Auth Effect] Profile fetch failed or returned null. Skipping unread count.'); // LOG 10
-          }
-
-          // Now, set all state at once
-          console.log('[Auth Effect] Setting logged-in state...'); // LOG 11
-          setSession(newSession);
-          setUser(newSession.user);
-          setProfile(userProfile);
-          setInitialUnreadCount(unreadCount);
-          console.log('[Auth Effect] Logged-in state SET.'); // LOG 12
-
-        } else {
-          // User is logged out
-          console.log('[Auth Effect] NO user session found. Clearing state...'); // LOG 13
-          setLoadingMessage('Logging out...'); // Update message (briefly shown)
-
-          setSession(null);
-          setUser(null);
-          setProfile(null);
-          setInitialUnreadCount(null);
-          setPersonalKey(null);
-          setUserMasterKey(null);
-          console.log('[Auth Effect] Logged-out state CLEARED.'); // LOG 14
+        if (sessionError) {
+          console.error('[Auth Effect - Revised] Error fetching initial session:', sessionError); // Log 3 (Error)
+          throw sessionError; // Throw to be caught below
         }
 
-        // --- Crucial Part ---
-        console.log('[Auth Effect] Setting loading: false'); // LOG 15
-        setLoading(false);
-        setLoadingMessage(''); // Clear message
-        console.log('[Auth Effect] Loading FINISHED.'); // LOG 16
-
-      } catch (error) { // Catch errors from fetchProfile or the count RPC
-          console.error('[Auth Effect] CRITICAL ERROR during auth state processing:', error); // LOG 17 (Critical Error)
-          // Optionally set an error state here
-          console.log('[Auth Effect] Setting loading: false (after error)'); // LOG 18
-          setLoading(false); // Still set loading false even on error
-          setLoadingMessage('Error initializing session.'); // Show error message
+        if (session) {
+          console.log('[Auth Effect - Revised] Initial session FOUND. Fetching profile/counts...'); // Log 4
+          setLoadingMessage('Loading profile...');
+          // Fetch profile and count (similar to before)
+          const userProfile = await fetchProfile(session.user.id);
+          let unreadCount = null;
+          if (userProfile) {
+            try {
+              const { data, error: countError } = await supabase.rpc('get_my_unread_inbox_count');
+              if (countError) console.error("[Auth Effect - Revised] Error fetching unread count:", countError); // Log error but continue
+              else unreadCount = data;
+            } catch (e) { console.error("[Auth Effect - Revised] CATCH fetching unread count:", e); }
+          }
+          // Set initial state if still mounted
+          if (mounted) {
+            console.log('[Auth Effect - Revised] Setting initial logged-in state.'); // Log 5
+            setSession(session);
+            setUser(session.user);
+            setProfile(userProfile);
+            setInitialUnreadCount(unreadCount);
+          }
+        } else {
+          console.log('[Auth Effect - Revised] No initial session found.'); // Log 6
+          // Ensure state is cleared if no session (might already be null, but good practice)
+          if (mounted) {
+             setSession(null);
+             setUser(null);
+             setProfile(null);
+             setInitialUnreadCount(null);
+             setPersonalKey(null);
+             setUserMasterKey(null);
+          }
+        }
+      } catch (error) {
+         console.error('[Auth Effect - Revised] CRITICAL ERROR during initial check:', error); // Log 7 (Critical Error)
+         if (mounted) setError('Failed to initialize session.'); // Set an error state if you have one
+      } finally {
+         // --- CRUCIAL: Set loading false AFTER initial check ---
+         if (mounted) {
+           console.log('[Auth Effect - Revised] Initial check complete. Setting loading: false.'); // Log 8
+           setLoading(false);
+           setLoadingMessage('');
+         }
       }
-    });
+    };
 
-    console.log('[Auth Effect] Subscription CREATED.'); // LOG 19
+    checkInitialSession(); // Run the initial check
 
-    // Cleanup function
+    // --- Setup Listener for Subsequent Changes ---
+    console.log('[Auth Effect - Revised] Subscribing to onAuthStateChange for UPDATES...'); // Log 9
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (_event, newSession) => {
+        if (!mounted) return;
+        console.log('[Auth Effect - Revised] onAuthStateChange FIRED (Update):', _event); // Log 10
+
+        // This listener now ONLY handles updates *after* the initial load
+        if (newSession) {
+           // User logged IN (or token refreshed)
+           console.log('[Auth Effect - Revised] AuthChange: Session updated. Refetching profile/counts...'); // Log 11
+           setLoadingMessage('Refreshing session...'); // Show brief message
+           const userProfile = await fetchProfile(newSession.user.id);
+           let unreadCount = null;
+           if (userProfile) {
+             try {
+               const { data } = await supabase.rpc('get_my_unread_inbox_count');
+               unreadCount = data;
+             } catch (e) { console.error("[Auth Effect - Revised] Error fetching unread count on update:", e); }
+           }
+           if (mounted) {
+             setSession(newSession);
+             setUser(newSession.user);
+             setProfile(userProfile);
+             setInitialUnreadCount(unreadCount);
+             setLoadingMessage(''); // Clear message quickly
+           }
+        } else {
+           // User logged OUT
+           console.log('[Auth Effect - Revised] AuthChange: No session. Clearing state...'); // Log 12
+           if (mounted) {
+              setSession(null);
+              setUser(null);
+              setProfile(null);
+              setInitialUnreadCount(null);
+              setPersonalKey(null);
+              setUserMasterKey(null);
+           }
+        }
+      }
+    );
+
+    // Cleanup
     return () => {
-      console.log('[Auth Effect] CLEANUP running. Unsubscribing...'); // LOG 20
+      console.log('[Auth Effect - Revised] CLEANUP running. Unsubscribing...'); // Log 13
       mounted = false;
       subscription.unsubscribe();
-      console.log('[Auth Effect] Unsubscribed.'); // LOG 21
     };
   }, [fetchProfile]);
     
