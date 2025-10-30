@@ -71,7 +71,7 @@ function SelectContent({
         )}
       </CommandEmpty>
       {/* ✅ FIX: Add padding to the group for mobile drawer spacing */ }
-      <CommandGroup className="max-h-64 overflow-auto p-2">
+      <CommandGroup className="max-h-64 min-h-[10rem] overflow-auto p-2">
         {options.map((option) => (
           <CommandItem
             key={option.value}
