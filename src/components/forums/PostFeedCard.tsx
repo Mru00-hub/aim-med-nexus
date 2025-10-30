@@ -169,17 +169,21 @@ export const PostFeedCard: React.FC<PostFeedCardProps> = ({
         {/* Main clickable area */}
         <div className="block cursor-pointer" onClick={handleCardClick}>
           <div className="flex justify-between items-start gap-4 mb-3"> {/* Added margin-bottom */}
-            <Avatar profile={authorProfile} className="h-9 w-9">
-              <AvatarImage alt={authorName || 'Author'} />
-              <AvatarFallback />
-            </Avatar>
-            <div>
-              <span className="font-semibold text-sm text-foreground">{authorName}</span>
-              {authorPosition && <p className="text-xs text-muted-foreground">{authorPosition}</p>}
+            <div className="flex items-center gap-2"> {/* <-- This is the wrapper you missed */}
+              <Avatar profile={authorProfile} className="h-9 w-9">
+                <AvatarImage alt={authorName || 'Author'} />
+                <AvatarFallback />
+              </Avatar>
+              <div>
+                <span className="font-semibold text-sm text-foreground">{authorName}</span>
+                {authorPosition && <p className="text-xs text-muted-foreground">{authorPosition}</p>}
+              </div>
             </div>
-            <Button 
-              variant="ghost" 
-              size="icon" 
+
+            {/* 2. Share Button */}
+            <Button
+              variant="ghost"
+              size="icon"
               className="h-8 w-8 flex-shrink-0" // Icon button
               onClick={handleShare}
             >
