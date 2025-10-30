@@ -61,12 +61,7 @@ export const UserListModal = ({
             data = await getFollowingWithStatus(userId);
             break;
           case 'Connections': 
-            const connectionsData = await getMyConnections();
-            data = connectionsData.map(conn => ({
-              ...conn, // Spread all other fields (full_name, profile_picture_url, etc.)
-              id: conn.other_user_id, // Map the ID field
-              connection_status: conn.status, // Pass this along (UserCard doesn't use it, but good practice)
-            })) as ApiUser[];
+            data = await getMyConnections(); 
             break;
           case 'Mutual Connections':
             data = await getMutualConnections(userId) as ApiUser[]; 
