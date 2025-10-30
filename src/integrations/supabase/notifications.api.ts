@@ -68,7 +68,7 @@ export const getNotifications = async (): Promise<NotificationWithActor[]> => {
         title, 
         body 
       ),
-      space:spaces (
+      space:spaces!entity_id (
         name
       )
     `
