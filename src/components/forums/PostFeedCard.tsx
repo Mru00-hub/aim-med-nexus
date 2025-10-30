@@ -72,7 +72,7 @@ export const PostFeedCard: React.FC<PostFeedCardProps> = ({
     
   const authorAvatar = isPublicPost 
     ? (post as PublicPost).author.profile_picture_url 
-    : ''; // PostOrThreadSummary type doesn't have an avatar, so we default to empty.
+    : (post as PostOrThreadSummary).creator_profile_picture_url || '';
 
   const reactionCount = isPublicPost
     ? (post as PublicPost).total_reaction_count
