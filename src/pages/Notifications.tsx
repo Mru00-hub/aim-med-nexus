@@ -353,14 +353,14 @@ export default function Notifications() {
       case 'new_public_post_by_followed_user':
       case 'new_reply_to_your_message':
         if (entityId) {
-          navigate(`/post/${entityId}`); // Navigate to the post
+          navigate(`/community/thread/${entityId}`); // Navigate to the post
           return;
         }
         break;
 
       case 'new_public_space_by_followed_user':
         if (entityId) {
-          navigate(`/space/${entityId}`); // Navigate to the space
+          navigate(`/community/space/${entityId}`); // Navigate to the space
           return;
         }
         break;
@@ -382,7 +382,7 @@ export default function Notifications() {
 
       case 'space_join_request': // [!code ++]
         if (entityId) { // [!code ++]
-          navigate(`/space/${entityId}/members`); // Navigate to the space's member management page [!code ++]
+          navigate(`/community/space/${entityId}/members`); // Navigate to the space's member management page [!code ++]
           return; // [!code ++]
         } // [!code ++]
         break;
