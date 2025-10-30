@@ -4,7 +4,7 @@ import { PublicPost, PostOrThreadSummary, SimpleAttachment } from '@/integration
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { ThumbsUp, MessageSquare, FileText, UserPlus, Check, Loader2, Smile } from 'lucide-react';
+import { ThumbsUp, MessageSquare, FileText, UserPlus, Check, Loader2, Smile, Share2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { ShortenedBody } from './ShortenedBody'; // We will create this
 import { Avatar, AvatarFallback, AvatarImage, AvatarProfile } from "@/components/ui/avatar";
@@ -137,6 +137,29 @@ export const PostFeedCard: React.FC<PostFeedCardProps> = ({
     setLocalFollowLoading(false);
   };
 
+  const handleShare = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation(); // Stop the card from navigating
+
+    // Construct the full URL
+    const postUrl = `${window.origin}/community/thread/${id}`;
+
+    navigator.clipboard.writeText(postUrl)
+      .then(() => {
+        toast({
+          title: 'Link Copied!',
+          description: 'The link to this post has been copied.',
+        });
+      })
+      .catch(() => {
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: 'Could not copy the link.',
+        });
+      });
+  };
+
   return (
     <Card 
       key={id} 
@@ -145,7 +168,7 @@ export const PostFeedCard: React.FC<PostFeedCardProps> = ({
       <CardContent className="p-4 sm:p-6">
         {/* Main clickable area */}
         <div className="block cursor-pointer" onClick={handleCardClick}>
-          <div className="flex items-center gap-2 mb-3"> {/* Added margin-bottom */}
+          <div className="flex justify-between items-start gap-4 mb-3"> {/* Added margin-bottom */}
             <Avatar profile={authorProfile} className="h-9 w-9">
               <AvatarImage alt={authorName || 'Author'} />
               <AvatarFallback />
@@ -154,6 +177,14 @@ export const PostFeedCard: React.FC<PostFeedCardProps> = ({
               <span className="font-semibold text-sm text-foreground">{authorName}</span>
               {authorPosition && <p className="text-xs text-muted-foreground">{authorPosition}</p>}
             </div>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-8 w-8 flex-shrink-0" // Icon button
+              onClick={handleShare}
+            >
+              <Share2 className="h-4 w-4" />
+            </Button>
           </div>
           <h3 className="font-semibold text-lg mb-2">{title}</h3>
           
