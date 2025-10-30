@@ -568,10 +568,44 @@ export const PostDisplay: React.FC<PostDisplayProps> = ({
         {/* Attachments and Link Previews */}
         <div className="mt-4 space-y-4">
           {post.attachments && post.attachments.length > 0 && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {post.attachments.map((att: any) => (
-                <AttachmentPreview key={att.file_url} attachment={att} />
-              ))}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {post.attachments.map((att: any) => {
+                const isImage = att.file_type.startsWith('image/');
+                const isVideo = att.file_type.startsWith('video/');
+
+                if (isImage) {
+                  return (
+                    <a
+                      key={att.file_url}
+                      href={att.file_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="block rounded-lg overflow-hidden border hover:opacity-90 transition-opacity"
+                    >
+                      <img
+                        src={att.file_url}
+                        alt={att.file_name}
+                        className="w-full h-auto object-cover max-h-[600px]"
+                      />
+                    </a>
+                  );
+                }
+
+                if (isVideo) {
+                  return (
+                    <div key={att.file_url} className="rounded-lg overflow-hidden border bg-black">
+                      <video
+                        src={att.file_url}
+                        controls
+                        className="w-full h-auto max-h-[600px]"
+                      />
+                    </div>
+                  );
+                }
+
+                // Fallback for PDF, ZIP, etc. using your original component
+                return <AttachmentPreview key={att.file_url} attachment={att} />;
+              })}
             </div>
           )}
 
