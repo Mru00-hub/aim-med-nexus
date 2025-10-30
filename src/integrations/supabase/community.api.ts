@@ -57,6 +57,7 @@ export type PostOrThreadSummary = {
   creator_full_name: string;
   creator_position: string | null;
   creator_organization: string | null;
+  creator_profile_picture_url: string | null;
   creator_specialization: string | null;
   created_at: string;
   last_activity_at: string;
