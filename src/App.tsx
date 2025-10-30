@@ -4,7 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 // ✅ 1. Replaced BrowserRouter with HashRouter for Cloud Shell compatibility
-import { HashRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import ScrollToTop from '@/lib/ScrollToTop';
 import { AuthProvider, useAuth } from "@/hooks/useAuth"; // useAuth is now used
 import AuthGuard from "@/components/AuthGuard";
@@ -137,13 +137,13 @@ const App = () => {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         {/* ✅ 4. Using HashRouter */}
-        <HashRouter>
+        <BrowserRouter>
           <ScrollToTop />
           <AuthProvider>
             {/* ✅ 5. Render the new AppContent component */}
             <AppContent />
           </AuthProvider>
-        </HashRouter>
+        </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>
   );            
