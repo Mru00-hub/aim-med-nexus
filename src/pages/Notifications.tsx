@@ -375,7 +375,7 @@ export default function Notifications() {
         
       case 'new_direct_message':
         if (entityId) {
-          navigate(`/messages/${entityId}`); // Navigate to the conversation
+          navigate(`/inbox`); // Navigate to the conversation
           return;
         }
         break;
