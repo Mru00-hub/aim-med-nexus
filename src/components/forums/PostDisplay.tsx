@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef} from 'react';
 import ReactMarkdown from 'react-markdown'; 
 import remarkBreaks from 'remark-breaks';
+import remarkGfm from 'remark-gfm';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/components/ui/use-toast';
@@ -537,7 +538,7 @@ export const PostDisplay: React.FC<PostDisplayProps> = ({
                 ${needsTruncation && !isExpanded ? 'line-clamp-4' : ''}
               `}
             >
-              <ReactMarkdown remarkPlugins={[remarkBreaks]}>
+              <ReactMarkdown remarkPlugins={[remarkBreaks, remarkGfm]}>
                 {post.body || ''}
               </ReactMarkdown>
             </div>
@@ -568,7 +569,7 @@ export const PostDisplay: React.FC<PostDisplayProps> = ({
         {/* Attachments and Link Previews */}
         <div className="mt-4 space-y-4">
           {post.attachments && post.attachments.length > 0 && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               {post.attachments.map((att: any) => {
                 const isImage = att.file_type.startsWith('image/');
                 const isVideo = att.file_type.startsWith('video/');
