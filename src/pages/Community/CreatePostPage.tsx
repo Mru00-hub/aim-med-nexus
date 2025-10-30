@@ -324,7 +324,30 @@ const CreatePostForm: React.FC = () => {
       navigate(`/community/thread/${newThreadId}`);
 
     } catch (err: any) {
-      // ... (error handling)
+      console.error("Failed to create post:", err);
+      let errorMessage = "An unknown error occurred. Check the console.";
+      if (err.message) {
+        // Check for PostgREST error details
+        try {
+            // PostgREST errors often have a JSON string in the message
+          const jsonError = JSON.parse(err.message);
+          errorMessage = jsonError.message || jsonError.details || err.message;
+        } catch (e) {
+          // Not JSON, just use the plain message
+          errorMessage = err.message;
+        }
+      }
+
+      // Set the error in your component's state
+      setError(errorMessage); 
+  
+      // Show a toast with the real error
+      toast({
+        variant: "destructive",
+        title: "Error Creating Post",
+        // Show the detailed error to yourself for debugging
+        description: errorMessage, 
+      });
     } finally {
       setIsLoading(false);
       setUploadStatus(null); // <-- Clear status on end
