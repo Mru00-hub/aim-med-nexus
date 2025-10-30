@@ -14,6 +14,8 @@ import { SocialCountsProvider } from './context/SocialCountsContext';
 import { SecureRouteGuard } from './components/SecureRouteGuard';
 import SettingsPage from './pages/SettingsPage';
 import { Loader2 } from 'lucide-react';
+import { SpeedInsights } from "@vercel/speed-insights/next"
+import { Analytics } from "@vercel/analytics/next"
 import './App.css';
 
 // --- All Page Imports (remain the same) ---
