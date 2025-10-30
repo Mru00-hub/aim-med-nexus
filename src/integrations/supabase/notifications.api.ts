@@ -49,54 +49,32 @@ export type NotificationWithActor = {
  * joining the actor's profile details.
  */
 export const getNotifications = async (): Promise<NotificationWithActor[]> => {
-  const { data, error } = await supabase
-    .from('notifications')
-    .select(
-      `
-      id,
-      user_id,
-      actor_id,
-      type,
-      entity_id,
-      is_read,
-      created_at,
-      actor:profiles!actor_id (
-        full_name,
-        profile_picture_url
-      ),
-      announcement:announcements ( 
-        title, 
-        body 
-      ),
-      space:spaces!entity_id (
-        name
-      )
-    `
-    )
-    .order('created_at', { ascending: false });
+  // Call the database function we just created
+  const { data, error } = await supabase.rpc('get_my_notifications');
 
   if (error) {
     console.error('Error fetching notifications:', error);
     throw error;
   }
 
-  // Filter out any notification types the frontend doesn't know about,
-  // just in case the DB has old types (e.g., 'new_connection_request')
+  // The RPC returns the data as JSON, which already matches our type.
+  // We just need to cast it.
+  const allData = data as NotificationWithActor[];
+
+  // This filter list is still necessary
   const knownTypes: NotificationType[] = [
     'connection_accepted',
-    'new_public_post_by_followed_user', // [!code --] 'new_thread',
-    'new_public_space_by_followed_user', // [!code --] 'new_space',
-    'new_reply_to_your_message', // [!code --] 'new_reply',
-    'new_direct_message', // [!code ++]
-    'space_join_request', // [!code ++]
+    'new_public_post_by_followed_user',
+    'new_public_space_by_followed_user',
+    'new_reply_to_your_message',
+    'new_direct_message',
+    'space_join_request',
     'system_update',
     'job_application_update',
   ];
-  
-  const allData = data as NotificationWithActor[];
-  
+
   // Return only the data that matches our known types
-  return allData.filter(n => knownTypes.includes(n.type));
+  return allData.filter(n => n.type && knownTypes.includes(n.type));
 };
 
 /**
