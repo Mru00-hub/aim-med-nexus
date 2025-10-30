@@ -128,7 +128,7 @@ export default async function handler(req, res) {
   try {
     // 1. Read the built index.html file
     // This path works in Vercel's environment
-    const htmlPath = path.resolve('./.vercel/output/static/index.html');
+    const htmlPath = path.resolve(process.cwd(), 'dist/index.html');
     let html = fs.readFileSync(htmlPath, 'utf-8');
 
     // 2. Find and replace all placeholders
