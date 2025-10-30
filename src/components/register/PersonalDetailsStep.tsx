@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, ChangeEvent } from 'react';
+import React, { useState, useEffect, useMemo, ChangeEvent, useRef } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage, AvatarProfile} from "@/components/ui/avatar";
@@ -36,39 +36,54 @@ export const PersonalDetailsStep: React.FC<PersonalDetailsStepProps> = ({
   const [locations, setLocations] = useState<Location[]>([]);
   const [locationSearch, setLocationSearch] = useState("");
   const [isLocLoading, setIsLocLoading] = useState(false);
+  const isMounted = useRef(false);
 
   useEffect(() => {
-    setIsLocLoading(true);
+    const fetchSearchLocations = async () => {
+      setIsLocLoading(true);
+      const { data, error } = await supabase
+        .from('locations')
+        .select('id, label, value')
+        .neq('value', 'other')
+        .or(`label.ilike.%${locationSearch}%,value.ilike.%${locationSearch}%`)
+        .order('label')
+        .limit(50); 
+      
+      if (data) setLocations(data);
+      if (error) console.error('Error fetching search locations:', error);
+      setIsLocLoading(false);
+    };
+    
+    const fetchInitialLocations = async () => {
+       setIsLocLoading(true);
+       const { data, error } = await supabase
+        .from('locations')
+        .select('id, label, value')
+        .neq('value', 'other')
+        .order('label') // Or order by popularity, etc.
+        .limit(10); // Fetch top 10
+      
+       if (data) setLocations(data);
+       if (error) console.error('Error fetching initial locations:', error);
+       setIsLocLoading(false);
+    };
+
+    // On component mount, fetch the initial list right away
+    if (!isMounted.current) {
+      isMounted.current = true;
+      fetchInitialLocations();
+      return; // Exit
+    }
+
+    // On subsequent search changes, use the debounce timer
     const searchTimer = setTimeout(() => {
-      const fetchLocations = async () => {
-        if (locationSearch.length < 2) {
-          // Don't search if the query is too short
-          setLocations([]);
-          setIsLocLoading(false);
-          return;
-        }
-        const { data, error } = await supabase
-          .from('locations')
-          .select('id, label, value')
-          .neq('value', 'other')
-          // .or() searches multiple columns
-          // .ilike() is a case-insensitive "contains" search
-          .or(`label.ilike.%${locationSearch}%,value.ilike.%${locationSearch}%`)
-          .order('label')
-          .limit(50); // Limit results to keep it fast
-
-        if (data) setLocations(data);
-        if (error) console.error('Error fetching locations:', error);
-        
-        // We're done loading
-        setIsLocLoading(false);
-      };
-
-      fetchLocations();
+      if (locationSearch.length < 2) {
+        fetchInitialLocations(); // Re-fetch initial list if search is cleared
+      } else {
+        fetchSearchLocations(); // Perform the search
+      }
     }, 500); // 500ms debounce
-
-    // This is the cleanup function. It clears the timer
-    // if the user types again before 500ms is up.
+    
     return () => clearTimeout(searchTimer);
 
   }, [locationSearch]);
