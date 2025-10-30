@@ -7,7 +7,6 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { ThumbsUp, MessageSquare, FileText, UserPlus, Check, Loader2, Smile } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { ShortenedBody } from './ShortenedBody'; // We will create this
-import { AttachmentPreview } from './AttachmentPreview'; // We will create this
 import { Avatar, AvatarFallback, AvatarImage, AvatarProfile } from "@/components/ui/avatar";
 import { useSocialCounts } from '@/context/SocialCountsContext';
 import { toggleFollow } from '@/integrations/supabase/community.api';
@@ -161,6 +160,49 @@ export const PostFeedCard: React.FC<PostFeedCardProps> = ({
           <div className="line-clamp-3">
             <ShortenedBody text={body} />
           </div>
+          {hasAttachments && !hasPreview && (
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              {attachments.slice(0, 4).map((att: SimpleAttachment) => { // Only show max 4
+                const isImage = att.file_type.startsWith('image/');
+                const isVideo = att.file_type.startsWith('video/');
+
+                if (isImage) {
+                  return (
+                    <div key={att.file_url} className="rounded-md overflow-hidden border aspect-square bg-gray-100">
+                      <img
+                        src={att.file_url}
+                        alt={att.file_name}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  );
+                }
+                if (isVideo) {
+                  return (
+                    <div key={att.file_url} className="rounded-md overflow-hidden border aspect-square bg-black">
+                      <video
+                        src={att.file_url}
+                        muted
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  );
+                }
+                // Fallback for non-visual files (PDF, etc.)
+                return (
+                  <div
+                    key={att.file_url}
+                    className="p-2 border rounded-md flex flex-col items-center justify-center aspect-square text-muted-foreground"
+                  >
+                    <FileText className="h-8 w-8" />
+                    <p className="text-xs text-center mt-2 truncate w-full">
+                      {att.file_name}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          )}
           {!hasAttachments && (
             <div className="mt-3">
               {videoId ? (
@@ -210,7 +252,6 @@ export const PostFeedCard: React.FC<PostFeedCardProps> = ({
               ) : null}
             </div>
           )}
-          <AttachmentPreview attachments={post.attachments} />
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground mt-4">
             <div className="flex items-center gap-1 font-medium">
               <ThumbsUp className="h-3 w-3" />
