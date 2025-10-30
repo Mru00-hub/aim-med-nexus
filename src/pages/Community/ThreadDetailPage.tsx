@@ -105,7 +105,7 @@ export default function ThreadDetailPage() {
       setBasicDetails(details);
       
       // Stage 2: Check if it's a public post
-      if (details.spaceType === 'PUBLIC') {
+      if (details.spaceType === 'PUBLIC' || details.spaceType === 'FORUM') {
         setIsPublicPost(true);
         // It's a public post, so fetch the full post/comment data
         const fullData = await getPostDetails(threadId);
