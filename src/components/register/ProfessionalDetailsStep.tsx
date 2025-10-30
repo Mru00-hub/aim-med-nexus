@@ -1,5 +1,5 @@
 //src/components/register/ProfessionalDetailsStep.tsx
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -37,87 +37,144 @@ export const ProfessionalDetailsStep: React.FC<ProfessionalDetailsStepProps> = (
   const [isInstLoading, setIsInstLoading] = useState(false);
   const [isCourseLoading, setIsCourseLoading] = useState(false);
   const [isSpecLoading, setIsSpecLoading] = useState(false);
+  const isInstMounted = useRef(false);
+  const isCourseMounted = useRef(false);
+  const isSpecMounted = useRef(false);
 
   // --- Data Fetching Effects ---
 
   // Effect for Institution search (debounced)
   useEffect(() => {
-    setIsInstLoading(true);
+    const fetchSearchInstitutions = async () => {
+      setIsInstLoading(true);
+      const { data, error } = await supabase
+        .from('institutions')
+        .select('id, label, value')
+        .neq('value', 'other')
+        .or(`label.ilike.%${institutionSearch}%,value.ilike.%${institutionSearch}%`)
+        .order('label')
+        .limit(50);
+      if (data) setInstitutions(data);
+      if (error) console.error('Error fetching institutions:', error);
+      setIsInstLoading(false);
+    };
+    
+    const fetchInitialInstitutions = async () => {
+      setIsInstLoading(true);
+      const { data, error } = await supabase
+        .from('institutions')
+        .select('id, label, value')
+        .neq('value', 'other')
+        .order('label')
+        .limit(10);
+      if (data) setInstitutions(data);
+      if (error) console.error('Error fetching initial institutions:', error);
+      setIsInstLoading(false);
+    };
+
+    if (!isInstMounted.current) {
+      isInstMounted.current = true;
+      fetchInitialInstitutions();
+      return;
+    }
+
     const searchTimer = setTimeout(() => {
-      const fetchInstitutions = async () => {
-        if (institutionSearch.length < 2) {
-          setInstitutions([]);
-          setIsInstLoading(false);
-          return;
-        }
-        const { data, error } = await supabase
-          .from('institutions')
-          .select('id, label, value')
-          .neq('value', 'other')
-          .or(`label.ilike.%${institutionSearch}%,value.ilike.%${institutionSearch}%`)
-          .order('label')
-          .limit(50);
-        
-        if (data) setInstitutions(data);
-        if (error) console.error('Error fetching institutions:', error);
-        setIsInstLoading(false);
-      };
-      fetchInstitutions();
-    }, 500); // 500ms debounce
+      if (institutionSearch.length < 2) {
+        fetchInitialInstitutions();
+      } else {
+        fetchSearchInstitutions();
+      }
+    }, 500);
     return () => clearTimeout(searchTimer);
   }, [institutionSearch]);
-
+ 
   // Effect for Course search (debounced)
   useEffect(() => {
-    setIsCourseLoading(true);
+    const fetchSearchCourses = async () => {
+      setIsCourseLoading(true);
+      const { data, error } = await supabase
+        .from('courses')
+        .select('id, label, value')
+        .neq('value', 'other')
+        .or(`label.ilike.%${courseSearch}%,value.ilike.%${courseSearch}%`)
+        .order('label')
+        .limit(50);
+      if (data) setCourses(data);
+      if (error) console.error('Error fetching courses:', error);
+      setIsCourseLoading(false);
+    };
+
+    const fetchInitialCourses = async () => {
+      setIsCourseLoading(true);
+      const { data, error } = await supabase
+        .from('courses')
+        .select('id, label, value')
+        .neq('value', 'other')
+        .order('label')
+        .limit(10);
+      if (data) setCourses(data);
+      if (error) console.error('Error fetching initial courses:', error);
+      setIsCourseLoading(false);
+    };
+    
+    if (!isCourseMounted.current) {
+      isCourseMounted.current = true;
+      fetchInitialCourses();
+      return;
+    }
+
     const searchTimer = setTimeout(() => {
-      const fetchCourses = async () => {
-        if (courseSearch.length < 2) {
-          setCourses([]);
-          setIsCourseLoading(false);
-          return;
-        }
-        const { data, error } = await supabase
-          .from('courses')
-          .select('id, label, value')
-          .neq('value', 'other')
-          .or(`label.ilike.%${courseSearch}%,value.ilike.%${courseSearch}%`)
-          .order('label')
-          .limit(50);
-        
-        if (data) setCourses(data);
-        if (error) console.error('Error fetching courses:', error);
-        setIsCourseLoading(false);
-      };
-      fetchCourses();
-    }, 500); // 500ms debounce
+      if (courseSearch.length < 2) {
+        fetchInitialCourses();
+      } else {
+        fetchSearchCourses();
+      }
+    }, 500);
     return () => clearTimeout(searchTimer);
   }, [courseSearch]);
 
   // Effect for Specialization search (debounced)
   useEffect(() => {
-    setIsSpecLoading(true);
+    const fetchSearchSpecializations = async () => {
+      setIsSpecLoading(true);
+      const { data, error } = await supabase
+        .from('specializations')
+        .select('id, label, value')
+        .neq('value', 'other')
+        .or(`label.ilike.%${specializationSearch}%,value.ilike.%${specializationSearch}%`)
+        .order('label')
+        .limit(50);
+      if (data) setSpecializations(data);
+      if (error) console.error('Error fetching specializations:', error);
+      setIsSpecLoading(false);
+    };
+    
+    const fetchInitialSpecializations = async () => {
+      setIsSpecLoading(true);
+      const { data, error } = await supabase
+        .from('specializations')
+        .select('id, label, value')
+        .neq('value', 'other')
+        .order('label')
+        .limit(10);
+      if (data) setSpecializations(data);
+      if (error) console.error('Error fetching initial specializations:', error);
+      setIsSpecLoading(false);
+    };
+
+    if (!isSpecMounted.current) {
+      isSpecMounted.current = true;
+      fetchInitialSpecializations();
+      return;
+    }
+
     const searchTimer = setTimeout(() => {
-      const fetchSpecializations = async () => {
-        if (specializationSearch.length < 2) {
-          setSpecializations([]);
-          setIsSpecLoading(false);
-          return;
-        }
-        const { data, error } = await supabase
-          .from('specializations')
-          .select('id, label, value')
-          .neq('value', 'other')
-          .or(`label.ilike.%${specializationSearch}%,value.ilike.%${specializationSearch}%`)
-          .order('label')
-          .limit(50);
-        
-        if (data) setSpecializations(data);
-        if (error) console.error('Error fetching specializations:', error);
-        setIsSpecLoading(false);
-      };
-      fetchSpecializations();
-    }, 500); // 500ms debounce
+      if (specializationSearch.length < 2) {
+        fetchInitialSpecializations();
+      } else {
+        fetchSearchSpecializations();
+      }
+    }, 500);
     return () => clearTimeout(searchTimer);
   }, [specializationSearch]);
 
