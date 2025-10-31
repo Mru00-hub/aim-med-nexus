@@ -53,6 +53,19 @@ const validatePassword = (password: string) => {
   return ""; // Valid
 };
 
+const validatePhone = (phone: string) => {
+  if (!phone) return ""; // It's optional, so empty is fine.
+  
+  // Simple regex: must start with '+' and be followed by 9 to 15 digits.
+  // This covers international formats like +91xxxxxxxxxx or +1xxxxxxxxxx
+  const phoneRegex = /^\+[0-9]{9,15}$/;
+  
+  if (!phoneRegex.test(phone)) {
+    return "Phone number must be in international format (e.g., +91XXXXXXXXXX).";
+  }
+  return ""; // Valid
+};
+
 const Register = () => {
   const navigate = useNavigate();
   const { signUp } = useAuth();
@@ -69,6 +82,7 @@ const Register = () => {
   const [formData, setFormData] = useState(initialFormData);
   const [passwordError, setPasswordError] = useState('');
   const [passwordFormatError, setPasswordFormatError] = useState('');
+  const [phoneFormatError, setPhoneFormatError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
   const handleInputChange = (field: string, value: string | boolean) => {
@@ -94,6 +108,10 @@ const Register = () => {
         setPasswordError('');
       }
     }
+    if (field === 'phone') {
+      // Validate in real-time as the user types
+      setPhoneFormatError(validatePhone(String(value)));
+    }
   };
 
   const handleAvatarChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -117,7 +135,8 @@ const Register = () => {
     if (stepToValidate === 2) {
       const { firstName, lastName, email, date_of_birth, location_id, password, confirmPassword } = formData;
       if (!firstName || !lastName || !email || !date_of_birth || !location_id || !password || !confirmPassword) return "Please fill in all required personal information fields.";
-      
+      const phoneError = validatePhone(phone);
+      if (phoneError) return phoneError;
       // Use the validation function
       const formatError = validatePassword(password);
       if (formatError) return formatError; // Return the specific format error
@@ -278,6 +297,7 @@ const Register = () => {
                       removeAvatar={removeAvatar}
                       passwordError={passwordError}
                       passwordFormatError={passwordFormatError}
+                      phoneFormatError={phoneFormatError}
                       showPassword={showPassword}
                       setShowPassword={setShowPassword}
                     />
