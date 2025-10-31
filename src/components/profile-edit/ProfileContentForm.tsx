@@ -11,7 +11,7 @@ type ProfileContentFormProps = {
   items: (EditableContent & { client_id?: string })[]; // 1. Update item type
   onListChange: (listName: 'contentPortfolio', index: number, field: string, value: any) => void;
   onAddItem: (listName: 'contentPortfolio') => void;
-  onRemoveItem: (listName: 'contentPortfolio', id: string) => void; // 2. Update to expect 'id: string'
+  onRemoveItem: ( id: string) => void; // 2. Update to expect 'id: string'
 };
 
 export const ProfileContentForm: React.FC<ProfileContentFormProps> = ({
@@ -29,7 +29,7 @@ export const ProfileContentForm: React.FC<ProfileContentFormProps> = ({
             variant="ghost"
             size="icon"
             className="absolute top-2 right-2 h-7 w-7 text-muted-foreground hover:text-destructive"
-            onClick={() => onRemoveItem('contentPortfolio', content.id || content.client_id!)}
+            onClick={() => onRemoveItem(content.id || content.client_id!)}
           >
             <Trash2 className="h-4 w-4" />
           </Button>
