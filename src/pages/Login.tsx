@@ -35,9 +35,40 @@ const Login = () => {
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
+  const [needsVerification, setNeedsVerification] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendMessage, setResendMessage] = useState('');
+  const [resendMessageType, setResendMessageType] = useState<'default' | 'destructive'>('default');
+
   const handleInputChange = (field: string, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     if (error) setError(''); // Clear error when user types
+    if (needsVerification) setNeedsVerification(false);
+    if (resendMessage) setResendMessage('');
+  };
+
+  const handleResend = async () => {
+    if (!formData.email) {
+      setError("Please enter your email address in the field above.");
+      return;
+    }
+    setResendLoading(true);
+    setResendMessage('');
+    setError(''); // Clear the main login error
+
+    const { error }_ = await supabase.auth.resend({
+      type: 'signup',
+      email: formData.email,
+    });
+
+    if (error) {
+      setResendMessage(error.message);
+      setResendMessageType('destructive');
+    } else {
+      setResendMessage("A new verification link has been sent! Please check your inbox (and spam folder).");
+      setResendMessageType('default');
+    }
+    setResendLoading(false);
   };
 
   // --- THIS FUNCTION HAS BEEN CORRECTED ---
@@ -45,6 +76,8 @@ const Login = () => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
+    setNeedsVerification(false); // Reset on every new attempt
+    setResendMessage('');
     try {
       // Step A: Sign in the user
       const { error: signInError } = await signIn(formData.email, formData.password);
@@ -80,7 +113,13 @@ const Login = () => {
       // Note: Navigation will be handled automatically by the onAuthStateChange listener in your useAuth hook.
 
     } catch (err: any) {
-      setError(err.message || 'An unexpected error occurred.');
+      if (err.message && err.message.includes('Email not confirmed')) {
+        setError('Your email is not verified. Please check your inbox or resend the verification link below.');
+        setNeedsVerification(true); // This will show the resend button
+      } else {
+        setError(err.message || 'An unexpected error occurred.');
+        setNeedsVerification(false); // Hide button for all other errors
+      }
     } finally {
       setIsLoading(false);
     }
@@ -117,6 +156,28 @@ const Login = () => {
                 <Alert variant="destructive" className="mb-6">
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+
+              {needsVerification && (
+                <div className="mb-4 space-y-2">
+                  <Button
+                    type="button" // Important: not 'submit'
+                    variant="outline"
+                    className="w-full"
+                    onClick={handleResend}
+                    disabled={resendLoading}
+                  >
+                    {resendLoading ? 'Sending...' : 'Resend Verification Email'}
+                  </Button>
+                  <p className="text-xs text-muted-foreground text-center">
+                    You will receive an email from Supabase to confirm your account.
+                  </p>
+                </div>
+              )}
+              {resendMessage && (
+                <Alert variant={resendMessageType} className="mb-6">
+                  <AlertDescription>{resendMessage}</AlertDescription>
                 </Alert>
               )}
 
