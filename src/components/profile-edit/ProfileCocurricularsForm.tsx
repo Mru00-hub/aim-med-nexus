@@ -11,7 +11,7 @@ type ProfileCocurricularsFormProps = {
   items: (EditableCocurricular & { client_id?: string })[]; // 1. Update item type
   onListChange: (listName: 'cocurriculars', index: number, field: string, value: any) => void;
   onAddItem: (listName: 'cocurriculars') => void;
-  onRemoveItem: (listName: 'cocurriculars', id: string) => void; // 2. Update to expect 'id: string'
+  onRemoveItem: (id: string) => void; // 2. Update to expect 'id: string'
 };
 
 export const ProfileCocurricularsForm: React.FC<ProfileCocurricularsFormProps> = ({
@@ -29,7 +29,7 @@ export const ProfileCocurricularsForm: React.FC<ProfileCocurricularsFormProps> =
             variant="ghost"
             size="icon"
             className="absolute top-2 right-2 h-7 w-7 text-muted-foreground hover:text-destructive"
-            onClick={() => onRemoveItem('cocurriculars', item.id || item.client_id!)}
+            onClick={() => onRemoveItem(item.id || item.client_id!)}
           >
             <Trash2 className="h-4 w-4" />
           </Button>
