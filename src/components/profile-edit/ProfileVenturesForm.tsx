@@ -89,7 +89,7 @@ export const ProfileVenturesForm: React.FC<ProfileVenturesFormProps> = ({
             <Label htmlFor={`venture-url-${index}`}>Website URL</Label>
             <Input
               id={`venture-url-${index}`}
-              type="url"
+              type="text"
               value={venture.website_url || ''}
               onChange={(e) => onListChange('ventures', index, 'website_url', e.target.value)}
               placeholder="https://myventure.com"
