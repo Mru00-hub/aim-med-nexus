@@ -569,9 +569,9 @@ export const PostDisplay: React.FC<PostDisplayProps> = ({
 
         {/* Attachments and Link Previews */}
         <div className="mt-4 space-y-4">
+          
+          {/* --- START OF CORRECTED ATTACHMENT LOGIC --- */}
           {post.attachments && post.attachments.length > 0 && (
-            <div className="grid grid-cols-2 gap-4">
-              {post.attachments && post.attachments.length > 0 && (
             <div>
               {/* Case 1: Single Image or Video */}
               {post.attachments.length === 1 && (post.attachments[0].file_type.startsWith('image/') || post.attachments[0].file_type.startsWith('video/')) ? (
