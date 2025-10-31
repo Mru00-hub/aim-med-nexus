@@ -56,7 +56,7 @@ const Login = () => {
     setResendMessage('');
     setError(''); // Clear the main login error
 
-    const { error }_ = await supabase.auth.resend({
+    const { error } = await supabase.auth.resend({
       type: 'signup',
       email: formData.email,
     });
