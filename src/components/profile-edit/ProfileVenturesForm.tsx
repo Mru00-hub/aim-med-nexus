@@ -11,7 +11,7 @@ type ProfileVenturesFormProps = {
   items: (EditableVenture & { client_id?: string })[]; // 1. Update item type
   onListChange: (listName: 'ventures', index: number, field: string, value: any) => void;
   onAddItem: (listName: 'ventures') => void;
-  onRemoveItem: (listName: 'ventures', id: string) => void; // 2. Update to expect 'id: string'
+  onRemoveItem: (id: string) => void; // 2. Update to expect 'id: string'
 };
 
 export const ProfileVenturesForm: React.FC<ProfileVenturesFormProps> = ({
@@ -29,7 +29,7 @@ export const ProfileVenturesForm: React.FC<ProfileVenturesFormProps> = ({
             variant="ghost"
             size="icon"
             className="absolute top-2 right-2 h-7 w-7 text-muted-foreground hover:text-destructive"
-            onClick={() => onRemoveItem('ventures', venture.id || venture.client_id!)}
+            onClick={() => onRemoveItem(venture.id || venture.client_id!)}
           >
             <Trash2 className="h-4 w-4" />
           </Button>
