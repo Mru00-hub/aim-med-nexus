@@ -24,13 +24,13 @@ export const ProfileCertificationsForm: React.FC<ProfileCertificationsFormProps>
   return (
     <div className="p-1 pt-4 space-y-4">
       {items.map((cert, index) => (
-        <div key={item.id || item.client_id} className="p-4 border rounded-lg space-y-4 relative bg-muted/30">
+        <div key={cert.id || cert.client_id} className="p-4 border rounded-lg space-y-4 relative bg-muted/30">
           <Button
             type="button"
             variant="ghost"
             size="icon"
             className="absolute top-2 right-2 h-7 w-7 text-muted-foreground hover:text-destructive"
-            onClick={() => onRemoveItem('certifications', item.id || item.client_id!)}
+            onClick={() => onRemoveItem('certifications', cert.id || cert.client_id!)}
           >
             <Trash2 className="h-4 w-4" />
           </Button>
