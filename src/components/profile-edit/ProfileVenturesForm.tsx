@@ -20,6 +20,21 @@ export const ProfileVenturesForm: React.FC<ProfileVenturesFormProps> = ({
   onAddItem,
   onRemoveItem
 }) => {
+  const handleUrlBlur = (e: React.FocusEvent<HTMLInputElement>, index: number) => {
+    const value = e.target.value.trim(); // Get the value and remove whitespace
+
+    // If it's empty or *already* has a protocol, do nothing
+    if (!value || /^https?:\/\//i.test(value)) {
+      return;
+    }
+
+    // It's a value like "aimmednexus.in", so prepend "https://"
+    const newValue = `https://${value}`;
+    
+    // Update the state with the new, formatted value
+    onListChange('ventures', index, 'website_url', newValue);
+  };
+  
   return (
     <div className="p-1 pt-4 space-y-4">
       {items.map((venture, index) => (
@@ -92,6 +107,7 @@ export const ProfileVenturesForm: React.FC<ProfileVenturesFormProps> = ({
               type="text"
               value={venture.website_url || ''}
               onChange={(e) => onListChange('ventures', index, 'website_url', e.target.value)}
+              onBlur={(e) => handleUrlBlur(e, index)}
               placeholder="https://myventure.com"
             />
           </div>
