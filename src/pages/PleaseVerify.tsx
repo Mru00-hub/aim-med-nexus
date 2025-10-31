@@ -7,11 +7,43 @@ import { Footer } from '@/components/layout/Footer';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { MailCheck } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client'; // 2. Import supabase
+import { Alert, AlertDescription } from '@/components/ui/alert'; // 3. Import Alert
 
 const PleaseVerify = () => {
   const location = useLocation();
   // Get the email passed from the registration page
   const email = location.state?.email;
+
+  const [isSending, setIsSending] = useState(false);
+  const [message, setMessage] = useState('');
+  const [messageType, setMessageType] = useState<'default' | 'destructive'>('default');
+
+  // 5. Create the resend handler
+  const handleResend = async () => {
+    if (!email) {
+      setMessage("No email address found. Please go back to the registration page.");
+      setMessageType('destructive');
+      return;
+    }
+    
+    setIsSending(true);
+    setMessage('');
+
+    const { error }_ = await supabase.auth.resend({
+      type: 'signup',
+      email: email,
+    });
+
+    if (error) {
+      setMessage(error.message);
+      setMessageType('destructive');
+    } else {
+      setMessage("A new verification link has been successfully sent!");
+      setMessageType('default');
+    }
+    setIsSending(false);
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -41,14 +73,32 @@ const PleaseVerify = () => {
                 A confirmation link has been sent to the email address you provided.
               </p>
             )}
+            {message && (
+              <Alert variant={messageType} className="mb-6 text-left">
+                <AlertDescription>{message}</AlertDescription>
+              </Alert>
+            )}
+
             <p className="text-sm text-muted-foreground mb-6">
-              You will need to verify your email before you can log in and complete your profile.
+              You will need to verify your email before you can log in.
+              Can't find it? Check your spam/junk folder.
             </p>
-            <Button asChild size="lg" className="btn-medical w-full">
-              <Link to="/login">Proceed to Login</Link>
-            </Button>
+            <div className="space-y-4">
+              <Button asChild size="lg" className="btn-medical w-full">
+                <Link to="/login">Proceed to Login</Link>
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={handleResend}
+                disabled={isSending || !email}
+              >
+                {isSending ? 'Sending...' : 'Resend Verification Email'}
+              </Button>
+            </div>
+            
             <p className="text-xs text-muted-foreground mt-4">
-              Didn't receive the email? Check your spam folder or try registering again.
+              You will receive an email from a Supabase address.
             </p>
           </CardContent>
         </Card>
