@@ -44,6 +44,7 @@ export const ProfilePublicationsForm: React.FC<ProfilePublicationsFormProps> = (
               >
                 <SelectTrigger id={`pub-type-${index}`}><SelectValue /></SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="paper">Research Paper</SelectItem>
                   <SelectItem value="journal">Journal Article</SelectItem>
                   <SelectItem value="book">Book / Chapter</SelectItem>
                   <SelectItem value="conference">Conference</SelectItem>
