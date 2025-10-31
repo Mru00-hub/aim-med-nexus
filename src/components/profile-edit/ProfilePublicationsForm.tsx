@@ -78,7 +78,7 @@ export const ProfilePublicationsForm: React.FC<ProfilePublicationsFormProps> = (
             <Label htmlFor={`pub-authors-${index}`}>Authors (comma-separated)</Label>
             <Input
               id={`pub-authors-${index}`}
-              value={Array.isArray(pub.authors) ? pub.authors.join(', ') : ''}
+              value={pub.authors as string || ''}
               onChange={(e) => onListChange('publications', index, 'authors', e.target.value)}
               placeholder="e.g., Author A, Author B, Author C"
             />
