@@ -12,7 +12,7 @@ type ProfileAwardsFormProps = {
   onListChange: (listName: 'awards', index: number, field: string, value: any) => void;
   onAddItem: (listName: 'awards') => void;
   // 2. UPDATE PROP TYPE for 'onRemoveItem'
-  onRemoveItem: (listName: 'awards', id: string) => void;
+  onRemoveItem: (id: string) => void;
 };
 
 export const ProfileAwardsForm: React.FC<ProfileAwardsFormProps> = ({
@@ -31,7 +31,7 @@ export const ProfileAwardsForm: React.FC<ProfileAwardsFormProps> = ({
             variant="ghost"
             size="icon"
             className="absolute top-2 right-2 h-7 w-7 text-muted-foreground hover:text-destructive"
-            onClick={() => onRemoveItem('awards', award.id || award.client_id!)}
+            onClick={() => onRemoveItem(award.id || award.client_id!)}
           >
             <Trash2 className="h-4 w-4" />
           </Button>
