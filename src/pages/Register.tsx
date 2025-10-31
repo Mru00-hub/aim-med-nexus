@@ -1,4 +1,4 @@
-import React, { useState, ChangeEvent } from 'react';
+import React, { useState, ChangeEvent, useEffect} from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/components/ui/use-toast';
@@ -180,7 +180,7 @@ const Register = () => {
 
   const validateStep = (stepToValidate: number) => {
     if (stepToValidate === 2) {
-      const { firstName, lastName, email, date_of_birth, location_id, password, confirmPassword } = formData;
+      const { firstName, lastName, email, date_of_birth, location_id, password, confirmPassword, phone } = formData;
       if (!firstName || !lastName || !email || !date_of_birth || !location_id || !password || !confirmPassword) return "Please fill in all required personal information fields.";
       const phoneError = validatePhone(phone);
       if (phoneError) return phoneError;
