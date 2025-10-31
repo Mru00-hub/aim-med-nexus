@@ -19,6 +19,7 @@ type PersonalDetailsStepProps = {
   handleAvatarChange: (e: ChangeEvent<HTMLInputElement>) => void;
   removeAvatar: () => void;
   passwordError: string;
+  passwordFormatError: string; 
   showPassword: boolean;
   setShowPassword: (show: boolean) => void;
 };
@@ -30,6 +31,7 @@ export const PersonalDetailsStep: React.FC<PersonalDetailsStepProps> = ({
   handleAvatarChange,
   removeAvatar,
   passwordError,
+  passwordFormatError,
   showPassword,
   setShowPassword,
 }) => {
@@ -241,9 +243,13 @@ export const PersonalDetailsStep: React.FC<PersonalDetailsStepProps> = ({
               {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </Button>
           </div>
-          <p className="text-xs text-muted-foreground mt-1">
-            Must be at least 6 characters long.
-          </p>
+          {passwordFormatError ? (
+            <p className="text-sm text-destructive mt-1">{passwordFormatError}</p>
+          ) : (
+            <p className="text-xs text-muted-foreground mt-1">
+              6+ chars, 1 uppercase, 1 number, 1 special (!@#$).
+            </p>
+          )}
         </div>
 
         {/* ✅ FIX: Updated Confirm Password Field */}
