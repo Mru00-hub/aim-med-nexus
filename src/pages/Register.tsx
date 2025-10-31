@@ -53,6 +53,43 @@ const validatePassword = (password: string) => {
   return ""; // Valid
 };
 
+const REG_DRAFT_KEY = 'aimednet_reg_draft';
+
+const loadDraft = () => {
+  const saved = localStorage.getItem(REG_DRAFT_KEY);
+  
+  // If no draft exists, return the defaults
+  if (!saved) {
+    return { 
+      formData: initialFormData, 
+      registrationType: '', 
+      step: 1 
+    };
+  }
+  
+  // If a draft exists, parse it and reset passwords
+  try {
+    const { formData, registrationType, step } = JSON.parse(saved);
+    return {
+      formData: {
+        ...formData,
+        password: '', // Reset password for security
+        confirmPassword: '' // Reset confirm password
+      },
+      registrationType,
+      step: step || 1 // Fallback if step isn't saved
+    };
+  } catch (e) {
+    console.error("Failed to parse registration draft", e);
+    // If parsing fails, return defaults
+    return { 
+      formData: initialFormData, 
+      registrationType: '', 
+      step: 1 
+    };
+  }
+};
+
 const validatePhone = (phone: string) => {
   if (!phone) return ""; // It's optional, so empty is fine.
   
@@ -70,20 +107,30 @@ const Register = () => {
   const navigate = useNavigate();
   const { signUp } = useAuth();
   const { toast } = useToast();
+  const initialDraft = loadDraft();
 
-  const [step, setStep] = useState(1);
-  const [registrationType, setRegistrationType] = useState('');
+  const [step, setStep] = useState(initialDraft.step);
+  const [registrationType, setRegistrationType] = useState(initialDraft.registrationType);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string>('');
   
-  const [formData, setFormData] = useState(initialFormData);
+  const [formData, setFormData] = useState(initialDraft.formData);
   const [passwordError, setPasswordError] = useState('');
   const [passwordFormatError, setPasswordFormatError] = useState('');
-  const [phoneFormatError, setPhoneFormatError] = useState('');
+  const [phoneFormatError, setPhoneFormatError] = useState(''); // Your phone error state
   const [showPassword, setShowPassword] = useState(false);
+
+  useEffect(() => {
+    // Don't save the draft if the form is successfully submitted
+    if (isLoading) return; 
+
+    const draft = { formData, registrationType, step };
+    localStorage.setItem(REG_DRAFT_KEY, JSON.stringify(draft));
+    
+  }, [formData, registrationType, step, isLoading]);
 
   const handleInputChange = (field: string, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -257,6 +304,7 @@ const Register = () => {
       setError(signUpError.message);
       toast({ title: "Registration Failed", description: signUpError.message, variant: "destructive" });
     } else if (data.user) {
+      localStorage.removeItem(REG_DRAFT_KEY); 
       toast({ title: "Success!", description: "Please check your email to verify your account." });
       navigate('/please-verify', { replace: true, state: { email: formData.email } });
     }
