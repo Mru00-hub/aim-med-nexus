@@ -9,7 +9,7 @@ type ProfileAchievementsFormProps = {
   items: (EditableAchievement & { client_id?: string })[]; // 1. Update item type
   onListChange: (listName: 'achievements', index: number, field: string, value: any) => void;
   onAddItem: (listName: 'achievements') => void;
-  onRemoveItem: (listName: 'achievements', id: string) => void; // 2. Update to expect 'id: string'
+  onRemoveItem: (id: string) => void; // 2. Update to expect 'id: string'
 };
 
 export const ProfileAchievementsForm: React.FC<ProfileAchievementsFormProps> = ({
@@ -27,7 +27,7 @@ export const ProfileAchievementsForm: React.FC<ProfileAchievementsFormProps> = (
             variant="ghost"
             size="icon"
             className="absolute top-2 right-2 h-7 w-7 text-muted-foreground hover:text-destructive"
-            onClick={() => onRemoveItem('achievements', ach.id || ach.client_id!)}
+            onClick={() => onRemoveItem( ach.id || ach.client_id!)}
           >
             <Trash2 className="h-4 w-4" />
           </Button>
