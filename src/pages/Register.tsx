@@ -44,6 +44,15 @@ const initialFormData = {
   receiveUpdates: true,
 };
 
+const validatePassword = (password: string) => {
+  if (!password) return "Password is required.";
+  if (password.length < 6) return "Must be at least 6 characters long.";
+  if (!/[A-Z]/.test(password)) return "Must include one uppercase letter.";
+  if (!/[0-9]/.test(password)) return "Must include one number.";
+  if (!/[!@#$%^&*]/.test(password)) return "Must include one special character (e.g., !@#$).";
+  return ""; // Valid
+};
+
 const Register = () => {
   const navigate = useNavigate();
   const { signUp } = useAuth();
@@ -59,21 +68,30 @@ const Register = () => {
   
   const [formData, setFormData] = useState(initialFormData);
   const [passwordError, setPasswordError] = useState('');
+  const [passwordFormatError, setPasswordFormatError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
   const handleInputChange = (field: string, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-    if (field === 'password' || field === 'confirmPassword') {
-      const newPassword = field === 'password' ? String(value) : formData.password;
-      const newConfirmPassword = field === 'confirmPassword' ? String(value) : formData.confirmPassword;
+    
+    if (field === 'password') {
+      const formatError = validatePassword(String(value));
+      setPasswordFormatError(formatError); // Set format error in real-time
       
-      // Only show error if confirmPassword has been touched
-      if (newConfirmPassword) { 
-        if (newPassword !== newConfirmPassword) {
-          setPasswordError("Passwords do not match.");
-        } else {
-          setPasswordError('');
-        }
+      // Also check for match if confirmPassword already has a value
+      if (formData.confirmPassword && String(value) !== formData.confirmPassword) {
+        setPasswordError("Passwords do not match.");
+      } else {
+        setPasswordError(''); // Clear match error if it's now correct
+      }
+    }
+    
+    if (field === 'confirmPassword') {
+      // Check for match
+      if (formData.password !== String(value)) {
+        setPasswordError("Passwords do not match.");
+      } else {
+        setPasswordError('');
       }
     }
   };
@@ -95,15 +113,19 @@ const Register = () => {
     setAvatarPreview('');
   };
 
-  const validateStep = () => {
-    if (step === 2) {
+  const validateStep = (stepToValidate: number) => {
+    if (stepToValidate === 2) {
       const { firstName, lastName, email, date_of_birth, location_id, password, confirmPassword } = formData;
       if (!firstName || !lastName || !email || !date_of_birth || !location_id || !password || !confirmPassword) return "Please fill in all required personal information fields.";
-      if (password.length < 6) return "Password must be at least 6 characters long.";
+      
+      // Use the validation function
+      const formatError = validatePassword(password);
+      if (formatError) return formatError; // Return the specific format error
+
       if (password !== confirmPassword) return "Passwords do not match.";
-      if (passwordError) return passwordError;
+      // No need to check passwordError state, just check the data directly
     }
-    if (step === 3) {
+    if (stepToValidate === 3) {
       const { institution_id, course_id, student_year_value, currentPosition, organization, specialization_id, experience_level_value, agreeToTerms } = formData;
       if (!institution_id || !course_id) return "Educational institution and course are required.";
       if (registrationType === 'student' && !student_year_value) return "Please select your year of study.";
@@ -114,7 +136,7 @@ const Register = () => {
   };
 
   const handleNext = () => {
-    const validationError = validateStep();
+    const validationError = validateStep(step); 
     if (validationError) {
       toast({ title: "Missing Information", description: validationError, variant: "destructive" });
       return;
@@ -128,12 +150,18 @@ const Register = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const validationError = validateStep();
-    if (validationError) {
-      toast({ title: "Submission Error", description: validationError, variant: "destructive" });
+    const step2Error = validateStep(2);
+    if (step2Error) {
+      toast({ title: "Submission Error", description: step2Error, variant: "destructive" });
+      setStep(2); // Send the user back to Step 2
       return;
     }
     
+    const step3Error = validateStep(3);
+    if (step3Error) {
+      toast({ title: "Submission Error", description: step3Error, variant: "destructive" });
+      return; // Already on Step 3, just stop
+    }    
     setIsLoading(true);
     setError('');
     
@@ -248,8 +276,8 @@ const Register = () => {
                       avatarPreview={avatarPreview}
                       handleAvatarChange={handleAvatarChange}
                       removeAvatar={removeAvatar}
-                      // ✅ FIX 1 & 2: Pass new props
                       passwordError={passwordError}
+                      passwordFormatError={passwordFormatError}
                       showPassword={showPassword}
                       setShowPassword={setShowPassword}
                     />
