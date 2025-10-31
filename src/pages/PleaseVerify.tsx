@@ -1,6 +1,6 @@
 // src/pages/PleaseVerify.tsx
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
@@ -30,7 +30,7 @@ const PleaseVerify = () => {
     setIsSending(true);
     setMessage('');
 
-    const { error }_ = await supabase.auth.resend({
+    const { error } = await supabase.auth.resend({
       type: 'signup',
       email: email,
     });
