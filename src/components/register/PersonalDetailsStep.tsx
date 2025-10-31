@@ -20,6 +20,7 @@ type PersonalDetailsStepProps = {
   removeAvatar: () => void;
   passwordError: string;
   passwordFormatError: string; 
+  phoneFormatError: string; 
   showPassword: boolean;
   setShowPassword: (show: boolean) => void;
 };
@@ -32,6 +33,7 @@ export const PersonalDetailsStep: React.FC<PersonalDetailsStepProps> = ({
   removeAvatar,
   passwordError,
   passwordFormatError,
+  phoneFormatError,
   showPassword,
   setShowPassword,
 }) => {
@@ -180,6 +182,9 @@ export const PersonalDetailsStep: React.FC<PersonalDetailsStepProps> = ({
             onChange={(e) => handleInputChange('phone', e.target.value)}
             placeholder="+91 XXXXX XXXXX"
           />
+          {phoneFormatError && (
+            <p className="text-sm text-destructive mt-1">{phoneFormatError}</p>
+          )}
         </div>
         <div>
           <label htmlFor="dob" className="block text-sm font-medium mb-2">Date of Birth *</label>
