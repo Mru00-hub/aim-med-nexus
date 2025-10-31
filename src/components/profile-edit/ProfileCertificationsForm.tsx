@@ -11,7 +11,7 @@ type ProfileCertificationsFormProps = {
   onListChange: (listName: 'certifications', index: number, field: string, value: any) => void;
   onAddItem: (listName: 'certifications') => void;
   // 2. UPDATE PROP TYPE for 'onRemoveItem'
-  onRemoveItem: (listName: 'certifications', id: string) => void;
+  onRemoveItem: (id: string) => void;
 };
 
 export const ProfileCertificationsForm: React.FC<ProfileCertificationsFormProps> = ({
@@ -30,7 +30,7 @@ export const ProfileCertificationsForm: React.FC<ProfileCertificationsFormProps>
             variant="ghost"
             size="icon"
             className="absolute top-2 right-2 h-7 w-7 text-muted-foreground hover:text-destructive"
-            onClick={() => onRemoveItem('certifications', cert.id || cert.client_id!)}
+            onClick={() => onRemoveItem(cert.id || cert.client_id!)}
           >
             <Trash2 className="h-4 w-4" />
           </Button>
