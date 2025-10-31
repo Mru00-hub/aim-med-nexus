@@ -285,7 +285,8 @@ export const saveProfileDetails = async (payload: SaveProfilePayload, deletedIte
     const userId = session.user.id;
 
     const prepareUpsert = (list: any[]) => list.map(item => {
-        const newItem = { ...item, profile_id: userId };
+        const { client_id, ...rest } = item; 
+        const newItem = { ...rest, profile_id: userId };
         Object.keys(newItem).forEach(key => {
             if (newItem[key] === '' && !Array.isArray(item[key])) {
                 // Handle potential empty date strings specifically if necessary
