@@ -559,12 +559,8 @@ const CompleteProfile = () => {
     
     setter(prev => {
       const newList = [...prev];
-      let finalValue = value;
-      // Handle array fields
-      if ((listName === 'publications' && field === 'authors') || (listName === 'ventures' && field === 'achievements')) {
-        finalValue = value.split(',').map((s: string) => s.trim()).filter(Boolean);
-      }
-      newList[index] = { ...newList[index], [field]: finalValue };
+      
+      newList[index] = { ...newList[index], [field]: value };
       return newList;
     });
   };
