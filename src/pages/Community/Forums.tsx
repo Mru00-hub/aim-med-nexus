@@ -30,6 +30,7 @@ import { PostFeedCard } from '@/components/forums/PostFeedCard';
 import { SpaceCard } from '@/components/forums/SpaceCard';
 import { Skeleton } from '@/components/ui/skeleton';
 const POSTS_PER_PAGE = 4;
+const SPACES_PER_PAGE = 9;
 
 export default function Forums() {
   const { user, profile, refreshProfile } = useAuth();
@@ -37,13 +38,12 @@ export default function Forums() {
   const { toast } = useToast();
 
   const { 
-    spaces, 
-    isLoadingSpaces: loadingSpaces,
     refreshSpaces, 
     getMembershipStatus,
     setMemberships, 
     addOptimisticSpace, 
     removeOptimisticSpace,
+    loadSpacesPage, 
   } = useCommunity();
   
   const { isFollowing, refetchSocialGraph } = useSocialCounts();
@@ -60,6 +60,11 @@ export default function Forums() {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [hasMorePosts, setHasMorePosts] = useState(true);
+  const [spaces, setSpaces] = useState<SpaceWithDetails[]>([]); // New local state
+  const [isLoadingSpaces, setIsLoadingSpaces] = useState(true); // Now local
+  const [isLoadingMoreSpaces, setIsLoadingMoreSpaces] = useState(false);
+  const [currentSpacePage, setCurrentSpacePage] = useState(1);
+  const [hasMoreSpaces, setHasMoreSpaces] = useState(true);
   
   const filteredSpaces = useMemo(() => {
     return (spaces || [])
@@ -73,6 +78,30 @@ export default function Forums() {
         );
       });
   }, [spaces, searchQuery, selectedFilter]);
+
+  const loadSpaces = useCallback(async (page: number) => {
+    if (page === 1) setIsLoadingSpaces(true);
+    else setIsLoadingMoreSpaces(true);
+
+    try {
+      const newSpaces = await loadSpacesPage(page, SPACES_PER_PAGE); // Use the new context function
+      
+      setSpaces(prev => page === 1 ? newSpaces : [...prev, ...newSpaces]);
+      setHasMoreSpaces(newSpaces.length === SPACES_PER_PAGE);
+      setCurrentSpacePage(page);
+
+    } catch (error: any) {
+      toast({ title: 'Error loading spaces', description: error.message, variant: 'destructive' });
+    } finally {
+      if (page === 1) setIsLoadingSpaces(false);
+      else setIsLoadingMoreSpaces(false);
+    }
+  }, [toast, loadSpacesPage]); // Depend on loadSpacesPage
+
+  // 🚀 ADDED: Initial load for spaces
+  useEffect(() => {
+    loadSpaces(1);
+  }, [loadSpaces]);
 
   const loadPosts = useCallback(async (page: number) => {
     if (page === 1) setIsLoadingPosts(true);
@@ -279,7 +308,7 @@ export default function Forums() {
               <Plus className="h-4 w-4 mr-2" /> Create Space
             </Button>
           </div>
-          {loadingSpaces ? (
+          {isLoadingSpaces ? (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
               <Skeleton className="h-64 w-full" />
               <Skeleton className="h-64 w-full" />
@@ -299,6 +328,21 @@ export default function Forums() {
               ))}
             </div>
           )}
+          <div className="mt-6 text-center">
+            {hasMoreSpaces && !isLoadingSpaces && (
+              <Button
+                variant="outline"
+                onClick={() => loadSpaces(currentSpacePage + 1)}
+                disabled={isLoadingMoreSpaces}
+              >
+                {isLoadingMoreSpaces && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {isLoadingMoreSpaces ? 'Loading...' : 'Show More Spaces'}
+              </Button>
+            )}
+            {!hasMoreSpaces && spaces.length > SPACES_PER_PAGE && (
+              <p className="text-sm text-muted-foreground">You've reached the end of spaces.</p>
+            )}
+          </div>
         </section>
         <section>
         <div className="flex justify-between items-center mb-4">
