@@ -18,7 +18,12 @@ interface CommunityContextType {
   spaces: SpaceWithDetails[];
   memberships: Membership[];
   isLoadingSpaces: boolean;
-  loadSpacesPage: (page: number, limit: number) => Promise<SpaceWithDetails[]>;
+  loadSpacesPage: (props: {
+    page: number;
+    limit: number;
+    searchQuery?: string;
+    filter?: string;
+  }) => Promise<SpaceWithDetails[]>;
   refreshSpaces: () => Promise<void>; // <-- RENAMED for clarity
   /*updateLocalSpace: (updatedSpace: SpaceWithDetails) => void; // <-- ADDED for optimistic updates
   updateLocalPost: (
@@ -27,8 +32,8 @@ interface CommunityContextType {
   */
   getMembershipStatus: (spaceId: string) => Enums<'membership_status'> | null;
   setMemberships: React.Dispatch<React.SetStateAction<Membership[]>>;
-  addOptimisticSpace: (space: SpaceWithDetails) => void;
-  removeOptimisticSpace: (spaceId: string) => void;
+  //addOptimisticSpace: (space: SpaceWithDetails) => void;
+  //removeOptimisticSpace: (spaceId: string) => void;
 }
 
 const CommunityContext = createContext<CommunityContextType | undefined>(undefined);
@@ -38,13 +43,17 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
   
   const [spaces, setSpaces] = useState<SpaceWithDetails[]>([]); 
   const [memberships, setMemberships] = useState<Membership[]>([]);
-  const [publicThreads, setPublicThreads] = useState<PublicPost[]>([]); 
+  //const [publicThreads, setPublicThreads] = useState<PublicPost[]>([]); 
   const [isLoadingSpaces, setIsLoadingSpaces] = useState(true);
 
-  const loadSpacesPage = useCallback(async (page: number, limit: number) => {
+  const loadSpacesPage = useCallback(async (props: {
+    page: number;
+    limit: number;
+    searchQuery?: string;
+    filter?: string;
+  }) => {
     try {
-      const offset = (page - 1) * limit; // Calculate offset from page
-      const spacesData = await getSpacesWithDetails({ page, limit, offset }); 
+      const spacesData = await getSpacesWithDetails(props);
       return spacesData || [];
     } catch (error) {
       console.error('Error loading spaces page:', error);
@@ -78,14 +87,10 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
         const membershipsData = await getUserMemberships();
         setMemberships(membershipsData || []);
       } else {
-        // 3. If no session, ensure memberships are cleared.
         console.log('No session, clearing memberships.');
         setMemberships([]);
       }
-      
     } catch (error: any) {
-      // This catch block will now only trigger on a *real* network/API error,
-      // not on a "logged out" error from getUserMemberships.
       console.error('--- REFRESH SPACES FAILED ---', error.message);
       setSpaces([]);
       setMemberships([]);
@@ -93,7 +98,7 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
       setIsLoadingSpaces(false);
       console.log('--- refreshSpaces END ---');
     }
-  }, []);
+  }, [user]);
 
   const userId = user?.id;
   // Initial data fetch on user change
@@ -138,7 +143,7 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
     setMemberships, 
     //addOptimisticSpace,
     //removeOptimisticSpace,
-  }), [spaces, memberships, isLoadingSpaces, refreshSpaces, updateLocalSpace, updateLocalPost, getMembershipStatus]);
+  }), [spaces, memberships, isLoadingSpaces, refreshSpaces, loadSpacesPage, getMembershipStatus]);
 
   return (
     <CommunityContext.Provider value={contextValue}>
