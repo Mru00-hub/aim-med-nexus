@@ -24,6 +24,8 @@ import {
   leaveSpace, 
   transferSpaceOwnership,
   deleteSpace,
+  getSpaceDetails, // 🚀 ADDED
+  SpaceWithDetails 
 } from '@/integrations/supabase/community.api';
 
 export default function SpaceDetailPage() {
@@ -33,12 +35,11 @@ export default function SpaceDetailPage() {
   const { toast } = useToast();
 
   // --- DATA FETCHING ---
-  const { spaces, isLoadingSpaces, getMembershipStatus, refreshSpaces, updateLocalSpace } = useCommunity();
+  const { getMembershipStatus, refreshSpaces } = useCommunity();
   const { memberCount, threadCount, isLoadingMetrics } = useSpaceMetrics(spaceId);
   const { memberList, isLoadingList, refreshList } = useSpaceMemberList(spaceId);
-
-  // Find the specific space details from the global list.
-  const space = useMemo(() => spaces?.find(s => s.id === spaceId), [spaces, spaceId]);
+  const [space, setSpace] = useState<SpaceWithDetails | null>(null);
+  const [isLoadingSpace, setIsLoadingSpace] = useState(true);
 
   // --- UI STATE ---
   const [showCreateThread, setShowCreateThread] = useState(false);
@@ -76,6 +77,34 @@ export default function SpaceDetailPage() {
   }, [isLoadingSpaces, space, navigate, toast]);
 
   useEffect(() => {
+    if (!spaceId) {
+      navigate('/community');
+      return;
+    }
+    
+    setIsLoadingSpace(true);
+    getSpaceDetails(spaceId)
+      .then(data => {
+        if (data) {
+          // Note: getSpaceDetails returns 'Space', not 'SpaceWithDetails'.
+          // We cast it here, assuming it has the necessary fields.
+          // For a robust app, you'd fetch the 'SpaceWithDetails' version.
+          setSpace(data as SpaceWithDetails); 
+        } else {
+          toast({ variant: 'destructive', title: 'Not Found', description: 'This space does not exist.' });
+          navigate('/community');
+        }
+      })
+      .catch(error => {
+        toast({ variant: 'destructive', title: 'Error', description: error.message });
+        navigate('/community');
+      })
+      .finally(() => {
+        setIsLoadingSpace(false);
+      });
+  }, [spaceId, navigate, toast]);
+
+  useEffect(() => {
     // This ensures window is accessed only on the client
     setShareUrl(window.location.href);
   }, []);
@@ -92,7 +121,7 @@ export default function SpaceDetailPage() {
       ...space,
       ...payload, // Merge the new details (name, description, etc.)
     };
-    updateLocalSpace(optimisticSpace); // Optimistic update
+    setSpace(optimisticSpace); // Optimistic update
     try {
       console.log('[SpaceDetailPage] Calling updateSpaceDetails with:', space.id, payload);
       await updateSpaceDetails(space.id, payload);
@@ -103,7 +132,7 @@ export default function SpaceDetailPage() {
       console.error('--- UPDATE FAILED ---'); // <-- ADD THIS
       console.error(error);
       toast({ title: "Update Failed", description: error.message, variant: "destructive" });
-      updateLocalSpace(originalSpace); // Revert
+      setSpace(originalSpace);
       throw error; // Re-throw to keep dialog open
     }
   };
@@ -235,13 +264,13 @@ export default function SpaceDetailPage() {
             {space.space_type === 'FORUM' ? (
               <ForumPostFeed 
                 spaceId={space.id} 
-                onPostCreated={() => setThreadCreatedCount(c => c + 1)} 
+                refreshKey={threadCreatedCount} 
               />
             ) : (
               <ChatThreadList 
                 spaceId={space.id} 
                 isUserAdminOrMod={isUserAdminOrMod}
-                onThreadCreated={() => setThreadCreatedCount(c => c + 1)}
+                refreshKey={threadCreatedCount} 
               />
             )}
           </>
