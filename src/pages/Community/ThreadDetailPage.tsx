@@ -76,7 +76,7 @@ export default function ThreadDetailPage() {
   const [editedTitle, setEditedTitle] = useState('');
   const [editedDescription, setEditedDescription] = useState('');
   const [isSaving, setIsSaving] = useState(false);
-  const { refreshSpaces, updateLocalPost } = useCommunity();
+  const { refreshSpaces } = useCommunity();
   const { isFollowing, refetchSocialGraph } = useSocialCounts();
   const [followLoadingMap, setFollowLoadingMap] = useState<Record<string, boolean>>({});
 
