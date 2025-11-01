@@ -15,6 +15,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { Loader2, AlertCircle, Upload, X, File as FileIcon, Bold, Italic} from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import AuthGuard from '@/components/AuthGuard';
+import { getSpaceDetails } from '@/integrations/supabase/community.api'
 
 // Import our new API functions
 import { createThread, uploadFilesForPost, AttachmentInput } from '@/integrations/supabase/community.api';
@@ -519,8 +520,19 @@ const CreatePostForm: React.FC = () => {
 // The page component that renders the form
 const CreatePostPage = () => {
   const { spaceId } = useParams<{ spaceId?: string }>();
-  const { spaces } = useCommunity();
-  const space = spaceId ? spaces?.find(s => s.id === spaceId) : null;
+  const [spaceName, setSpaceName] = useState('the main Community Hub');
+  const [description, setDescription] = useState('This post will be visible to everyone on the Community Hub.');
+  useEffect(() => {
+    if (spaceId) {
+      getSpaceDetails(spaceId)
+        .then(details => {
+          if (details) {
+            setSpaceName(`'${details.name}'`);
+            setDescription(`This post will be visible to all members of ${details.name}.`);
+          }
+        })
+    }
+  }, [spaceId]);
     return (
       <AuthGuard>
         <div className="min-h-screen bg-background">
@@ -529,13 +541,10 @@ const CreatePostPage = () => {
             <Card className="max-w-3xl mx-auto">
               <CardHeader>
                 <CardTitle className="text-2xl">
-                  {space ? `New Post in ${space.name}` : 'Create a New Public Post'}
+                  {spaceId ? `New Post in ${spaceName}` : 'Create a New Public Post'}
                 </CardTitle>
                 <CardDescription>
-                  {space 
-                    ? `This post will be visible to all members of ${space.name}.`
-                    : 'This post will be visible to everyone on the Community Hub.'
-                  }
+                  {description}
                 </CardDescription>
               </CardHeader>
               <CardContent>
