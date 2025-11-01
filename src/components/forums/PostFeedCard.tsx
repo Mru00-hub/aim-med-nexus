@@ -196,8 +196,11 @@ export const PostFeedCard: React.FC<PostFeedCardProps> = ({
           <div className="line-clamp-3">
             <ShortenedBody text={body} />
           </div>
-          {attachments.length === 1 && (attachments[0].file_type.startsWith('image/') || attachments[0].file_type.startsWith('video/')) ? (
-                (() => { // IIFE to render the single item
+          {hasAttachments && !hasPreview && (
+            <div className="mt-3">
+              {/* Case 1: Single Image or Video */}
+              {attachments.length === 1 && (attachments[0].file_type.startsWith('image/') || attachments[0].file_type.startsWith('video/')) ? (
+                (() => {
                   const att = attachments[0];
                   if (att.file_type.startsWith('image/')) {
                     return (
@@ -212,7 +215,7 @@ export const PostFeedCard: React.FC<PostFeedCardProps> = ({
                         <img
                           src={att.file_url}
                           alt={att.file_name}
-                          className="w-full h-auto object-cover max-h-72" // Full width
+                          className="w-full h-auto object-cover max-h-72"
                         />
                       </a>
                     );
@@ -223,7 +226,7 @@ export const PostFeedCard: React.FC<PostFeedCardProps> = ({
                         <video
                           src={att.file_url}
                           controls
-                          className="w-full h-auto max-h-72" // Full width
+                          className="w-full h-auto max-h-72"
                         />
                       </div>
                     );
@@ -233,12 +236,13 @@ export const PostFeedCard: React.FC<PostFeedCardProps> = ({
               ) : (
                 /* Case 2: Multiple attachments (grid view) */
                 <div className="grid grid-cols-2 gap-2">
-                  {attachments.slice(0, 4).map((att: SimpleAttachment) => (
-                    // Use the new AttachmentPreview component
+                  {/* Since max is 4, we just map all of them. No slice needed. */}
+                  {attachments.map((att: SimpleAttachment) => (
                     <AttachmentPreview key={att.file_url} attachment={att} />
                   ))}
                 </div>
               )}
+              {/* This code block will never run because of MAX_POST_FILES = 4, but it is safe. */}
               {attachments.length > 4 && (
                 <p className="text-sm text-muted-foreground mt-2 text-center">
                   +{attachments.length - 4} more attachments
