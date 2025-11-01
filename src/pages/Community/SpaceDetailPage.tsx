@@ -11,6 +11,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/components/ui/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Search } from 'lucide-react';
 // --- IMPORTS ---
 import { useCommunity } from '@/context/CommunityContext';
 import { useSpaceMetrics, useSpaceMemberList } from '@/hooks/useSpaceData';
@@ -46,7 +47,7 @@ export default function SpaceDetailPage() {
   const [threadCreatedCount, setThreadCreatedCount] = useState(0);
   const [showShareModal, setShowShareModal] = useState(false);
   const [shareUrl, setShareUrl] = useState('');
-  
+  const [searchQuery, setSearchQuery] = useState('');
   // --- LOGIC & EFFECTS ---
   const loading = isLoadingSpace || !spaceId;
 
@@ -258,12 +259,24 @@ export default function SpaceDetailPage() {
                 </Button>
               </div>
             </div>
+            {space.space_type === 'FORUM' && (
+              <div className="relative mb-4">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input 
+                  placeholder="Search posts in this space..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            )}
             
             {/* --- The Conditional "Chameleon" Render --- */}
             {space.space_type === 'FORUM' ? (
               <ForumPostFeed 
                 spaceId={space.id} 
                 refreshKey={threadCreatedCount} 
+                searchQuery={searchQuery}
               />
             ) : (
               <ChatThreadList 
