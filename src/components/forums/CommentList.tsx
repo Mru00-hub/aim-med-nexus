@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect, useRef } from 'react';
 import { MessageWithDetails } from '@/integrations/supabase/community.api';
 import { CommentItem } from './CommentItem';
 type CommentNode = MessageWithDetails & { children: CommentNode[] };
@@ -21,6 +21,7 @@ export const CommentList: React.FC<CommentListProps> = ({
   onCommentEdit,
   onCommentDelete
 }) => {
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   // This builds the nested tree
   const commentTree = useMemo(() => {
     const map: { [key: number]: CommentNode } = {};
@@ -40,6 +41,16 @@ export const CommentList: React.FC<CommentListProps> = ({
     });
     return tree;
   }, [comments]);
+
+  const scrollToBottom = () => {
+    // We use 'auto' behavior. 'smooth' can be laggy and 
+    // get interrupted by other renders. 'auto' is instant.
+    messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [comments.length]); 
 
   // Recursive render function
   const renderComments = (commentList: CommentNode[], depth: number) => {
@@ -68,5 +79,10 @@ export const CommentList: React.FC<CommentListProps> = ({
     );
   };
 
-  return renderComments(commentTree, 1);
+  return (
+    <div>
+      {renderComments(commentTree, 1)}
+      <div ref={messagesEndRef} />
+    </div>
+  );
 };
