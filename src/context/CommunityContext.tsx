@@ -20,10 +20,11 @@ interface CommunityContextType {
   isLoadingSpaces: boolean;
   loadSpacesPage: (page: number, limit: number) => Promise<SpaceWithDetails[]>;
   refreshSpaces: () => Promise<void>; // <-- RENAMED for clarity
-  updateLocalSpace: (updatedSpace: SpaceWithDetails) => void; // <-- ADDED for optimistic updates
+  /*updateLocalSpace: (updatedSpace: SpaceWithDetails) => void; // <-- ADDED for optimistic updates
   updateLocalPost: (
     updatedPost: Partial<PublicPost> & { thread_id: string }
   ) => void;
+  */
   getMembershipStatus: (spaceId: string) => Enums<'membership_status'> | null;
   setMemberships: React.Dispatch<React.SetStateAction<Membership[]>>;
   addOptimisticSpace: (space: SpaceWithDetails) => void;
@@ -51,27 +52,25 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
     }
   }, []);
 
-  const addOptimisticSpace = useCallback((space: SpaceWithDetails) => {
+  /*const addOptimisticSpace = useCallback((space: SpaceWithDetails) => {
     setSpaces(currentSpaces => [space, ...currentSpaces]);
   }, []);
 
   const removeOptimisticSpace = useCallback((spaceId: string) => {
     setSpaces(currentSpaces => currentSpaces.filter(s => s.id !== spaceId));
   }, []);
+  */
 
-  // This function is now named `refreshSpaces` but its logic is the same
   const refreshSpaces = useCallback(async () => {
     console.log('--- refreshSpaces START ---');
     console.log('User object from useAuth:', user); // <-- LOG 1: What does useAuth think?
     setIsLoadingSpaces(true);
     try {
-      // 1. Always fetch public spaces and threads.
-      // These functions will return mock data if the user is logged out.
       const { data: { session } } = await supabase.auth.getSession();      
       console.log('Current session status:', session ? 'ACTIVE' : 'NULL');
-      const spacesData = await getSpacesPage(1, 100);
+      //const spacesData = await getSpacesPage(1, 100);
       console.log('Fetched spaces count:', spacesData?.length);
-      setSpaces(spacesData || []);
+      setSpaces([]);
 
       // 2. *Only* fetch memberships if the user is actually logged in.
       if (session) {
@@ -102,15 +101,14 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
     refreshSpaces();
   }, [userId, refreshSpaces]);
   
-  // --- NEW FUNCTION FOR OPTIMISTIC UPDATES ---
-  // This function directly updates the local state for a single space.
-  const updateLocalSpace = useCallback((updatedSpace: SpaceWithDetails) => {
+  /*const updateLocalSpace = useCallback((updatedSpace: SpaceWithDetails) => {
     setSpaces(currentSpaces => 
       currentSpaces.map(s => s.id === updatedSpace.id ? updatedSpace : s)
     );
   }, []); // No dependencies needed as `setSpaces` is stable
+  */
 
-  const updateLocalPost = useCallback(
+  /*const updateLocalPost = useCallback(
     (updatedPost: Partial<PublicPost> & { thread_id: string }) => {
       setPublicThreads((currentThreads) =>
         currentThreads.map((t) =>
@@ -120,6 +118,7 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
     },
     []
   );
+  */
     
   const getMembershipStatus = useCallback((spaceId: string): Enums<'membership_status'> | null => {
       const membership = memberships.find(m => m.space_id === spaceId);
@@ -133,12 +132,12 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
     isLoadingSpaces,
     refreshSpaces, // <-- EXPOSED as refreshSpaces
     loadSpacesPage,
-    updateLocalSpace, // <-- EXPOSED the new function
-    updateLocalPost,
+    //updateLocalSpace, // <-- EXPOSED the new function
+    //updateLocalPost,
     getMembershipStatus,
     setMemberships, 
-    addOptimisticSpace,
-    removeOptimisticSpace,
+    //addOptimisticSpace,
+    //removeOptimisticSpace,
   }), [spaces, memberships, isLoadingSpaces, refreshSpaces, updateLocalSpace, updateLocalPost, getMembershipStatus]);
 
   return (
