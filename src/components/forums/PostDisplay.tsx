@@ -42,14 +42,9 @@ import {
 } from '@/integrations/supabase/community.api';
 import { ChevronDown, ChevronUp, MoreHorizontal} from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { Document, Page, pdfjs } from 'react-pdf';
+import { AttachmentPreview } from './AttachmentPreview';
 import { useSocialCounts } from '@/context/SocialCountsContext';
 import { toggleFollow } from '@/integrations/supabase/community.api';
-// FIX 1: Add required CSS import for react-pdf
-import 'react-pdf/dist/Page/AnnotationLayer.css';
-import 'react-pdf/dist/Page/TextLayer.css';
-
-pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
 const REACTIONS = ['👍', '❤️', '🔥', '🧠', '😂'];
 const URL_REGEX = /(https?:\/\/[^\s]+)/g;
@@ -68,44 +63,6 @@ interface AttachmentPreviewProps {
     file_type: string;
   };
 }
-
-const AttachmentPreview: React.FC<AttachmentPreviewProps> = ({ attachment }) => {
-  const isImage = attachment.file_type.startsWith('image/');
-  const isVideo = attachment.file_type.startsWith('video/');
-  const isPdf = attachment.file_type === 'application/pdf';
-
-  return (
-    <a
-      href={attachment.file_url}
-      target="_blank"
-      rel="noreferrer"
-      className="relative group w-full overflow-hidden flex items-center p-2 border rounded-md"
-    >
-      {isImage ? (
-        <img src={attachment.file_url} alt={attachment.file_name} className="h-16 w-16 rounded-md object-cover flex-shrink-0" />
-      ) : isVideo ? (
-        <video src={attachment.file_url} muted className="h-16 w-16 rounded-md object-cover flex-shrink-0" />
-      ) : isPdf ? (
-        <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-md flex items-center justify-center bg-gray-100">
-          <Document
-            file={attachment.file_url}
-            loading={<Loader2 className="h-4 w-4 animate-spin" />}
-            error={<FileIcon className="h-8 w-8 text-destructive" />}
-            renderAnnotationLayer={false}
-            renderTextLayer={false}
-          >
-            <Page pageNumber={1} width={64} />
-          </Document>
-        </div>
-      ) : (
-        <FileIcon className="h-16 w-16 text-muted-foreground flex-shrink-0" />
-      )}
-      <div className="ml-3 overflow-hidden min-w-0">
-        <p className="text-sm font-medium truncate">{attachment.file_name}</p>
-      </div>
-    </a>
-  );
-};
 
 // Helper to group reactions
 const groupReactions = (reactions: any[]) => {
@@ -575,7 +532,7 @@ export const PostDisplay: React.FC<PostDisplayProps> = ({
             <div>
               {/* Case 1: Single Image or Video */}
               {post.attachments.length === 1 && (post.attachments[0].file_type.startsWith('image/') || post.attachments[0].file_type.startsWith('video/')) ? (
-                (() => { // IIFE to render the single item
+                (() => { // (This logic remains the same, it's for a single large preview)
                   const att = post.attachments[0];
                   if (att.file_type.startsWith('image/')) {
                     return (
@@ -589,7 +546,7 @@ export const PostDisplay: React.FC<PostDisplayProps> = ({
                         <img
                           src={att.file_url}
                           alt={att.file_name}
-                          className="w-full h-auto object-cover max-h-[600px]" // Full width, max height
+                          className="w-full h-auto object-cover max-h-[600px]"
                         />
                       </a>
                     );
@@ -600,7 +557,7 @@ export const PostDisplay: React.FC<PostDisplayProps> = ({
                         <video
                           src={att.file_url}
                           controls
-                          className="w-full h-auto max-h-[600px]" // Full width, max height
+                          className="w-full h-auto max-h-[600px]"
                         />
                       </div>
                     );
@@ -608,46 +565,12 @@ export const PostDisplay: React.FC<PostDisplayProps> = ({
                   return null;
                 })()
               ) : (
-                /* Case 2: Multiple attachments (or single file) */
+                /* Case 2: Multiple attachments (grid view) */
                 <div className="grid grid-cols-2 gap-4">
-                  {post.attachments.map((att: any) => {
-                    const isImage = att.file_type.startsWith('image/');
-                    const isVideo = att.file_type.startsWith('video/');
-
-                    if (isImage) {
-                      return (
-                        <a
-                          key={att.file_url}
-                          href={att.file_url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="block rounded-lg overflow-hidden border hover:opacity-90 transition-opacity aspect-square"
-                        >
-                          <img
-                            src={att.file_url}
-                            alt={att.file_name}
-                            className="w-full h-full object-cover" // Fill the square
-                          />
-                        </a>
-                      );
-                    }
-
-                    if (isVideo) {
-                      return (
-                        <div key={att.file_url} className="rounded-lg overflow-hidden border bg-black aspect-square">
-                          <video
-                            src={att.file_url}
-                            controls // Keep controls for grid videos
-                            muted // Mute by default in a grid
-                            className="w-full h-full object-cover" // Fill the square
-                          />
-                        </div>
-                      );
-                    }
-
-                    // Fallback for PDF, ZIP, etc.
-                    return <AttachmentPreview key={att.file_url} attachment={att} />;
-                  })}
+                  {post.attachments.map((att: any) => (
+                    // Now just call the new component
+                    <AttachmentPreview key={att.file_url} attachment={att} />
+                  ))}
                 </div>
               )}
             </div>
