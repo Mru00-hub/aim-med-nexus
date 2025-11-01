@@ -127,7 +127,6 @@ export default function SpaceDetailPage() {
       await updateSpaceDetails(space.id, payload);
       console.log('[SpaceDetailPage] updateSpaceDetails SUCCESS.');
       toast({ title: "Success!", description: "Space details updated." });
-      await refreshSpaces();
     } catch (error: any) {
       console.error('--- UPDATE FAILED ---'); // <-- ADD THIS
       console.error(error);
