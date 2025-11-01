@@ -87,14 +87,6 @@ export default function Forums() {
     }
   }, [toast, loadSpacesPage, searchQuery, selectedFilter]); // Depend on loadSpacesPage
 
-  // 🚀 ADDED: Initial load for spaces
-  useEffect(() => {
-    // We check for !isLoadingSpaces to prevent double-loads on mount
-    if (!isLoadingSpaces) {
-      loadSpaces(1);
-    }
-  }, [searchQuery, selectedFilter]);
-
   useEffect(() => {
     loadSpaces(1);
   }, [loadSpaces]);
@@ -120,12 +112,6 @@ export default function Forums() {
       else setIsLoadingMore(false);
     }
   }, [toast, threadSearchQuery]);
-
-  useEffect(() => {
-    if (!isLoadingPosts) {
-      loadPosts(1);
-    }
-  }, [threadSearchQuery]);
 
   useEffect(() => {
     loadPosts(1);
