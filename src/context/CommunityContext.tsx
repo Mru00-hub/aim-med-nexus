@@ -143,7 +143,7 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
     setMemberships, 
     //addOptimisticSpace,
     //removeOptimisticSpace,
-  }), [spaces, memberships, isLoadingSpaces, refreshSpaces, loadSpacesPage, getMembershipStatus]);
+  }), [spaces, memberships, isLoadingSpaces, refreshSpaces, loadSpacesPage, getMembershipStatus, setMemberships]);
 
   return (
     <CommunityContext.Provider value={contextValue}>
