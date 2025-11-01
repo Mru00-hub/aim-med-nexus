@@ -11,6 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage, AvatarProfile } from "@/components
 import { useSocialCounts } from '@/context/SocialCountsContext';
 import { toggleFollow } from '@/integrations/supabase/community.api';
 import { useToast } from "@/components/ui/use-toast";
+import { AttachmentPreview } from './AttachmentPreview';
 
 const URL_REGEX = /(https?:\/\/[^\s]+)/g;
 const REACTIONS = ['👍', '❤️', '🔥', '🧠', '😂'];
@@ -195,70 +196,47 @@ export const PostFeedCard: React.FC<PostFeedCardProps> = ({
           <div className="line-clamp-3">
             <ShortenedBody text={body} />
           </div>
-          {hasAttachments && !hasPreview && (
-            <div className="mt-3">
-              {attachments.length === 1 && (attachments[0].file_type.startsWith('image/') || attachments[0].file_type.startsWith('video/')) ? (
-                // Single image or video - make it prominent
-                <a
-                  href={attachments[0].file_url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="block rounded-lg overflow-hidden border hover:opacity-90 transition-opacity"
-                  onClick={(e) => e.stopPropagation()} // Prevent card click
-                >
-                  {attachments[0].file_type.startsWith('image/') ? (
-                    <img
-                      src={attachments[0].file_url}
-                      alt={attachments[0].file_name}
-                      className="w-full h-auto object-cover max-h-72" // Adjust max-height as needed
-                    />
-                  ) : (
-                    <video
-                      src={attachments[0].file_url}
-                      controls
-                      className="w-full h-auto max-h-72 bg-black"
-                    />
-                  )}
-                </a>
-              ) : (
-                // Multiple attachments or single non-image/video file - use a grid/list
-                <div className="grid grid-cols-2 gap-2">
-                  {attachments.slice(0, 4).map((att: SimpleAttachment) => {
-                    const isImage = att.file_type.startsWith('image/');
-                    const isVideo = att.file_type.startsWith('video/');
-
+          {attachments.length === 1 && (attachments[0].file_type.startsWith('image/') || attachments[0].file_type.startsWith('video/')) ? (
+                (() => { // IIFE to render the single item
+                  const att = attachments[0];
+                  if (att.file_type.startsWith('image/')) {
                     return (
                       <a
                         key={att.file_url}
                         href={att.file_url}
                         target="_blank"
                         rel="noreferrer"
-                        className="flex items-center justify-center p-2 border rounded-md aspect-square bg-gray-100 overflow-hidden"
-                        onClick={(e) => e.stopPropagation()} // Prevent card click
+                        className="block rounded-lg overflow-hidden border hover:opacity-90 transition-opacity"
+                        onClick={(e) => e.stopPropagation()}
                       >
-                        {isImage ? (
-                          <img
-                            src={att.file_url}
-                            alt={att.file_name}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : isVideo ? (
-                          <video
-                            src={att.file_url}
-                            muted
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="flex flex-col items-center text-muted-foreground">
-                            <FileText className="h-8 w-8" />
-                            <p className="text-xs text-center mt-2 truncate w-full px-1">
-                              {att.file_name}
-                            </p>
-                          </div>
-                        )}
+                        <img
+                          src={att.file_url}
+                          alt={att.file_name}
+                          className="w-full h-auto object-cover max-h-72" // Full width
+                        />
                       </a>
                     );
-                  })}
+                  }
+                  if (att.file_type.startsWith('video/')) {
+                    return (
+                      <div key={att.file_url} className="rounded-lg overflow-hidden border bg-black" onClick={(e) => e.stopPropagation()}>
+                        <video
+                          src={att.file_url}
+                          controls
+                          className="w-full h-auto max-h-72" // Full width
+                        />
+                      </div>
+                    );
+                  }
+                  return null;
+                })()
+              ) : (
+                /* Case 2: Multiple attachments (grid view) */
+                <div className="grid grid-cols-2 gap-2">
+                  {attachments.slice(0, 4).map((att: SimpleAttachment) => (
+                    // Use the new AttachmentPreview component
+                    <AttachmentPreview key={att.file_url} attachment={att} />
+                  ))}
                 </div>
               )}
               {attachments.length > 4 && (
