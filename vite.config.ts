@@ -9,6 +9,9 @@ export default defineConfig({
     port: 8080,
     allowedHosts: true
   },
+  build: {
+    target: 'es2020',
+  },
   plugins: [react()], // Temporarily removed componentTagger()
   resolve: {
     alias: {
