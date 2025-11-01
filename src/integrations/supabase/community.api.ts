@@ -266,16 +266,25 @@ export const getUserSpaces = async (): Promise<Space[]> => {
 export interface GetSpacesProps {
   page: number;
   limit: number;
+  searchQuery?: string; // 🚀 ADDED
+  filter?: string; 
 }
 
-export const getSpacesWithDetails = async ({ page, limit }: GetSpacesProps): Promise<SpaceWithDetails[]> => {
+export const getSpacesWithDetails = async ({ page, limit, searchQuery = '', filter = 'ALL' }: GetSpacesProps): Promise<SpaceWithDetails[]> => {
     const { data: { session } } = await supabase.auth.getSession();
     const from = (page - 1) * limit;
     const to = from + limit - 1;
     if (!session) {
         // 🚀 FIX: Return the same mapped mock data your context expects
         console.log('[getSpacesWithDetails] No session, returning MOCK_SPACES.');
-        const mockSlice = MOCK_SPACES.slice(from, to + 1); // +1 because slice end is exclusive
+        const mockSlice = MOCK_SPACES
+          .filter(space => filter === 'ALL' || space.space_type === filter)
+          .filter(space => 
+            searchQuery === '' || 
+            space.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            (space.description && space.description.toLowerCase().includes(searchQuery.toLowerCase()))
+          )
+          .slice(from, to + 1);
         return mockSlice.map((space, index) => {
           const mockCounts = [
             { members: 125, threads: 42 },
@@ -300,6 +309,8 @@ export const getSpacesWithDetails = async ({ page, limit }: GetSpacesProps): Pro
     const { data, error } = await supabase.rpc('get_spaces_with_details', {
         p_limit: limit, // Pass the limit
         p_offset: from, // Optional: Pass offset if your RPC expects it instead of page
+        p_search_query: searchQuery, // 🚀 PASSED
+        p_filter_type: filter
     });
 
     if (error) {
@@ -436,29 +447,60 @@ export const incrementProfileView = async (userId: string): Promise<void> => {
 interface GetPublicThreadsProps {
   page: number;
   limit: number;
+  searchQuery?: string;
 }
 /** Fetches all global public threads using the new DB function. */
-export const getPublicThreads = async ({ page, limit }: GetPublicThreadsProps): Promise<PublicPost[]> => {
+export const getPublicThreads = async ({ page, limit, searchQuery = '' }: GetPublicThreadsProps): Promise<PublicPost[]> => {
     const { data: { session } } = await supabase.auth.getSession();
     
     if (!session) {
         console.log('[getPublicThreads] No session, returning MOCK_PUBLIC_POSTS.');
         const start = (page - 1) * limit;
         const end = start + limit;
-        return (MOCK_PUBLIC_POSTS as any).slice(start, end); 
+        const filteredMocks = MOCK_PUBLIC_POSTS.filter(post => 
+          searchQuery === '' ||
+          post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (post.first_message_body && post.first_message_body.toLowerCase().includes(searchQuery.toLowerCase()))
+        );
+        return (filteredMocks as any).slice(start, end); 
     }
 
-    const from = (page - 1) * limit;
-    const to = from + limit - 1;
-
-    const { data, error } = await supabase
-        .from('public_posts_feed') // This view now has the new fields
-        .select('*')
-        .order('created_at', { ascending: false })
-        .range(from, to);
+    const { data, error } = await supabase.rpc('get_threads', {
+        p_space_id: null, // This will default to the 'PUBLIC' space per your SQL
+        p_limit: limit,
+        p_page: page,
+        p_search_query: searchQuery // 🚀 PASSED
+    });
         
     if (error) throw error;
-    return (data || []) as PublicPost[]; // Cast to the updated type
+    
+    // 🚀 ADDED MAPPER: Convert RPC response (PostOrThreadSummary) to component type (PublicPost)
+    const rpcData = (data || []) as PostOrThreadSummary[];
+    const posts: PublicPost[] = rpcData.map(post => ({
+      thread_id: post.id,
+      title: post.title,
+      author: {
+        id: post.creator_id,
+        full_name: post.creator_full_name,
+        profile_picture_url: post.creator_profile_picture_url,
+        current_position: post.creator_position,
+      },
+      created_at: post.created_at,
+      last_activity_at: post.last_activity_at,
+      comment_count: post.comment_count,
+      // The RPC returns bigint, which JS receives as number. Cast to be safe.
+      first_message_id: Number(post.first_message_id), 
+      total_reaction_count: Number(post.first_message_reaction_count),
+      first_message_user_reaction: post.first_message_user_reaction,
+      first_message_body: post.first_message_body,
+      attachments: post.attachments,
+      // These fields are not in the 'get_threads' RPC, default to null
+      preview_title: null, 
+      preview_description: null,
+      preview_image_url: null,
+    }));
+
+    return posts;
 };
 
 export const getPostDetails = async (threadId: string) => {
@@ -599,12 +641,14 @@ export const getThreadsForSpace = async (props: {
   spaceId: string;
   page: number;
   limit: number;
+  searchQuery?: string;
 }): Promise<PostOrThreadSummary[]> => {
   
   const { data, error } = await supabase.rpc('get_threads', {
     p_space_id: props.spaceId,
     p_page: props.page,
-    p_limit: props.limit
+    p_limit: props.limit,
+    p_search_query: props.searchQuery || ''
   });
 
   if (error) throw error;
