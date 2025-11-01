@@ -82,14 +82,22 @@ export default function SpaceDetailPage() {
   // --- ASYNCHRONOUS ACTIONS ---
 
   const handleSave = async (payload: { name: string; description?: string | null; join_level: Enums<'space_join_level'> }) => {
-    if (!space) return;
+    console.log('[SpaceDetailPage] handleSave FIRED.');
+    if (!space) {
+      console.error('[SpaceDetailPage] Save failed: space is null');
+      return;
+    }
     const originalSpace = { ...space };
     updateLocalSpace(optimisticSpace); // Optimistic update
     try {
+      console.log('[SpaceDetailPage] Calling updateSpaceDetails with:', space.id, payload);
       await updateSpaceDetails(space.id, payload);
+      console.log('[SpaceDetailPage] updateSpaceDetails SUCCESS.');
       toast({ title: "Success!", description: "Space details updated." });
       await refreshSpaces();
     } catch (error: any) {
+      console.error('--- UPDATE FAILED ---'); // <-- ADD THIS
+      console.error(error);
       toast({ title: "Update Failed", description: error.message, variant: "destructive" });
       updateLocalSpace(originalSpace); // Revert
       throw error; // Re-throw to keep dialog open
