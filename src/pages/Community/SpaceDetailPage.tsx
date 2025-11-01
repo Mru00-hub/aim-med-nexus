@@ -48,7 +48,7 @@ export default function SpaceDetailPage() {
   const [shareUrl, setShareUrl] = useState('');
   
   // --- LOGIC & EFFECTS ---
-  const loading = isLoadingSpaces || !spaceId;
+  const loading = isLoadingSpace || !spaceId;
 
   const currentUserMembership = useMemo(() => {
     if (!user || !memberList) return null;
@@ -70,11 +70,11 @@ export default function SpaceDetailPage() {
   }, [user, space, getMembershipStatus]);
 
   useEffect(() => {
-    if (!isLoadingSpaces && !space) {
+    if (!isLoadingSpace && !space) {
       toast({ variant: 'destructive', title: 'Not Found', description: 'This space does not exist.' });
       navigate('/community');
     }
-  }, [isLoadingSpaces, space, navigate, toast]);
+  }, [isLoadingSpace, space, navigate, toast]);
 
   useEffect(() => {
     if (!spaceId) {
