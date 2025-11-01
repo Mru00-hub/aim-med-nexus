@@ -263,13 +263,20 @@ export const getUserSpaces = async (): Promise<Space[]> => {
     return data;
 }
 
-export const getSpacesWithDetails = async (): Promise<SpaceWithDetails[]> => {
+export interface GetSpacesProps {
+  page: number;
+  limit: number;
+}
+
+export const getSpacesWithDetails = async ({ page, limit }: GetSpacesProps): Promise<SpaceWithDetails[]> => {
     const { data: { session } } = await supabase.auth.getSession();
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
     if (!session) {
         // 🚀 FIX: Return the same mapped mock data your context expects
         console.log('[getSpacesWithDetails] No session, returning MOCK_SPACES.');
-        return MOCK_SPACES.map((space, index) => {
-          // Give each mock space some unique-looking numbers
+        const mockSlice = MOCK_SPACES.slice(from, to + 1); // +1 because slice end is exclusive
+        return mockSlice.map((space, index) => {
           const mockCounts = [
             { members: 125, threads: 42 },
             { members: 88, threads: 19 },
@@ -290,7 +297,10 @@ export const getSpacesWithDetails = async (): Promise<SpaceWithDetails[]> => {
           };
         });
     }
-    const { data, error } = await supabase.rpc('get_spaces_with_details');
+    const { data, error } = await supabase.rpc('get_spaces_with_details', {
+        p_limit: limit, // Pass the limit
+        p_offset: from, // Optional: Pass offset if your RPC expects it instead of page
+    });
 
     if (error) {
       console.error("Error fetching spaces with details:", error);
