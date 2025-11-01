@@ -77,8 +77,6 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
     try {
       const { data: { session } } = await supabase.auth.getSession();      
       console.log('Current session status:', session ? 'ACTIVE' : 'NULL');
-      //const spacesData = await getSpacesPage(1, 100);
-      console.log('Fetched spaces count:', spacesData?.length);
       setSpaces([]);
 
       // 2. *Only* fetch memberships if the user is actually logged in.
