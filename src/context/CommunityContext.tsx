@@ -18,6 +18,7 @@ interface CommunityContextType {
   spaces: SpaceWithDetails[];
   memberships: Membership[];
   isLoadingSpaces: boolean;
+  loadSpacesPage: (page: number, limit: number) => Promise<SpaceWithDetails[]>;
   refreshSpaces: () => Promise<void>; // <-- RENAMED for clarity
   updateLocalSpace: (updatedSpace: SpaceWithDetails) => void; // <-- ADDED for optimistic updates
   updateLocalPost: (
@@ -39,6 +40,17 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
   const [publicThreads, setPublicThreads] = useState<PublicPost[]>([]); 
   const [isLoadingSpaces, setIsLoadingSpaces] = useState(true);
 
+  const loadSpacesPage = useCallback(async (page: number, limit: number) => {
+    try {
+      const offset = (page - 1) * limit; // Calculate offset from page
+      const spacesData = await getSpacesWithDetails({ page, limit, offset }); 
+      return spacesData || [];
+    } catch (error) {
+      console.error('Error loading spaces page:', error);
+      throw error;
+    }
+  }, []);
+
   const addOptimisticSpace = useCallback((space: SpaceWithDetails) => {
     setSpaces(currentSpaces => [space, ...currentSpaces]);
   }, []);
@@ -57,7 +69,7 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
       // These functions will return mock data if the user is logged out.
       const { data: { session } } = await supabase.auth.getSession();      
       console.log('Current session status:', session ? 'ACTIVE' : 'NULL');
-      const spacesData = await getSpacesWithDetails();
+      const spacesData = await getSpacesPage(1, 100);
       console.log('Fetched spaces count:', spacesData?.length);
       setSpaces(spacesData || []);
 
@@ -120,6 +132,7 @@ export const CommunityProvider: React.FC<{ children: ReactNode }> = ({ children 
     memberships,
     isLoadingSpaces,
     refreshSpaces, // <-- EXPOSED as refreshSpaces
+    loadSpacesPage,
     updateLocalSpace, // <-- EXPOSED the new function
     updateLocalPost,
     getMembershipStatus,
