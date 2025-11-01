@@ -1,30 +1,92 @@
 import React from 'react';
+import { Loader2, File as FileIcon } from 'lucide-react';
+import { Document, Page, pdfjs } from 'react-pdf';
 import { SimpleAttachment } from '@/integrations/supabase/community.api';
-import { FileText } from 'lucide-react';
 
-export const AttachmentPreview = ({ attachments }: { attachments: SimpleAttachment[] | null }) => {
-  if (!attachments || attachments.length === 0) return null;
-  
-  return (
-    <div className="mb-3" onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
-      <div className="flex flex-wrap gap-2">
-        {attachments.map((att, index) => (
-          <a
-            key={index}
-            href={att.file_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1.5 p-1.5 bg-muted rounded-md text-xs hover:bg-muted-foreground/20 transition-colors"
-          >
-            {att.file_type.startsWith('image/') ? (
-              <img src={att.file_url} alt={att.file_name} className="h-4 w-4 rounded-sm object-cover" />
-            ) : (
-              <FileText className="h-3 w-3 flex-shrink-0" />
-            )}
-            <span className="truncate max-w-[150px]">{att.file_name}</span>
-          </a>
-        ))}
+// Add the required CSS imports for react-pdf to work
+import 'react-pdf/dist/Page/AnnotationLayer.css';
+import 'react-pdf/dist/Page/TextLayer.css';
+
+// Setup PDF worker
+pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+
+interface AttachmentPreviewProps {
+  attachment: SimpleAttachment;
+}
+
+export const AttachmentPreview: React.FC<AttachmentPreviewProps> = ({ attachment }) => {
+  const isImage = attachment.file_type.startsWith('image/');
+  const isVideo = attachment.file_type.startsWith('video/');
+  const isPdf = attachment.file_type === 'application/pdf';
+
+  // Stop card navigation when clicking the preview
+  const handleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+  };
+
+  // Render images/videos as a grid item
+  if (isImage) {
+    return (
+      <a
+        href={attachment.file_url}
+        target="_blank"
+        rel="noreferrer"
+        className="block rounded-lg overflow-hidden border hover:opacity-90 transition-opacity aspect-square"
+        onClick={handleClick}
+      >
+        <img
+          src={attachment.file_url}
+          alt={attachment.file_name}
+          className="w-full h-full object-cover" // Fill the square
+        />
+      </a>
+    );
+  }
+
+  if (isVideo) {
+    return (
+      <div 
+        className="rounded-lg overflow-hidden border bg-black aspect-square"
+        onClick={handleClick}
+      >
+        <video
+          src={attachment.file_url}
+          controls
+          muted
+          className="w-full h-full object-cover" // Fill the square
+        />
       </div>
-    </div>
+    );
+  }
+
+  // Render PDF and other files as a list-style item
+  return (
+    <a
+      href={attachment.file_url}
+      target="_blank"
+      rel="noreferrer"
+      className="relative group w-full overflow-hidden flex items-center p-2 border rounded-md col-span-1"
+      onClick={handleClick}
+    >
+      {isPdf ? (
+        <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-md flex items-center justify-center bg-gray-100">
+          <Document
+            file={attachment.file_url}
+            loading={<Loader2 className="h-4 w-4 animate-spin" />}
+            error={<FileIcon className="h-8 w-8 text-destructive" />}
+            renderAnnotationLayer={false}
+            renderTextLayer={false}
+          >
+            <Page pageNumber={1} width={64} />
+          </Document>
+        </div>
+      ) : (
+        <FileIcon className="h-16 w-16 text-muted-foreground flex-shrink-0" />
+      )}
+      <div className="ml-3 overflow-hidden min-w-0">
+        <p className="text-sm font-medium truncate">{attachment.file_name}</p>
+      </div>
+    </a>
   );
 };
+
