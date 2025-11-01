@@ -332,18 +332,52 @@ export const getUserMemberships = async (): Promise<Membership[]> => {
 }
 
 /** Fetches details for a single space. RLS will prevent unauthorized access. */
-export const getSpaceDetails = async(spaceId: string): Promise<Space | undefined> => {
+export const getSpaceDetails = async(spaceId: string): Promise<SpaceWithDetails | undefined> => {
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return MOCK_SPACES.find(s => s.id === spaceId);
+    if (!session) {
+      // Return mock data if needed, simplified here
+      const mock = MOCK_SPACES.find(s => s.id === spaceId);
+      return mock ? {
+        ...mock,
+        creator_full_name: 'Mock User',
+        creator_position: 'Mock Position',
+        creator_organization: 'Mock Org',
+        creator_specialization: 'Mock Spec',
+        moderators: [],
+        member_count: 1,
+        thread_count: 1,
+      } : undefined;
+    }
 
+    // 🚀 This query fetches the full details your page component expects
     const { data, error } = await supabase
       .from('spaces')
-      .select('*')
+      .select(`
+        *,
+        creator:profiles (
+          full_name,
+          current_position,
+          organization,
+          specialization:specializations (label)
+        )
+      `)
       .eq('id', spaceId)
       .single();
     
-    if(error) throw error;
-    return data || undefined;
+    if (error) throw error;
+    if (!data) return undefined;
+
+    // Map the nested data to the flat 'SpaceWithDetails' type
+    const result: SpaceWithDetails = {
+      ...data,
+      creator_full_name: data.creator?.full_name || null,
+      creator_position: data.creator?.current_position || null,
+      creator_organization: data.creator?.organization || null,
+      creator_specialization: data.creator?.specialization?.label || null,
+      moderators: [], // Note: This query doesn't fetch moderators.
+                     // The *best* fix is modifying your RPC to accept a p_space_id.
+    };
+    return result;
 }
 
 /** Fetches the count of ACTIVE members for a space. */
