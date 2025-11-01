@@ -15,9 +15,10 @@ const POSTS_PER_PAGE = 10;
 interface ForumPostFeedProps {
   spaceId: string;
   refreshKey: number;
+  searchQuery?: string;
 }
 
-export const ForumPostFeed: React.FC<ForumPostFeedProps> = ({ spaceId, refreshKey }) => {
+export const ForumPostFeed: React.FC<ForumPostFeedProps> = ({ spaceId, refreshKey, searchQuery = ''}) => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -41,7 +42,8 @@ export const ForumPostFeed: React.FC<ForumPostFeedProps> = ({ spaceId, refreshKe
       const newPosts = await getThreadsForSpace({ 
         spaceId: spaceId, 
         page: page, 
-        limit: POSTS_PER_PAGE 
+        limit: POSTS_PER_PAGE, 
+        searchQuery: searchQuery
       });
       setPosts(prev => page === 1 ? newPosts : [...prev, ...newPosts]);
       setHasMorePosts(newPosts.length === POSTS_PER_PAGE);
@@ -52,11 +54,11 @@ export const ForumPostFeed: React.FC<ForumPostFeedProps> = ({ spaceId, refreshKe
       if (page === 1) setIsLoading(false);
       else setIsLoadingMore(false);
     }
-  }, [spaceId, toast]);
+  }, [spaceId, toast, searchQuery]);
 
   useEffect(() => {
     loadPosts(1);
-  }, [loadPosts, refreshKey]); // Reload if onPostCreated changes (i.e., a post is created)
+  }, [loadPosts, refreshKey, searchQuery]); // Reload if onPostCreated changes (i.e., a post is created)
 
   const handleOptimisticReaction = useCallback(async (
     postId: string, 
@@ -112,6 +114,11 @@ export const ForumPostFeed: React.FC<ForumPostFeedProps> = ({ spaceId, refreshKe
 
   return (
     <div className="space-y-4">
+      {!isLoading && posts.length === 0 && (
+        <p className="text-sm text-center text-muted-foreground pt-4">
+          {searchQuery ? 'No posts match your search.' : 'No posts yet.'}
+        </p>
+      )}
       {posts.map(post => (
         <PostFeedCard 
           key={post.id}
