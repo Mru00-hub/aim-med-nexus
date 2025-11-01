@@ -41,8 +41,6 @@ export default function Forums() {
     refreshSpaces, 
     getMembershipStatus,
     setMemberships, 
-    addOptimisticSpace, 
-    removeOptimisticSpace,
     loadSpacesPage, 
   } = useCommunity();
   
@@ -65,27 +63,18 @@ export default function Forums() {
   const [isLoadingMoreSpaces, setIsLoadingMoreSpaces] = useState(false);
   const [currentSpacePage, setCurrentSpacePage] = useState(1);
   const [hasMoreSpaces, setHasMoreSpaces] = useState(true);
-  
-  const filteredSpaces = useMemo(() => {
-    return (spaces || [])
-      .filter(space => space.space_type !== 'PUBLIC')
-      .filter(space => selectedFilter === 'ALL' || space.space_type === selectedFilter)
-      .filter(space => {
-        const searchLower = searchQuery.toLowerCase();
-        return (
-          space.name.toLowerCase().includes(searchLower) ||
-          (space.description && space.description.toLowerCase().includes(searchLower))
-        );
-      });
-  }, [spaces, searchQuery, selectedFilter]);
 
   const loadSpaces = useCallback(async (page: number) => {
     if (page === 1) setIsLoadingSpaces(true);
     else setIsLoadingMoreSpaces(true);
 
     try {
-      const newSpaces = await loadSpacesPage(page, SPACES_PER_PAGE); // Use the new context function
-      
+      const newSpaces = await loadSpacesPage({
+        page, 
+        limit: SPACES_PER_PAGE,
+        searchQuery: searchQuery,
+        filter: selectedFilter
+      }); 
       setSpaces(prev => page === 1 ? newSpaces : [...prev, ...newSpaces]);
       setHasMoreSpaces(newSpaces.length === SPACES_PER_PAGE);
       setCurrentSpacePage(page);
@@ -96,9 +85,16 @@ export default function Forums() {
       if (page === 1) setIsLoadingSpaces(false);
       else setIsLoadingMoreSpaces(false);
     }
-  }, [toast, loadSpacesPage]); // Depend on loadSpacesPage
+  }, [toast, loadSpacesPage, searchQuery, selectedFilter]); // Depend on loadSpacesPage
 
   // 🚀 ADDED: Initial load for spaces
+  useEffect(() => {
+    // We check for !isLoadingSpaces to prevent double-loads on mount
+    if (!isLoadingSpaces) {
+      loadSpaces(1);
+    }
+  }, [searchQuery, selectedFilter]);
+
   useEffect(() => {
     loadSpaces(1);
   }, [loadSpaces]);
@@ -108,8 +104,11 @@ export default function Forums() {
     else setIsLoadingMore(true);
 
     try {
-      const newPosts = await getPublicThreads({ page, limit: POSTS_PER_PAGE });
-      
+      const newPosts = await getPublicThreads({ 
+        page, 
+        limit: POSTS_PER_PAGE,
+        searchQuery: threadSearchQuery 
+      });
       setPosts(prev => page === 1 ? newPosts : [...prev, ...newPosts]);
       setHasMorePosts(newPosts.length === POSTS_PER_PAGE);
       setCurrentPage(page);
@@ -120,21 +119,17 @@ export default function Forums() {
       if (page === 1) setIsLoadingPosts(false);
       else setIsLoadingMore(false);
     }
-  }, [toast]);
+  }, [toast, threadSearchQuery]);
+
+  useEffect(() => {
+    if (!isLoadingPosts) {
+      loadPosts(1);
+    }
+  }, [threadSearchQuery]);
 
   useEffect(() => {
     loadPosts(1);
   }, [loadPosts]);
-
-  const filteredPublicThreads = useMemo(() => {
-    return posts.filter(thread => {
-      const searchLower = threadSearchQuery.toLowerCase();
-      return (
-        (thread.title || '').toLowerCase().includes(searchLower) ||
-        (thread.author_name || '').toLowerCase().includes(searchLower) 
-      );
-    });
-  }, [posts, threadSearchQuery]);
 
   const handleCreateSpace = async (data: {
     name: string;
@@ -159,17 +154,20 @@ export default function Forums() {
       creator_specialization: null,
     };
 
-    addOptimisticSpace(optimisticSpace);
+    setSpaces(currentSpaces => [optimisticSpace, ...currentSpaces]);
     setShowSpaceCreator(false);
     
     try {
       await createSpace(data);
-      removeOptimisticSpace(tempId); // Use context
-      await refreshSpaces(); 
+      // 🚀 CHANGE: Remove temp space from local state
+      setSpaces(currentSpaces => currentSpaces.filter(s => s.id !== tempId));
+      // 🚀 CHANGE: Reload first page instead of calling refreshSpaces()
+      loadSpaces(1); 
       toast({ title: 'Success!', description: `The space "${data.name}" has been created.` });
     } catch (error: any) {
       toast({ variant: 'destructive', title: 'Creation Failed', description: error.message });
-      removeOptimisticSpace(tempId); // Use context
+      // 🚀 CHANGE: Revert local state on failure
+      setSpaces(currentSpaces => currentSpaces.filter(s => s.id !== tempId));
     } 
   };
   
@@ -184,6 +182,7 @@ export default function Forums() {
         await joinSpaceAsMember(space.id);
         toast({ title: 'Success!', description: `You have joined ${space.name}.` });
         await refreshSpaces();
+        loadSpaces(1); 
       } else { 
         await requestToJoinSpace(space.id);
         toast({ title: 'Request Sent', description: `Your request to join ${space.name} is pending approval.` });
@@ -314,11 +313,14 @@ export default function Forums() {
               <Skeleton className="h-64 w-full" />
               <Skeleton className="h-64 w-full" />
             </div>
-          ) : filteredSpaces.length === 0 ? (
+          ) : spaces.length === 0 ? ( // 🚀 CHANGE
             <p className="text-center text-muted-foreground py-4">No spaces match your criteria.</p>
           ) : (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredSpaces.map(space => (
+              {/* 🚀 CHANGE: Map over local 'spaces' state directly */}
+              {spaces
+                .filter(space => space.space_type !== 'PUBLIC') // Keep client-side 'PUBLIC' filter
+                .map(space => ( 
                 <SpaceCard 
                   key={space.id}
                   space={space}
@@ -370,11 +372,11 @@ export default function Forums() {
               <Skeleton className="h-40 w-full" />
               <Skeleton className="h-40 w-full" />
             </div>
-          ) : filteredPublicThreads.length === 0 ? (
+          ) : posts.length === 0 ? ( // 🚀 CHANGE
             <p className="text-center text-muted-foreground py-4">No public posts match your search.</p>
           ) : (
             <div className="space-y-4">
-              {filteredPublicThreads.map(post => {
+              {posts.map(post => {
                 const authorId = 'author_id' in post ? post.author_id : post.creator_id;
                 return (
                   <PostFeedCard 
