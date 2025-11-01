@@ -172,6 +172,15 @@ export type ProfileWithStatus = {
   is_viewer_following: boolean;
 };
 
+type ModeratorDetails = {
+  role: Enums<'membership_role'>;
+  user_id: string;
+  full_name: string;
+  current_position: string | null;
+  organization: string | null;
+  specialization: string | null;
+};
+
 // =================================================================
 // Rich Mock Data for Logged-Out Users
 // =================================================================
@@ -349,36 +358,70 @@ export const getSpaceDetails = async(spaceId: string): Promise<SpaceWithDetails 
       } : undefined;
     }
 
-    // 🚀 This query fetches the full details your page component expects
-    const { data, error } = await supabase
-      .from('spaces')
-      .select(`
-        *,
-        creator:profiles (
-          full_name,
-          current_position,
-          organization,
-          specialization:specializations (label)
-        )
-      `)
-      .eq('id', spaceId)
-      .single();
-    
-    if (error) throw error;
-    if (!data) return undefined;
+    const spaceQuery = supabase
+    .from('spaces')
+    .select(
+      `
+      *,
+      creator:profiles (
+        full_name,
+        current_position,
+        organization,
+        specialization:specializations (label)
+      )
+    `
+    )
+    .eq('id', spaceId)
+    .single();
 
-    // Map the nested data to the flat 'SpaceWithDetails' type
-    const result: SpaceWithDetails = {
-      ...data,
-      creator_full_name: data.creator?.full_name || null,
-      creator_position: data.creator?.current_position || null,
-      creator_organization: data.creator?.organization || null,
-      creator_specialization: data.creator?.specialization?.label || null,
-      moderators: [], // Note: This query doesn't fetch moderators.
-                     // The *best* fix is modifying your RPC to accept a p_space_id.
-    };
-    return result;
-}
+  // 2. Get the moderators (logic copied from your SQL CTE)
+  const moderatorsQuery = supabase
+    .from('memberships')
+    .select(
+      `
+      role,
+      user_id,
+      profile:profiles (
+        full_name,
+        current_position,
+        organization,
+        specialization:specializations (label)
+      )
+    `
+    )
+    .eq('space_id', spaceId)
+    .in('role', ['ADMIN', 'MODERATOR'])
+    .eq('status', 'ACTIVE');
+
+  // Run both queries
+  const [{ data: spaceData, error: spaceError }, { data: moderatorsData, error: moderatorsError }] =
+    await Promise.all([spaceQuery, moderatorsQuery]);
+
+  // Handle errors
+  if (spaceError) throw spaceError;
+  if (moderatorsError) throw moderatorsError;
+  if (!spaceData) return undefined;
+
+  // Map the nested data to the flat 'SpaceWithDetails' type
+  const result: SpaceWithDetails = {
+    ...spaceData,
+    creator_full_name: spaceData.creator?.full_name || null,
+    creator_position: spaceData.creator?.current_position || null,
+    creator_organization: spaceData.creator?.organization || null,
+    creator_specialization: spaceData.creator?.specialization?.label || null,
+    // --- THIS IS THE FIX ---
+    // Map the moderator data into the correct shape
+    moderators: (moderatorsData || []).map((m: any) => ({
+      role: m.role,
+      user_id: m.user_id,
+      full_name: m.profile?.full_name || 'Unknown',
+      current_position: m.profile?.current_position || null,
+      organization: m.profile?.organization || null,
+      specialization: m.profile?.specialization?.label || null,
+    })),
+  };
+  return result;
+};
 
 /** Fetches the count of ACTIVE members for a space. */
 export const getSpaceMemberCount = async (spaceId: string): Promise<number> => {
