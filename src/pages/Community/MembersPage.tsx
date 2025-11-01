@@ -1,6 +1,6 @@
 // src/pages/Community/MembersPage.tsx
 
-import React, { useMemo, useCallback } from 'react';
+import React, { useMemo, useCallback, useState, useEffect} from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { useCommunity } from '@/context/CommunityContext';
 import { useSpaceMemberList, usePendingRequests } from '@/hooks/useSpaceData';
-import { updateMembershipStatus, updateMemberRole } from '@/integrations/supabase/community.api';
+import { updateMembershipStatus, updateMemberRole, getSpaceDetails } from '@/integrations/supabase/community.api';
 import { MemberList } from '@/components/forums/MemberList';
 import { useToast } from '@/components/ui/use-toast';
 import { ArrowLeft } from 'lucide-react';
@@ -21,11 +21,27 @@ import { DisplayMember } from '@/components/forums/MemberCard';
 export default function MembersPage() {
     const { spaceId } = useParams<{ spaceId: string }>();
     const { user } = useAuth();
-    const { spaces } = useCommunity();
     const navigate = useNavigate();
     const { toast } = useToast();
+    const [space, setSpace] = useState<SpaceWithDetails | null>(null);
 
-    const space = useMemo(() => spaces.find(s => s.id === spaceId), [spaces, spaceId]);
+    useEffect(() => {
+      if (spaceId) {
+        getSpaceDetails(spaceId)
+          .then(data => {
+            if (data) {
+              setSpace(data);
+            } else {
+              toast({ variant: 'destructive', title: 'Error', description: 'Space not found.' });
+              navigate('/community');
+            }
+          })
+          .catch(err => {
+            toast({ variant: 'destructive', title: 'Error', description: err.message });
+            navigate('/community');
+          });
+      }
+    }, [spaceId, navigate, toast]);
     const { memberList, isLoadingList, refreshMemberList } = useSpaceMemberList(spaceId);
 
     const isUserAdminOrMod = useMemo(() => {
@@ -71,7 +87,7 @@ export default function MembersPage() {
         return (
             <div className="min-h-screen bg-background flex flex-col">
                 <Header />
-                <main className="container mx-auto py-8 px-4 flex-grow"><p>Loading space or space not found...</p></main>
+                <main className="container mx-auto py-8 px-4 flex-grow"><p>Loading space details...</p></main>
                 <Footer />
             </div>
         );
