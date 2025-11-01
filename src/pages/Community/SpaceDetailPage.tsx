@@ -88,6 +88,10 @@ export default function SpaceDetailPage() {
       return;
     }
     const originalSpace = { ...space };
+    const optimisticSpace = {
+      ...space,
+      ...payload, // Merge the new details (name, description, etc.)
+    };
     updateLocalSpace(optimisticSpace); // Optimistic update
     try {
       console.log('[SpaceDetailPage] Calling updateSpaceDetails with:', space.id, payload);
