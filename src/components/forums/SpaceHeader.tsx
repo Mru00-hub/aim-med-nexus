@@ -81,17 +81,21 @@ export const SpaceHeader: React.FC<SpaceHeaderProps> = ({
   };
 
   const handleSaveClick = async () => {
+    console.log('[SpaceHeader] handleSaveClick FIRED.'); 
     setIsSaving(true);
     try {
+      console.log('[SpaceHeader] Calling onSave...');
       await onSave({
         name: editedName,
         description: editedDescription,
         join_level: editedJoinLevel,
       });
+      console.log('[SpaceHeader] onSave SUCCEEDED.');
       setIsEditing(false);
     } catch (error) {
-      // Error is handled by parent, just stop loading
+      console.error('[SpaceHeader] FAILED TO SAVE. Error received from parent:', error);
     } finally {
+      console.log('[SpaceHeader] finally block. Setting isSaving to false.'); 
       setIsSaving(false);
     }
   };
@@ -147,7 +151,13 @@ export const SpaceHeader: React.FC<SpaceHeaderProps> = ({
               </div>
               <div className="flex justify-end gap-2">
                 <Button variant="ghost" onClick={() => setIsEditing(false)} disabled={isSaving}>Cancel</Button>
-                <Button onClick={handleSaveClick} disabled={isSaving}>
+                <Button 
+                  onClick={() => {
+                    console.log('--- SAVE BUTTON CLICKED ---'); // <-- ADD THIS LINE
+                    handleSaveClick();
+                  }} 
+                  disabled={isSaving}
+                >
                   {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Save Changes
                 </Button>
               </div>
