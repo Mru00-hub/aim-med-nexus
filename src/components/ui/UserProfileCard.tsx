@@ -4,7 +4,7 @@ import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/h
 import { Avatar, AvatarFallback, AvatarImage, AvatarProfile } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { MapPin, Briefcase, Award } from 'lucide-react';
+import { MapPin, Briefcase, Award, School, BookOpen } from 'lucide-react';
 
 // --- UPDATED: Interface to match the RPC return type ---
 interface UserProfile {
@@ -71,24 +71,48 @@ export const UserProfileCard = ({ userId, children }: UserProfileCardProps) => {
               <h4 className="text-sm font-semibold">{profile.full_name}</h4>
               
               {/* --- UPDATED: Show richer data --- */}
-              <div className="flex items-center text-xs text-muted-foreground">
-                <Briefcase className="mr-2 h-3.5 w-3.5 opacity-70" />
-                <span className="truncate">
-                  {profile.current_position || 'Position not specified'}
-                </span>
-              </div>
-              <div className="flex items-center text-xs text-muted-foreground">
-                <Award className="mr-2 h-3.5 w-3.5 opacity-70" />
-                <span className="truncate">
-                  {profile.specialization || 'Specialization not specified'}
-                </span>
-              </div>
+              {profile.user_role === 'student' ? (
+                <>
+                  {/* Student-specific fields */}
+                  <div className="flex items-center text-xs text-muted-foreground">
+                    <School className="mr-2 h-3.5 w-3.5 opacity-70" />
+                    <span className="truncate">
+                      {profile.organization || 'Institution not specified'}
+                    </span>
+                  </div>
+                  <div className="flex items-center text-xs text-muted-foreground">
+                    <BookOpen className="mr-2 h-3.5 w-3.5 opacity-70" />
+                    <span className="truncate">
+                      {profile.current_position || 'Course not specified'}
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* Professional (non-student) fields */}
+                  <div className="flex items-center text-xs text-muted-foreground">
+                    <Briefcase className="mr-2 h-3.5 w-3.5 opacity-70" />
+                    <span className="truncate">
+                      {profile.current_position || 'Position not specified'}
+                    </span>
+                  </div>
+                  <div className="flex items-center text-xs text-muted-foreground">
+                    <Award className="mr-2 h-3.5 w-3.5 opacity-70" />
+                    <span className="truncate">
+                      {profile.specialization || 'Specialization not specified'}
+                    </span>
+                  </div>
+                </>
+              )}
+              
+              {/* Common field: Location */}
               <div className="flex items-center text-xs text-muted-foreground">
                 <MapPin className="mr-2 h-3.5 w-3.5 opacity-70" />
                 <span className="truncate">
                   {profile.current_location || 'Location not specified'}
                 </span>
               </div>
+              
               <Badge variant="outline" className="capitalize mt-1">
                 {profile.user_role || 'Member'}
               </Badge>
