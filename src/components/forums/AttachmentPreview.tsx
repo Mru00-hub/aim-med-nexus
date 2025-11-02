@@ -56,8 +56,9 @@ export const AttachmentPreview: React.FC<AttachmentPreviewProps> = ({ attachment
             page: 0 // <-- This is the magic! 0 is the first page.
           }
         });
-      console.log('[AttachmentPreview] Generated Thumbnail URL:', data.publicUrl);
-      setPdfThumbnailUrl(data.publicUrl);
+      const thumbnailUrl = `${data.publicUrl}&page=0`;
+      console.log('[AttachmentPreview] Generated Thumbnail URL:', thumbnailUrl);
+      setPdfThumbnailUrl(thumbnailUrl);
     } else {
       console.error('[AttachmentPreview] Could not parse path from URL:', attachment.file_url);
       setIsLoading(false);
