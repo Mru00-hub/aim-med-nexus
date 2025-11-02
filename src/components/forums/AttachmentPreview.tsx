@@ -24,7 +24,11 @@ const getPathFromUrl = (url: string) => {
   try {
     const urlObj = new URL(url);
     const parts = urlObj.pathname.split('/message_attachments/');
-    return parts[1] ? decodeURIComponent(parts[1]) : null;
+    let path = parts[1] ? decodeURIComponent(parts[1]) : null;
+    if (path && path.startsWith('public/')) {
+      path = path.substring(7); // Remove 'public/' (7 characters)
+    }
+    return path;
   } catch (error) {
     console.error('Error parsing attachment URL:', error);
     return null;
