@@ -341,86 +341,43 @@ export const getUserMemberships = async (): Promise<Membership[]> => {
 }
 
 /** Fetches details for a single space. RLS will prevent unauthorized access. */
-export const getSpaceDetails = async(spaceId: string): Promise<SpaceWithDetails | undefined> => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      // Return mock data if needed, simplified here
-      const mock = MOCK_SPACES.find(s => s.id === spaceId);
-      return mock ? {
-        ...mock,
-        creator_full_name: 'Mock User',
-        creator_position: 'Mock Position',
-        creator_organization: 'Mock Org',
-        creator_specialization: 'Mock Spec',
-        moderators: [],
-        member_count: 1,
-        thread_count: 1,
-      } : undefined;
-    }
+export const getSpaceDetails = async (spaceId: string): Promise<SpaceWithDetails | undefined> => {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) {
+    // Mock data logic for logged-out users remains the same
+    const mock = MOCK_SPACES.find(s => s.id === spaceId);
+    return mock ? {
+      ...mock,
+      creator_full_name: 'Mock User',
+      creator_position: 'Mock Position',
+      creator_organization: 'Mock Org',
+      creator_specialization: 'Mock Spec',
+      moderators: [],
+      member_count: 1,
+      thread_count: 1,
+    } : undefined;
+  }
 
-    const spaceQuery = supabase
-    .from('spaces')
-    .select(
-      `
-      *,
-      creator:profiles (
-        full_name,
-        current_position,
-        organization,
-        specialization:specializations (label)
-      )
-    `
-    )
-    .eq('id', spaceId)
-    .single();
+  // --- This is the new implementation ---
 
-  // 2. Get the moderators (logic copied from your SQL CTE)
-  const moderatorsQuery = supabase
-    .from('memberships')
-    .select(
-      `
-      role,
-      user_id,
-      profile:profiles (
-        full_name,
-        current_position,
-        organization,
-        specialization:specializations (label)
-      )
-    `
-    )
-    .eq('space_id', spaceId)
-    .in('role', ['ADMIN', 'MODERATOR'])
-    .eq('status', 'ACTIVE');
+  // 1. Call the new RPC function
+  const { data, error } = await supabase
+    .rpc('get_space_details_by_id', {
+      p_space_id: spaceId
+    })
+    .single(); // We expect only one row
 
-  // Run both queries
-  const [{ data: spaceData, error: spaceError }, { data: moderatorsData, error: moderatorsError }] =
-    await Promise.all([spaceQuery, moderatorsQuery]);
+  // 2. Handle errors
+  if (error) {
+    console.error("Error fetching space details from RPC:", error);
+    throw error;
+  }
+  if (!data) return undefined;
 
-  // Handle errors
-  if (spaceError) throw spaceError;
-  if (moderatorsError) throw moderatorsError;
-  if (!spaceData) return undefined;
-
-  // Map the nested data to the flat 'SpaceWithDetails' type
-  const result: SpaceWithDetails = {
-    ...spaceData,
-    creator_full_name: spaceData.creator?.full_name || null,
-    creator_position: spaceData.creator?.current_position || null,
-    creator_organization: spaceData.creator?.organization || null,
-    creator_specialization: spaceData.creator?.specialization?.label || null,
-    // --- THIS IS THE FIX ---
-    // Map the moderator data into the correct shape
-    moderators: (moderatorsData || []).map((m: any) => ({
-      role: m.role,
-      user_id: m.user_id,
-      full_name: m.profile?.full_name || 'Unknown',
-      current_position: m.profile?.current_position || null,
-      organization: m.profile?.organization || null,
-      specialization: m.profile?.specialization?.label || null,
-    })),
-  };
-  return result;
+  // 3. Return the data directly
+  // No client-side mapping is needed because the SQL function
+  // already formats the data to match the SpaceWithDetails type.
+  return data as SpaceWithDetails;
 };
 
 /** Fetches the count of ACTIVE members for a space. */
