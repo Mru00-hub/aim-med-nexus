@@ -47,14 +47,14 @@ export const AttachmentPreview: React.FC<AttachmentPreviewProps> = ({ attachment
         href={href}
         target="_blank"
         rel="noreferrer"
-        className="block rounded-lg overflow-hidden border hover:opacity-90 transition-opacity aspect-square"
+        className="block rounded-lg overflow-hidden border hover:opacity-90 transition-opacity aspect-square **bg-white**"
         onClick={handleClick}
         title={attachment.file_name} 
       >
         <img
           src={attachment.file_url}
           alt={attachment.file_name}
-          className="w-full h-full object-cover" // Fill the square
+          className="w-full h-full **object-contain**" // Fill the square
         />
       </a>
     );
@@ -71,7 +71,7 @@ export const AttachmentPreview: React.FC<AttachmentPreviewProps> = ({ attachment
           src={attachment.file_url}
           controls
           muted
-          className="w-full h-full object-cover" // Fill the square
+          className="w-full h-full **object-contain**" // Fill the square
         />
       </div>
     );
