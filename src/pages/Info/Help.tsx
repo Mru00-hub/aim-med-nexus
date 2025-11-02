@@ -1,5 +1,6 @@
 import { InfoPageLayout } from './InfoPageLayout';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Link } from 'react-router-dom';
 
 export default function HelpPage() {
   return (
@@ -38,16 +39,29 @@ export default function HelpPage() {
         <AccordionItem value="item-4">
           <AccordionTrigger>How do I report inappropriate content or a user?</AccordionTrigger>
           <AccordionContent>
-            If you encounter content that violates our <a href="/info/code-of-conduct" className="text-primary hover:underline">Code of Conduct</a> or 
-            a user exhibiting inappropriate behavior, please use the 'Report' button 
-            (if available) or contact us directly through our <a href="/info/report" className="text-primary hover:underline">Report Content</a> page.
+            If you encounter content that violates our{' '}
+            <Link to="/info/code-of-conduct" className="text-primary hover:underline">
+              Code of Conduct
+            </Link>{' '}
+            or a user exhibiting inappropriate behavior, please use the 'Report'
+            button (if available) or contact us directly through our{' '}
+            {/* Use Link component here */}
+            <Link to="/info/report" className="text-primary hover:underline">
+              Report Content
+            </Link>{' '}
+            page.
           </AccordionContent>
         </AccordionItem>
          <AccordionItem value="item-5">
           <AccordionTrigger>I have a partnership idea. How do I submit it?</AccordionTrigger>
           <AccordionContent>
-            We welcome collaboration! Please visit our <a href="/partnerships" className="text-primary hover:underline">Partnerships</a> page 
-            to learn more about the types of partnerships we offer and to submit your formal proposal.
+            We welcome collaboration! Please visit our{' '}
+            {/* Use Link component here */}
+            <Link to="/partnerships" className="text-primary hover:underline">
+              Partnerships
+            </Link>{' '}
+            page to learn more about the types of partnerships we offer and to
+            submit your formal proposal.
           </AccordionContent>
         </AccordionItem>
       </Accordion>
