@@ -197,13 +197,10 @@ export const PostFeedCard: React.FC<PostFeedCardProps> = ({
             <ShortenedBody text={body} />
           </div>
           {hasAttachments && !hasPreview && (
-            <div className="mt-3 grid grid-cols-2 gap-2">
-              {/* This grid will now handle all cases correctly:
-                - 1 image: Fills one grid cell
-                - 1 PDF: Fills one grid cell
-                - 2 attachments: Fills both cells
-                - 3 or 4 attachments: Fills 3 or 4 cells
-              */}
+            <div className={`
+              mt-3 grid gap-2
+              ${attachments.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}
+            `}>
               {attachments.map((att: SimpleAttachment) => (
                 <AttachmentPreview key={att.file_url} attachment={att} />
               ))}
