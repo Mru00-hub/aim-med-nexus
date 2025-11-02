@@ -52,7 +52,6 @@ export const AttachmentPreview: React.FC<AttachmentPreviewProps> = ({ attachment
         .from('message_attachments') // <-- Assumes 'attachments' bucket
         .getPublicUrl(path, {
           transform: {
-            format: 'webp', // Serve a modern, small image format
             quality: 80,
             page: 0 // <-- This is the magic! 0 is the first page.
           }
