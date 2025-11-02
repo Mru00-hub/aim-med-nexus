@@ -3,8 +3,11 @@ import { Loader2, File as FileIcon, ExternalLink} from 'lucide-react';
 import { SimpleAttachment } from '@/integrations/supabase/community.api';
 import { Document, Page, pdfjs } from 'react-pdf';
 
-import pdfWorkerURL from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
-pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerURL;
+pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+  "pdfjs-dist/build/pdf.worker.min.mjs",
+  import.meta.url
+).toString();
+console.log('pdfjs.GlobalWorkerOptions.workerSrc:', pdfjs.GlobalWorkerOptions.workerSrc);
 
 const PdfSpinner = () => (
   <div className="flex items-center justify-center w-full h-full text-muted-foreground">
@@ -98,6 +101,7 @@ export const AttachmentPreview: React.FC<AttachmentPreviewProps> = ({ attachment
               onLoadSuccess={() => setIsLoading(false)}
               onLoadError={(error) => {
                 console.error('[AttachmentPreview] Failed to load PDF:', error);
+                console.error('Current workerSrc:', pdfjs.GlobalWorkerOptions.workerSrc);
                 setIsLoading(false);
                 setHasError(true);
               }}
