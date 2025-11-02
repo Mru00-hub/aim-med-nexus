@@ -4,11 +4,7 @@ import { SimpleAttachment } from '@/integrations/supabase/community.api';
 import { supabase } from '@/integrations/supabase/client';
 import * as pdfjsLib from 'pdfjs-dist';
 
-/*pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
-  'pdfjs-dist/build/pdf.worker.min.mjs',
-  import.meta.url
-).toString();
-*/
+pdfjsLib.GlobalWorkerOptions.workerSrc = '';
 
 const PdfSpinner = () => (
   <div className="flex items-center justify-center w-full h-full text-muted-foreground">
@@ -61,7 +57,7 @@ export const AttachmentPreview: React.FC<AttachmentPreviewProps> = ({ attachment
         // Load the PDF document
         const loadingTask = pdfjsLib.getDocument({
           url: attachment.file_url,
-          disableWorker: true
+          worker: null
         });
         const pdf = await loadingTask.promise;
         
