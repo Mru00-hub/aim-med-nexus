@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Loader2, File as FileIcon, ExternalLink} from 'lucide-react';
 import { SimpleAttachment } from '@/integrations/supabase/community.api';
 import { supabase } from '@/integrations/supabase/client';
+import * as pdfjsLib from 'pdfjs-dist';
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js`;
 
 const PdfSpinner = () => (
   <div className="flex items-center justify-center w-full h-full text-muted-foreground">
@@ -47,26 +50,49 @@ export const AttachmentPreview: React.FC<AttachmentPreviewProps> = ({ attachment
   useEffect(() => {
     if (!isPdf) return;
 
-    const path = getPathFromUrl(attachment.file_url);
-    console.log('[AttachmentPreview] Path from URL:', path);
-    
-    if (path) {
-      // Get the public URL with transformations
-      const { data } = supabase.storage
-        .from('message_attachments') // <-- Assumes 'attachments' bucket
-        .getPublicUrl(path, {
-          transform: {
-            page: 0 // <-- This is the magic! 0 is the first page.
-          }
-        });
-      console.log('[AttachmentPreview] Generated Thumbnail URL:', data.publicUrl);
-      setPdfThumbnailUrl(data.publicUrl);
-    } else {
-      console.error('[AttachmentPreview] Could not parse path from URL:', attachment.file_url);
-      setIsLoading(false);
-      setPdfThumbnailUrl(null); // This will cause the PdfError to show
-    }
+    const generatePdfThumbnail = async () => {
+      try {
+        console.log('[AttachmentPreview] Loading PDF from:', attachment.file_url);
+        
+        // Load the PDF document
+        const loadingTask = pdfjsLib.getDocument(attachment.file_url);
+        const pdf = await loadingTask.promise;
+        
+        // Get the first page
+        const page = await pdf.getPage(1);
+        
+        // Set up canvas with appropriate scale for thumbnail
+        const viewport = page.getViewport({ scale: 1.5 });
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        
+        if (!context) {
+          throw new Error('Could not get canvas context');
+        }
+        
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        
+        // Render the page
+        await page.render({
+          canvasContext: context,
+          viewport: viewport
+        }).promise;
+        
+        // Convert canvas to data URL
+        const thumbnailUrl = canvas.toDataURL('image/jpeg', 0.8);
+        console.log('[AttachmentPreview] PDF thumbnail generated successfully');
+        
+        setPdfThumbnailUrl(thumbnailUrl);
+        setIsLoading(false);
+      } catch (error) {
+        console.error('[AttachmentPreview] Failed to generate PDF thumbnail:', error);
+        setIsLoading(false);
+        setPdfThumbnailUrl(null);
+      }
+    };
 
+    generatePdfThumbnail();
   }, [isPdf, attachment.file_url]);
 
   // Handle image load/error to set loading state
@@ -144,9 +170,6 @@ export const AttachmentPreview: React.FC<AttachmentPreviewProps> = ({ attachment
               src={pdfThumbnailUrl}
               alt={attachment.file_name}
               className="w-full h-full object-cover"
-              onLoad={handleImageLoad}
-              onError={handleImageError}
-              // Hide the image until it's loaded to prevent flicker
               style={{ display: isLoading ? 'none' : 'block' }}
             />
           ) : (
