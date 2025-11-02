@@ -1,4 +1,5 @@
 import { InfoPageLayout } from './InfoPageLayout';
+import { Link } from 'react-router-dom';
 
 export default function ReportPage() {
   return (
@@ -27,8 +28,19 @@ export default function ReportPage() {
         </a>
         <p className="text-sm text-muted-foreground mt-4">
           All reports are confidential. Our team will review the case and take 
-          appropriate action based on our <a href="/info/code-of-conduct" className="text-primary hover:underline">Code of Conduct</a> and 
-          <a href="/info/terms" className="text-primary hover:underline ml-1">Terms of Service</a>.
+          appropriate action based on our {' '}
+          <Link
+            to="/info/code-of-conduct"
+            className="text-primary hover:underline"
+          >
+            Code of Conduct
+          </Link>{' '}
+          and
+          {/* Use Link component here */}
+          <Link to="/info/terms" className="text-primary hover:underline ml-1">
+            Terms of Service
+          </Link>
+          .
         </p>
       </div>
     </InfoPageLayout>
