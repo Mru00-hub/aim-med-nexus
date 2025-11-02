@@ -529,7 +529,12 @@ export const PostDisplay: React.FC<PostDisplayProps> = ({
           
           {/* --- START OF CORRECTED ATTACHMENT LOGIC --- */}
           {post.attachments && post.attachments.length > 0 && (
-            <div className="grid grid-cols-2 gap-4">
+            // This grid is now dynamic.
+            // It will be 1 column if there's 1 item, and 2 columns if there's more.
+            <div className={`
+              grid gap-4
+              ${post.attachments.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}
+            `}>
               {post.attachments.map((att: any) => (
                 <AttachmentPreview key={att.file_url} attachment={att} />
               ))}
