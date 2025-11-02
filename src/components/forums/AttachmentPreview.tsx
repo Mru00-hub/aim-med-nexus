@@ -4,7 +4,10 @@ import { SimpleAttachment } from '@/integrations/supabase/community.api';
 import { supabase } from '@/integrations/supabase/client';
 import * as pdfjsLib from 'pdfjs-dist';
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js`;
+pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+  'pdfjs-dist/build/pdf.worker.min.mjs',
+  import.meta.url
+).toString();
 
 const PdfSpinner = () => (
   <div className="flex items-center justify-center w-full h-full text-muted-foreground">
@@ -55,7 +58,11 @@ export const AttachmentPreview: React.FC<AttachmentPreviewProps> = ({ attachment
         console.log('[AttachmentPreview] Loading PDF from:', attachment.file_url);
         
         // Load the PDF document
-        const loadingTask = pdfjsLib.getDocument(attachment.file_url);
+        const loadingTask = pdfjsLib.getDocument({
+          url: attachment.file_url,
+          // Disable worker as a fallback if it still doesn't work
+          // worker: null
+        });
         const pdf = await loadingTask.promise;
         
         // Get the first page
@@ -94,14 +101,6 @@ export const AttachmentPreview: React.FC<AttachmentPreviewProps> = ({ attachment
 
     generatePdfThumbnail();
   }, [isPdf, attachment.file_url]);
-
-  // Handle image load/error to set loading state
-  const handleImageLoad = () => setIsLoading(false);
-  const handleImageError = () => {
-    console.error('[AttachmentPreview] Failed to load thumbnail:', pdfThumbnailUrl);
-    setIsLoading(false);
-    setPdfThumbnailUrl(null); // Fallback to error icon
-  };
 
   // Stop card navigation when clicking the preview
   const handleClick = (e: React.MouseEvent) => {
