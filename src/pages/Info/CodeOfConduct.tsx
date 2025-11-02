@@ -75,7 +75,7 @@ export default function CodeOfConductPage() {
           className="text-primary hover:underline ml-2"
         >
           Click here to report an issue.
-        </a>
+        </Link>
       </p>
     </InfoPageLayout>
   );
