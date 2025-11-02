@@ -8,9 +8,11 @@ const PdfSpinner = () => (
     <Loader2 className="h-6 w-6 animate-spin" />
   </div>
 );
-const PdfError = () => (
-  <div className="flex items-center justify-center w-full h-full bg-muted text-destructive-foreground">
-    <FileIcon className="h-12 w-12" />
+const PdfError = ({ fileName }: { fileName: string }) => (
+  <div className="flex flex-col items-center justify-center w-full h-full p-2 text-center bg-muted text-destructive-foreground">
+    <FileIcon className="h-10 w-10" />
+    <p className="mt-2 text-xs font-medium line-clamp-2">{fileName}</p>
+    <p className="text-xs text-destructive-foreground/70">Preview unavailable</p>
   </div>
 );
 
@@ -42,6 +44,7 @@ export const AttachmentPreview: React.FC<AttachmentPreviewProps> = ({ attachment
     if (!isPdf) return;
 
     const path = getPathFromUrl(attachment.file_url);
+    console.log('[AttachmentPreview] Path from URL:', path);
     
     if (path) {
       // Get the public URL with transformations
@@ -54,10 +57,10 @@ export const AttachmentPreview: React.FC<AttachmentPreviewProps> = ({ attachment
             page: 0 // <-- This is the magic! 0 is the first page.
           }
         });
-
+      console.log('[AttachmentPreview] Generated Thumbnail URL:', data.publicUrl);
       setPdfThumbnailUrl(data.publicUrl);
     } else {
-      // Could not parse the URL, set error state
+      console.error('[AttachmentPreview] Could not parse path from URL:', attachment.file_url);
       setIsLoading(false);
       setPdfThumbnailUrl(null); // This will cause the PdfError to show
     }
@@ -67,6 +70,7 @@ export const AttachmentPreview: React.FC<AttachmentPreviewProps> = ({ attachment
   // Handle image load/error to set loading state
   const handleImageLoad = () => setIsLoading(false);
   const handleImageError = () => {
+    console.error('[AttachmentPreview] Failed to load thumbnail:', pdfThumbnailUrl);
     setIsLoading(false);
     setPdfThumbnailUrl(null); // Fallback to error icon
   };
@@ -84,11 +88,12 @@ export const AttachmentPreview: React.FC<AttachmentPreviewProps> = ({ attachment
   if (isImage) {
     return (
       <a
-        href={attachment.file_url}
+        href={href}
         target="_blank"
         rel="noreferrer"
         className="block rounded-lg overflow-hidden border hover:opacity-90 transition-opacity aspect-square"
         onClick={handleClick}
+        title={attachment.file_name} 
       >
         <img
           src={attachment.file_url}
@@ -104,6 +109,7 @@ export const AttachmentPreview: React.FC<AttachmentPreviewProps> = ({ attachment
       <div 
         className="rounded-lg overflow-hidden border bg-black aspect-square"
         onClick={handleClick}
+        title={attachment.file_name}
       >
         <video
           src={attachment.file_url}
@@ -143,7 +149,7 @@ export const AttachmentPreview: React.FC<AttachmentPreviewProps> = ({ attachment
             />
           ) : (
             // If loading is done and STILL no URL, show error
-            !isLoading && <PdfError />
+            !isLoading && <PdfError fileName={attachment.file_name} />
           )}
 
           {/* Badge */}
