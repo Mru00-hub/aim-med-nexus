@@ -65,8 +65,9 @@ export const AttachmentPreview: React.FC<AttachmentPreviewProps> = ({ attachment
       href={attachment.file_url}
       target="_blank"
       rel="noreferrer"
-      className="relative group w-full overflow-hidden flex items-center p-2 border rounded-md col-span-1"
+      className="relative group w-full overflow-hidden border rounded-lg aspect-square"
       onClick={handleClick}
+      title={attachment.file_name}
     >
       {isPdf ? (
         <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-md flex items-center justify-center bg-gray-100">
@@ -77,14 +78,32 @@ export const AttachmentPreview: React.FC<AttachmentPreviewProps> = ({ attachment
             renderAnnotationLayer={false}
             renderTextLayer={false}
           >
-            <Page pageNumber={1} width={64} />
+            <div className="absolute inset-0 flex items-center justify-center overflow-hidden">
+              <Page 
+                pageNumber={1} 
+                width={158} // 158px is the default size of a 'col-span-1' in a grid.
+                           // This will be clipped by the parent's overflow-hidden.
+              />
+            </div>
+            
+            {/* Add a 'PDF' badge */}
+            <span className="absolute top-2 left-2 bg-red-600 text-white text-xs font-bold px-2 py-0.5 rounded-sm">
+              PDF
+            </span>
           </Document>
         </div>
       ) : (
-        <FileIcon className="h-16 w-16 text-muted-foreground flex-shrink-0" />
+        <div className="w-full h-full flex flex-col items-center justify-center bg-muted text-muted-foreground p-2">
+          <FileIcon className="h-12 w-12" />
+          <p className="text-xs text-center line-clamp-2 mt-2">
+            {attachment.file_name}
+          </p>
+        </div>
       )}
-      <div className="ml-3 overflow-hidden min-w-0">
-        <p className="text-sm font-medium truncate">{attachment.file_name}</p>
+
+      {/* Overlay shown on hover */}
+      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
+        <ExternalLink className="h-6 w-6" />
       </div>
     </a>
   );
