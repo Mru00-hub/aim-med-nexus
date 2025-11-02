@@ -1,4 +1,5 @@
 import { InfoPageLayout } from './InfoPageLayout';
+import { Link } from 'react-router-dom';
 
 export default function CodeOfConductPage() {
   return (
@@ -69,8 +70,8 @@ export default function CodeOfConductPage() {
       <p>
         If you witness or are subject to unacceptable behavior, please report it 
         immediately to our moderation team.
-        <a 
-          href="/info/report" 
+        <Link
+          to="/info/report"
           className="text-primary hover:underline ml-2"
         >
           Click here to report an issue.
