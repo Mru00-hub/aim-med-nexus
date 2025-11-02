@@ -17,6 +17,9 @@ import { Loader2 } from 'lucide-react';
 import { SpeedInsights } from "@vercel/speed-insights/next"
 import { Analytics } from "@vercel/analytics/next"
 import './App.css';
+import { pdfjs } from 'react-pdf';
+pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
+console.log('workerSrc (global setup):', pdfjs.GlobalWorkerOptions.workerSrc);
 
 // --- All Page Imports (remain the same) ---
 import Index from "./pages/Index";
