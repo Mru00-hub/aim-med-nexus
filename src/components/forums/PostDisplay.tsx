@@ -414,7 +414,7 @@ export const PostDisplay: React.FC<PostDisplayProps> = ({
             <Input
               value={editedTitle}
               onChange={(e) => setEditedTitle(e.target.value)}
-              className="text-2xl font-bold h-auto p-0 border-0 shadow-none focus-visible:ring-0"
+              className="text-xl font-bold h-auto p-0 border-0 shadow-none focus-visible:ring-0"
               autoFocus
             />
             <div className="flex justify-end gap-2">
@@ -425,7 +425,7 @@ export const PostDisplay: React.FC<PostDisplayProps> = ({
             </div>
           </div>
         ) : (
-          <h1 className="text-2xl font-bold mb-4">{post.title}</h1>
+          <h1 className="text-xl font-bold mb-4">{post.title}</h1>
         )}
 
         {/* Post Body */}
@@ -491,7 +491,7 @@ export const PostDisplay: React.FC<PostDisplayProps> = ({
           <>
             <div
               className={`
-                prose prose-sm dark:prose-invert max-w-none
+                prose dark:prose-invert max-w-none
                 break-words
                 ${needsTruncation && !isExpanded ? 'line-clamp-4' : ''}
               `}
