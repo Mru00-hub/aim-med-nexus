@@ -24,21 +24,6 @@ interface AttachmentPreviewProps {
   attachment: SimpleAttachment;
 }
 
-const getPathFromUrl = (url: string) => {
-  try {
-    const urlObj = new URL(url);
-    const parts = urlObj.pathname.split('/message_attachments/');
-    let path = parts[1] ? decodeURIComponent(parts[1]) : null;
-    if (path && path.startsWith('public/')) {
-      path = path.substring(7); // Remove 'public/' (7 characters)
-    }
-    return path;
-  } catch (error) {
-    console.error('Error parsing attachment URL:', error);
-    return null;
-  }
-};
-
 export const AttachmentPreview: React.FC<AttachmentPreviewProps> = ({ attachment }) => {
   const isImage = attachment.file_type.startsWith('image/');
   const isVideo = attachment.file_type.startsWith('video/');
@@ -118,12 +103,14 @@ export const AttachmentPreview: React.FC<AttachmentPreviewProps> = ({ attachment
                 setHasError(true);
               }}
               loading={<PdfSpinner />}
+              className="flex items-center justify-center"
             >
               <Page
                 pageNumber={1}
                 width={400}
                 renderTextLayer={false}
                 renderAnnotationLayer={false}
+                className="max-w-full max-h-full"
               />
             </Document>
           ) : (
