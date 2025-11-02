@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Loader2, File as FileIcon, ExternalLink} from 'lucide-react';
 import { SimpleAttachment } from '@/integrations/supabase/community.api';
-import { supabase } from '@/integrations/supabase/client';
-import * as pdfjsLib from 'pdfjs-dist';
+import { Document, Page, pdfjs } from 'react-pdf';
+import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
+import 'react-pdf/dist/esm/Page/TextLayer.css';
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = '';
+pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
 
 const PdfSpinner = () => (
   <div className="flex items-center justify-center w-full h-full text-muted-foreground">
@@ -43,61 +44,9 @@ export const AttachmentPreview: React.FC<AttachmentPreviewProps> = ({ attachment
   const isVideo = attachment.file_type.startsWith('video/');
   const isPdf = attachment.file_type === 'application/pdf';
 
-  const [pdfThumbnailUrl, setPdfThumbnailUrl] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(isPdf); // Only load if it's a PDF
-
-  // 3. Effect to generate the thumbnail URL for PDFs
-  useEffect(() => {
-    if (!isPdf) return;
-
-    const generatePdfThumbnail = async () => {
-      try {
-        console.log('[AttachmentPreview] Loading PDF from:', attachment.file_url);
-        
-        // Load the PDF document
-        const loadingTask = pdfjsLib.getDocument({
-          url: attachment.file_url,
-          worker: null
-        });
-        const pdf = await loadingTask.promise;
-        
-        // Get the first page
-        const page = await pdf.getPage(1);
-        
-        // Set up canvas with appropriate scale for thumbnail
-        const viewport = page.getViewport({ scale: 1.5 });
-        const canvas = document.createElement('canvas');
-        const context = canvas.getContext('2d');
-        
-        if (!context) {
-          throw new Error('Could not get canvas context');
-        }
-        
-        canvas.width = viewport.width;
-        canvas.height = viewport.height;
-        
-        // Render the page
-        await page.render({
-          canvasContext: context,
-          viewport: viewport
-        }).promise;
-        
-        // Convert canvas to data URL
-        const thumbnailUrl = canvas.toDataURL('image/jpeg', 0.8);
-        console.log('[AttachmentPreview] PDF thumbnail generated successfully');
-        
-        setPdfThumbnailUrl(thumbnailUrl);
-        setIsLoading(false);
-      } catch (error) {
-        console.error('[AttachmentPreview] Failed to generate PDF thumbnail:', error);
-        setIsLoading(false);
-        setPdfThumbnailUrl(null);
-      }
-    };
-
-    generatePdfThumbnail();
-  }, [isPdf, attachment.file_url]);
-
+  const [isLoading, setIsLoading] = useState(isPdf);
+  const [hasError, setHasError] = useState(false);
+  
   // Stop card navigation when clicking the preview
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -159,20 +108,28 @@ export const AttachmentPreview: React.FC<AttachmentPreviewProps> = ({ attachment
           {/* Show spinner while loading/generating */}
           {isLoading && <PdfSpinner />}
           
-          {/* If we have a thumbnail, show it */}
-          {pdfThumbnailUrl ? (
-            <img
-              src={pdfThumbnailUrl}
-              alt={attachment.file_name}
-              className="w-full h-full object-cover"
-              style={{ display: isLoading ? 'none' : 'block' }}
-            />
+          {!hasError ? (
+            <Document
+              file={attachment.file_url}
+              onLoadSuccess={() => setIsLoading(false)}
+              onLoadError={(error) => {
+                console.error('[AttachmentPreview] Failed to load PDF:', error);
+                setIsLoading(false);
+                setHasError(true);
+              }}
+              loading={<PdfSpinner />}
+            >
+              <Page
+                pageNumber={1}
+                width={400}
+                renderTextLayer={false}
+                renderAnnotationLayer={false}
+              />
+            </Document>
           ) : (
-            // If loading is done and STILL no URL, show error
-            !isLoading && <PdfError fileName={attachment.file_name} />
+            <PdfError fileName={attachment.file_name} />
           )}
 
-          {/* Badge */}
           <span className="absolute top-2 left-2 bg-red-600 text-white text-xs font-bold px-2 py-0.5 rounded-sm z-10">
             PDF
           </span>
