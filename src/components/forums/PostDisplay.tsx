@@ -529,53 +529,12 @@ export const PostDisplay: React.FC<PostDisplayProps> = ({
           
           {/* --- START OF CORRECTED ATTACHMENT LOGIC --- */}
           {post.attachments && post.attachments.length > 0 && (
-            <div>
-              {/* Case 1: Single Image or Video */}
-              {post.attachments.length === 1 && (post.attachments[0].file_type.startsWith('image/') || post.attachments[0].file_type.startsWith('video/')) ? (
-                (() => { // (This logic remains the same, it's for a single large preview)
-                  const att = post.attachments[0];
-                  if (att.file_type.startsWith('image/')) {
-                    return (
-                      <a
-                        key={att.file_url}
-                        href={att.file_url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="block rounded-lg overflow-hidden border hover:opacity-90 transition-opacity"
-                      >
-                        <img
-                          src={att.file_url}
-                          alt={att.file_name}
-                          className="w-full h-auto object-cover max-h-[600px]"
-                        />
-                      </a>
-                    );
-                  }
-                  if (att.file_type.startsWith('video/')) {
-                    return (
-                      <div key={att.file_url} className="rounded-lg overflow-hidden border bg-black">
-                        <video
-                          src={att.file_url}
-                          controls
-                          className="w-full h-auto max-h-[600px]"
-                        />
-                      </div>
-                    );
-                  }
-                  return null;
-                })()
-              ) : (
-                /* Case 2: Multiple attachments (grid view) */
-                <div className="grid grid-cols-2 gap-4">
-                  {post.attachments.map((att: any) => (
-                    // Now just call the new component
-                    <AttachmentPreview key={att.file_url} attachment={att} />
-                  ))}
-                </div>
-              )}
+            <div className="grid grid-cols-2 gap-4">
+              {post.attachments.map((att: any) => (
+                <AttachmentPreview key={att.file_url} attachment={att} />
+              ))}
             </div>
           )}
-
           {isPreviewLoading && (
             <div className="flex items-center text-sm text-muted-foreground p-2">
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
