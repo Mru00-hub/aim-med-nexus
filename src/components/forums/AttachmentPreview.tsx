@@ -3,7 +3,8 @@ import { Loader2, File as FileIcon, ExternalLink} from 'lucide-react';
 import { SimpleAttachment } from '@/integrations/supabase/community.api';
 import { Document, Page, pdfjs } from 'react-pdf';
 
-pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
+import workerSrc from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+pdfjs.GlobalWorkerOptions.workerSrc = workerSrc;
 
 const PdfSpinner = () => (
   <div className="flex items-center justify-center w-full h-full text-muted-foreground">
