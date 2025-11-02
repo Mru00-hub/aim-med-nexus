@@ -1,14 +1,7 @@
 import React from 'react';
-import { Loader2, File as FileIcon } from 'lucide-react';
-import { Document, Page, pdfjs } from 'react-pdf';
+import { Loader2, File as FileIcon, ExternalLink} from 'lucide-react';
 import { SimpleAttachment } from '@/integrations/supabase/community.api';
-
-// Add the required CSS imports for react-pdf to work
-import 'react-pdf/dist/Page/AnnotationLayer.css';
-import 'react-pdf/dist/Page/TextLayer.css';
-
-// Setup PDF worker
-pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+import { supabase } from '@/integrations/supabase/client';
 
 const PdfSpinner = () => (
   <div className="flex items-center justify-center w-full h-full text-muted-foreground">
@@ -25,20 +18,67 @@ interface AttachmentPreviewProps {
   attachment: SimpleAttachment;
 }
 
+const getPathFromUrl = (url: string) => {
+  try {
+    const urlObj = new URL(url);
+    const parts = urlObj.pathname.split('/message_attachments/');
+    return parts[1] ? decodeURIComponent(parts[1]) : null;
+  } catch (error) {
+    console.error('Error parsing attachment URL:', error);
+    return null;
+  }
+};
+
 export const AttachmentPreview: React.FC<AttachmentPreviewProps> = ({ attachment }) => {
   const isImage = attachment.file_type.startsWith('image/');
   const isVideo = attachment.file_type.startsWith('video/');
   const isPdf = attachment.file_type === 'application/pdf';
+
+  const [pdfThumbnailUrl, setPdfThumbnailUrl] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(isPdf); // Only load if it's a PDF
+
+  // 3. Effect to generate the thumbnail URL for PDFs
+  useEffect(() => {
+    if (!isPdf) return;
+
+    const path = getPathFromUrl(attachment.file_url);
+    
+    if (path) {
+      // Get the public URL with transformations
+      const { data } = supabase.storage
+        .from('message_attachments') // <-- Assumes 'attachments' bucket
+        .getPublicUrl(path, {
+          transform: {
+            format: 'webp', // Serve a modern, small image format
+            quality: 80,
+            page: 0 // <-- This is the magic! 0 is the first page.
+          }
+        });
+
+      setPdfThumbnailUrl(data.publicUrl);
+    } else {
+      // Could not parse the URL, set error state
+      setIsLoading(false);
+      setPdfThumbnailUrl(null); // This will cause the PdfError to show
+    }
+
+  }, [isPdf, attachment.file_url]);
+
+  // Handle image load/error to set loading state
+  const handleImageLoad = () => setIsLoading(false);
+  const handleImageError = () => {
+    setIsLoading(false);
+    setPdfThumbnailUrl(null); // Fallback to error icon
+  };
 
   // Stop card navigation when clicking the preview
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
   };
 
-  const fileUrl = attachment.file_url;
   const href = isPdf
-    ? `https://docs.google.com/gview?url=${encodeURIComponent(fileUrl)}&embedded=true`
-    : fileUrl;
+    ? `https://docs.google.com/gview?url=${encodeURIComponent(attachment.file_url)}&embedded=true`
+    : attachment.file_url;
 
   // Render images/videos as a grid item
   if (isImage) {
@@ -86,29 +126,33 @@ export const AttachmentPreview: React.FC<AttachmentPreviewProps> = ({ attachment
       title={attachment.file_name}
     >
       {isPdf ? (
-        <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-md flex items-center justify-center bg-gray-100">
-          <Document
-            file={attachment.file_url}
-            loading={<Loader2 className="h-4 w-4 animate-spin" />}
-            error={<FileIcon className="h-8 w-8 text-destructive" />}
-            renderAnnotationLayer={false}
-            renderTextLayer={false}
-          >
-            <div className="absolute inset-0 flex items-center justify-center overflow-hidden">
-              <Page 
-                pageNumber={1} 
-                width={158} // 158px is the default size of a 'col-span-1' in a grid.
-                           // This will be clipped by the parent's overflow-hidden.
-              />
-            </div>
-            
-            {/* Add a 'PDF' badge */}
-            <span className="absolute top-2 left-2 bg-red-600 text-white text-xs font-bold px-2 py-0.5 rounded-sm">
-              PDF
-            </span>
-          </Document>
+        <div className="w-full h-full overflow-hidden">
+          {/* Show spinner while loading/generating */}
+          {isLoading && <PdfSpinner />}
+          
+          {/* If we have a thumbnail, show it */}
+          {pdfThumbnailUrl ? (
+            <img
+              src={pdfThumbnailUrl}
+              alt={attachment.file_name}
+              className="w-full h-full object-cover"
+              onLoad={handleImageLoad}
+              onError={handleImageError}
+              // Hide the image until it's loaded to prevent flicker
+              style={{ display: isLoading ? 'none' : 'block' }}
+            />
+          ) : (
+            // If loading is done and STILL no URL, show error
+            !isLoading && <PdfError />
+          )}
+
+          {/* Badge */}
+          <span className="absolute top-2 left-2 bg-red-600 text-white text-xs font-bold px-2 py-0.5 rounded-sm z-10">
+            PDF
+          </span>
         </div>
       ) : (
+        // Fallback for other files (zip, docx, etc.)
         <div className="w-full h-full flex flex-col items-center justify-center bg-muted text-muted-foreground p-2">
           <FileIcon className="h-12 w-12" />
           <p className="text-xs text-center line-clamp-2 mt-2">
@@ -118,10 +162,9 @@ export const AttachmentPreview: React.FC<AttachmentPreviewProps> = ({ attachment
       )}
 
       {/* Overlay shown on hover */}
-      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
+      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white z-20">
         <ExternalLink className="h-6 w-6" />
       </div>
     </a>
   );
 };
-
