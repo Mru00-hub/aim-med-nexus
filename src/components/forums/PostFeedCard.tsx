@@ -197,57 +197,16 @@ export const PostFeedCard: React.FC<PostFeedCardProps> = ({
             <ShortenedBody text={body} />
           </div>
           {hasAttachments && !hasPreview && (
-            <div className="mt-3">
-              {/* Case 1: Single Image or Video */}
-              {attachments.length === 1 && (attachments[0].file_type.startsWith('image/') || attachments[0].file_type.startsWith('video/')) ? (
-                (() => {
-                  const att = attachments[0];
-                  if (att.file_type.startsWith('image/')) {
-                    return (
-                      <a
-                        key={att.file_url}
-                        href={att.file_url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="block rounded-lg overflow-hidden border hover:opacity-90 transition-opacity"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <img
-                          src={att.file_url}
-                          alt={att.file_name}
-                          className="w-full h-auto object-cover max-h-72"
-                        />
-                      </a>
-                    );
-                  }
-                  if (att.file_type.startsWith('video/')) {
-                    return (
-                      <div key={att.file_url} className="rounded-lg overflow-hidden border bg-black" onClick={(e) => e.stopPropagation()}>
-                        <video
-                          src={att.file_url}
-                          controls
-                          className="w-full h-auto max-h-72"
-                        />
-                      </div>
-                    );
-                  }
-                  return null;
-                })()
-              ) : (
-                /* Case 2: Multiple attachments (grid view) */
-                <div className="grid grid-cols-2 gap-2">
-                  {/* Since max is 4, we just map all of them. No slice needed. */}
-                  {attachments.map((att: SimpleAttachment) => (
-                    <AttachmentPreview key={att.file_url} attachment={att} />
-                  ))}
-                </div>
-              )}
-              {/* This code block will never run because of MAX_POST_FILES = 4, but it is safe. */}
-              {attachments.length > 4 && (
-                <p className="text-sm text-muted-foreground mt-2 text-center">
-                  +{attachments.length - 4} more attachments
-                </p>
-              )}
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              {/* This grid will now handle all cases correctly:
+                - 1 image: Fills one grid cell
+                - 1 PDF: Fills one grid cell
+                - 2 attachments: Fills both cells
+                - 3 or 4 attachments: Fills 3 or 4 cells
+              */}
+              {attachments.map((att: SimpleAttachment) => (
+                <AttachmentPreview key={att.file_url} attachment={att} />
+              ))}
             </div>
           )}
           {!hasAttachments && (
