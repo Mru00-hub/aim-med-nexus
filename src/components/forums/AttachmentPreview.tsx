@@ -52,13 +52,11 @@ export const AttachmentPreview: React.FC<AttachmentPreviewProps> = ({ attachment
         .from('message_attachments') // <-- Assumes 'attachments' bucket
         .getPublicUrl(path, {
           transform: {
-            quality: 80,
             page: 0 // <-- This is the magic! 0 is the first page.
           }
         });
-      const thumbnailUrl = `${data.publicUrl}&page=0`;
-      console.log('[AttachmentPreview] Generated Thumbnail URL:', thumbnailUrl);
-      setPdfThumbnailUrl(thumbnailUrl);
+      console.log('[AttachmentPreview] Generated Thumbnail URL:', data.publicUrl);
+      setPdfThumbnailUrl(data.publicUrl);
     } else {
       console.error('[AttachmentPreview] Could not parse path from URL:', attachment.file_url);
       setIsLoading(false);
