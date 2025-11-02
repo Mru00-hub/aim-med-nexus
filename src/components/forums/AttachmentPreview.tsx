@@ -10,6 +10,17 @@ import 'react-pdf/dist/Page/TextLayer.css';
 // Setup PDF worker
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
+const PdfSpinner = () => (
+  <div className="flex items-center justify-center w-full h-full text-muted-foreground">
+    <Loader2 className="h-6 w-6 animate-spin" />
+  </div>
+);
+const PdfError = () => (
+  <div className="flex items-center justify-center w-full h-full bg-muted text-destructive-foreground">
+    <FileIcon className="h-12 w-12" />
+  </div>
+);
+
 interface AttachmentPreviewProps {
   attachment: SimpleAttachment;
 }
@@ -23,6 +34,11 @@ export const AttachmentPreview: React.FC<AttachmentPreviewProps> = ({ attachment
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
   };
+
+  const fileUrl = attachment.file_url;
+  const href = isPdf
+    ? `https://docs.google.com/gview?url=${encodeURIComponent(fileUrl)}&embedded=true`
+    : fileUrl;
 
   // Render images/videos as a grid item
   if (isImage) {
