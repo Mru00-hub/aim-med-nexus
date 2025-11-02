@@ -118,7 +118,7 @@ export const AttachmentPreview: React.FC<AttachmentPreviewProps> = ({ attachment
   // Render PDF and other files as a list-style item
   return (
     <a
-      href={attachment.file_url}
+      href={href}
       target="_blank"
       rel="noreferrer"
       className="relative group w-full overflow-hidden border rounded-lg aspect-square"
