@@ -14,8 +14,8 @@ import { SocialCountsProvider } from './context/SocialCountsContext';
 import { SecureRouteGuard } from './components/SecureRouteGuard';
 import SettingsPage from './pages/SettingsPage';
 import { Loader2 } from 'lucide-react';
-import { SpeedInsights } from "@vercel/speed-insights/next"
-import { Analytics } from "@vercel/analytics/next"
+import { SpeedInsights } from "@vercel/speed-insights/react"
+import { Analytics } from "@vercel/analytics/react"
 import './App.css';
 import { pdfjs } from 'react-pdf';
 pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
@@ -148,6 +148,8 @@ const App = () => {
             {/* ✅ 5. Render the new AppContent component */}
             <AppContent />
           </AuthProvider>
+          <Analytics />
+          <SpeedInsights />
         </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>
