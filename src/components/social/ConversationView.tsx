@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Star, Loader2, ArrowLeft } from 'lucide-react';
+import { Star, Loader2, ArrowLeft, AlertCircle} from 'lucide-react';
 import { DirectMessage } from './DirectMessage';
 import { DirectMessageInput } from './DirectMessageInput';
 import { useAuth } from '@/hooks/useAuth';
@@ -37,6 +37,7 @@ export const ConversationView = ({ conversation, onConversationUpdate, onBack}: 
     messages,
     isLoading,
     conversationKey,
+    encryptionError,
     replyingTo,
     setReplyingTo,
     handleSendMessage,
@@ -170,7 +171,16 @@ export const ConversationView = ({ conversation, onConversationUpdate, onBack}: 
         </div>
       </CardHeader>
       <CardContent className="flex-1 overflow-y-auto overflow-x-hidden p-3 md:p-4 lg:p-6 space-y-3 md:space-y-4 bg-muted/20">
-        {isLoading ? (
+        {encryptionError ? (
+          <div className="flex flex-col items-center justify-center h-full text-center p-4">
+            <AlertCircle className="h-12 w-12 text-destructive mb-4" />
+            <h3 className="font-bold text-lg">Encryption Error</h3>
+            <p className="text-muted-foreground text-sm max-w-xs">
+              This conversation is unreadable, likely due to a password reset. 
+              Starting a new message will create a new secure session.
+            </p>
+          </div>
+        ) : isLoading ? (
           <div className="flex justify-center items-center h-full">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
