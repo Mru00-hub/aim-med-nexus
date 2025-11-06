@@ -216,15 +216,30 @@ export const decryptFile = async (
   ivString: string, 
   key: CryptoKey
 ): Promise<Blob> => {
-  const encryptedBuffer = await encryptedBlob.arrayBuffer();
-  const iv = new Uint8Array(atob(ivString).split('').map(c => c.charCodeAt(0)));
+  try {
+    const encryptedBuffer = await encryptedBlob.arrayBuffer();
+    const iv = new Uint8Array(atob(ivString).split('').map(c => c.charCodeAt(0)));
 
-  const decryptedBuffer = await getSubtle().decrypt(
-    { name: 'AES-GCM', iv: iv },
-    key,
-    encryptedBuffer
-  );
+    if (!ivString || !encryptedBuffer) {
+      throw new Error(`Invalid format. Missing IV or Blob data.`);
+    }
 
-  // Reconstruct the file blob with its original type
-  return new Blob([decryptedBuffer], { type: encryptedBlob.type });
+    const decryptedBuffer = await getSubtle().decrypt(
+      { name: 'AES-GCM', iv: iv },
+      key,
+      encryptedBuffer
+    );
+
+    // Reconstruct the file blob with its original type
+    return new Blob([decryptedBuffer], { type: encryptedBlob.type });
+
+  } catch (error: any) {
+    console.error('--- FILE DECRYPTION FAILED ---');
+    console.error('Key used (info):', key);
+    console.error('Specific Error:', error.message);
+    console.error(error);
+    
+    // Re-throw a clearer error
+    throw new Error(`File decryption failed: ${error.message}. Check console for details.`);
+  }
 };
