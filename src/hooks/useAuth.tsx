@@ -49,6 +49,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
+  const [isRecovery, setIsRecovery] = useState(false);
   
   const isAuthOperationInProgress = useRef(false);
 
