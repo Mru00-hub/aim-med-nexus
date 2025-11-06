@@ -101,38 +101,63 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     let mounted = true;
     const init = async () => {
       // This getSession() is what causes the reload hang
-      const { data, error } = await supabase.auth.getSession();
-      if (mounted && data.session) {
-        setSession(data.session);
-        setUser(data.session.user);
-        // This fetchProfile() is the race condition
-        const userProfile = await fetchProfile(data.session.user.id);
-        setProfile(userProfile);
-        if (userProfile) {
-          await fetchUnreadCount();
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        
+        // Handle session error
+        if (error) {
+          console.error("Error getting session:", error.message);
+          return; // Don't proceed
         }
-      }
-      // This will set loading false, even if the profile fetch failed/hanged
-      if (mounted) {
-        setLoading(false);
+
+        if (mounted && data.session) {
+          setSession(data.session);
+          setUser(data.session.user);
+          
+          // Fetch profile in a separate try/catch so it can fail
+          // without stopping the auth state from being set.
+          try {
+            const userProfile = await fetchProfile(data.session.user.id);
+            if (mounted) {
+              setProfile(userProfile);
+              if (userProfile) {
+                await fetchUnreadCount();
+              }
+            }
+          } catch (profileError: any) {
+            console.error("Failed to fetch profile during init:", profileError.message);
+            // You might want a toast here, but for now, just log it.
+          }
+        }
+      } catch (err: any) {
+        // Catch any other unexpected error
+        console.error("Critical error in auth init:", err.message);
+      } finally {
+        // This is the most important part:
+        // Always set loading to false, no matter what happens.
+        if (mounted) {
+          setLoading(false);
+        }
       }
     };
 
     init();
 
+    // The auth state change listener is fine
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
       if (!mounted) return;
 
       if (_event === 'PASSWORD_RECOVERY') {
         setLoading(false);
-        setIsRecovery(true);
-      }      
+        setIsRecovery(true); 
+      }
+
       if (newSession) {
         setSession(newSession);
         setUser(newSession.user);
-        // This is not awaited, which is fine for the listener
+        
         fetchProfile(newSession.user.id).then(async (userProfile) => {
-          if (mounted) { // Check mounted again inside async callback
+          if (mounted) { 
             setProfile(userProfile);
             if (userProfile) {
               await fetchUnreadCount();
@@ -154,7 +179,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       mounted = false;
       subscription.unsubscribe();
     };
-  }, [fetchProfile, fetchUnreadCount]); // Added dependencies
+  }, [fetchProfile, fetchUnreadCount]);
   // =================================================================
   // END: YOUR ORIGINAL useEffect
   // =================================================================
