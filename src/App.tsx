@@ -4,7 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 // ✅ 1. Replaced BrowserRouter with HashRouter for Cloud Shell compatibility
-import { BrowserRouter, Routes, Route, useLocation, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import ScrollToTop from '@/lib/ScrollToTop';
 import { AuthProvider, useAuth } from "@/hooks/useAuth"; // useAuth is now used
 import AuthGuard from "@/components/AuthGuard";
@@ -76,8 +76,6 @@ const ConditionalRoute = ({ AuthComponent, PublicComponent }: { AuthComponent: R
 const AppContent = () => {
   // --- Logic from AppRoutes is moved here ---
   const { user, isRecovery, loading } = useAuth(); // Get all flags
-  const location = useLocation(); // Call useLocation here
-
   // --- This logic is now in the right place ---
   if (loading) {
     return (
