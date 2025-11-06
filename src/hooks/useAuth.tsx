@@ -124,7 +124,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (_event === 'PASSWORD_RECOVERY') {
         setLoading(false);
-      
+      }      
       if (newSession) {
         setSession(newSession);
         setUser(newSession.user);
