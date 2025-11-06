@@ -280,9 +280,24 @@ export const setupConversationEncryption = async (
     .single();
 
   if (participant?.encrypted_conversation_key) {
-    // Yes, decrypt and return it.
-    console.log('DEBUG: Found encrypted key in DB:', participant.encrypted_conversation_key);
-    return decryptConversationKey(participant.encrypted_conversation_key, userMasterKey);
+    try {
+      // ATTEMPT to decrypt the old key
+      console.log('DEBUG: Found encrypted key, attempting decryption...');
+      const decryptedKey = await decryptConversationKey(participant.encrypted_conversation_key, userMasterKey);
+      
+      // If we get here, it worked (e.g., user is on a new device, not a password reset)
+      console.log('DEBUG: Old key decrypted successfully.');
+      return decryptedKey;
+
+    } catch (decryptionError: any) {
+      // THIS IS THE NEW LOGIC
+      // Decryption failed. This is expected after a password reset.
+      // We will warn the console and then fall through to the logic below
+      // to create a new key, which "recovers" the conversation.
+      console.warn(`DECRYPTION FAILED (likely password reset): ${decryptionError.message}`);
+      console.warn('Proceeding to create a new conversation key to recover this chat.');
+      // By not returning here, we fall through to "Step 2"
+    }
   }
 
   // Step 2: No key for me. Let's establish the master key using our atomic RPC.
