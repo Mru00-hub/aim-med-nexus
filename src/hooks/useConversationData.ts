@@ -33,6 +33,7 @@ export const useConversationData = (conversationId: string | undefined, recipien
     const [replyingTo, setReplyingTo] = useState<MessageWithParent | null>(null);
     const [conversationKey, setConversationKey] = useState<CryptoKey | null>(null);
     const [isInitializingEncryption, setIsInitializingEncryption] = useState(true);
+    const [encryptionError, setEncryptionError] = useState(false);
 
     const fetchMessages = useCallback(async (id: string) => {
       setIsLoading(true);
@@ -55,6 +56,7 @@ export const useConversationData = (conversationId: string | undefined, recipien
         setDisplayMessages([]);
         setIsInitializingEncryption(true);
         setIsLoading(true);
+        setEncryptionError(false); 
 
         // Early return if prerequisites aren't met
         if (!conversationId) {
@@ -118,8 +120,10 @@ export const useConversationData = (conversationId: string | undefined, recipien
                 toast({ 
                     variant: 'destructive', 
                     title: 'Encryption Error', 
-                    description: 'Could not load this conversation. Please try refreshing.' 
+                    description: 'Could not decrypt this conversation. It was likely secured with an old password.'
                 });
+                setEncryptionError(true); // Tell the UI it failed
+                setIsLoading(false)
             } finally {
                 setIsInitializingEncryption(false);
             }
@@ -452,6 +456,7 @@ export const useConversationData = (conversationId: string | undefined, recipien
         isLoading, 
         conversationKey,
         isInitializingEncryption,
+        encryptionError,
         replyingTo,
         setReplyingTo,
         handleSendMessage,
