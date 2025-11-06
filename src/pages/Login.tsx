@@ -24,7 +24,7 @@ import { supabase } from '@/integrations/supabase/client';
  * Email and password authentication with Google OAuth option
  */
 const Login = () => {
-  const { signIn, generateAndSetKey } = useAuth();
+  const { signIn, generateAndSetKeys, sendPasswordResetEmail } = useAuth();
   
   const [formData, setFormData] = useState({
     email: '',
@@ -32,6 +32,7 @@ const Login = () => {
     rememberMe: false
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [isResetLoading, setIsResetLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
@@ -71,6 +72,30 @@ const Login = () => {
     setResendLoading(false);
   };
 
+  const handleForgotPassword = async () => {
+    if (!formData.email) {
+      setError("Please enter your email address to reset your password.");
+      setNeedsVerification(false);
+      setResendMessage('');
+      return;
+    }
+    
+    setIsResetLoading(true);
+    setError('');
+    setNeedsVerification(false);
+    setResendMessage('');
+
+    try {
+      // The useAuth hook's function will show its own success/error toasts
+      await sendPasswordResetEmail(formData.email);
+    } catch (err: any) {
+      // Fallback catch, though sendPasswordResetEmail handles its own toasts
+      setError(err.message || "An unexpected error occurred.");
+    } finally {
+      setIsResetLoading(false);
+    }
+  };
+
   // --- THIS FUNCTION HAS BEEN CORRECTED ---
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -95,7 +120,7 @@ const Login = () => {
       // Step C: Fetch the user's profile to get their unique salt
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
-        .select('encryption_salt')
+        .select('*')
         .eq('id', session.user.id)
         .single();
       
@@ -108,7 +133,13 @@ const Login = () => {
       }
 
       // Step D: Generate the encryption key using the password from the form and the fetched salt
-      await generateAndSetKey(formData.password, profile.encryption_salt);
+      const keysGenerated = await generateAndSetKeys(formData.password, profile, profile.encryption_salt);
+      
+      if (!keysGenerated) {
+        // The generateAndSetKeys function shows its own "Incorrect Password" toast.
+        // We just need to stop execution. The `finally` block will handle isLoading.
+        return; 
+      }
       
       // Note: Navigation will be handled automatically by the onAuthStateChange listener in your useAuth hook.
 
@@ -116,7 +147,12 @@ const Login = () => {
       if (err.message && err.message.includes('Email not confirmed')) {
         setError('Your email is not verified. Please check your inbox or resend the verification link below.');
         setNeedsVerification(true); // This will show the resend button
-      } else {
+      } else if (err.message && err.message.includes('Invalid login credentials')) {
+        // Catch the specific sign-in error
+        setError('Invalid email or password. Please try again.');
+        setNeedsVerification(false);
+      }
+      else {
         setError(err.message || 'An unexpected error occurred.');
         setNeedsVerification(false); // Hide button for all other errors
       }
@@ -195,9 +231,7 @@ const Login = () => {
                       required
                     />
                   </div>
-                </div>
-
-                
+                </div>                
 
                 <div>
                   <label className="block text-sm font-medium mb-2">Password</label>
@@ -235,12 +269,21 @@ const Login = () => {
                       Remember me
                     </label>
                   </div>
+                  <Button
+                    type="button"
+                    variant="link"
+                    className="p-0 h-auto text-sm text-primary hover:underline"
+                    onClick={handleForgotPassword}
+                    disabled={isResetLoading || isLoading}
+                  >
+                    {isResetLoading ? 'Sending...' : 'Forgot Password?'}
+                  </Button>
                 </div>
 
                 <Button 
                   type="submit" 
                   className="w-full btn-medical"
-                  disabled={isLoading}
+                  disabled={isLoading || isResetLoading}
                 >
                   {isLoading ? 'Signing in...' : 'Sign In'}
                   {!isLoading && <ArrowRight className="ml-2 h-4 w-4" />}
