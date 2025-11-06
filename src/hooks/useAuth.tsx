@@ -23,6 +23,7 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   signInWithGoogle: () => Promise<{ error: any }>;
   sendPasswordResetEmail: (email: string) => Promise<{ error: any }>;
+  isRecovery: boolean;
 }
 
 const AuthContext = createContext<AuthContextType>({} as AuthContextType);
@@ -124,6 +125,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (_event === 'PASSWORD_RECOVERY') {
         setLoading(false);
+        setIsRecovery(true);
       }      
       if (newSession) {
         setSession(newSession);
@@ -144,6 +146,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setInitialUnreadCount(null);
         setPersonalKey(null);
         setUserMasterKey(null);
+        setIsRecovery(false); 
       }
     });
 
@@ -433,6 +436,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     initialUnreadCount,
     personalKey,
     userMasterKey,
+    isRecovery,
     generateAndSetKeys, 
     refreshProfile, 
     fetchUnreadCount,
@@ -450,6 +454,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     initialUnreadCount,
     personalKey,
     userMasterKey,
+    isRecovery, 
     generateAndSetKeys,
     refreshProfile,
     fetchUnreadCount,
