@@ -77,7 +77,10 @@ const AppContent = () => {
   // --- Logic from AppRoutes is moved here ---
   const { user, isRecovery, loading } = useAuth(); // Get all flags
   // --- This logic is now in the right place ---
+  console.log('--- 8. AppContent: Rendering ---'); // <-- ADD THIS LOG
+  console.log('--- 9. AppContent: State is:', { loading, isRecovery, user: !!user });
   if (loading) {
+    console.log('--- 10. AppContent: Showing loading spinner ---');
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -85,17 +88,19 @@ const AppContent = () => {
     );
   }
 
+  console.log('--- 11. AppContent: Loading complete, rendering providers ---');
   return (
     // ✅ 3. THE KEY FIX
     // When the user.id changes (or user becomes null), React will
     // destroy and re-create this component and all its children.
     // This 100% clears all old state and subscriptions.
     <SocialCountsProvider key={user ? user.id : 'logged-out'}>
+      {console.log('--- 12. AppContent: SocialCountsProvider rendered ---')}
       <Toaster />
       <Sonner />
       
       <CommunityProvider>
-        {/* --- START: Routing logic is now inside the provider wrappers --- */}
+        {console.log('--- 13. AppContent: CommunityProvider rendered, showing routes ---')} 
         {isRecovery ? (
           // --- CASE 1: User is in password recovery mode ---
           <Routes>
@@ -171,7 +176,7 @@ const App = () => {
         <BrowserRouter>
           <ScrollToTop />
           <AuthProvider>
-            {/* ✅ 5. Render the new AppContent component */}
+            {console.log('--- 7. App: AuthProvider rendered ---')}
             <AppContent />
           </AuthProvider>
           <Analytics />
