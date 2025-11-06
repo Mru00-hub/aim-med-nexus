@@ -21,6 +21,12 @@ function getCrypto(): Crypto {
 }
 
 function getSubtle(): SubtleCrypto {
+  const cryptoInterface = getCrypto();
+  const subtleInterface = cryptoInterface.subtle;
+
+  console.log('--- Universal Crypto Resolver Log ---');
+  console.log('getCrypto() found:', cryptoInterface);
+  console.log('getSubtle() is returning:', subtleInterface);
   return getCrypto().subtle;
 }
 
