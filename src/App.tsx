@@ -54,6 +54,7 @@ import ThreadDetailPage from "./pages/Community/ThreadDetailPage";
 import CreateThread from "./pages/Community/CreateThread";
 import CreatePostPage from "./pages/Community/CreatePostPage";
 import MembersPage from './pages/Community/MembersPage';
+import UpdatePassword from './pages/UpdatePassword';
 
 const queryClient = new QueryClient();
 
@@ -92,6 +93,7 @@ const AppContent = () => {
           <Route path="/" element={<Index />} />
           <Route path="/please-verify" element={<PleaseVerify />} />
           <Route path="/auth/callback" element={<AuthCallback />} />
+          <Route path="/auth/update-password" element={<UpdatePassword />} />
           <Route path="/jobs" element={<Jobs />} />
           <Route path="/partnerships" element={<Partnerships />} />
           <Route path="/community" element={<Forums />} /> 
