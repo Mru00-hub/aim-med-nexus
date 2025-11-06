@@ -37,6 +37,7 @@ export const useAuth = () => {
 };
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  console.log('--- 1. AuthProvider: Rendering ---');
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -98,8 +99,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // START: YOUR ORIGINAL useEffect (Restored)
   // =================================================================
   useEffect(() => {
+    console.log('--- 2. AuthProvider: useEffect running ---');
     let mounted = true;
     const init = async () => {
+      console.log('--- 3. AuthProvider: init() started ---'); 
       // This getSession() is what causes the reload hang
       try {
         const { data, error } = await supabase.auth.getSession();
@@ -111,6 +114,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
 
         if (mounted && data.session) {
+          console.log('--- 4. AuthProvider: Session found, setting user ---');
           setSession(data.session);
           setUser(data.session.user);
           
@@ -126,16 +130,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
           } catch (profileError: any) {
             console.error("Failed to fetch profile during init:", profileError.message);
-            // You might want a toast here, but for now, just log it.
           }
+        } else if (mounted) {
+          console.log('--- 4. AuthProvider: No session found ---'); // <-- ADD THIS LOG
         }
       } catch (err: any) {
-        // Catch any other unexpected error
         console.error("Critical error in auth init:", err.message);
       } finally {
-        // This is the most important part:
-        // Always set loading to false, no matter what happens.
         if (mounted) {
+          console.log('--- 5. AuthProvider: init() finished, setLoading(false) ---'); // <-- ADD THIS LOG
           setLoading(false);
         }
       }
@@ -489,6 +492,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     signInWithGoogle,
     sendPasswordResetEmail
   ]);
-
+  console.log('--- 6. AuthProvider: Returning provider with children ---');
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
