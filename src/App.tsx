@@ -73,15 +73,12 @@ const ConditionalRoute = ({ AuthComponent, PublicComponent }: { AuthComponent: R
   return user ? <AuthComponent /> : <PublicComponent />;
 };
 
-/**
- * Switches the app's entire route map based on the auth state.
- * - If in recovery, it ONLY allows the /auth/update-password route.
- * - If not in recovery, it shows all normal app routes.
- */
-const AppRoutes = () => {
-  const { isRecovery, loading } = useAuth();
-  const location = useLocation();
+const AppContent = () => {
+  // --- Logic from AppRoutes is moved here ---
+  const { user, isRecovery, loading } = useAuth(); // Get all flags
+  const location = useLocation(); // Call useLocation here
 
+  // --- This logic is now in the right place ---
   if (loading) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
@@ -89,81 +86,6 @@ const AppRoutes = () => {
       </div>
     );
   }
-
-  // --- CASE 1: User is in password recovery mode ---
-  // Lock them to the UpdatePassword page
-  if (isRecovery) {
-    return (
-      <Routes>
-        <Route path="/auth/update-password" element={<UpdatePassword />} />
-        {/* Any other path redirects TO the update-password page */}
-        <Route path="*" element={<Navigate to="/auth/update-password" replace />} />
-      </Routes>
-    );
-  }
-
-  // --- CASE 2: User is NOT in recovery but tries to access the reset page ---
-  // Kick them back to the homepage
-  if (location.pathname === '/auth/update-password') {
-    return <Navigate to="/" replace />;
-  }
-
-  // --- CASE 3: Normal browsing ---
-  // Show all the regular app routes
-  return (
-    <Routes>
-      <Route path="/" element={<Index />} />
-      <Route path="/please-verify" element={<PleaseVerify />} />
-      <Route path="/auth/callback" element={<AuthCallback />} />
-      {/* Note: /auth/update-password is now handled by the logic above */}
-      <Route path="/jobs" element={<Jobs />} />
-      <Route path="/partnerships" element={<Partnerships />} />
-      <Route path="/community" element={<Forums />} /> 
-      <Route path="/industryhub" element={<IndustryHub />} /> 
-      <Route path="/industryhub/company/example" element={<CompanyProfilePage />} />
-
-      <Route path="/info/help" element={<HelpPage />} />
-      <Route path="/info/support" element={<SupportPage />} />
-      <Route path="/info/report" element={<ReportPage />} />
-      <Route path="/info/privacy" element={<PrivacyPage />} />
-      <Route path="/info/terms" element={<TermsPage />} />
-      <Route path="/info/cookies" element={<CookiesPage />} />
-      <Route path="/info/code-of-conduct" element={<CodeOfConductPage />} />
-      
-      <Route path="/social" element={<ConditionalRoute AuthComponent={FunctionalSocial} PublicComponent={Social} />} />
-      
-      <Route element={<AuthGuard requireAuth={false} />}>
-        <Route path="/register" element={<Register />} />
-        <Route path="/login" element={<Login />} />
-      </Route>
-
-      <Route element={<AuthGuard />}>
-        <Route path="/complete-profile" element={<CompleteProfile />} />
-        <Route path="/profile/:userId" element={<ProfilePage />} />
-        <Route path="/feedback" element={<Feedback />} />
-        <Route path="/notifications" element={<Notifications />} />
-        <Route path="/payment" element={<PaymentPage />} />
-        <Route path="/inbox" element={ <SecureRouteGuard> <FunctionalInbox /> </SecureRouteGuard> } />
-        <Route path="/settings" element={<SettingsPage />} />
-        <Route path="/admin/dashboard" element={<AdminDashboard />} />
-        <Route path="/community/create-post" element={<CreatePostPage />} />
-        <Route path="/community/space/:spaceId/create-post" element={<CreatePostPage />} />
-        <Route path="/community/space/:spaceId" element={<SpaceDetailPage />} />
-        <Route path="/community/space/:spaceId/members" element={<MembersPage />} />
-        <Route path="/community/thread/:threadId" element={<ThreadDetailPage />} />
-      </Route>
-      
-      <Route path="*" element={<NotFound />} />
-    </Routes>
-  );
-};
-// --- END: NEW COMPONENT ---
-
-
-// ✅ 2. MODIFIED COMPONENT to wrap providers and routes
-// This allows us to call useAuth() and get the user ID
-const AppContent = () => {
-  const { user } = useAuth();
 
   return (
     // ✅ 3. THE KEY FIX
@@ -175,8 +97,68 @@ const AppContent = () => {
       <Sonner />
       
       <CommunityProvider>
-        {/* --- MODIFIED: Use the new AppRoutes component --- */}
-        <AppRoutes />
+        {/* --- START: Routing logic is now inside the provider wrappers --- */}
+        {isRecovery ? (
+          // --- CASE 1: User is in password recovery mode ---
+          <Routes>
+            <Route path="/auth/update-password" element={<UpdatePassword />} />
+            {/* Any other path redirects TO the update-password page */}
+            <Route path="*" element={<Navigate to="/auth/update-password" replace />} />
+          </Routes>
+        ) : (
+          // --- CASE 2: Normal browsing ---
+          <Routes>
+            {/* Kick user out if they try to access reset page */}
+            <Route 
+              path="/auth/update-password" 
+              element={<Navigate to="/" replace />} 
+            />
+
+            {/* All your normal app routes go here */}
+            <Route path="/" element={<Index />} />
+            <Route path="/please-verify" element={<PleaseVerify />} />
+            <Route path="/auth/callback" element={<AuthCallback />} />
+            <Route path="/jobs" element={<Jobs />} />
+            <Route path="/partnerships" element={<Partnerships />} />
+            <Route path="/community" element={<Forums />} /> 
+            <Route path="/industryhub" element={<IndustryHub />} /> 
+            <Route path="/industryhub/company/example" element={<CompanyProfilePage />} />
+
+            <Route path="/info/help" element={<HelpPage />} />
+            <Route path="/info/support" element={<SupportPage />} />
+            <Route path="/info/report" element={<ReportPage />} />
+            <Route path="/info/privacy" element={<PrivacyPage />} />
+            <Route path="/info/terms" element={<TermsPage />} />
+            <Route path="/info/cookies" element={<CookiesPage />} />
+            <Route path="/info/code-of-conduct" element={<CodeOfConductPage />} />
+            
+            <Route path="/social" element={<ConditionalRoute AuthComponent={FunctionalSocial} PublicComponent={Social} />} />
+            
+            <Route element={<AuthGuard requireAuth={false} />}>
+              <Route path="/register" element={<Register />} />
+              <Route path="/login" element={<Login />} />
+            </Route>
+
+            <Route element={<AuthGuard />}>
+              <Route path="/complete-profile" element={<CompleteProfile />} />
+              <Route path="/profile/:userId" element={<ProfilePage />} />
+              <Route path="/feedback" element={<Feedback />} />
+              <Route path="/notifications" element={<Notifications />} />
+              <Route path="/payment" element={<PaymentPage />} />
+              <Route path="/inbox" element={ <SecureRouteGuard> <FunctionalInbox /> </SecureRouteGuard> } />
+              <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/admin/dashboard" element={<AdminDashboard />} />
+              <Route path="/community/create-post" element={<CreatePostPage />} />
+              <Route path="/community/space/:spaceId/create-post" element={<CreatePostPage />} />
+              <Route path="/community/space/:spaceId" element={<SpaceDetailPage />} />
+              <Route path="/community/space/:spaceId/members" element={<MembersPage />} />
+              <Route path="/community/thread/:threadId" element={<ThreadDetailPage />} />
+            </Route>
+            
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        )}
+        {/* --- END: Routing logic --- */}
       </CommunityProvider>
     </SocialCountsProvider>
   );
