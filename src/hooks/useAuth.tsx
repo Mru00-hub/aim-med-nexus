@@ -22,6 +22,7 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   signInWithGoogle: () => Promise<{ error: any }>;
+  sendPasswordResetEmail: (email: string) => Promise<{ error: any }>;
 }
 
 const AuthContext = createContext<AuthContextType>({} as AuthContextType);
@@ -120,6 +121,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
       if (!mounted) return;
+
+      if (_event === 'PASSWORD_RECOVERY') {
+        setLoading(false);
       
       if (newSession) {
         setSession(newSession);
@@ -382,6 +386,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [navigate, toast]);
 
+  const sendPasswordResetEmail = useCallback(async (email: string) => {
+    isAuthOperationInProgress.current = true;
+    setLoadingMessage('Sending password reset link...');
+    
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth/update-password`, // This is the page you will create for users to enter a new password
+      });
+
+      if (error) {
+        toast({
+          title: "Password Reset Error",
+          description: error.message,
+          variant: "destructive",
+        });
+        return { error };
+      }
+      
+      toast({
+        title: "Check Your Email",
+        description: "A password reset link has been sent to your email address.",
+      });
+      return { error: null };
+
+    } catch (error: any) {
+      toast({
+        title: "Password Reset Error",
+        description: error.message || "An unexpected error occurred",
+        variant: "destructive",
+      });
+      return { error };
+    } finally {
+      setLoadingMessage('');
+      isAuthOperationInProgress.current = false; // Following signUp pattern
+    }
+  }, [toast]);
+
   // --- Using useMemo as in your first file ---
   const value = useMemo(() => ({
     user,
@@ -399,6 +440,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     signIn,
     signOut,
     signInWithGoogle,
+    sendPasswordResetEmail,
   }), [
     user,
     session,
@@ -414,7 +456,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     signUp,
     signIn,
     signOut,
-    signInWithGoogle
+    signInWithGoogle,
+    sendPasswordResetEmail
   ]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
