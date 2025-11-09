@@ -80,19 +80,21 @@ export const HeroSection = () => {
                 >
                   Join AIMedNet Today
                   <ArrowRight
-                    className="ml-2 h-8 w-8 animate-nudge-right group-hover:animate-none group-hover:translate-x-1 transition-transform"
+                    size={32}
+                    className="ml-2 animate-nudge-right group-hover:animate-none group-hover:translate-x-1 transition-transform"
                   />
                 </Button>
               ) : (
                 // IF USER IS LOGGED IN: Show "Go to Community" button
                 <Button 
                   size="lg" 
-                  className={`btn-medical text-lg px-8 py-6 group`}
+                  className={`btn-medical text-lg px-8 py-6 group animate-pop-in`}
                   onClick={() => navigate('/community')}
                 >
                   Go to Community
                   <ArrowRight
-                    className="ml-2 h-8 w-8 animate-nudge-right group-hover:animate-none group-hover:translate-x-1 transition-transform"
+                    size={32}
+                    className="ml-2 animate-nudge-right group-hover:animate-none group-hover:translate-x-1 transition-transform"
                   />
                 </Button>
               )}            
