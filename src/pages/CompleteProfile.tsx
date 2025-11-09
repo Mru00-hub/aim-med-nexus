@@ -484,7 +484,18 @@ const CompleteProfile = () => {
           setCocurriculars(draft.cocurriculars || []);
           setWorkExperience(draft.workExperience || []);
           setEducationHistory(draft.educationHistory || []);
-          setDeletedItems(draft.deletedItems || { /* ... initial empty object ... */ });
+          const emptyDeleted = {
+            academic_achievements: [],
+            publications: [],
+            certifications: [],
+            awards: [],
+            ventures: [],
+            content_portfolio: [],
+            cocurriculars: [],
+            work_experiences: [],
+            education_history: [],
+          };
+          setDeletedItems({ ...emptyDeleted, ...(draft.deletedItems || {}) });
           setAvatarUrl(draft.avatarUrl || '');
 
           // 2. Fetch dropdown labels based on draft's formData
