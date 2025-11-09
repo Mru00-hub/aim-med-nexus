@@ -78,7 +78,9 @@ export const HeroSection = () => {
                   onClick={() => navigate('/login')}
                 >
                   Join AIMedNet Today
-                  <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                  <ArrowRight
+                    className="ml-2 h-5 w-5 animate-nudge-right group-hover:animate-none group-hover:translate-x-1 transition-transform"
+                  />
                 </Button>
               )}            
             </div>
