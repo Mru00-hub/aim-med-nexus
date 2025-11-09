@@ -45,6 +45,11 @@ const VideoCard = ({ video, onPlay }: { video: FeaturedVideo, onPlay: () => void
         <CardContent className="p-3">
           <p className="font-semibold text-sm leading-snug group-hover:text-primary transition-colors truncate">{video.title}</p>
           <p className="text-xs text-muted-foreground mt-1">{video.author_name}</p>
+          {video.description && (
+            <p className="text-xs text-muted-foreground/80 mt-2 line-clamp-2">
+              {video.description}
+            </p>
+          )}
         </CardContent>
       </Card>
     </button>
@@ -68,7 +73,7 @@ const VideoCarousel = ({
   // 4. Setup carousel with faster autoplay (2.5 seconds) and loop
   const [emblaRef, emblaApi] = useCarousel(
     { loop: true },
-    [Autoplay({ delay: 2500, stopOnInteraction: true, stopOnMouseEnter: true })]
+    [Autoplay({ delay: 2500, stopOnInteraction: true, stopOnMouseEnter: true, resumeDelay: 5000 })]
   );
 
   // 5. Setup Prev/Next button controls
