@@ -1,4 +1,5 @@
 // src/components/home/FeaturedVideos.tsx
+
 import React, { useState, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
@@ -154,7 +155,7 @@ export const FeaturedVideos = () => {
   const { data: videos, isLoading } = useQuery({
     queryKey: ['featuredVideos'],
     queryFn: getFeaturedVideos,
-    staleTime: 5 * 60 * 1000, // Cache for 5 mins
+    staleTime: 5 * 60 * 1000, 
   });
 
   const founderVideos = videos?.filter(v => v.author_type === 'founder') || [];
