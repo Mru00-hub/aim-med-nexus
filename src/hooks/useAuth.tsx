@@ -450,7 +450,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     try {
       const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'linkedin',
+        provider: 'linkedin_oidc',
         options: {
           redirectTo: `${window.location.origin}`
         }
