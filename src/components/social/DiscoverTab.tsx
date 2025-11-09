@@ -1,9 +1,10 @@
 import React, { useState, useMemo, useCallback } from 'react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Users, Search, Sparkles, UserPlus, MoreHorizontal, Ban, Loader2, Check, Clock, MessageSquare } from 'lucide-react';
+import { Users, Search, Sparkles, UserPlus, MoreHorizontal, Ban, Loader2, Check, Clock, MessageSquare, Lightbulb } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { UserActionCard } from './UserActionCard';
 import { useSocialCounts } from '@/context/SocialCountsContext';
@@ -58,6 +59,20 @@ export const DiscoverTab = ({ recommendations, loading, onSendRequest, onBlockUs
         </div>
       </CardHeader>
       <CardContent className="space-y-2 max-h-[60vh] overflow-y-auto">
+        <Alert className="mb-4 bg-blue-50 border-blue-200 dark:bg-blue-950 dark:border-blue-800">
+          <Lightbulb className="h-4 w-4 text-blue-500" />
+          <AlertTitle className="text-blue-700 dark:text-blue-300">Get Better Recommendations!</AlertTitle>
+          <AlertDescription className="text-blue-600 dark:text-blue-400">
+            Keep your profile details up-to-date to discover the most relevant connections.
+            <Button 
+              variant="link" 
+              className="p-0 h-auto ml-1 text-blue-700 dark:text-blue-300 font-semibold" 
+              onClick={() => navigate('/complete-profile')}
+            >
+              Update Profile
+            </Button>
+          </AlertDescription>
+        </Alert>
         {loading ? <Skeleton className="h-20 w-full" /> : filteredRecommendations.map(rec => {
           // --- Get LIVE status inside the map ---
           const liveConnectionStatus = getConnectionStatus(rec.id);
