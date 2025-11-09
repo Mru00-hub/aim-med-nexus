@@ -44,7 +44,7 @@ const VideoCard = ({ video, onPlay }: { video: FeaturedVideo, onPlay: () => void
           <p className="text-sm text-muted-foreground mt-1">{video.author_name}</p>
         </CardContent>
       </Card>
-    </a>
+    </button>
   );
 };
 
