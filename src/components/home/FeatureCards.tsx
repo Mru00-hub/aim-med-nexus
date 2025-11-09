@@ -170,7 +170,7 @@ export const FeatureCards = () => {
   ];
 
   return (
-    <section className="section-medical bg-muted/30 py-10 md:py-12">
+    <section className="section-medical bg-muted/30 pt-0 pb-10 md:pb-12">
       <div className="container-medical">
         {/* Section Header */}
         <div className="text-center mb-10 animate-fade-in">
