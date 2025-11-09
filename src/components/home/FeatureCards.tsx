@@ -9,8 +9,6 @@ import {
   Building, 
   GraduationCap,
   Calendar,
-  PenTool,
-  Share2,
   BookOpen,
   ArrowRight,
   Sparkles
@@ -78,7 +76,7 @@ const FeatureCard: React.FC<FeatureCardProps> = ({
           <CardTitle className="text-xl group-hover:text-primary transition-colors">
             {title}
           </CardTitle>
-          <CardDescription className="text-muted-foreground mt-2 text-base leading-relaxed">
+          <CardDescription className="text-muted-foreground mt-2 text-sm leading-relaxed">
             {description}
           </CardDescription>
         </div>
@@ -162,18 +160,6 @@ export const FeatureCards = () => {
       isComingSoon: true
     },
     {
-      title: 'Write & Publish',
-      description: 'Blogs, articles, and newsletters from the community. Share your expertise, publish research insights, and contribute to healthcare knowledge.',
-      icon: PenTool,
-      isComingSoon: true
-    },
-    {
-      title: 'Social',
-      description: 'Share updates, achievements, and links with your network. Build your professional presence and stay connected with your healthcare community.',
-      icon: Share2,
-      isComingSoon: true
-    },
-    {
       title: 'Digital Library',
       description: 'Support creators and access premium knowledge. Buy and download digital books and magazines from leading clinicians and healthcare experts.',
       icon: BookOpen,
@@ -214,7 +200,7 @@ export const FeatureCards = () => {
           <h3 className="text-2xl font-semibold mb-8 text-center">
             🔮 Coming Soon
           </h3>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 animate-slide-up">
+          <div className="grid md:grid-cols-2 gap-8 animate-slide-up max-w-4xl mx-auto">
             {comingSoonFeatures.map((feature, index) => (
               <FeatureCard key={index} {...feature} />
             ))}
