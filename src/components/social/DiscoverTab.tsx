@@ -78,6 +78,7 @@ export const DiscoverTab = ({ recommendations, loading, onSendRequest, onBlockUs
           const liveConnectionStatus = getConnectionStatus(rec.id);
           const liveIsFollowing = isFollowing(rec.id);
           const isFollowLoading = !!followLoadingMap[rec.id];
+          const isStudent = rec.user_role === 'student';
 
           return (
             <UserActionCard
@@ -86,15 +87,11 @@ export const DiscoverTab = ({ recommendations, loading, onSendRequest, onBlockUs
                 id: rec.id,
                 full_name: rec.full_name,
                 profile_picture_url: rec.profile_picture_url,
-                title: rec.specialization,
-                organization: rec.organization,
-                location: rec.current_location,
-                course: rec.course,
-                institution: rec.institution,
-                student_year: rec.student_year,
+                title: isStudent ? rec.course : rec.specialization,
+                organization: isStudent ? rec.institution : rec.organization,
+                location: isStudent ? rec.student_year : rec.current_location,
                 mutuals: rec.mutuals,
                 similarity_score: rec.similarity_score,
-                user_role: rec.user_role,
               }}
             >
               {/* --- Render buttons based on LIVE status --- */}
