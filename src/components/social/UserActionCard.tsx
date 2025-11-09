@@ -11,10 +11,14 @@ interface User {
   id: string;
   full_name: string;
   profile_picture_url?: string | null;
+  user_role?: 'student' | 'professional' | 'premium' | 'deluxe' | null;
   // NEW: Optional detailed fields
   title?: string | null;
   organization?: string | null;
   location?: string | null;
+  course?: string | null;
+  institution?: string | null;
+  student_year?: string | null;
   mutuals?: any[];
   similarity_score?: number | null;
 }
@@ -25,12 +29,19 @@ interface UserActionCardProps {
 }
 
 export const UserActionCard = ({ user, children }: UserActionCardProps) => {
+  const isStudent = user.user_role === 'student';
   // NEW: Create a details array to cleanly render available info
-  const userDetails = [
-    user.title,
-    user.organization,
-    user.location,
-  ].filter(Boolean); // Filter out any null or empty strings
+  const userDetails = isStudent 
+    ? [
+        user.course,
+        user.institution,
+        user.student_year
+      ].filter(Boolean) // Filter out null/empty strings
+    : [
+        user.title, // This would be their specialization
+        user.organization,
+        user.location
+      ].filter(Boolean);
 
   return (
     <Card className="hover:bg-muted/50 transition-colors">
