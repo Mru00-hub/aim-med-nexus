@@ -3347,3 +3347,13 @@ export const Constants = {
     },
   },
 } as const
+
+export type FeaturedVideo = {
+  id: string;
+  created_at: string;
+  title: string;
+  description: string | null;
+  youtube_video_id: string;
+  author_type: 'founder' | 'partner';
+  author_name: string;
+};
