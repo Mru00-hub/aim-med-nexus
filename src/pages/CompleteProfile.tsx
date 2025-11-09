@@ -13,6 +13,8 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Separator } from "@/components/ui/separator";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import { generateAvatarUrl } from '@/lib/utils';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 // --- Import ALL Profile Edit Components ---
 import { ProfileAvatar } from '@/components/profile-edit/ProfileAvatar';
 import { ProfileBasicInfo } from '@/components/profile-edit/ProfileBasicInfo';
@@ -1090,7 +1092,22 @@ const CompleteProfile = () => {
                   <AlertDescription>{error}</AlertDescription>
                 </Alert>
               )}
-
+              <div className="space-y-2">
+                <Label htmlFor="userRole">Your Current Role</Label>
+                <Select
+                  id="userRole"
+                  value={userRole}
+                  onValueChange={(value) => setUserRole(value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select your role..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="student">Student</SelectItem>
+                    <SelectItem value="professional">Professional</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
               {/* --- Always-Visible Sections --- */}
               <ProfileBasicInfo
                 formData={formData}
