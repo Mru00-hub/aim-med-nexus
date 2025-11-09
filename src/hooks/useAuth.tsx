@@ -22,6 +22,7 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   signInWithGoogle: () => Promise<{ error: any }>;
+  signInWithLinkedIn: () => Promise<{ error: any }>;
   sendPasswordResetEmail: (email: string) => Promise<{ error: any }>;
   isRecovery: boolean;
 }
@@ -102,13 +103,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     console.log('--- 2. AuthProvider: useEffect running ---');
     let mounted = true;
+    const safePaths = [
+      '/login',
+      '/register',
+      '/complete-profile',
+      '/please-verify',
+      '/auth/update-password',
+    ];
+    const checkProfileAndRedirect = (profile: Profile | null) => {
+      // If we have a profile AND that profile is NOT onboarded...
+      if (profile && !profile.is_onboarded && mounted && !safePaths.some(path => location.pathname.startsWith(path))) {
+        
+        console.log('--- AuthProvider: User NOT onboarded. Redirecting to /complete-profile ---');
+        navigate('/complete-profile', { replace: true });
+      }
+    };
+    
     const init = async () => {
-      console.log('--- 3. AuthProvider: init() started ---'); 
-      // This getSession() is what causes the reload hang
+      console.log('--- 3. AuthProvider: init() started ---');
+      let userProfile: Profile | null = null;
+      let sessionUser: User | null = null;
+
       try {
         const { data, error } = await supabase.auth.getSession();
         
-        // Handle session error
         if (error) {
           console.error("Error getting session:", error.message);
           return; // Don't proceed
@@ -118,11 +136,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           console.log('--- 4. AuthProvider: Session found, setting user ---');
           setSession(data.session);
           setUser(data.session.user);
-          
-          // Fetch profile in a separate try/catch so it can fail
-          // without stopping the auth state from being set.
+          sessionUser = data.session.user; // Store user for the 'finally' block
+
+          // --- YOUR ORIGINAL, RESILIENT PROFILE FETCH ---
           try {
-            const userProfile = await fetchProfile(data.session.user.id);
+            userProfile = await fetchProfile(data.session.user.id);
             if (mounted) {
               setProfile(userProfile);
               if (userProfile) {
@@ -131,15 +149,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
           } catch (profileError: any) {
             console.error("Failed to fetch profile during init:", profileError.message);
+            toast({
+              title: "Profile Error",
+              description: "Could not load your profile. Please refresh.",
+              variant: "destructive",
+            });
+            // App continues, but profile is null
           }
+          // --- END RESILIENT BLOCK ---
+
         } else if (mounted) {
-          console.log('--- 4. AuthProvider: No session found ---'); // <-- ADD THIS LOG
+          console.log('--- 4. AuthProvider: No session found ---');
         }
       } catch (err: any) {
+        // This only catches critical session errors, which is correct
         console.error("Critical error in auth init:", err.message);
       } finally {
         if (mounted) {
-          console.log('--- 5. AuthProvider: init() finished, setLoading(false) ---'); // <-- ADD THIS LOG
+          // --- REDIRECT CHECK MOVED HERE ---
+          // This runs after all session/profile fetching is complete
+          // It only runs if we successfully got a session user
+          if (sessionUser) {
+            checkProfileAndRedirect(userProfile);
+          }
+          
+          console.log('--- 5. AuthProvider: init() finished, setLoading(false) ---');
           setLoading(false);
         }
       }
@@ -147,7 +181,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     init();
 
-    // The auth state change listener is fine
+    // --- YOUR onAuthStateChange LISTENER IS PERFECT ---
+    // It already handles profile errors gracefully inside the .then()
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
       if (!mounted) return;
 
@@ -166,6 +201,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             if (userProfile) {
               await fetchUnreadCount();
             }
+            // --- ADDED CHECK (using the new logic) ---
+            checkProfileAndRedirect(userProfile);
           }
         });
       } else {
@@ -183,7 +220,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       mounted = false;
       subscription.unsubscribe();
     };
-  }, [fetchProfile, fetchUnreadCount]);
+  // Add `toast` to the dependency array
+  }, [fetchProfile, fetchUnreadCount, navigate, location.pathname, toast]);
+  
   // =================================================================
   // END: YOUR ORIGINAL useEffect
   // =================================================================
@@ -392,6 +431,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [toast]); 
 
+  const signInWithLinkedIn = useCallback(async () => {
+    isAuthOperationInProgress.current = true;
+    setLoadingMessage('Redirecting to LinkedIn...');
+
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'linkedin',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`
+        }
+      });
+
+      if (error) {
+        toast({
+          title: "LinkedIn Sign In Error",
+          description: error.message,
+          variant: "destructive",
+        });
+        return { error };
+      }
+
+      return { error: null };
+    } catch (error: any) {
+      toast({
+        title: "LinkedIn Sign In Error",
+        description: error.message || "An unexpected error occurred",
+        variant: "destructive",
+      });
+      return { error };
+    } finally {
+      setLoadingMessage('');
+    }
+  }, [toast]);
+
   // --- Using useCallback as in your first file ---
   const signOut = useCallback(async () => {
     isAuthOperationInProgress.current = true;
@@ -473,6 +546,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     signIn,
     signOut,
     signInWithGoogle,
+    signInWithLinkedIn,
     sendPasswordResetEmail,
   }), [
     user,
@@ -491,6 +565,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     signIn,
     signOut,
     signInWithGoogle,
+    signInWithLinkedIn,
     sendPasswordResetEmail
   ]);
   console.log('--- 6. AuthProvider: Returning provider with children ---');
