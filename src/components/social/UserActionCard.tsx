@@ -48,12 +48,6 @@ export const UserActionCard = ({ user, children }: UserActionCardProps) => {
               <Link to={`/profile/${user.id}`} className="hover:underline">
                   <h4 className="font-semibold truncate">{user.full_name}</h4>
               </Link>
-              {isStudent && (
-                 <Badge variant="outline" className="flex-shrink-0 text-xs">
-                   <GraduationCap className="h-3 w-3 mr-1" />
-                   Student
-                 </Badge>
-              )}
               {roundedScore > 0 && (
                 <Badge variant="secondary" className="flex-shrink-0 text-xs">
                   {roundedScore}% Match
