@@ -44,7 +44,7 @@ export const HeroSection = () => {
   });
 
   return (
-    <section className="section-medical bg-gradient-hero relative overflow-hidden">
+    <section className="section-medical bg-gradient-hero relative overflow-hidden py-12 md:py-16">
       {/* Background Image Overlay */}
       <div className="absolute inset-0">
         <img 
@@ -56,11 +56,11 @@ export const HeroSection = () => {
       </div>
 
       <div className="container-medical relative">
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
+        <div className="grid lg:grid-cols-2 gap-8 items-center">
           {/* Hero Content */}
-          <div className="space-y-8 animate-fade-in">
+          <div className="space-y-6 animate-fade-in">
             <div className="space-y-4">
-              <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-foreground leading-tight">
+              <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-foreground leading-tight">
                 Where Healthcare Professionals 
                 <span className="block">
                   <span className="text-primary">Connect, Collaborate, </span>
@@ -94,7 +94,7 @@ export const HeroSection = () => {
                 <img 
                   src={heroImage}
                   alt="Healthcare professionals using AIMedNet platform"
-                  className="w-full h-[400px] md:h-[500px] object-cover"
+                  className="w-full h-[350px] md:h-[450px] object-cover"
                 />
               </div>
 
