@@ -79,7 +79,7 @@ export const HeroSection = () => {
                 >
                   Join AIMedNet Today
                   <ArrowRight
-                    className="ml-2 h-5 w-5 animate-nudge-right group-hover:animate-none group-hover:translate-x-1 transition-transform"
+                    className="ml-2 h-6 w-6 animate-nudge-right group-hover:animate-none group-hover:translate-x-1 transition-transform"
                   />
                 </Button>
               )}            
