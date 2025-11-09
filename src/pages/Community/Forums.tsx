@@ -145,6 +145,7 @@ export default function Forums() {
     
     try {
       await createSpace(data);
+      await refreshSpaces(); 
       // 🚀 CHANGE: Remove temp space from local state
       setSpaces(currentSpaces => currentSpaces.filter(s => s.id !== tempId));
       // 🚀 CHANGE: Reload first page instead of calling refreshSpaces()
