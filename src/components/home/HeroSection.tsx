@@ -43,16 +43,6 @@ export const HeroSection = () => {
     staleTime: 5 * 60 * 1000,
   });
 
-  const [isFirstVisit, setIsFirstVisit] = useState(false);
-
-  useEffect(() => {
-    // Check if the user has visited *this session*
-    if (!sessionStorage.getItem('hasVisitedHome')) {
-      setIsFirstVisit(true);
-      sessionStorage.setItem('hasVisitedHome', 'true');
-    }
-  }, []);
-
   return (
     <section className="section-medical bg-gradient-hero relative overflow-hidden py-12 md:py-16">
       {/* Background Image Overlay */}
@@ -84,9 +74,7 @@ export const HeroSection = () => {
               {!user && (
                 <Button 
                   size="lg" 
-                  className={`btn-medical text-lg px-8 py-6 group ${
-                    isFirstVisit ? 'animate-pop-in' : ''
-                  }`}
+                  className={`btn-medical text-lg px-8 py-6 group animate-pop-in`}
                   onClick={() => navigate('/login')}
                 >
                   Join AIMedNet Today
@@ -109,7 +97,7 @@ export const HeroSection = () => {
               </div>
 
               {/* Floating Stats Cards */}
-              <div className="animate-shine absolute bottom-2 right-2 sm:-bottom-4 sm:-right-4 bg-card border border-border rounded-lg p-4 shadow-card animate-scale-in">
+              <div className="animate-shine absolute top-2 left-2 sm:-top-4 sm:-left-4 bg-card border border-border rounded-lg p-4 shadow-card animate-scale-in">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-gradient-primary rounded-full flex items-center justify-center">
                     <Users className="h-5 w-5 text-primary-foreground" />
@@ -123,7 +111,7 @@ export const HeroSection = () => {
                 </div>
               </div>
 
-              <div className="absolute bottom-2 right-2 sm:-bottom-4 sm:-right-4 bg-card border border-border rounded-lg p-4 shadow-card animate-scale-in">
+              <div className="animate-shine absolute bottom-2 right-2 sm:-bottom-4 sm:-right-4 bg-card border border-border rounded-lg p-4 shadow-card animate-scale-in">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-gradient-medical rounded-full flex items-center justify-center">
                     <MessageSquare className="h-5 w-5 text-accent-foreground" />
