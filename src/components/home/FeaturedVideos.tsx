@@ -40,8 +40,8 @@ const VideoCard = ({ video, onPlay }: { video: FeaturedVideo, onPlay: () => void
           </div>
         </div>
         <CardContent className="p-3">
-          <p className="font-semibold text-base leading-snug group-hover:text-primary transition-colors truncate">{video.title}</p>
-          <p className="text-sm text-muted-foreground mt-1">{video.author_name}</p>
+          <p className="font-semibold text-sm leading-snug group-hover:text-primary transition-colors truncate">{video.title}</p>
+          <p className="text-xs text-muted-foreground mt-1">{video.author_name}</p>
         </CardContent>
       </Card>
     </button>
@@ -138,5 +138,61 @@ export const FeaturedVideos = () => {
         </div>
       </div>
     </div>
+  );
+  return (
+    <Dialog open={!!selectedVideo} onOpenChange={(isOpen) => !isOpen && setSelectedVideo(null)}>
+      <section className="section-medical py-10 md:py-12">
+        <div className="container-medical">
+          {/* Section Header */}
+          <div className="mb-10 animate-fade-in">
+            <h2 className="text-2xl md:text-3xl font-bold mb-3 text-center">
+              From Clinic to Career
+              <span className="text-primary block">Featured Content</span>
+            </h2>
+            <p className="text-lg text-muted-foreground max-w-3xl mx-auto text-center">
+              Watch content from our founder and partners on transitioning from clinical to non-clinical roles.
+            </p>
+          </div>
+
+          {/* Founder's Content */}
+          {(isLoading || founderVideos.length > 0) && (
+            <div className="mb-10">
+              <h3 className="text-xl font-semibold mb-6">From the Founder</h3>
+              {renderVideoList(founderVideos, true)}
+            </div>
+          )}
+
+          {/* Partners' Content */}
+          {(isLoading || partnerVideos.length > 0) && (
+            <div>
+              <h3 className="text-xl font-semibold mb-6">From Our Partners</h3>
+              {renderVideoList(partnerVideos, false)}
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* This is the Modal Content */}
+      <DialogContent className="max-w-3xl p-0">
+        {selectedVideo && (
+          <>
+            <DialogHeader className="p-4 pb-0">
+              <DialogTitle>{selectedVideo.title}</DialogTitle>
+            </DialogHeader>
+            <div className="aspect-video w-full">
+              <iframe
+                width="100%"
+                height="100%"
+                src={`https://www.youtube.com/embed/${selectedVideo.youtube_video_id}?autoplay=1`}
+                title={selectedVideo.title}
+                frameBorder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              ></iframe>
+            </div>
+          </>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 };
