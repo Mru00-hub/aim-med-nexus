@@ -14,7 +14,9 @@ import {
   Shield,
   AlertCircle,
   Eye,      // --- ADDED ---
-  EyeOff 
+  EyeOff, 
+  Chrome,
+  Linkedin
 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
@@ -24,7 +26,7 @@ import { supabase } from '@/integrations/supabase/client';
  * Email and password authentication with Google OAuth option
  */
 const Login = () => {
-  const { signIn, generateAndSetKeys, sendPasswordResetEmail } = useAuth();
+  const { signIn, generateAndSetKeys, sendPasswordResetEmail, signInWithGoogle, signInWithLinkedIn } = useAuth();
   
   const [formData, setFormData] = useState({
     email: '',
@@ -161,6 +163,20 @@ const Login = () => {
     }
   };
 
+  const handleGoogleSignIn = async () => {
+    setIsLoading(true);
+    setError('');
+    await signInWithGoogle();
+    // The page will redirect, so no need to setIsLoading(false)
+  };
+
+  const handleLinkedInSignIn = async () => {
+    setIsLoading(true);
+    setError('');
+    await signInWithLinkedIn();
+    // The page will redirect, so no need to setIsLoading(false)
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -289,6 +305,38 @@ const Login = () => {
                   {!isLoading && <ArrowRight className="ml-2 h-4 w-4" />}
                 </Button>
               </form>
+
+              <div className="relative my-6">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-card px-2 text-muted-foreground">
+                    Or continue with
+                  </span>
+                </div>
+              </div>
+    
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Button 
+                  type="button"
+                  variant="outline" 
+                  onClick={handleGoogleSignIn} 
+                  disabled={isLoading || isResetLoading}
+                >
+                  <Chrome className="mr-2 h-4 w-4" />
+                  Sign in with Google
+                </Button>
+                <Button 
+                  type="button"
+                  variant="outline" 
+                  onClick={handleLinkedInSignIn} 
+                  disabled={isLoading || isResetLoading}
+                >
+                  <Linkedin className="mr-2 h-4 w-4" />
+                  Sign in with LinkedIn
+                </Button>
+              </div>
 
               {/* Sign Up Link */}
               <div className="text-center mt-6">
