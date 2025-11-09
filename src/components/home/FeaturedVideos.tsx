@@ -176,28 +176,28 @@ export const FeaturedVideos = () => {
             </p>
           </div>
 
-          {/* Founder's Content */}
-          {(isLoading || founderVideos.length > 0) && (
-            <div className="mb-10">
-              <h3 className="text-xl font-semibold mb-6">From the Founder</h3>
+          {/* --- 1. PARTNERS' CONTENT (MOVED UP) --- */}
+          {(isLoading || partnerVideos.length > 0) && (
+            <div className="mb-10"> 
+              <h3 className="text-xl font-semibold mb-6">From Our Partners</h3>
               <VideoCarousel
-                videos={founderVideos}
+                videos={partnerVideos}
                 isLoading={isLoading}
-                forFounder={true}
+                forFounder={false}
                 onPlay={setSelectedVideo}
                 onCtaClick={() => navigate('/login')}
               />
             </div>
           )}
 
-          {/* 14. And we call it again for the partners */}
-          {(isLoading || partnerVideos.length > 0) && (
-            <div>
-              <h3 className="text-xl font-semibold mb-6">From Our Partners</h3>
+          {/* --- 2. FOUNDER'S CONTENT (MOVED DOWN) --- */}
+          {(isLoading || founderVideos.length > 0) && (
+            <div> 
+              <h3 className="text-xl font-semibold mb-6">From the Founder</h3>
               <VideoCarousel
-                videos={partnerVideos}
+                videos={founderVideos}
                 isLoading={isLoading}
-                forFounder={false}
+                forFounder={true}
                 onPlay={setSelectedVideo}
                 onCtaClick={() => navigate('/login')}
               />
