@@ -22,7 +22,7 @@ const VideoCard = ({ video }: { video: FeaturedVideo }) => {
       href={videoUrl} 
       target="_blank" 
       rel="noopener noreferrer" 
-      className="block w-72 md:w-80 flex-shrink-0"
+      className="block w-64 md:w-72 flex-shrink-0"
       title={video.title}
     >
       <Card className="group h-full overflow-hidden transition-all duration-300 hover:shadow-medical hover:scale-[1.02]">
@@ -33,10 +33,10 @@ const VideoCard = ({ video }: { video: FeaturedVideo }) => {
             className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-300" 
           />
           <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-            <PlayCircle className="h-12 w-12 text-white/90" />
+            <PlayCircle className="h-10 w-10 text-white/90" />
           </div>
         </div>
-        <CardContent className="p-4">
+        <CardContent className="p-3">
           <p className="font-semibold text-base leading-snug group-hover:text-primary transition-colors truncate">{video.title}</p>
           <p className="text-sm text-muted-foreground mt-1">{video.author_name}</p>
         </CardContent>
@@ -64,9 +64,9 @@ export const FeaturedVideos = () => {
     <div className="flex space-x-6 pb-4 -mb-4 overflow-x-auto">
       {isLoading ? (
         Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="w-72 md:w-80 flex-shrink-0">
+          <div key={i} className="w-64 md:w-72 flex-shrink-0">
             <Skeleton className="aspect-video w-full rounded-t-lg" />
-            <div className="p-4 border border-t-0 rounded-b-lg">
+            <div className="p-3 border border-t-0 rounded-b-lg">
               <Skeleton className="h-5 w-3/4" />
               <Skeleton className="h-4 w-1/2 mt-2" />
             </div>
@@ -77,8 +77,8 @@ export const FeaturedVideos = () => {
       )}
       
       {/* "Sign in for more" CTA card at the end of the scroll */}
-      <div className="w-72 md:w-80 flex-shrink-0">
-         <Card className="h-full flex flex-col items-center justify-center text-center p-6 bg-muted/30 hover:bg-muted/80 transition-colors">
+      <div className="w-64 md:w-72 flex-shrink-0">
+         <Card className="h-full flex flex-col items-center justify-center text-center p-4 bg-muted/30 hover:bg-muted/80 transition-colors">
             <h4 className="text-lg font-semibold">Want to see more?</h4>
             <p className="text-muted-foreground text-sm mt-2">
               {forFounder 
@@ -98,8 +98,8 @@ export const FeaturedVideos = () => {
     <section className="section-medical">
       <div className="container-medical">
         {/* Section Header */}
-        <div className="mb-12 animate-fade-in">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4 text-center">
+        <div className="mb-10 animate-fade-in">
+          <h2 className="text-2xl md:text-3xl font-bold mb-3 text-center">
             From Clinic to Career
             <span className="text-primary block">Featured Content</span>
           </h2>
@@ -110,8 +110,8 @@ export const FeaturedVideos = () => {
 
         {/* Founder's Content */}
         {(isLoading || founderVideos.length > 0) && (
-          <div className="mb-12">
-            <h3 className="text-2xl font-semibold mb-6">From the Founder</h3>
+          <div className="mb-10">
+            <h3 className="text-xl font-semibold mb-6">From the Founder</h3>
             {renderVideoList(founderVideos, true)}
           </div>
         )}
@@ -119,7 +119,7 @@ export const FeaturedVideos = () => {
         {/* Partners' Content */}
         {(isLoading || partnerVideos.length > 0) && (
           <div>
-            <h3 className="text-2xl font-semibold mb-6">From Our Partners</h3>
+            <h3 className="text-xl font-semibold mb-6">From Our Partners</h3>
             {renderVideoList(partnerVideos, false)}
           </div>
         )}
