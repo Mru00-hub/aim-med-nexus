@@ -169,6 +169,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         fetchProfile(newSession.user.id).then(async (userProfile) => {
           if (mounted) { 
+            let finalProfile = userProfile;
+            if (!finalProfile) {
+              console.warn("Profile not found on first fetch, retrying once...");
+              await new Promise(r => setTimeout(r, 500)); // 500ms backoff
+              finalProfile = await fetchProfile(newSession.user.id);
+            }
             setProfile(userProfile);
             if (userProfile) {
               await fetchUnreadCount();
@@ -216,6 +222,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       '/complete-profile',
       '/please-verify',
       '/auth/update-password',
+      '/auth/callback',
     ];
 
     const isSafePath = safePaths.some(path => location.pathname.startsWith(path));
