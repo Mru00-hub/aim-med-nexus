@@ -60,10 +60,12 @@ export const HeroSection = () => {
           {/* Hero Content */}
           <div className="space-y-8 animate-fade-in">
             <div className="space-y-4">
-              <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold text-foreground leading-tight">
+              <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-foreground leading-tight">
                 Where Healthcare Professionals 
-                <span className="text-primary block">Connect, Collaborate,</span>
-                <span className="text-accent">and Grow</span>
+                <span className="block">
+                  <span className="text-primary">Connect, Collaborate, </span>
+                  <span className="text-accent">and Grow</span>
+                </span>
               </h1>
             </div>
 
@@ -74,44 +76,13 @@ export const HeroSection = () => {
                   size="lg" 
                   className="btn-medical text-lg px-8 py-6 group"
                   // CHANGE 4: Use navigate function for SPA-friendly routing
-                  onClick={() => navigate('/register')}
+                  onClick={() => navigate('/login')}
                 >
                   Join AIMedNet Today
                   <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
                 </Button>
               )}
               
-              <Button 
-                variant="outline" 
-                size="lg"
-                className="text-lg px-8 py-6 border-primary text-primary hover:bg-primary/5"
-                // CHANGE 5: Use navigate function and update to the correct path
-                onClick={() => navigate('/community')}
-              >
-                Explore Platform
-              </Button>
-            </div>
-
-            {/* Trust Indicators */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-8 pt-8 border-t border-border">
-              <div className="flex items-center gap-2">
-                <Users className="h-5 w-5 text-primary" />
-                <span className="text-sm text-muted-foreground flex items-center gap-1.5">
-                  <MetricDisplay count={userCount} isLoading={isLoadingUsers} fallback="50k+" /> 
-                  Healthcare Professionals
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <MessageSquare className="h-5 w-5 text-accent" />
-                <span className="text-sm text-muted-foreground flex items-center gap-1.5">
-                  <MetricDisplay count={spacesCount} isLoading={isLoadingSpaces} fallback="1k+" /> 
-                  Active Communities
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Briefcase className="h-5 w-5 text-success" />
-                <span className="text-sm text-muted-foreground">Career Growth</span>
-              </div>
             </div>
           </div>
 
