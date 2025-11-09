@@ -158,6 +158,20 @@ export default {
             opacity: "0.7",
           },
         },
+
+        "pop-in": {
+          "0%": { transform: "scale(0.8)", opacity: "0" },
+          "50%": { transform: "scale(1.15)", opacity: "1" },
+          "100%": { transform: "scale(1)", opacity: "1" },
+        },
+        "shine": {
+          "0%": { transform: "translateX(-100%)" },
+          "100%": { transform: "translateX(100%)" },
+        },
+        "auto-scroll": {
+          "0%": { transform: "translateX(0)" },
+          "100%": { transform: "translateX(-100%)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -166,11 +180,15 @@ export default {
         "slide-up": "slide-up 0.8s ease-out",
         "scale-in": "scale-in 0.4s ease-out",
         "pulse-medical": "pulse-medical 2s infinite",
+        "pop-in": "pop-in 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards",
+        "shine": "shine 3s ease-in-out infinite 1s",
+        "auto-scroll": "auto-scroll 40s linear infinite",
       },
     },
   },
   plugins: [
     require("tailwindcss-animate"),
-    require('@tailwindcss/typography')
+    require('@tailwindcss/typography'),
+    require('@tailwindcss/line-clamp'),
   ],
 } satisfies Config;
