@@ -4,6 +4,7 @@ import { Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Header } from '@/components/layout/Header';
 import { HeroSection } from '@/components/home/HeroSection';
+import { FeaturedVideos } from '@/components/home/FeaturedVideos';
 import { FeatureCards } from '@/components/home/FeatureCards';
 import { PartnershipSection } from '@/components/home/PartnershipSection';
 import { Footer } from '@/components/layout/Footer';
@@ -21,6 +22,7 @@ const Index = () => {
 
       <main>
         <HeroSection />
+        <FeaturedVideos />
         <FeatureCards />
         <PartnershipSection />
       </main>
