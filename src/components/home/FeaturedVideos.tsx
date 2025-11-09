@@ -1,6 +1,5 @@
 // src/components/home/FeaturedVideos.tsx
-
-import React from 'react';
+import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { getFeaturedVideos } from '@/integrations/supabase/content.api';
@@ -9,20 +8,24 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Loader2, PlayCircle } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 /**
  * Internal card component to display a single video.
  */
-const VideoCard = ({ video }: { video: FeaturedVideo }) => {
-  const videoUrl = `https://www.youtube.com/watch?v=${video.youtube_video_id}`;
+const VideoCard = ({ video, onPlay }: { video: FeaturedVideo, onPlay: () => void }) => {
   const thumbnailUrl = `https://img.youtube.com/vi/${video.youtube_video_id}/hqdefault.jpg`;
 
   return (
-    <a 
-      href={videoUrl} 
-      target="_blank" 
-      rel="noopener noreferrer" 
-      className="block w-64 md:w-72 flex-shrink-0"
+    <button 
+      onClick={onPlay}
+      className="block w-64 md:w-72 flex-shrink-0 text-left"
       title={video.title}
     >
       <Card className="group h-full overflow-hidden transition-all duration-300 hover:shadow-medical hover:scale-[1.02]">
@@ -50,6 +53,7 @@ const VideoCard = ({ video }: { video: FeaturedVideo }) => {
  */
 export const FeaturedVideos = () => {
   const navigate = useNavigate();
+  const [selectedVideo, setSelectedVideo] = useState<FeaturedVideo | null>(null);
   const { data: videos, isLoading } = useQuery({
     queryKey: ['featuredVideos'],
     queryFn: getFeaturedVideos,
@@ -73,7 +77,13 @@ export const FeaturedVideos = () => {
           </div>
         ))
       ) : (
-        videoList.map(video => <VideoCard key={video.id} video={video} />)
+        videoList.map(video => (
+          <VideoCard 
+            key={video.id} 
+            video={video} 
+            onPlay={() => setSelectedVideo(video)} 
+          />
+        ))
       )}
       
       {/* "Sign in for more" CTA card at the end of the scroll */}
@@ -95,35 +105,59 @@ export const FeaturedVideos = () => {
   );
 
   return (
-    <section className="section-medical">
-      <div className="container-medical">
-        {/* Section Header */}
-        <div className="mb-10 animate-fade-in">
-          <h2 className="text-2xl md:text-3xl font-bold mb-3 text-center">
-            From Clinic to Career
-            <span className="text-primary block">Featured Content</span>
-          </h2>
-          <p className="text-xl text-muted-foreground max-w-3xl mx-auto text-center">
-            Watch content from our founder and partners on transitioning from clinical to non-clinical roles.
-          </p>
+    <Dialog open={!!selectedVideo} onOpenChange={(isOpen) => !isOpen && setSelectedVideo(null)}>
+      <section className="section-medical py-10 md:py-12">
+        <div className="container-medical">
+          {/* Section Header */}
+          <div className="mb-10 animate-fade-in">
+            <h2 className="text-2xl md:text-3xl font-bold mb-3 text-center">
+              From Clinic to Career
+              <span className="text-primary block">Featured Content</span>
+            </h2>
+            <p className="text-lg text-muted-foreground max-w-3xl mx-auto text-center">
+              Watch content from our founder and partners on transitioning from clinical to non-clinical roles.
+            </p>
+          </div>
+
+          {/* Founder's Content */}
+          {(isLoading || founderVideos.length > 0) && (
+            <div className="mb-10">
+              <h3 className="text-xl font-semibold mb-6">From the Founder</h3>
+              {renderVideoList(founderVideos, true)}
+            </div>
+          )}
+
+          {/* Partners' Content */}
+          {(isLoading || partnerVideos.length > 0) && (
+            <div>
+              <h3 className="text-xl font-semibold mb-6">From Our Partners</h3>
+              {renderVideoList(partnerVideos, false)}
+            </div>
+          )}
         </div>
+      </section>
 
-        {/* Founder's Content */}
-        {(isLoading || founderVideos.length > 0) && (
-          <div className="mb-10">
-            <h3 className="text-xl font-semibold mb-6">From the Founder</h3>
-            {renderVideoList(founderVideos, true)}
-          </div>
+      {/* 7. This is the Modal Content. It only renders when selectedVideo is not null. */}
+      <DialogContent className="max-w-3xl p-0">
+        {selectedVideo && (
+          <>
+            <DialogHeader className="p-4 pb-0">
+              <DialogTitle>{selectedVideo.title}</DialogTitle>
+            </DialogHeader>
+            <div className="aspect-video w-full">
+              <iframe
+                width="100%"
+                height="100%"
+                src={`https://www.youtube.com/embed/${selectedVideo.youtube_video_id}?autoplay=1`}
+                title={selectedVideo.title}
+                frameBorder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              ></iframe>
+            </div>
+          </>
         )}
-
-        {/* Partners' Content */}
-        {(isLoading || partnerVideos.length > 0) && (
-          <div>
-            <h3 className="text-xl font-semibold mb-6">From Our Partners</h3>
-            {renderVideoList(partnerVideos, false)}
-          </div>
-        )}
-      </div>
-    </section>
+      </DialogContent>
+    </Dialog>
   );
 };
