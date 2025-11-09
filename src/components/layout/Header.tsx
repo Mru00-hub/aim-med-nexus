@@ -33,6 +33,8 @@ import {
   AlertDialogCancel,
   AlertDialogAction,
 } from "@/components/ui/alert-dialog";
+import { useQuery } from '@tanstack/react-query'; // 1. Add this
+import { getPartnershipProposalsCount } from '@/integrations/supabase/metrics.api';
 
 export const Header = () => {
   const { user, loading, signOut, profile} = useAuth();
@@ -46,6 +48,12 @@ export const Header = () => {
     unreadInboxCount, 
     unreadNotifCount // Get the new count
   } = useSocialCounts();
+
+  const { data: proposalCount } = useQuery({
+    queryKey: ['partnershipProposalsCount'],
+    queryFn: getPartnershipProposalsCount,
+    staleTime: 5 * 60 * 1000, // Optional: cache for 5 mins like in your section
+  });
 
   // --- THIS ARRAY DEFINITION WAS ACCIDENTALLY OMITTED ---
   const headerIcons = [
@@ -255,8 +263,18 @@ export const Header = () => {
               </Button>
               
               <Link to="/partnerships">
-                  <Button variant="ghost" size="sm" className="p-2 sm:p-3 text-accent">
-                      <Handshake className="h-5 w-5" />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="flex flex-col h-auto p-2 sm:p-3 text-accent hover:text-accent/80"
+                    title="Partnerships"
+                  >
+                    <Handshake className="h-5 w-5" />
+                    {proposalCount && proposalCount > 0 && (
+                      <span className="text-xs font-bold leading-none mt-0.5">
+                        {proposalCount}
+                      </span>
+                    )}
                   </Button>
               </Link>
 
