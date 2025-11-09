@@ -221,6 +221,29 @@
   .animate-pulse-medical {
     animation: pulseMedical 2s infinite;
   }
+
+  .animate-shine {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .animate-shine::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(
+      to right,
+      transparent 0%,
+      rgba(255, 255, 255, 0.4) 50%,
+      transparent 100%
+    );
+    transform: translateX(-100%);
+    /* This animation uses the keyframes below */
+    animation: shine 3s ease-in-out infinite 1s;
+  }
 }
 
 @keyframes fadeIn {
@@ -262,6 +285,15 @@
   }
   50% {
     opacity: 0.7;
+  }
+}
+
+@keyframes shine {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
   }
 }
 
