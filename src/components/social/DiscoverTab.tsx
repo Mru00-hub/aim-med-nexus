@@ -86,11 +86,15 @@ export const DiscoverTab = ({ recommendations, loading, onSendRequest, onBlockUs
                 id: rec.id,
                 full_name: rec.full_name,
                 profile_picture_url: rec.profile_picture_url,
-                title: rec.specialization || rec.course,
+                title: rec.specialization,
                 organization: rec.organization,
                 location: rec.current_location,
+                course: rec.course,
+                institution: rec.institution,
+                student_year: rec.student_year,
                 mutuals: rec.mutuals,
                 similarity_score: rec.similarity_score,
+                user_role: rec.user_role,
               }}
             >
               {/* --- Render buttons based on LIVE status --- */}
