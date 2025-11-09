@@ -56,6 +56,7 @@ import {
   EditableWorkExperience,
   EditableEducationHistory,
 } from '@/integrations/supabase/user.api';
+import { RegistrationTypeStep } from '@/components/register/RegistrationTypeStep';
 
 export type WorkExperienceItem = EditableWorkExperience;
 export type EducationHistoryItem = EditableEducationHistory;
@@ -684,6 +685,16 @@ const CompleteProfile = () => {
     if (!user) return;
 
     // --- Validation ---
+    if (!userRole) {
+      setError("Please select whether you are a Student or Professional.");
+      toast({
+        title: "Missing Information",
+        description: "Please select whether you are a Student or Professional.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     const requiredFields: { [key: string]: string } = {
       full_name: "Full Name",
       date_of_birth: "Date of Birth",
@@ -894,7 +905,8 @@ const CompleteProfile = () => {
         p_resume_url: formData.resume_url || null,
         p_profile_picture_url: finalAvatarUrl,
         p_is_onboarded: true,
-        p_profile_mode: profileMode, // 🚀 PLAN: Save the profile mode
+        p_profile_mode: profileMode,
+        p_user_role: userRole,
       };
       
       const { error: rpcError } = await supabase.rpc('update_profile', rpcArgs);
@@ -985,6 +997,50 @@ const CompleteProfile = () => {
 
   if (!user) {
     return <PageSkeleton />;
+  }
+
+  if (!userRole) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <main className="py-8 sm:py-12">
+          <Card className="card-medical max-w-2xl mx-auto p-0 sm:p-4 md:p-6">
+            <CardHeader>
+              <CardTitle className="text-2xl sm:text-3xl">
+                One Last Step!
+              </CardTitle>
+              <CardDescription>
+                Welcome! To get you started, please tell us what type of professional you are.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {error && (
+                <Alert variant="destructive" className="mb-4">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Error</AlertTitle>
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+              <RegistrationTypeStep 
+                registrationType={userRole} 
+                setRegistrationType={setUserRole} 
+                onNext={() => {}} // No 'next' button, just sets state
+              />
+              <div className="flex flex-col sm:flex-row gap-4 pt-6">
+                <Button type="button" size="lg" className="btn-medical w-full sm:flex-1" onClick={handleSubmit}>
+                  Continue
+                  <Save className="ml-2 h-5 w-5" />
+                </Button>
+                <Button type="button" variant="outline" size="lg" onClick={handleSkip} className="w-full sm:w-auto">
+                  Skip for Now 
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </main>
+        <Footer />
+      </div>
+    );
   }
 
   const educationLabel = userRole === 'student' 
@@ -1262,8 +1318,8 @@ const CompleteProfile = () => {
       <Footer />
     </div>
   );
-}; // *** CHANGE 1: Remove extra closing brace here ***
-
+}; 
+      
 // --- PageSkeleton --- // 
 const PageSkeleton = () => (
   <div className="min-h-screen bg-background">
