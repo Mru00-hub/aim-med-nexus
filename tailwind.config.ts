@@ -172,6 +172,10 @@ export default {
           "0%": { transform: "translateX(0)" },
           "100%": { transform: "translateX(-100%)" },
         },
+        "nudge-right": {
+          "0%, 100%": { transform: "translateX(0)" },
+          "50%": { transform: "translateX(8px)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -183,6 +187,7 @@ export default {
         "pop-in": "pop-in 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards",
         "shine": "shine 3s ease-in-out infinite 1s",
         "auto-scroll": "auto-scroll 40s linear infinite",
+        "nudge-right": "nudge-right 1.5s ease-in-out infinite",
       },
     },
   },
