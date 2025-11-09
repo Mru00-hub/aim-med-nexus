@@ -98,106 +98,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []); // Empty dependency array is correct here
 
   // =================================================================
-  // START: YOUR ORIGINAL useEffect (Restored)
+  // START: AUTH STATE EFFECT (Runs once)
+  // =This hook handles initializing the session and listening for auth changes.
   // =================================================================
   useEffect(() => {
-    console.log('--- 2. AuthProvider: useEffect running ---');
-    let mounted = true;
-    const safePaths = [
-      '/login',
-      '/register',
-      '/complete-profile',
-      '/please-verify',
-      '/auth/update-password',
-    ];
-    const checkProfileAndRedirect = (profile: Profile | null) => {
-      // If we have a profile AND that profile is NOT onboarded...
-      if (profile && !profile.is_onboarded && mounted && !safePaths.some(path => location.pathname.startsWith(path))) {
-        
-        console.log('--- AuthProvider: User NOT onboarded. Redirecting to /complete-profile ---');
-        navigate('/complete-profile', { replace: true });
-      }
-    };
-    
-    const init = async () => {
-      console.log('--- 3. AuthProvider: init() started ---');
-      let userProfile: Profile | null = null;
-      let sessionUser: User | null = null;
-
-      try {
-        const { data, error } = await supabase.auth.getSession();
-        
-        if (error) {
-          console.error("Error getting session:", error.message);
-          return; // Don't proceed
-        }
-
-        if (mounted && data.session) {
-          console.log('--- 4. AuthProvider: Session found, setting user ---');
-          setSession(data.session);
-          setUser(data.session.user);
-          sessionUser = data.session.user; // Store user for the 'finally' block
-
-          // --- YOUR ORIGINAL, RESILIENT PROFILE FETCH ---
-          try {
-            userProfile = await fetchProfile(data.session.user.id);
-            if (mounted) {
-              setProfile(userProfile);
-              if (userProfile) {
-                await fetchUnreadCount();
-              }
-            }
-          } catch (profileError: any) {
-            console.error("Failed to fetch profile during init:", profileError.message);
-            toast({
-              title: "Profile Error",
-              description: "Could not load your profile. Please refresh.",
-              variant: "destructive",
-            });
-            // App continues, but profile is null
-          }
-          // --- END RESILIENT BLOCK ---
-
-        } else if (mounted) {
-          console.log('--- 4. AuthProvider: No session found ---');
-        }
-      } catch (err: any) {
-        // This only catches critical session errors, which is correct
-        console.error("Critical error in auth init:", err.message);
-      } finally {
-        if (mounted) {
-          // --- REDIRECT CHECK MOVED HERE ---
-          // This runs after all session/profile fetching is complete
-          // It only runs if we successfully got a session user
-          if (sessionUser) {
-            checkProfileAndRedirect(userProfile);
-          }
-          
-          console.log('--- 5. AuthProvider: init() finished, setLoading(false) ---');
-          setLoading(false);
-        }
-      }
-    };
-
-    init();
-
-    // --- YOUR onAuthStateChange LISTENER IS PERFECT ---
-    // It already handles profile errors gracefully inside the .then()
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
-      if (!mounted) return;
-
-      if (_event === 'PASSWORD_RECOVERY') {
-        setLoading(false);
-        setIsRecovery(true); 
-      }
-
-      if (newSession) {
-        setSession(newSession);
-        setUser(newSession.user);
-        
-        fetchProfile(newSession.user.id).then(async (userProfile) => {
-          if (mounted) { 
-useEffect(() => {
     console.log('--- 1. AuthProvider: Auth Effect Running ---');
     let mounted = true;
 
@@ -289,7 +193,15 @@ useEffect(() => {
     };
   // This dependency array is now correct and will only run once.
   }, [fetchProfile, fetchUnreadCount, toast]);
+  // =================================================================
+  // END: AUTH STATE EFFECT
+  // =================================================================
 
+
+  // =================================================================
+  // START: REDIRECT GUARD EFFECT (Runs on profile/location changes)
+  // This hook handles redirecting un-onboarded users.
+  // =================================================================
   useEffect(() => {
     console.log('--- AuthProvider: Redirect Effect Running ---');
 
@@ -309,16 +221,16 @@ useEffect(() => {
     const isSafePath = safePaths.some(path => location.pathname.startsWith(path));
 
     // If we have a profile, AND they are NOT onboarded, AND they are NOT on a safe path
-    if (profile && !profile.is_onreaded && !isSafePath) {
+    // *** THIS IS THE FIXED LINE ***
+    if (profile && !profile.is_onboarded && !isSafePath) {
       console.log('--- AuthProvider: User NOT onboarded. Redirecting to /complete-profile ---');
       navigate('/complete-profile', { replace: true });
     }
 
   // This runs after load, and any time the user's profile or location changes
   }, [profile, location.pathname, navigate, loading]);
-  
   // =================================================================
-  // END: YOUR ORIGINAL useEffect
+  // END: REDIRECT GUARD EFFECT
   // =================================================================
     
   // --- Using useCallback as in your first file ---
