@@ -197,15 +197,82 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         fetchProfile(newSession.user.id).then(async (userProfile) => {
           if (mounted) { 
+useEffect(() => {
+    console.log('--- 1. AuthProvider: Auth Effect Running ---');
+    let mounted = true;
+
+    const init = async () => {
+      console.log('--- 2. AuthProvider: init() started ---');
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error("Error getting session:", error.message);
+          return; 
+        }
+
+        if (mounted && data.session) {
+          console.log('--- 3. AuthProvider: Session found, setting user ---');
+          setSession(data.session);
+          setUser(data.session.user);
+
+          // --- Resilient Profile Fetch ---
+          try {
+            const userProfile = await fetchProfile(data.session.user.id);
+            if (mounted) {
+              setProfile(userProfile);
+              if (userProfile) {
+                await fetchUnreadCount();
+              }
+            }
+          } catch (profileError: any) {
+            console.error("Failed to fetch profile during init:", profileError.message);
+            toast({
+              title: "Profile Error",
+              description: "Could not load your profile. Please refresh.",
+              variant: "destructive",
+            });
+          }
+          // --- End Resilient Block ---
+
+        } else if (mounted) {
+          console.log('--- 3. AuthProvider: No session found ---');
+        }
+      } catch (err: any) {
+        console.error("Critical error in auth init:", err.message);
+      } finally {
+        if (mounted) {
+          console.log('--- 4. AuthProvider: init() finished, setLoading(false) ---');
+          setLoading(false);
+        }
+      }
+    };
+
+    init();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      if (!mounted) return;
+
+      if (_event === 'PASSWORD_RECOVERY') {
+        setLoading(false);
+        setIsRecovery(true); 
+      }
+
+      if (newSession) {
+        console.log('--- AuthProvider: Auth state changed (NEW SESSION) ---');
+        setSession(newSession);
+        setUser(newSession.user);
+        
+        fetchProfile(newSession.user.id).then(async (userProfile) => {
+          if (mounted) { 
             setProfile(userProfile);
             if (userProfile) {
               await fetchUnreadCount();
             }
-            // --- ADDED CHECK (using the new logic) ---
-            checkProfileAndRedirect(userProfile);
           }
         });
       } else {
+        console.log('--- AuthProvider: Auth state changed (NO SESSION) ---');
         setSession(null);
         setUser(null);
         setProfile(null);
@@ -220,8 +287,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       mounted = false;
       subscription.unsubscribe();
     };
-  // Add `toast` to the dependency array
-  }, [fetchProfile, fetchUnreadCount, navigate, location.pathname, toast]);
+  // This dependency array is now correct and will only run once.
+  }, [fetchProfile, fetchUnreadCount, toast]);
+
+  useEffect(() => {
+    console.log('--- AuthProvider: Redirect Effect Running ---');
+
+    // Don't redirect while the app is still loading
+    if (loading) {
+      return;
+    }
+    
+    const safePaths = [
+      '/login',
+      '/register',
+      '/complete-profile',
+      '/please-verify',
+      '/auth/update-password',
+    ];
+
+    const isSafePath = safePaths.some(path => location.pathname.startsWith(path));
+
+    // If we have a profile, AND they are NOT onboarded, AND they are NOT on a safe path
+    if (profile && !profile.is_onreaded && !isSafePath) {
+      console.log('--- AuthProvider: User NOT onboarded. Redirecting to /complete-profile ---');
+      navigate('/complete-profile', { replace: true });
+    }
+
+  // This runs after load, and any time the user's profile or location changes
+  }, [profile, location.pathname, navigate, loading]);
   
   // =================================================================
   // END: YOUR ORIGINAL useEffect
