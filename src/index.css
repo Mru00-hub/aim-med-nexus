@@ -221,46 +221,6 @@
   .animate-pulse-medical {
     animation: pulseMedical 2s infinite;
   }
-
-  /* For the hero button "pop-in" */
-  .animate-pop-in {
-    animation: pop-in 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
-  }
-
-  /* For the auto-scrolling video carousel */
-  .animate-auto-scroll {
-    animation: auto-scroll 40s linear infinite;
-  }
-
-  /* For the hero metrics "shine" effect */
-  .animate-shine {
-    position: relative;
-    overflow: hidden;
-  }
-
-  .animate-shine::after {
-    content: '';
-    position: absolute;
-    top: -50%;
-    left: -50%;
-    width: 200%;
-    height: 200%;
-    background: linear-gradient(
-      to right,
-      transparent 0%,
-      rgba(255, 255, 255, 0.4) 50%,
-      transparent 100%
-    );
-    transform: translateX(-100%);
-    /* Start after 1s, then repeat every 3s */
-    animation: shine 3s ease-in-out infinite 1s;
-  }
-
-  /* For the auto-scroller gradient fade-out */
-  .scroller-mask {
-    -webkit-mask: linear-gradient(90deg, transparent, white 20%, white 80%, transparent);
-    mask: linear-gradient(90deg, transparent, white 20%, white 80%, transparent);
-  }
 }
 
 @keyframes fadeIn {
@@ -302,40 +262,6 @@
   }
   50% {
     opacity: 0.7;
-  }
-}
-
-@keyframes pop-in {
-  0% {
-    transform: scale(0.8);
-    opacity: 0;
-  }
-  
-  50% {
-    transform: scale(1.15); /* Overshoots to 115% */
-    opacity: 1;
-  }
-  100% {
-    transform: scale(1);
-    opacity: 1;
-  }
-}
-
-@keyframes auto-scroll {
-  0% {
-    transform: translateX(0);
-  }
-  100% {
-    transform: translateX(-100%);
-  }
-}
-
-@keyframes shine {
-  0% {
-    transform: translateX(-100%);
-  }
-  100% {
-    transform: translateX(100%);
   }
 }
 
