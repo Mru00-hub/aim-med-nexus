@@ -44,12 +44,12 @@ const FeatureCard: React.FC<FeatureCardProps> = ({
     <Card className={`card-medical group cursor-pointer h-full transition-all duration-300 hover:scale-[1.02] ${
       isPremium ? 'border-premium/30 bg-gradient-to-br from-card to-premium/5' : ''
     } ${isActive ? 'border-primary/50 shadow-medical' : ''}`}>
-      <CardHeader className="space-y-4">
+      <CardHeader className="space-y-3">
         <div className="flex items-center justify-between">
-          <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
+          <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
             isPremium ? 'bg-gradient-premium' : 'bg-gradient-primary'
           }`}>
-            <Icon className="h-6 w-6 text-white" />
+            <Icon className="h-5 w-5 text-white" />
           </div>
           
           <div className="flex gap-2">
@@ -73,7 +73,7 @@ const FeatureCard: React.FC<FeatureCardProps> = ({
         </div>
         
         <div>
-          <CardTitle className="text-xl group-hover:text-primary transition-colors">
+          <CardTitle className="text-lg group-hover:text-primary transition-colors">
             {title}
           </CardTitle>
           <CardDescription className="text-muted-foreground mt-2 text-sm leading-relaxed">
@@ -85,6 +85,7 @@ const FeatureCard: React.FC<FeatureCardProps> = ({
       <CardContent className="pt-0">
         <Button 
           variant={isComingSoon ? "secondary" : "ghost"} 
+          size="sm" 
           className={`w-full group/btn ${
             isComingSoon 
               ? 'cursor-not-allowed opacity-60' 
@@ -172,8 +173,8 @@ export const FeatureCards = () => {
     <section className="section-medical bg-muted/30">
       <div className="container-medical">
         {/* Section Header */}
-        <div className="text-center mb-12 animate-fade-in">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">
+        <div className="text-center mb-10 animate-fade-in">
+          <h2 className="text-2xl md:text-3xl font-bold mb-3">
             Your Complete Healthcare
             <span className="text-primary block">Professional Ecosystem</span>
           </h2>
@@ -188,7 +189,7 @@ export const FeatureCards = () => {
           <h3 className="text-2xl font-semibold mb-8 text-center">
             🚀 Available Now
           </h3>
-          <div className="grid md:grid-cols-3 gap-8 animate-slide-up">
+          <div className="grid md:grid-cols-3 gap-6 animate-slide-up">
             {activeFeatures.map((feature, index) => (
               <FeatureCard key={index} {...feature} />
             ))}
@@ -200,7 +201,7 @@ export const FeatureCards = () => {
           <h3 className="text-2xl font-semibold mb-8 text-center">
             🔮 Coming Soon
           </h3>
-          <div className="grid md:grid-cols-2 gap-8 animate-slide-up max-w-4xl mx-auto">
+          <div className="grid md:grid-cols-2 gap-6 animate-slide-up max-w-4xl mx-auto">
             {comingSoonFeatures.map((feature, index) => (
               <FeatureCard key={index} {...feature} />
             ))}
@@ -208,8 +209,8 @@ export const FeatureCards = () => {
         </div>
 
         {/* Bottom CTA */}
-        <div className="text-center mt-12 animate-fade-in">
-          <p className="text-lg text-muted-foreground mb-6">
+        <div className="text-center mt-10 animate-fade-in">
+          <p className="text-base text-muted-foreground mb-6">
             Ready to join the future of healthcare networking?
           </p>
           <Link to="/register">
