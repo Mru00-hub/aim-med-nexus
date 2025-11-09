@@ -71,7 +71,8 @@ export const HeroSection = () => {
 
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row gap-4">
-              {!user && (
+              {!user ? (
+                // IF USER IS LOGGED OUT: Show "Join" button
                 <Button 
                   size="lg" 
                   className={`btn-medical text-lg px-8 py-6 group animate-pop-in`}
@@ -80,6 +81,18 @@ export const HeroSection = () => {
                   Join AIMedNet Today
                   <ArrowRight
                     className="ml-2 h-6 w-6 animate-nudge-right group-hover:animate-none group-hover:translate-x-1 transition-transform"
+                  />
+                </Button>
+              ) : (
+                // IF USER IS LOGGED IN: Show "Go to Community" button
+                <Button 
+                  size="lg" 
+                  className={`btn-medical text-lg px-8 py-6 group`}
+                  onClick={() => navigate('/community')}
+                >
+                  Go to Community
+                  <ArrowRight
+                    className="ml-2 h-6 w-6 group-hover:translate-x-1 transition-transform"
                   />
                 </Button>
               )}            
