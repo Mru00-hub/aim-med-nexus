@@ -121,23 +121,43 @@ Deno.serve(async (req) => {
     const MY_TEST_USER_ID = '39b25a48-7c7e-44b4-bc2d-2e07cf68c2ed';
 
     // 4. Get all users who have email_enabled = true
+    const { data: eligibleUserIds, error: eligibleIdsError } = await supabaseAdmin
+      .from('notification_preferences')
+      .select('user_id')
+      .eq('email_enabled', true)
+      .eq('user_id', MY_TEST_USER_ID);
+
+    if (eligibleIdsError) throw eligibleIdsError;
+
+    if (!eligibleUserIds || eligibleUserIds.length === 0) {
+      console.log('No users are eligible for email. Job complete.');
+      return new Response(JSON.stringify({ message: 'No users eligible for email.' }), {
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Convert the array of objects (e.g., [{user_id: '...'}]) into a simple array of strings
+    const userIds = eligibleUserIds.map((item) => item.user_id);
+
+    // 4. (NEW STEP 2) Get the profiles for those eligible user IDs
     const { data: eligibleUsers, error: eligibleUsersError } = await supabaseAdmin
       .from('profiles')
       .select(`
         id,
         full_name,
-        email,
-        preferences:notification_preferences!user_id ( email_enabled )
+        email
       `)
-      .eq('preferences.email_enabled', true)
-      .eq('id', MY_TEST_USER_ID);
+      .in('id', userIds); // Use .in() to get all users in the list
 
     if (eligibleUsersError) throw eligibleUsersError;
+
+    // [!code ++]
     console.log(`Query for eligible users complete. Found: ${eligibleUsers?.length || 0}`);
 
     if (!eligibleUsers || eligibleUsers.length === 0) {
-      console.log('No users are eligible for email. Job complete.');
-      return new Response(JSON.stringify({ message: 'No users eligible for email.' }), {
+      // This case should be rare if data is in sync, but it's good to keep
+      console.log('Found eligible IDs but no matching profiles. Job complete.');
+      return new Response(JSON.stringify({ message: 'No matching profiles found for eligible IDs.' }), {
         headers: { 'Content-Type': 'application/json' },
       });
     }
