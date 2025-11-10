@@ -193,8 +193,8 @@ Deno.serve(async (req) => {
           id,
           type,
           created_at,
-          entity_id,       // <-- The polymorphic ID for spaces, etc.
-          announcement_id, // <-- The ID for announcements
+          entity_id,       
+          announcement_id, 
           actor:profiles!actor_id (
             full_name
           )
