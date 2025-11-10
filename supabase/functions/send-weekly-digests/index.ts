@@ -99,7 +99,6 @@ Deno.serve(async (req) => {
   console.log('--- DEBUGGING SECRET CHECK ---');
   console.log('Received authHeader:', authHeader);
   console.log('Expected cronSecret:', cronSecret ? `"${cronSecret}"` : '(CRON_SECRET is NOT SET or DEPLOYED!)');
-  console.log('Expected full string:', `Bearer ${cronSecret}`);
   if (!cronSecret || authHeader !== cronSecret) {
     console.warn('Forbidden: Invalid or missing cron secret.');
     return new Response(JSON.stringify({ error: 'Forbidden: Invalid secret' }), {
@@ -194,22 +193,17 @@ Deno.serve(async (req) => {
           id,
           type,
           created_at,
+          entity_id,       // <-- The polymorphic ID for spaces, etc.
+          announcement_id, // <-- The ID for announcements
           actor:profiles!actor_id (
             full_name
-          ),
-          space:spaces (
-            name
-          ),
-          announcement:announcements (
-            title,
-            body
           )
         `
         )
         .eq('user_id', userId)
-        .eq('is_read', false) // <-- Only get unread notifications
+        .eq('is_read', false)
         .gte('created_at', oneWeekAgo.toISOString())
-        .lt('created_at', now.toISOString()) 
+        .lt('created_at', now.toISOString())
         .order('created_at', { ascending: false });
 
       if (notifError) {
@@ -225,10 +219,57 @@ Deno.serve(async (req) => {
         continue;
       }
 
+      const spaceIds = notifications
+        .filter(n => (n.type === 'new_public_space_by_followed_user' || n.type === 'space_join_request') && n.entity_id)
+        .map(n => n.entity_id);
+        
+      const announcementIds = notifications
+        .filter(n => n.type === 'system_update' && n.announcement_id)
+        .map(n => n.announcement_id);
+
+      // Fetch the related data in parallel
+      const [
+        { data: spacesData },
+        { data: announcementsData }
+      ] = await Promise.all([
+        // Query 1: Get all spaces we need
+        supabaseAdmin.from('spaces').select('id, name').in('id', spaceIds),
+        
+        // Query 2: Get all announcements we need
+        supabaseAdmin.from('announcements').select('id, title, body').in('id', announcementIds)
+      ]);
+
+      // Create quick lookup maps for the data
+      const spaceMap = new Map(spacesData?.map(s => [s.id, s]));
+      const announcementMap = new Map(announcementsData?.map(a => [a.id, a]));
+
+      // "Hydrate" the original notifications array
+      const hydratedNotifications = notifications.map(n => {
+        let space = null;
+        let announcement = null;
+
+        // If it's a space notification, find its data in the spaceMap
+        if ((n.type === 'new_public_space_by_followed_user' || n.type === 'space_join_request') && n.entity_id) {
+          space = spaceMap.get(n.entity_id);
+        }
+        
+        // If it's a system update, find its data in the announcementMap
+        if (n.type === 'system_update' && n.announcement_id) {
+          announcement = announcementMap.get(n.announcement_id);
+        }
+
+        // Return the original notification + the new data
+        return {
+          ...n,
+          space,
+          announcement
+        };
+      });
+
       // 8. Format and Send the Email
       try {
-        const emailHtml = generateDigestEmail(userName, notifications);
-        const subject = `Your Weekly Digest: ${notifications.length} New Update${notifications.length > 1 ? 's' : ''}`;
+        const emailHtml = generateDigestEmail(userName, hydratedNotifications);
+        const subject = `Your Weekly Digest: ${hydratedNotifications.length} New Update${hydratedNotifications.length > 1 ? 's' : ''}`;
         console.log(`Attempting to send email to ${userEmail}...`);
         
         await resend.emails.send({
