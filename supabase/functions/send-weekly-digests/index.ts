@@ -67,7 +67,7 @@ function generateDigestEmail(userName: string, notifications: any[]): string {
       </ul>
       <p style="margin-top: 30px; text-align: center;">
         <a 
-          href="https://aim-med-nexus.lovable.app/#/notifications" 
+          href="https://aim-med-nexus.in/notifications" 
           style="background-color: #0a0a0a; color: #ffffff; padding: 14px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px;"
         >
           View All Notifications
@@ -97,11 +97,14 @@ Deno.serve(async (req) => {
   const authHeader = req.headers.get('Authorization');
   const cronSecret = Deno.env.get('CRON_SECRET');
   if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+    console.warn('Forbidden: Invalid or missing cron secret.');
     return new Response(JSON.stringify({ error: 'Forbidden: Invalid secret' }), {
       status: 403,
       headers: { 'Content-Type': 'application/json' },
     });
   }
+
+  console.log('Function invoked with valid secret. Starting digest job...');
 
   try {
     // 3. Initialize Admin Clients
@@ -124,8 +127,10 @@ Deno.serve(async (req) => {
       .eq('preferences.email_enabled', true);
 
     if (eligibleUsersError) throw eligibleUsersError;
+    console.log(`Query for eligible users complete. Found: ${eligibleUsers?.length || 0}`);
 
     if (!eligibleUsers || eligibleUsers.length === 0) {
+      console.log('No users are eligible for email. Job complete.');
       return new Response(JSON.stringify({ message: 'No users eligible for email.' }), {
         headers: { 'Content-Type': 'application/json' },
       });
@@ -138,6 +143,7 @@ Deno.serve(async (req) => {
     let successCount = 0;
     let failCount = 0;
     let skippedCount = 0;
+    console.log(`Starting to loop through ${eligibleUsers.length} users...`);
 
     // 6. Loop over each eligible user
     for (const user of eligibleUsers) {
@@ -186,6 +192,8 @@ Deno.serve(async (req) => {
         continue;
       }
 
+      console.log(`Checked user ${userId} (${userEmail}). Found ${notifications?.length || 0} new notifications.`);
+
       if (!notifications || notifications.length === 0) {
         skippedCount++;
         continue;
@@ -195,6 +203,7 @@ Deno.serve(async (req) => {
       try {
         const emailHtml = generateDigestEmail(userName, notifications);
         const subject = `Your Weekly Digest: ${notifications.length} New Update${notifications.length > 1 ? 's' : ''}`;
+        console.log(`Attempting to send email to ${userEmail}...`);
         
         await resend.emails.send({
           // Remember to use your new verified domain here
@@ -220,6 +229,8 @@ Deno.serve(async (req) => {
       failed: failCount,
       skipped_no_notifs: skippedCount,
     };
+
+    console.log('Job finished. Returning summary:', JSON.stringify(summary));
     
     return new Response(JSON.stringify(summary), {
       headers: { 'Content-Type': 'application/json' },
