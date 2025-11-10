@@ -115,8 +115,6 @@ Deno.serve(async (req) => {
     });
   }
 
-  console.log('Function invoked with valid secret. Starting digest job...');
-
   try {
     // 3. Initialize Admin Clients
     const supabaseAdmin = createClient(
@@ -174,8 +172,7 @@ Deno.serve(async (req) => {
     let successCount = 0;
     let failCount = 0;
     let skippedCount = 0;
-    console.log(`Starting to loop through ${eligibleUsers.length} users...`);
-
+  
     // 6. Loop over each eligible user
     for (const user of eligibleUsers) {
       // @ts-ignore
@@ -217,8 +214,6 @@ Deno.serve(async (req) => {
         failCount++;
         continue;
       }
-
-      console.log(`Checked user ${userId} (${userEmail}). Found ${notifications?.length || 0} new notifications.`);
 
       if (!notifications || notifications.length === 0) {
         skippedCount++;
@@ -276,7 +271,6 @@ Deno.serve(async (req) => {
       try {
         const emailHtml = generateDigestEmail(userName, hydratedNotifications);
         const subject = `AIMedNet Weekly Digest: ${hydratedNotifications.length} New Update${hydratedNotifications.length > 1 ? 's' : ''}`;
-        console.log(`Attempting to send email to ${userEmail}...`);
         
         await resend.emails.send({
           // Remember to use your new verified domain here
@@ -285,8 +279,6 @@ Deno.serve(async (req) => {
           subject: subject,
           html: emailHtml,
         });
-        
-        console.log(`Successfully sent digest to ${userEmail}`);
         successCount++;
         
       } catch (emailError) {
