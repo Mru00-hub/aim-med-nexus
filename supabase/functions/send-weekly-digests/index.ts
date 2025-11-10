@@ -126,7 +126,7 @@ Deno.serve(async (req) => {
       .select(`
         id,
         full_name,
-        user:auth.users!id ( email ),
+        user:auth.users(email),
         preferences:notification_preferences!user_id ( email_enabled )
       `)
       .eq('preferences.email_enabled', true)
