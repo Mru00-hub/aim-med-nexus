@@ -94,13 +94,13 @@ Deno.serve(async (req) => {
   }
 
   // 2. Check Cron Secret for security
-  const authHeader = req.headers.get('Authorization');
+  const authHeader = req.headers.get('X-Cron-Secret');
   const cronSecret = Deno.env.get('CRON_SECRET');
   console.log('--- DEBUGGING SECRET CHECK ---');
   console.log('Received authHeader:', authHeader);
   console.log('Expected cronSecret:', cronSecret ? `"${cronSecret}"` : '(CRON_SECRET is NOT SET or DEPLOYED!)');
   console.log('Expected full string:', `Bearer ${cronSecret}`);
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+  if (!cronSecret || authHeader !== cronSecret) {
     console.warn('Forbidden: Invalid or missing cron secret.');
     return new Response(JSON.stringify({ error: 'Forbidden: Invalid secret' }), {
       status: 403,
