@@ -67,7 +67,7 @@ function generateDigestEmail(userName: string, notifications: any[]): string {
       </ul>
       <p style="margin-top: 30px; text-align: center;">
         <a 
-          href="https://aim-med-nexus.in/notifications" 
+          href="https://aimmednexus.in/notifications" 
           style="background-color: #0a0a0a; color: #ffffff; padding: 14px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px;"
         >
           View All Notifications
