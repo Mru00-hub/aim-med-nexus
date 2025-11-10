@@ -1,5 +1,5 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { Resend } from 'resend';
+import { createClient } from 'npm:@supabase/supabase-js@2';
+import { Resend } from 'npm:resend';
 
 // --- Helper Functions ---
 
@@ -114,6 +114,7 @@ Deno.serve(async (req) => {
     );
     
     const resend = new Resend(Deno.env.get('RESEND_API_KEY'));
+    const MY_TEST_USER_ID = '39b25a48-7c7e-44b4-bc2d-2e07cf68c2ed';
 
     // 4. Get all users who have email_enabled = true
     const { data: eligibleUsers, error: eligibleUsersError } = await supabaseAdmin
@@ -124,7 +125,8 @@ Deno.serve(async (req) => {
         user:auth.users!id ( email ),
         preferences:notification_preferences!user_id ( email_enabled )
       `)
-      .eq('preferences.email_enabled', true);
+      .eq('preferences.email_enabled', true)
+      .eq('id', MY_TEST_USER_ID);
 
     if (eligibleUsersError) throw eligibleUsersError;
     console.log(`Query for eligible users complete. Found: ${eligibleUsers?.length || 0}`);
