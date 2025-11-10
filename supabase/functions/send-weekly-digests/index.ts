@@ -126,7 +126,7 @@ Deno.serve(async (req) => {
       .select(`
         id,
         full_name,
-        user:id(email),
+        email,
         preferences:notification_preferences!user_id ( email_enabled )
       `)
       .eq('preferences.email_enabled', true)
@@ -158,7 +158,7 @@ Deno.serve(async (req) => {
       // @ts-ignore
       const userName = user.full_name;
       // @ts-ignore
-      const userEmail = user.user?.email;
+      const userEmail = user.email;
 
       if (!userEmail) {
         console.warn(`User ${userId} has email_enabled but no email found. Skipping.`);
