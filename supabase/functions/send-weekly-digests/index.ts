@@ -125,14 +125,12 @@ Deno.serve(async (req) => {
     );
     
     const resend = new Resend(Deno.env.get('RESEND_API_KEY'));
-    const MY_TEST_USER_ID = '39b25a48-7c7e-44b4-bc2d-2e07cf68c2ed';
 
     // 4. Get all users who have email_enabled = true
     const { data: eligibleUserIds, error: eligibleIdsError } = await supabaseAdmin
       .from('notification_preferences')
       .select('user_id')
-      .eq('email_enabled', true)
-      .eq('user_id', MY_TEST_USER_ID);
+      .eq('email_enabled', true);
 
     if (eligibleIdsError) throw eligibleIdsError;
 
