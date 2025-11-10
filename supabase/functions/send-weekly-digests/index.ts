@@ -76,6 +76,14 @@ function generateDigestEmail(userName: string, notifications: any[]): string {
       <p style="margin-top: 30px; font-size: 12px; color: #888; text-align: center;">
         To change your email settings, visit your account preferences on our website.
       </p>
+      <p style="margin-top: 10px; font-size: 12px; color: #888; text-align: center;">
+        <a 
+          href="https://aimmednexus.in/settings" 
+          style="color: #888; text-decoration: underline;"
+        >
+          Unsubscribe from these emails
+        </a>
+      </p>
     </div>
   `;
 }
@@ -269,12 +277,12 @@ Deno.serve(async (req) => {
       // 8. Format and Send the Email
       try {
         const emailHtml = generateDigestEmail(userName, hydratedNotifications);
-        const subject = `Your Weekly Digest: ${hydratedNotifications.length} New Update${hydratedNotifications.length > 1 ? 's' : ''}`;
+        const subject = `AIMedNet Weekly Digest: ${hydratedNotifications.length} New Update${hydratedNotifications.length > 1 ? 's' : ''}`;
         console.log(`Attempting to send email to ${userEmail}...`);
         
         await resend.emails.send({
           // Remember to use your new verified domain here
-          from: 'Your App Name <notifications@aimmednexus.in>', 
+          from: 'AIMedNet <notifications@aimmednexus.in>', 
           to: userEmail,
           subject: subject,
           html: emailHtml,
