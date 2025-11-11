@@ -32,9 +32,7 @@ export const submitPartnershipProposal = async (proposal: PartnershipProposal) =
     // 2. Perform the database insertion with validated data
     const { data, error } = await supabase
       .from('partnership_proposals')
-      .insert([validatedProposal])
-      .select()
-      .single();
+      .insert([validatedProposal]);
 
     // Handle potential database errors
     if (error) {
@@ -43,7 +41,7 @@ export const submitPartnershipProposal = async (proposal: PartnershipProposal) =
     }
     
     // 3. On success, return only the data
-    return data;
+    return { data, error };
 
   } catch (error) {
     // Catches both Zod validation errors and any other exceptions
