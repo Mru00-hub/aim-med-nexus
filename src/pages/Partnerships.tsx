@@ -89,7 +89,7 @@ const Partnerships = () => {
 
     try {
       const { data } = await submitPartnershipProposal(proposalData);
-      setSubmissionId(data.id.slice(0, 8).toUpperCase());
+      setSubmissionId(data[0].id.slice(0, 8).toUpperCase());
       setIsSubmitted(true);
       toast.success('Proposal submitted successfully!');
     } catch (error) {
