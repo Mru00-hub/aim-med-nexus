@@ -96,8 +96,6 @@ const AppContent = () => {
     // This 100% clears all old state and subscriptions.
     <SocialCountsProvider key={user ? user.id : 'logged-out'}>
       {console.log('--- 12. AppContent: SocialCountsProvider rendered ---')}
-      <Toaster />
-      <Sonner />
       
       <CommunityProvider>
         {console.log('--- 13. AppContent: CommunityProvider rendered, showing routes ---')} 
@@ -181,6 +179,8 @@ const App = () => {
           </AuthProvider>
           <Analytics />
           <SpeedInsights />
+          <Toaster />
+          <Sonner richColors position="top-right" />
         </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>
