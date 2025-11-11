@@ -7,7 +7,7 @@ import { getFeaturedVideos } from '@/integrations/supabase/content.api';
 import { FeaturedVideo } from '@/integrations/supabase/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, PlayCircle, ArrowLeft, ArrowRight } from 'lucide-react';
+import { Loader2, PlayCircle, ArrowLeft, ArrowRight, Youtube } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Dialog,
@@ -16,6 +16,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { YouTubeSubscribeButton } from '@/components/ui/youtube-subscribe-button';
 
 import useCarousel from 'embla-carousel-react';
 import Autoplay from 'embla-carousel-autoplay';
@@ -179,7 +180,24 @@ export const FeaturedVideos = () => {
           {/* --- 1. PARTNERS' CONTENT (MOVED UP) --- */}
           {(isLoading || partnerVideos.length > 0) && (
             <div className="mb-10"> 
-              <h3 className="text-xl font-semibold mb-6">From Our Partners</h3>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4">
+                <h3 className="text-xl font-semibold">
+                  From Our Partners
+                </h3>
+                
+                {/* This is the new subscribe button element */}
+                <div className="flex items-center gap-2.5 p-2 rounded-lg bg-muted/50">
+                  <span className="text-sm font-medium text-muted-foreground">
+                    Feat. Partner: <span className="font-bold text-foreground">Medhustlr</span>
+                  </span>
+                  <Button asChild variant="destructive" size="sm" className="bg-red-600 hover:bg-red-700">
+                    <a href="https://www.youtube.com/@Medhustlr" target="_blank" rel="noopener noreferrer">
+                      <Youtube className="h-4 w-4 mr-1.5" />
+                      Subscribe
+                    </a>
+                  </Button>
+                </div>
+              </div>
               <VideoCarousel
                 videos={partnerVideos}
                 isLoading={isLoading}
@@ -223,6 +241,19 @@ export const FeaturedVideos = () => {
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 allowFullScreen
               ></iframe>
+            </div>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4">
+              <div className="flex-1">
+                <p className="text-sm font-semibold">{selectedVideo.author_name}</p>
+                <p className="text-xs text-muted-foreground">
+                  {selectedVideo.author_type === 'partner' ? 'Featured Partner' : 'Founder'}
+                </p>
+              </div>
+        
+              {/* We only show the subscribe button for partners */}
+              {selectedVideo.author_type === 'partner' && selectedVideo.author_channel_id && (
+                <YouTubeSubscribeButton channelId={selectedVideo.author_channel_id} />
+              )}
             </div>
           </>
         )}
