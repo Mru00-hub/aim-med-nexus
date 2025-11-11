@@ -3356,4 +3356,5 @@ export type FeaturedVideo = {
   youtube_video_id: string;
   author_type: 'founder' | 'partner';
   author_name: string;
+  author_channel_id?: string | null;
 };
