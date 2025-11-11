@@ -88,8 +88,10 @@ const Partnerships = () => {
     };
 
     try {
+      // 1. Run the function
       const { data, error } = await submitPartnershipProposal(proposalData);
-      // 2. Check for a hard error (e.g., if the insert policy was still wrong)
+
+      // 2. Check for a hard error (e.g., if RLS was still wrong)
       if (error) {
         throw new Error(error.message);
       }
