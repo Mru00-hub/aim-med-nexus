@@ -88,39 +88,27 @@ const Partnerships = () => {
     };
 
     try {
-      // 1. Run the function
-      const { data, error } = await submitPartnershipProposal(proposalData);
+      // 1. Run the function. It no longer returns data.
+      const { error } = await submitPartnershipProposal(proposalData);
 
-      // 2. Check for a hard error (e.g., if RLS was still wrong)
+      // 2. Check for a hard error.
       if (error) {
+        // If the INSERT policy *still* fails for some reason,
+        // this will catch it.
         throw new Error(error.message);
       }
 
-      // 3. Check if data was returned (i.e., SELECT worked)
-      if (data && data.length > 0 && data[0].id) {
-        
-        // --- Full Success (Insert + Select) ---
-        // This won't happen for anonymous users, but it's good to have
-        setSubmissionId(data[0].id.slice(0, 8).toUpperCase());
-        setIsSubmitted(true);
-        toast.success('Proposal submitted successfully!');
+      // --- 3. SUCCESS ---
+      // If there was no error, the insert worked.
       
-      } else {
-        
-        // --- THIS IS YOUR CURRENT CASE ---
-        // Partial Success: Insert worked, but Select failed due to RLS.
-        // We treat this as a full success for the user.
-        
-        console.warn('Submission saved, but RLS prevented data return.');
-        setIsSubmitted(true);
-        setSubmissionId('N/A'); // Set a fallback since we couldn't get the ID
-        toast.success('Proposal submitted! Our team will review it.');
-      }
+      console.log('Submission successful.');
+      setIsSubmitted(true);
+      setSubmissionId('N/A'); // We no longer get an ID back, which is fine.
+      toast.success('Proposal submitted! Our team will review it.');
 
     } catch (error) {
       
       // --- Full Failure ---
-      // This will now only catch true errors
       console.error('Submission failed:', error);
       const errorMessage = (error instanceof Error) ? error.message : 'Please try again later.';
       toast.error(`Submission failed: ${errorMessage}`);
