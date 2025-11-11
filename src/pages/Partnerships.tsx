@@ -88,13 +88,41 @@ const Partnerships = () => {
     };
 
     try {
-      const { data } = await submitPartnershipProposal(proposalData);
-      setSubmissionId(data[0].id.slice(0, 8).toUpperCase());
-      setIsSubmitted(true);
-      toast.success('Proposal submitted successfully!');
+      const { data, error } = await submitPartnershipProposal(proposalData);
+      // 2. Check for a hard error (e.g., if the insert policy was still wrong)
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      // 3. Check if data was returned (i.e., SELECT worked)
+      if (data && data.length > 0 && data[0].id) {
+        
+        // --- Full Success (Insert + Select) ---
+        // This won't happen for anonymous users, but it's good to have
+        setSubmissionId(data[0].id.slice(0, 8).toUpperCase());
+        setIsSubmitted(true);
+        toast.success('Proposal submitted successfully!');
+      
+      } else {
+        
+        // --- THIS IS YOUR CURRENT CASE ---
+        // Partial Success: Insert worked, but Select failed due to RLS.
+        // We treat this as a full success for the user.
+        
+        console.warn('Submission saved, but RLS prevented data return.');
+        setIsSubmitted(true);
+        setSubmissionId('N/A'); // Set a fallback since we couldn't get the ID
+        toast.success('Proposal submitted! Our team will review it.');
+      }
+
     } catch (error) {
-      toast.error('Submission failed. Please try again later.');
-      console.error(error);
+      
+      // --- Full Failure ---
+      // This will now only catch true errors
+      console.error('Submission failed:', error);
+      const errorMessage = (error instanceof Error) ? error.message : 'Please try again later.';
+      toast.error(`Submission failed: ${errorMessage}`);
+    
     } finally {
       setIsLoading(false);
     }
