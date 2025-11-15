@@ -458,3 +458,20 @@ export const updateApplicationStatus = async (
   }
   return responseData;
 };
+
+/**
+ * Fetches just the logo and name for a company.
+ */
+export const getCompanyHeaderData = async (companyId: string): Promise<{ company_logo_url: string | null, company_name: string } | null> => {
+  const { data, error } = await supabase
+    .from('company_profiles')
+    .select('company_name, company_logo_url')
+    .eq('id', companyId)
+    .single();
+
+  if (error) {
+    console.error('Error fetching company header:', error);
+    return null;
+  }
+  return data;
+};
