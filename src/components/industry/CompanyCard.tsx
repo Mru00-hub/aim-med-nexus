@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { CompanyListing } from '@/integrations/supabase/industry.api.ts'; // Import our RPC type
+// This is the correct type from our API file for the get_all_companies RPC
+import { CompanyListing } from '@/integrations/supabase/industry.api';
 import {
   Card,
   CardContent,
@@ -20,7 +21,7 @@ interface CompanyCardProps {
 
 export const CompanyCard: React.FC<CompanyCardProps> = ({ company }) => {
   const {
-    id,
+    id, // This is the company_id
     company_name,
     company_logo_url,
     description,
@@ -29,7 +30,7 @@ export const CompanyCard: React.FC<CompanyCardProps> = ({ company }) => {
   } = company;
 
   return (
-    <Card className="flex h-full flex-col">
+    <Card className="flex h-full flex-col overflow-hidden transition-all hover:shadow-lg">
       <CardHeader className="flex flex-row items-start gap-4 space-y-0">
         <Avatar className="h-12 w-12 rounded-lg">
           <AvatarImage src={company_logo_url || ''} alt={`${company_name} logo`} />
@@ -58,10 +59,11 @@ export const CompanyCard: React.FC<CompanyCardProps> = ({ company }) => {
           </Badge>
         )}
         <Button asChild className="w-full">
-          {/* We will update this route in App.tsx later */}
+          {/* This route will be added to App.tsx */}
           <Link to={`/industryhub/company/${id}`}>View Profile</Link>
         </Button>
       </CardFooter>
     </Card>
   );
 };
+
