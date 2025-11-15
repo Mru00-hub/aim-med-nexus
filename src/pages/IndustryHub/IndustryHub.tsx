@@ -18,7 +18,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Loader2, AlertCircle, Info, Search, X } from 'lucide-react';
+import { Loader2, AlertCircle, Info, Search, X, Plus } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
 
 // Simple debounce hook
 const useDebounce = (value: string, delay: number) => {
@@ -41,6 +43,8 @@ export default function IndustryHub() {
     locationId: '',
   });
   const debouncedSearch = useDebounce(filters.search, 500);
+  const navigate = useNavigate(); // 2. Get navigate function
+  const { user } = useAuth();
 
   // Fetch data for filters
   const { data: industries } = useQuery({
@@ -93,6 +97,14 @@ export default function IndustryHub() {
     setFilters({ search: '', industryId: '', locationId: '' });
   };
 
+  const handleCreateCompanyClick = () => {
+    if (user) {
+      navigate('/industryhub/create-company'); // New page we will build
+    } else {
+      navigate('/login', { state: { from: '/industryhub/create-company' } });
+    }
+  };
+
   const renderContent = () => {
     if (isLoading && !data) {
       return (
@@ -141,13 +153,24 @@ export default function IndustryHub() {
       <main className="flex-1">
         <div className="container mx-auto max-w-7xl px-4 py-8 md:py-12">
           {/* Hero Section */}
-          <div className="mb-8">
-            <h1 className="mb-2 text-3xl font-bold tracking-tight md:text-4xl">
-              Industry Hub
-            </h1>
-            <p className="text-lg text-muted-foreground md:text-xl">
-              Explore companies, partners, and organizations.
-            </p>
+          <div className="mb-8 flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
+            <div>
+              <h1 className="mb-2 text-3xl font-bold tracking-tight md:text-4xl">
+                Industry Hub
+              </h1>
+              <p className="text-lg text-muted-foreground md:text-xl">
+                Explore companies, partners, and organizations.
+              </p>
+            </div>
+            {/* 5. ADDED THE BUTTON HERE */}
+            <Button 
+              size="lg" 
+              className="w-full flex-shrink-0 md:w-auto"
+              onClick={handleCreateCompanyClick}
+            >
+              <Plus className="mr-2 h-5 w-5" />
+              Create Company Page
+            </Button>
           </div>
 
           {/* Disclaimer */}
@@ -156,7 +179,7 @@ export default function IndustryHub() {
             <AlertTitle className="font-semibold">Welcome to the Hub</AlertTitle>
             <AlertDescription>
               All company profiles are managed directly by the organizations
-              themselves. AIM MedNexus does not endorse or verify all information.
+              themselves. AIMMedNet does not endorse or verify all information.
             </AlertDescription>
           </Alert>
 
