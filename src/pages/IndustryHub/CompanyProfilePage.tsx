@@ -169,7 +169,7 @@ export default function CompanyProfilePage() {
   }
 
   // --- Data is loaded, destructure it ---
-  const { profile: company, jobs, collaborations, links, is_following } = data;
+  const { jobs, collaborations, links, is_following } = data;
 
   return (
     <div className="min-h-screen bg-background">
@@ -266,7 +266,7 @@ export default function CompanyProfilePage() {
                       <CardTitle>About {data.company_name}</CardTitle>
                     </CardHeader>
                     <CardContent className="prose prose-sm md:prose-base max-w-none text-muted-foreground space-y-4">
-                      {company.description.split('\n\n').map((paragraph, index) => (
+                      {data.description.split('\n\n').map((paragraph, index) => (
                         <p key={index}>{paragraph}</p>
                       ))}
                     </CardContent>
