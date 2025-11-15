@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
@@ -6,6 +6,7 @@ import {
   createCompanyProfile,
   getIndustries,
   CreateCompanyPayload,
+  uploadNewCompanyLogo,
 } from '@/integrations/supabase/industry.api';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
@@ -37,12 +38,18 @@ type FormData = {
   location_id: string;
   description: string;
   website_url: string;
+  company_size: string; // Add this
+  founded_year: string; 
 };
 
 export default function CreateCompanyPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
+
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   // --- Data for Form Selects ---
   const { data: industries, isLoading: isLoadingIndustries } = useQuery({
@@ -84,10 +91,23 @@ export default function CreateCompanyPage() {
       location_id: '',
       description: '',
       website_url: '',
+      company_size: '', // Add this
+      founded_year: '',
     },
   });
 
   const watchedIndustryId = watch('industry_id');
+
+  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setLogoFile(file);
+      setLogoPreview(URL.createObjectURL(file));
+    } else {
+      setLogoFile(null);
+      setLogoPreview(null);
+    }
+  };
 
   // --- API Mutation ---
   const mutation = useMutation({
@@ -109,15 +129,42 @@ export default function CreateCompanyPage() {
     },
   });
 
-  const onSubmit = (data: FormData) => {
-    const payload = {
-      ...data,
-      website_url: data.website_url || undefined,
-      industry_id: data.industry_id === 'other' ? undefined : data.industry_id,
-      industry_other: data.industry_id === 'other' ? data.industry_other : undefined,
-    };
+    const onSubmit = async (data: FormData) => {
+    let logoUrl: string | undefined = undefined;
     
-    mutation.mutate(payload); // <-- This was the missing line
+    try {
+      // Step 1: Upload logo if it exists
+      if (logoFile) {
+        setIsUploading(true);
+        const { publicUrl } = await uploadNewCompanyLogo(logoFile);
+        logoUrl = publicUrl;
+        setIsUploading(false);
+      }
+
+      // Step 2: Prepare final payload
+      const payload: CreateCompanyPayload = {
+        company_name: data.company_name,
+        description: data.description,
+        location_id: data.location_id,
+        website_url: data.website_url || undefined,
+        industry_id: data.industry_id === 'other' ? undefined : data.industry_id,
+        industry_other: data.industry_id === 'other' ? data.industry_other : undefined,
+        company_size: data.company_size || undefined,
+        founded_year: data.founded_year ? parseInt(data.founded_year, 10) : undefined,
+        company_logo_url: logoUrl,
+      };
+
+      // Step 3: Call the mutation
+      mutation.mutate(payload);
+
+    } catch (error: any) {
+      setIsUploading(false);
+      toast({ 
+        title: "Error", 
+        description: error.message || "Failed to upload logo. Please try again.",
+        variant: "destructive" 
+      });
+    }
   };
   
   return (
@@ -161,6 +208,31 @@ export default function CreateCompanyPage() {
                 {errors.company_name && (
                   <p className="text-sm text-red-600">{errors.company_name.message}</p>
                 )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="company_logo">Company Logo (Optional)</Label>
+                <div className="flex items-center gap-4">
+                  {logoPreview ? (
+                    <img 
+                      src={logoPreview} 
+                      alt="Logo preview" 
+                      className="h-20 w-20 rounded-full object-cover" 
+                    />
+                  ) : (
+                    <div className="flex h-20 w-20 items-center justify-center rounded-full bg-gray-200">
+                      <Building className="h-8 w-8 text-gray-500" />
+                    </div>
+                  )}
+                  <Input
+                    id="company_logo"
+                    type="file"
+                    accept="image/png, image/jpeg, image/webp"
+                    onChange={handleLogoChange}
+                    className="file:text-primary-foreground"
+                    disabled={isUploading || mutation.isPending}
+                  />
+                </div>
               </div>
 
               {/* Industry & Location */}
@@ -228,26 +300,79 @@ export default function CreateCompanyPage() {
                   )}
                 </div>
               </div>
-            {watchedIndustryId === 'other' && (
-              <div className="space-y-2">
-                <Label htmlFor="industry_other">Please specify industry *</Label>
-                <Controller
-                  name="industry_other"
-                  control={control}
-                  rules={{ required: 'Industry name is required when "Other" is selected' }}
-                  render={({ field }) => (
-                    <Input
-                      id="industry_other"
-                      placeholder="e.g., Medical Device Manufacturing"
-                      {...field}
-                    />
+
+              {watchedIndustryId === 'other' && (
+                <div className="space-y-2">
+                  <Label htmlFor="industry_other">Please specify industry *</Label>
+                  <Controller
+                    name="industry_other"
+                    control={control}
+                    rules={{ required: 'Industry name is required when "Other" is selected' }}
+                    render={({ field }) => (
+                      <Input
+                        id="industry_other"
+                        placeholder="e.g., Medical Device Manufacturing"
+                        {...field}
+                      />
+                    )}
+                  />
+                  {errors.industry_other && (
+                    <p className="text-sm text-red-600">{errors.industry_other.message}</p>
                   )}
-                />
-                {errors.industry_other && (
-                  <p className="text-sm text-red-600">{errors.industry_other.message}</p>
-                )}
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="company_size">Company Size *</Label>
+                  <Controller
+                    name="company_size"
+                    control={control}
+                    rules={{ required: 'Company size is required' }}
+                    render={({ field }) => (
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <SelectTrigger id="company_size">
+                          <SelectValue placeholder="Select company size..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {companySizeOptions.map((size) => (
+                            <SelectItem key={size} value={size}>
+                              {size}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                  {errors.company_size && (
+                    <p className="text-sm text-red-600">{errors.company_size.message}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="founded_year">Founded Year *</Label>
+                  <Controller
+                    name="founded_year"
+                    control={control}
+                    rules={{ 
+                      required: 'Founded year is required',
+                      min: { value: 1800, message: 'Must be a valid year' },
+                      max: { value: new Date().getFullYear(), message: 'Year cannot be in the future' }
+                    }}
+                    render={({ field }) => (
+                      <Input
+                        id="founded_year"
+                        type="number"
+                        placeholder={`e.g., ${new Date().getFullYear() - 5}`}
+                        {...field}
+                      />
+                    )}
+                  />
+                  {errors.founded_year && (
+                    <p className="text-sm text-red-600">{errors.founded_year.message}</p>
+                  )}
+                </div>
               </div>
-            )}
 
               {/* Website URL */}
               <div className="space-y-2">
@@ -288,11 +413,15 @@ export default function CreateCompanyPage() {
 
               {/* Submit */}
               <div className="flex justify-end">
-                <Button type="submit" size="lg" disabled={mutation.isPending}>
-                  {mutation.isPending && (
+                <Button 
+                  type="submit" 
+                  size="lg" 
+                  disabled={isUploading || mutation.isPending}
+                >
+                  {(isUploading || mutation.isPending) && (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   )}
-                  Create Profile
+                  {isUploading ? 'Uploading Logo...' : (mutation.isPending ? 'Creating...' : 'Create Profile')}
                 </Button>
               </div>
             </form>
