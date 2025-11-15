@@ -20,6 +20,7 @@ import {
   Users,
 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { CompanySidebarCard } from '@/components/industry/CompanySidebarCard';
 
 // Helper to format text
 const toTitleCase = (str: string | null | undefined) => {
@@ -178,29 +179,11 @@ export default function CollabDetailPage() {
                 </CardContent>
               </Card>
 
-              {/* Company Card */}
-              <Card className="shadow-sm">
-                <CardHeader className="flex flex-row items-center gap-4">
-                  <Avatar className="h-12 w-12 rounded-lg">
-                    {/* We need to fetch the company logo, but for now we use a fallback */}
-                    <AvatarFallback className="rounded-lg">
-                      <Building className="h-6 w-6" />
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <CardTitle className="text-lg">
-                      {company_name}
-                    </CardTitle>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <Button asChild variant="outline" className="w-full">
-                    <Link to={`/industryhub/company/${company_id}`}>
-                      View Company Profile
-                    </Link>
-                  </Button>
-                </CardContent>
-              </Card>
+              <CompanySidebarCard 
+                companyId={company_id} 
+                companyName={company_name} 
+              />
+
             </div>
           </div>
         </div>
