@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
@@ -39,6 +39,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Skeleton } from '@/components/ui/skeleton';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 
 // --- Zod Schema ---
 const companyFormSchema = z.object({
@@ -62,6 +63,64 @@ export default function EditCompanyPage() {
 
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [bannerFile, setBannerFile] = useState<File | null>(null);
+
+  const [locations, setLocations] = useState<{ id: string; label: string }[]>([]);
+  const [locationSearch, setLocationSearch] = useState("");
+  const [isLocLoading, setIsLocLoading] = useState(false);
+  const isMounted = useRef(false);
+
+  useEffect(() => {
+    const fetchSearchLocations = async () => {
+      setIsLocLoading(true);
+      const { data, error } = await supabase
+        .from('locations')
+        .select('id, label') // We only need id and label
+        .neq('label', 'Other') // Assuming 'Other' is a label
+        .or(`label.ilike.%${locationSearch}%`)
+        .order('label')
+        .limit(50);
+      
+      if (data) setLocations(data);
+      if (error) console.error('Error fetching search locations:', error);
+      setIsLocLoading(false);
+    };
+
+    const fetchInitialLocations = async () => {
+       setIsLocLoading(true);
+       const { data, error } = await supabase
+        .from('locations')
+        .select('id, label')
+        .neq('label', 'Other')
+        .order('label')
+        .limit(10); // Fetch top 10
+      
+       if (data) setLocations(data);
+       if (error) console.error('Error fetching initial locations:', error);
+       setIsLocLoading(false);
+    };
+
+    if (!isMounted.current) {
+      isMounted.current = true;
+      fetchInitialLocations();
+      return;
+    }
+
+    const searchTimer = setTimeout(() => {
+      if (locationSearch.length < 2) {
+        fetchInitialLocations();
+      } else {
+        fetchSearchLocations();
+      }
+    }, 500); // 500ms debounce
+    
+    return () => clearTimeout(searchTimer);
+
+  }, [locationSearch]);
+
+  const locationOptions = useMemo(() => 
+    locations.map(loc => ({ value: loc.id, label: loc.label })),
+    [locations]
+  );
 
   const { data: companyId } = useQuery<string | null, Error>({
     queryKey: ['myAdminCompanyId'],
@@ -94,14 +153,6 @@ export default function EditCompanyPage() {
 
   // 3. Fetch data for dropdowns
   const { data: industries } = useQuery({ queryKey: ['industries'], queryFn: getIndustries });
-  const { data: locations } = useQuery({
-    queryKey: ['locations'],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('locations').select('*');
-      if (error) throw new Error(error.message);
-      return data;
-    },
-  });
 
   const form = useForm<CompanyFormData>({
     resolver: zodResolver(companyFormSchema),
@@ -315,18 +366,16 @@ export default function EditCompanyPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Location *</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger><SelectValue placeholder="Select a location..." /></SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {locations?.map((location) => (
-                              <SelectItem key={location.id} value={location.id}>
-                                {location.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <SearchableSelect
+                          value={field.value}
+                          onValueChange={field.onChange}
+                          options={locationOptions}
+                          onSearchChange={setLocationSearch}
+                          isLoading={isLocLoading}
+                          placeholder="Select your location..."
+                          searchPlaceholder="Search locations... (min 2 chars)"
+                          emptyMessage="No location found."
+                        />
                         <FormMessage />
                       </FormItem>
                     )}
