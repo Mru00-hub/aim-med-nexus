@@ -16,6 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/componen
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   Building, Globe, Users, MapPin, Calendar, MessageSquare,
   Briefcase, Link as LinkIcon, Linkedin, Twitter, ExternalLink,
