@@ -33,6 +33,7 @@ import { Label } from '@/components/ui/label';
 type FormData = {
   company_name: string;
   industry_id: string;
+  industry_other: string;
   location_id: string;
   description: string;
   website_url: string;
@@ -62,16 +63,20 @@ export default function CreateCompanyPage() {
   const {
     control,
     handleSubmit,
+    watch, 
     formState: { errors },
   } = useForm<FormData>({
     defaultValues: {
       company_name: '',
       industry_id: '',
+      industry_other: '',
       location_id: '',
       description: '',
       website_url: '',
     },
   });
+
+  const watchedIndustryId = watch('industry_id');
 
   // --- API Mutation ---
   const mutation = useMutation({
@@ -94,10 +99,11 @@ export default function CreateCompanyPage() {
   });
 
   const onSubmit = (data: FormData) => {
-    mutation.mutate({
-      ...data,
-      website_url: data.website_url || undefined,
-    });
+    const payload = {
+    ...data,
+    website_url: data.website_url || undefined,
+    industry_id: data.industry_id === 'other' ? undefined : data.industry_id,
+    industry_other: data.industry_id === 'other' ? data.industry_other : undefined,
   };
 
   return (
@@ -113,7 +119,7 @@ export default function CreateCompanyPage() {
               Create Your Company Profile
             </CardTitle>
             <CardDescription className="text-center text-lg">
-              Establish your presence on AIM MedNexus to post jobs and find collaborators.
+              Establish your presence on AIMedNet to post jobs and find collaborators.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -160,11 +166,14 @@ export default function CreateCompanyPage() {
                           {isLoadingIndustries ? (
                             <SelectItem value="loading" disabled>Loading...</SelectItem>
                           ) : (
-                            industries?.map((industry) => (
+                            <> 
+                            {industries?.map((industry) => (
                               <SelectItem key={industry.id} value={industry.id}>
                                 {industry.name}
                               </SelectItem>
-                            ))
+                            ))}
+                            <SelectItem value="other">Other</SelectItem>
+                            </>
                           )}
                         </SelectContent>
                       </Select>
@@ -205,6 +214,26 @@ export default function CreateCompanyPage() {
                   )}
                 </div>
               </div>
+            {watchedIndustryId === 'other' && (
+              <div className="space-y-2">
+                <Label htmlFor="industry_other">Please specify industry *</Label>
+                <Controller
+                  name="industry_other"
+                  control={control}
+                  rules={{ required: 'Industry name is required when "Other" is selected' }}
+                  render={({ field }) => (
+                    <Input
+                      id="industry_other"
+                      placeholder="e.g., Medical Device Manufacturing"
+                      {...field}
+                    />
+                  )}
+                />
+                {errors.industry_other && (
+                  <p className="text-sm text-red-600">{errors.industry_other.message}</p>
+                )}
+              </div>
+            )}
 
               {/* Website URL */}
               <div className="space-y-2">
