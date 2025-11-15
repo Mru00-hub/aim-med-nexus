@@ -6,6 +6,7 @@ import type { Database, Tables, Enums, TablesInsert, TablesUpdate } from '../../
 
 export type Industry = Tables<'industries'>;
 export type CompanyProfile = Tables<'company_profiles'>;
+
 // Based on the 'get_job_details' RPC
 export type CompanyJobDetails = {
   id: string;
@@ -20,8 +21,9 @@ export type CompanyJobDetails = {
   job_type: string;
   experience_level: string;
   location_type: string;
-  location_text: string;
-  specialties_required: string[];
+  location_id: string | null; // Changed
+  location_name: string | null; // Added (from JOIN in RPC)
+  specializations: { id: string; label: string }[]; // Added (from JOIN in RPC)
   external_apply_url: string | null;
   is_active: boolean;
   created_at: string;
@@ -39,8 +41,9 @@ export type CollaborationDetails = {
   // --- Data from collaborations ---
   collaboration_type: Enums<'collab_type_enum'>;
   description: string;
-  required_specialty: string[];
-  location: string;
+  location_id: string | null; // Changed
+  location_name: string | null; // Added (from JOIN in RPC)
+  specializations: { id: string; label: string }[]; // Added (from JOIN in RPC)
   duration: string;
   is_active: boolean;
   applicants_count: number;
@@ -90,12 +93,12 @@ export type CompanyProfileDetails = {
 // Type for creating a new company profile
 export type CreateCompanyPayload = {
   company_name: string;
-  industry_id?: string; // Make optional
-  industry_other?: string; // Add this
+  industry_id?: string;
+  industry_other?: string;
   location_id: string;
   description: string;
   website_url?: string;
-  company_size?: string; // Add this
+  company_size?: string;
   founded_year?: number;
   company_logo_url?: string;
 };
@@ -123,8 +126,8 @@ export type CreateJobPayload = {
   p_job_type?: string;
   p_experience_level?: string;
   p_location_type?: string;
-  p_location_text?: string;
-  p_specialties_required?: string[];
+  p_location_id?: string; // Changed
+  p_specialization_ids?: string[]; // Changed
   p_external_apply_url?: string;
 };
 
@@ -133,10 +136,10 @@ export type UpdateJobPayload = {
   p_job_id: string; // The UUID of the job to update
   p_title?: string | null;
   p_description?: string | null;
-  p_specialties_required?: string[] | null;
+  p_specialization_ids?: string[] | null; // Changed
   p_job_type?: string | null;
   p_location_type?: string | null;
-  p_location_text?: string | null;
+  p_location_id?: string | null; // Changed
   p_experience_level?: string | null;
   p_external_apply_url?: string | null;
 };
@@ -147,8 +150,8 @@ export type CreateCollaborationPayload = {
   p_title: string;
   p_collaboration_type: Enums<'collab_type_enum'>;
   p_description: string;
-  p_required_specialty?: string[];
-  p_location?: string;
+  p_specialization_ids?: string[]; // Changed
+  p_location_id?: string; // Changed
   p_duration?: string;
 };
 
@@ -158,9 +161,9 @@ export type UpdateCollabPayload = {
   p_title?: string | null;
   p_description?: string | null;
   p_collaboration_type?: Enums<'collab_type_enum'> | null;
-  p_required_specialty?: string[] | null;
+  p_specialization_ids?: string[] | null; // Changed
   p_duration?: string | null;
-  p_location?: string | null;
+  p_location_id?: string | null; // Changed
 };
 
 // Type for 'apply_for_job' RPC arguments
@@ -177,16 +180,16 @@ export type ApplyCollabPayload = {
 export type AddManagerPayload = {
   p_company_id: string;
   p_user_id: string;
-  p_role: 'ADMIN' | 'MEMBER'; // Use specific string literals
+  p_role: 'ADMIN' | 'MEMBER';
 };
 
 export type UpdateManagerRolePayload = {
-  p_manager_record_id: string; // The UUID of the 'company_managers' row
+  p_manager_record_id: string;
   p_new_role: 'ADMIN' | 'MEMBER';
 };
 
 export type RemoveManagerPayload = {
-  p_manager_record_id: string; // The UUID of the 'company_managers' row
+  p_manager_record_id: string;
 };
 export type AddLinkPayload = {
   p_company_id: string;
@@ -197,7 +200,7 @@ export type AddLinkPayload = {
 };
 
 export type UpdateLinkPayload = {
-  p_link_id: string; // The UUID of the 'company_links' row
+  p_link_id: string;
   p_link_type?: Enums<'link_type_enum'> | null;
   p_title?: string | null;
   p_url?: string | null;
@@ -205,7 +208,7 @@ export type UpdateLinkPayload = {
 };
 
 export type DeleteLinkPayload = {
-  p_link_id: string; // The UUID of the 'company_links' row
+  p_link_id: string;
 };
 // Type for 'get_my_job_applications' RPC
 export type MyJobApplication = Database['public']['Functions']['get_my_job_applications']['Returns'][number];
@@ -236,11 +239,10 @@ const getSessionOrThrow = async () => {
  * Fetches all industries for filter dropdowns.
  */
 export const getIndustries = async (): Promise<Industry[]> => {
-  // CORRECTED: Changed from a non-existent RPC to a direct table query
   const { data, error } = await supabase
     .from('industries')
     .select('*')
-    .order('name', { ascending: true }); // Optional: alphabetize them
+    .order('name', { ascending: true });
 
   if (error) throw error;
   return data || [];
@@ -298,7 +300,6 @@ export const getAllCompanies = async (payload: {
  * (Assuming you have this RPC)
  */
 export const getCompanyProfileDetails = async (companyId: string): Promise<CompanyProfileDetails> => {
-  // @ts-ignore - Assuming get_company_profile_details RPC exists
   const { data, error } = await supabase.rpc('get_company_profile_details', {
     p_company_id: companyId
   });
@@ -306,33 +307,34 @@ export const getCompanyProfileDetails = async (companyId: string): Promise<Compa
   return data as CompanyProfileDetails;
 };
 
-// --- 1. Corrected function to get job details ---
-
 /**
  * Fetches a single job's details, including the company's info,
  * by calling the get_job_details RPC.
+ *
+ * NOTE: You must update your 'get_job_details' RPC to JOIN with
+ * 'locations' and 'job_specializations' -> 'specializations'
+ * to match the 'CompanyJobDetails' type.
  */
 export const getJobById = async (jobId: string): Promise<CompanyJobDetails> => {
   const { data, error } = await supabase
     .rpc('get_job_details', {
       p_job_id: jobId 
     })
-    .single(); // .single() is perfect here since the RPC returns one row
+    .single();
 
   if (error) throw error;
   if (!data) throw new Error('Job not found');
   
-  // The 'data' object now contains all columns:
-  // { id, title, ..., company_id, company_name, company_logo_url, ... }
   return data;
 };
-
-
-// --- 2. Corrected function to get collab details ---
 
 /**
  * Fetches a single collab's details, including the company's info,
  * by calling the get_collaboration_details RPC.
+ *
+ * NOTE: You must update your 'get_collaboration_details' RPC to JOIN
+ * with 'locations' and 'collaboration_specializations' -> 'specializations'
+ * to match the 'CollaborationDetails' type.
  */
 export const getCollabById = async (collabId: string): Promise<CollaborationDetails> => {
   const { data, error } = await supabase
@@ -344,7 +346,6 @@ export const getCollabById = async (collabId: string): Promise<CollaborationDeta
   if (error) throw error;
   if (!data) throw new Error('Collaboration not found');
   
-  // The 'data' object now has all collab and company info
   return data;
 };
 
@@ -352,22 +353,20 @@ export const getCollabById = async (collabId: string): Promise<CollaborationDeta
 
 /**
  * Creates a new company profile.
- * The creator is automatically made an 'owner' by the database trigger.
- * (Assuming you have this RPC)
  */
 export const createCompanyProfile = async (payload: CreateCompanyPayload): Promise<CompanyProfile> => {
   await getSessionOrThrow();
   
-  // @ts-ignore - RPC exists and is now updated
   const { data, error } = await supabase.rpc('create_company_profile', {
     p_company_name: payload.company_name,
     p_description: payload.description,
     p_location_id: payload.location_id,
     p_website_url: payload.website_url || null,
-    p_industry_id: payload.industry_id || null, // Pass as null if undefined
-    p_industry_other: payload.industry_other || null, // Pass new field
-    p_company_size: payload.company_size || null, // Pass new field
-    p_founded_year: payload.founded_year || null // Pass new field
+    p_industry_id: payload.industry_id || null,
+    p_industry_other: payload.industry_other || null,
+    p_company_size: payload.company_size || null,
+    p_founded_year: payload.founded_year || null,
+    p_company_logo_url: payload.company_logo_url || null
   });
   
   if (error) throw error;
@@ -375,33 +374,16 @@ export const createCompanyProfile = async (payload: CreateCompanyPayload): Promi
 };
 
 /**
- * --- NEW: Updates a company's profile ---
- * (Must be a manager. Relies on RLS.)
+ * Updates a company's profile.
  */
 export const updateCompanyProfile = async (
   payload: UpdateCompanyPayload
 ): Promise<CompanyProfile> => {
   await getSessionOrThrow();
   
-  // We must map the payload to the RPC arguments
-  const rpcParams = {
-    p_company_id: payload.id,
-    p_company_name: payload.company_name,
-    p_description: payload.description,
-    p_website_url: payload.website_url,
-    p_company_logo_url: payload.company_logo_url,
-    p_company_banner_url: payload.company_banner_url,
-    p_company_size: payload.company_size,
-    p_founded_year: payload.founded_year,
-    p_industry_id: payload.industry_id,
-    p_location_id: payload.location_id,
-  };
-
+  // The payload's keys (p_company_id, etc.) directly match the RPC args
   const { data, error } = await supabase
-    .rpc('update_company_profile', {
-      ...payload, // Pass all fields from the payload
-      p_industry_other: payload.p_industry_other || null // Ensure it's null if undefined
-    })
+    .rpc('update_company_profile', payload)
     .single();
     
   if (error) throw error;
@@ -411,12 +393,9 @@ export const updateCompanyProfile = async (
 
 /**
  * Toggles following or unfollowing a company.
- * Returns true if the user is now following, false otherwise.
- * (Assuming you have this RPC)
  */
 export const toggleFollowCompany = async (companyId: string): Promise<boolean> => {
   await getSessionOrThrow();
-  // @ts-ignore - Assuming toggle_follow_company RPC exists
   const { data, error } = await supabase.rpc('toggle_follow_company', {
     p_company_id: companyId
   });
@@ -425,41 +404,28 @@ export const toggleFollowCompany = async (companyId: string): Promise<boolean> =
 };
 
 /**
- * Creates a new job posting. (Must be a manager).
- * (Assuming you have this RPC)
+ * Creates a new job posting.
  */
 export const createCompanyJob = async (payload: CreateJobPayload): Promise<CompanyJob> => {
   await getSessionOrThrow();
-  // @ts-ignore - Assuming create_company_job RPC exists
+  
+  // Payload keys match RPC arguments
   const { data, error } = await supabase.rpc('create_company_job', payload);
   if (error) throw error;
   return data;
 };
 
 /**
- * --- NEW: Updates an existing job posting ---
- * (Must be a manager. Relies on RLS.)
+ * Updates an existing job posting.
  */
 export const updateCompanyJob = async (
   payload: UpdateJobPayload
 ): Promise<CompanyJob> => {
   await getSessionOrThrow();
   
-  // Map payload to RPC arguments
-  const rpcParams = {
-    p_job_id: payload.id,
-    p_title: payload.title,
-    p_description: payload.description,
-    p_specialties_required: payload.specialties_required,
-    p_job_type: payload.job_type,
-    p_location_type: payload.location_type,
-    p_location_text: payload.location_text,
-    p_experience_level: payload.experience_level,
-    p_external_apply_url: payload.external_apply_url,
-  };
-
+  // Payload keys match RPC arguments
   const { data, error } = await supabase
-    .rpc('update_company_job', rpcParams)
+    .rpc('update_company_job', payload)
     .single();
     
   if (error) throw error;
@@ -483,39 +449,28 @@ export const setJobActiveStatus = async (
 };
 
 /**
- * Creates a new collaboration posting. (Must be a manager).
- * (Assuming you have this RPC)
+ * Creates a new collaboration posting.
  */
 export const createCollaboration = async (payload: CreateCollaborationPayload): Promise<Collaboration> => {
   await getSessionOrThrow();
-  // @ts-ignore - Assuming create_collaboration RPC exists
+  
+  // Payload keys match RPC arguments
   const { data, error } = await supabase.rpc('create_collaboration', payload);
   if (error) throw error;
   return data;
 };
 
 /**
- * --- NEW: Updates an existing collaboration ---
- * (Must be a manager. Relies on RLS.)
+ * Updates an existing collaboration.
  */
 export const updateCollaboration = async (
   payload: UpdateCollabPayload
 ): Promise<Collaboration> => {
   await getSessionOrThrow();
   
-  // Map payload to RPC arguments
-  const rpcParams = {
-    p_collab_id: payload.id,
-    p_title: payload.title,
-    p_description: payload.description,
-    p_collaboration_type: payload.collaboration_type,
-    p_required_specialty: payload.required_specialty,
-    p_duration: payload.duration,
-    p_location: payload.location,
-  };
-
+  // Payload keys match RPC arguments
   const { data, error } = await supabase
-    .rpc('update_collaboration', rpcParams)
+    .rpc('update_collaboration', payload)
     .single();
     
   if (error) throw error;
@@ -523,8 +478,7 @@ export const updateCollaboration = async (
 };
 
 /**
- * --- NEW: Soft-deletes a collaboration (sets is_active = false) ---
- * (Must be a manager. Relies on RLS.)
+ * Soft-deletes a collaboration (sets is_active = false)
  */
 export const setCollabActiveStatus = async (
   collabId: string,
@@ -544,7 +498,7 @@ export const setCollabActiveStatus = async (
 
 
 /**
- * Applies for a job. (Authenticated users only).
+ * Applies for a job.
  */
 export const applyForJob = async (payload: ApplyJobPayload): Promise<any> => {
   await getSessionOrThrow();
@@ -553,7 +507,7 @@ export const applyForJob = async (payload: ApplyJobPayload): Promise<any> => {
     p_cover_letter: payload.p_cover_letter
   });
   
-  if (error) throw new Error(JSON.parse(error.message).message); // Throw the user-friendly message
+  if (error) throw new Error(JSON.parse(error.message).message);
   
   const responseData = data as any;
   if (responseData.status >= 400) {
@@ -564,7 +518,7 @@ export const applyForJob = async (payload: ApplyJobPayload): Promise<any> => {
 };
 
 /**
- * Applies for a collaboration. (Authenticated users only).
+ * Applies for a collaboration.
  */
 export const applyForCollaboration = async (payload: ApplyCollabPayload): Promise<any> => {
   await getSessionOrThrow();
@@ -585,7 +539,6 @@ export const applyForCollaboration = async (payload: ApplyCollabPayload): Promis
 
 /**
  * Uploads a file (logo or banner) to the company's asset folder.
- * (Must be a manager).
  */
 export const uploadCompanyAsset = async (companyId: string, file: File): Promise<{ publicUrl: string }> => {
   await getSessionOrThrow();
@@ -594,7 +547,6 @@ export const uploadCompanyAsset = async (companyId: string, file: File): Promise
   const fileName = `${Date.now()}.${fileExt}`;
   const filePath = `${companyId}/${fileName}`;
 
-  // Assuming 'industry_hub_assets' is your bucket name
   const { error: uploadError } = await supabase.storage
     .from('industry_hub_assets')
     .upload(filePath, file);
@@ -632,7 +584,7 @@ export const getMyCollabApplications = async (): Promise<MyCollabApplication[]> 
 };
 
 /**
- * Fetches all applicants for a specific job. (Company admin only).
+ * Fetches all applicants for a specific job.
  */
 export const getJobApplicants = async (jobId: string): Promise<Applicant[]> => {
   await getSessionOrThrow();
@@ -644,7 +596,7 @@ export const getJobApplicants = async (jobId: string): Promise<Applicant[]> => {
 };
 
 /**
- * Fetches all applicants for a specific collaboration. (Company admin only).
+ * Fetches all applicants for a specific collaboration.
  */
 export const getCollabApplicants = async (collabId: string): Promise<Applicant[]> => {
   await getSessionOrThrow();
@@ -656,7 +608,7 @@ export const getCollabApplicants = async (collabId: string): Promise<Applicant[]
 };
 
 /**
- * Updates the status of an application. (Company admin only).
+ * Updates the status of an application.
  */
 export const updateApplicationStatus = async (
   applicationId: string,
@@ -776,17 +728,14 @@ export const getCompanyManagers = async (companyId: string): Promise<CompanyMana
 
 /**
  * Uploads a logo file for a new company.
- * Uploads to a user-specific folder, not a company-specific one.
  */
 export const uploadNewCompanyLogo = async (file: File): Promise<{ publicUrl: string }> => {
   const session = await getSessionOrThrow();
   const fileExt = file.name.split('.').pop();
   const fileName = `${Date.now()}.${fileExt}`;
   
-  // Upload to a folder based on the user's ID
   const filePath = `public/${session.user.id}/${fileName}`;
 
-  // Assuming 'industry_hub_assets' is your bucket name
   const { error: uploadError } = await supabase.storage
     .from('industry_hub_assets')
     .upload(filePath, file);
