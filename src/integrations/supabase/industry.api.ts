@@ -90,10 +90,13 @@ export type CompanyProfileDetails = {
 // Type for creating a new company profile
 export type CreateCompanyPayload = {
   company_name: string;
-  industry_id: string;
+  industry_id?: string; // Make optional
+  industry_other?: string; // Add this
   location_id: string;
   description: string;
   website_url?: string;
+  company_size?: string; // Add this
+  founded_year?: number;
 };
 
 // --- ADDED: Type for updating a company profile ---
@@ -351,15 +354,20 @@ export const getCollabById = async (collabId: string): Promise<CollaborationDeta
  * (Assuming you have this RPC)
  */
 export const createCompanyProfile = async (payload: CreateCompanyPayload): Promise<CompanyProfile> => {
-  await getSessionOrThrow(); 
-  // @ts-ignore - Assuming create_company_profile RPC exists
+  await getSessionOrThrow();
+  
+  // @ts-ignore - RPC exists and is now updated
   const { data, error } = await supabase.rpc('create_company_profile', {
     p_company_name: payload.company_name,
-    p_industry_id: payload.industry_id,
-    p_location_id: payload.location_id,
     p_description: payload.description,
-    p_website_url: payload.website_url || null
+    p_location_id: payload.location_id,
+    p_website_url: payload.website_url || null,
+    p_industry_id: payload.industry_id || null, // Pass as null if undefined
+    p_industry_other: payload.industry_other || null, // Pass new field
+    p_company_size: payload.company_size || null, // Pass new field
+    p_founded_year: payload.founded_year || null // Pass new field
   });
+  
   if (error) throw error;
   return data;
 };
