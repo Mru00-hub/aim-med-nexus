@@ -6,8 +6,47 @@ import type { Database, Tables, Enums, TablesInsert, TablesUpdate } from '../../
 
 export type Industry = Tables<'industries'>;
 export type CompanyProfile = Tables<'company_profiles'>;
-export type CompanyJob = Tables<'company_jobs'>;
-export type Collaboration = Tables<'collaborations'>;
+// Based on the 'get_job_details' RPC
+export type CompanyJobDetails = {
+  id: string;
+  company_id: string;
+  // --- Data from company_profiles ---
+  company_name: string;
+  company_logo_url: string | null;
+  company_headline: string | null;
+  // --- Data from company_jobs ---
+  title: string;
+  description: string;
+  job_type: string;
+  experience_level: string;
+  location_type: string;
+  location_text: string;
+  specialties_required: string[];
+  external_apply_url: string | null;
+  is_active: boolean;
+  created_at: string;
+};
+
+// Based on the 'get_collaboration_details' RPC
+export type CollaborationDetails = {
+  id: string;
+  title: string;
+  company_id: string;
+  // --- Data from company_profiles ---
+  company_name: string;
+  company_logo_url: string | null;
+  company_headline: string | null;
+  // --- Data from collaborations ---
+  collaboration_type: Enums<'collab_type_enum'>;
+  description: string;
+  required_specialty: string[];
+  location: string;
+  duration: string;
+  is_active: boolean;
+  applicants_count: number;
+  created_at: string;
+};
+
 export type CompanyLink = Tables<'company_links'>;
 export type JobApplication = Tables<'job_applications'>;
 export type CollaborationApplication = Tables<'collaboration_applications'>;
@@ -176,35 +215,45 @@ export const getCompanyProfileDetails = async (companyId: string): Promise<Compa
   return data as CompanyProfileDetails;
 };
 
+// --- 1. Corrected function to get job details ---
+
 /**
- * --- ADDED: Fetches a single job's details by its ID. ---
- * This is used by JobDetailPage.tsx and EditJobPage.tsx
+ * Fetches a single job's details, including the company's info,
+ * by calling the get_job_details RPC.
  */
-export const getJobById = async (jobId: string): Promise<CompanyJob> => {
+export const getJobById = async (jobId: string): Promise<CompanyJobDetails> => {
   const { data, error } = await supabase
-    .from('company_jobs')
-    .select(`*`) // Selects all columns from the job
-    .eq('id', jobId)
-    .single();
+    .rpc('get_job_details', {
+      p_job_id: jobId 
+    })
+    .single(); // .single() is perfect here since the RPC returns one row
 
   if (error) throw error;
   if (!data) throw new Error('Job not found');
+  
+  // The 'data' object now contains all columns:
+  // { id, title, ..., company_id, company_name, company_logo_url, ... }
   return data;
 };
 
+
+// --- 2. Corrected function to get collab details ---
+
 /**
- * --- ADDED: Fetches a single collab's details by its ID. ---
- * This is used by CollabDetailPage.tsx and EditCollabPage.tsx
+ * Fetches a single collab's details, including the company's info,
+ * by calling the get_collaboration_details RPC.
  */
-export const getCollabById = async (collabId: string): Promise<Collaboration> => {
+export const getCollabById = async (collabId: string): Promise<CollaborationDetails> => {
   const { data, error } = await supabase
-    .from('collaborations')
-    .select(`*`) // Selects all columns from the collab
-    .eq('id', collabId)
+    .rpc('get_collaboration_details', {
+      p_collab_id: collabId 
+    })
     .single();
 
   if (error) throw error;
   if (!data) throw new Error('Collaboration not found');
+  
+  // The 'data' object now has all collab and company info
   return data;
 };
 
@@ -448,7 +497,7 @@ export const getMyCollabApplications = async (): Promise<MyCollabApplication[]> 
  */
 export const getJobApplicants = async (jobId: string): Promise<Applicant[]> => {
   await getSessionOrThrow();
-  const { data, error } = await supabase.rpc('get_job_ applicants', {
+  const { data, error } = await supabase.rpc('get_job_applicants', {
     p_job_id: jobId
   });
   if (error) throw error;
