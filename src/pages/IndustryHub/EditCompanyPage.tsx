@@ -45,6 +45,7 @@ const companyFormSchema = z.object({
   company_name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
   description: z.string().min(20, { message: 'Description must be at least 20 characters.' }),
   industry_id: z.string({ required_error: 'Industry is required.' }),
+  industry_other: z.string().optional(),
   location_id: z.string({ required_error: 'Location is required.' }),
   website_url: z.string().url({ message: 'Must be a valid URL.' }).optional().or(z.literal('')),
   company_size: z.string().optional(),
@@ -78,17 +79,6 @@ export default function EditCompanyPage() {
     enabled: !!companyId,
     onSuccess: (data) => {
       if (data) {
-        // [!code --] (This was the OLD, nested data structure)
-        // form.reset({
-        //   company_name: data.profile.company_name,
-        //   description: data.profile.description,
-        //   industry_id: data.profile.industry_id,
-        //   location_id: data.profile.location_id,
-        //   website_url: data.profile.website_url || '',
-        //   company_size: data.profile.company_size || '',
-        //   founded_year: data.profile.founded_year ? String(data.profile.founded_year) : '',
-        // });
-        // [!code ++] (FIX: Reset form with the new FLAT data structure from our RPC)
         form.reset({
           company_name: data.company_name,
           description: data.description,
@@ -119,18 +109,17 @@ export default function EditCompanyPage() {
       company_name: '',
       description: '',
       website_url: '',
+      industry_other: '',
     },
   });
+
+  const watchedIndustryId = form.watch('industry_id');
 
   // 5. Setup the UPDATE mutation
   const updateMutation = useMutation({
     mutationFn: async ({ payload, newLogo, newBanner }: { payload: UpdateCompanyPayload, newLogo: File | null, newBanner: File | null }) => {
       if (!companyId) throw new Error("Company ID is missing.");
       
-      // [!code --] (This was the OLD, nested data structure)
-      // let logoUrl = profileData?.profile.company_logo_url;
-      // let bannerUrl = profileData?.profile.company_banner_url;
-      // [!code ++] (FIX: Use the new FLAT data structure)
       let logoUrl = profileData?.company_logo_url;
       let bannerUrl = profileData?.company_banner_url;
 
@@ -152,9 +141,6 @@ export default function EditCompanyPage() {
         p_company_banner_url: bannerUrl,
       };
 
-      // [!code --] (This was the old, incorrect call)
-      // return updateCompanyProfile(companyId, finalPayload);
-      // [!code ++] (FIX: Call the API function with the single payload object)
       return updateCompanyProfile(finalPayload);
     },
     onSuccess: () => {
@@ -169,13 +155,12 @@ export default function EditCompanyPage() {
 
   // 6. Handle form submission
   const onSubmit = (data: CompanyFormData) => {
-    // [!code --] (This payload was missing the ID)
-    // const payload: UpdateCompanyPayload = {
-    // [!code ++] (FIX: The payload here only needs the form data, the mutation adds the ID)
+    
     const payload: Omit<UpdateCompanyPayload, 'p_company_id'> = { // [!code ++]
       p_company_name: data.company_name,
       p_description: data.description,
-      p_industry_id: data.industry_id,
+      p_industry_id: data.industry_id === 'other' ? undefined : data.industry_id, 
+      p_industry_other: data.industry_id === 'other' ? data.industry_other : undefined,
       p_location_id: data.location_id,
       p_website_url: data.website_url || null,
       p_company_size: data.company_size || null,
@@ -249,7 +234,6 @@ export default function EditCompanyPage() {
                 <Card className="p-4 bg-gray-50">
                   <CardTitle className="mb-4 text-xl">Assets</CardTitle>
                   <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                    {/* Logo Upload */}
                     <FormItem>
                       <FormLabel>Company Logo (Square)</FormLabel>
                       <FormControl>
@@ -261,9 +245,6 @@ export default function EditCompanyPage() {
                         />
                       </FormControl>
                       <FormDescription>
-                        {/* [!code --] (Old data structure) */}
-                        {/* {logoFile ? `New file selected: ${logoFile.name}` : profileData?.profile.company_logo_url ? 'Existing logo will be kept unless new file is selected.' : 'No logo uploaded yet.'} */}
-                        {/* [!code ++] (FIX: Use flat data structure) */}
                         {logoFile ? `New file selected: ${logoFile.name}` : profileData?.company_logo_url ? 'Existing logo will be kept unless new file is selected.' : 'No logo uploaded yet.'}
                       </FormDescription>
                       <FormMessage />
@@ -281,9 +262,6 @@ export default function EditCompanyPage() {
                         />
                       </FormControl>
                       <FormDescription>
-                        {/* [!code --] (Old data structure) */}
-                        {/* {bannerFile ? `New file selected: ${bannerFile.name}` : profileData?.profile.company_banner_url ? 'Existing banner will be kept unless new file is selected.' : 'No banner uploaded yet.'} */}
-                        {/* [!code ++] (FIX: Use flat data structure) */}
                         {bannerFile ? `New file selected: ${bannerFile.name}` : profileData?.company_banner_url ? 'Existing banner will be kept unless new file is selected.' : 'No banner uploaded yet.'}
                       </FormDescription>
                       <FormMessage />
@@ -324,6 +302,7 @@ export default function EditCompanyPage() {
                                 {industry.name}
                               </SelectItem>
                             ))}
+                            <SelectItem value="other">Other</SelectItem> 
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -353,6 +332,22 @@ export default function EditCompanyPage() {
                     )}
                   />
                 </div>
+                {watchedIndustryId === 'other' && (
+                  <FormField
+                    control={form.control}
+                    name="industry_other"
+                    rules={{ required: 'Industry name is required when "Other" is selected' }}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Please specify industry *</FormLabel>
+                        <FormControl>
+                          <Input placeholder="e.g., Medical Device Manufacturing" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
                 
                 {/* Size & Year */}
                 <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
