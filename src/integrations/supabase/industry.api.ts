@@ -97,6 +97,7 @@ export type CreateCompanyPayload = {
   website_url?: string;
   company_size?: string; // Add this
   founded_year?: number;
+  company_logo_url?: string;
 };
 
 // --- ADDED: Type for updating a company profile ---
@@ -110,6 +111,7 @@ export type UpdateCompanyPayload = {
   p_company_size?: string | null;
   p_founded_year?: number | null;
   p_industry_id?: string | null;
+  p_industry_other?: string | null;
   p_location_id?: string | null;
 };
 
@@ -396,7 +398,10 @@ export const updateCompanyProfile = async (
   };
 
   const { data, error } = await supabase
-    .rpc('update_company_profile', rpcParams)
+    .rpc('update_company_profile', {
+      ...payload, // Pass all fields from the payload
+      p_industry_other: payload.p_industry_other || null // Ensure it's null if undefined
+    })
     .single();
     
   if (error) throw error;
@@ -767,4 +772,30 @@ export const getCompanyManagers = async (companyId: string): Promise<CompanyMana
     throw error;
   }
   return data as CompanyManagerWithProfile[];
+};
+
+/**
+ * Uploads a logo file for a new company.
+ * Uploads to a user-specific folder, not a company-specific one.
+ */
+export const uploadNewCompanyLogo = async (file: File): Promise<{ publicUrl: string }> => {
+  const session = await getSessionOrThrow();
+  const fileExt = file.name.split('.').pop();
+  const fileName = `${Date.now()}.${fileExt}`;
+  
+  // Upload to a folder based on the user's ID
+  const filePath = `public/${session.user.id}/${fileName}`;
+
+  // Assuming 'industry_hub_assets' is your bucket name
+  const { error: uploadError } = await supabase.storage
+    .from('industry_hub_assets')
+    .upload(filePath, file);
+
+  if (uploadError) throw uploadError;
+
+  const { data } = supabase.storage
+    .from('industry_hub_assets')
+    .getPublicUrl(filePath);
+
+  return data;
 };
