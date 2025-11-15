@@ -211,7 +211,12 @@ export type MyCollabApplication = Database['public']['Functions']['get_my_collab
 // Type for 'get_job_applicants' and 'get_collaboration_applicants' RPCs
 export type Applicant = Database['public']['Functions']['get_job_applicants']['Returns'][number];
 
-
+export type CompanyManagerWithProfile = CompanyManager & {
+  profile: {
+    full_name: string | null;
+    profile_picture_url: string | null;
+  } | null;
+};
 // --- Helper: Enforce Authentication ---
 const getSessionOrThrow = async () => {
   const { data: { session }, error } = await supabase.auth.getSession();
@@ -733,4 +738,25 @@ export const deleteCompanyLink = async (payload: DeleteLinkPayload): Promise<{ s
     
   if (error) throw error;
   return data;
+};
+
+export const getCompanyManagers = async (companyId: string): Promise<CompanyManagerWithProfile[]> => {
+  if (!companyId) return [];
+  const { data, error } = await supabase
+    .from('company_managers')
+    .select(`
+      *,
+      profile:profiles (
+        full_name,
+        profile_picture_url
+      )
+    `)
+    .eq('company_id', companyId)
+    .eq('is_active', true);
+  
+  if (error) {
+    console.error('Error fetching company managers:', error);
+    throw error;
+  }
+  return data as CompanyManagerWithProfile[];
 };
