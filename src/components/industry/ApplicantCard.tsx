@@ -46,8 +46,18 @@ export const ApplicantCard: React.FC<ApplicantCardProps> = ({ applicant, applica
         title: 'Status Updated!', 
         description: `Application is now set to ${variables.status.replace('_', ' ').toUpperCase()}.` 
       });
-      // Invalidate the main applicants query to refetch the list
-      queryClient.invalidateQueries({ queryKey: ['companyApplicants', applicationType] });
+
+      // 1. Determine the correct query key to invalidate based on application type
+      const queryKeyToInvalidate = applicationType === 'job'
+        ? ['jobApplicants', applicant.job_id]
+        : ['collabApplicants', applicant.collab_id];
+        
+      // 2. Invalidate the specific applicant list query
+      queryClient.invalidateQueries({ queryKey: queryKeyToInvalidate });
+      
+      // 3. (Optional but recommended) Invalidate the main company profile.
+      // This will be useful if/when you add applicant counts to the ManageJobs/Collabs tabs.
+      queryClient.invalidateQueries({ queryKey: ['companyProfile', applicant.company_id] });
     },
     onError: (error) => {
       toast({ title: 'Error Updating Status', description: error.message, variant: 'destructive' });
