@@ -160,20 +160,19 @@ const NotificationCard = ({
         !notification.is_read ? 'border-l-4 border-l-primary bg-primary/5' : ''
       }`}
       onClick={() => {
-        // [!code --] (Removed system_update check, all cards are clickable)
         onClick(notification);
       }}
     >
-      {/* [!code --] UI IMPROVEMENT: Padding reduced from p-6 to p-4 */}
+      
       <CardContent className="p-4">
-        <div className="flex items-start gap-3"> {/* [!code --] (Gap reduced) */}
+        <div className="flex items-start gap-3">
           <div
             className={`w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center ${ {/* [!code --] (Icon container smaller) */}
               !notification.is_read ? 'bg-gradient-primary' : 'bg-muted'
             }`}
           >
             <Icon
-              className={`h-4 w-4 ${ {/* [!code --] (Icon smaller) */}
+              className={`h-4 w-4 ${ 
                 !notification.is_read
                   ? 'text-primary-foreground'
                   : 'text-muted-foreground'
@@ -182,9 +181,9 @@ const NotificationCard = ({
           </div>
 
           <div className="flex-1 min-w-0">
-            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-1 gap-1 sm:gap-0"> {/* [!code --] (Margin reduced) */}
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-1 gap-1 sm:gap-0"> 
               <h3
-                className={`font-semibold truncate text-base ${ {/* [!code --] (Size specified) */}
+                className={`font-semibold truncate text-base ${ 
                   !notification.is_read
                     ? 'text-foreground'
                     : 'text-muted-foreground'
@@ -207,12 +206,11 @@ const NotificationCard = ({
               </div>
             </div>
 
-            {/* [!code --] UI IMPROVEMENT: Description is smaller text */}
             <p className="text-sm text-muted-foreground mb-2 whitespace-pre-wrap">
               {description}
             </p>
             
-            {/* [!code --] UI IMPROVEMENT: Buttons are smaller and less obtrusive */}
+            
             <div className="flex flex-wrap items-center gap-1">
               <Button
                 size="xs"
@@ -248,7 +246,6 @@ const NotificationCard = ({
 
 const NotificationSkeleton = () => (
   <Card className="card-medical">
-    {/* [!code --] (Padding reduced) */}
     <CardContent className="p-4">
       <div className="flex items-start gap-3">
         <Skeleton className="w-8 h-8 rounded-full flex-shrink-0" />
@@ -541,7 +538,6 @@ export default function Notifications() {
       <Header />
 
       <main className="container-medical flex-grow py-8">
-        {/* [!code --] Removed the 'Coming Soon' Alert */}
 
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-8 gap-6 animate-fade-in">
           <div>
@@ -592,7 +588,7 @@ export default function Notifications() {
                 {renderContent()}
               </TabsContent>
 
-              {/* [!code --] This tab is now fully functional */}
+              
               <TabsContent value="job" className="space-y-4">
                 {renderContent()}
               </TabsContent>
