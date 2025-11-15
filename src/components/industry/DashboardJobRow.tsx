@@ -1,10 +1,25 @@
-import React from 'react';
+import React, { useState } from 'react'; // [!code ++]
 import { Link } from 'react-router-dom';
-import { CompanyJob } from '@/integrations/supabase/industry.api';
+// [!code ++] (Import mutation hooks and API functions)
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { setJobActiveStatus, CompanyJob } from '@/integrations/supabase/industry.api';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Edit, Users, Eye } from 'lucide-react';
+// [!code ++] (Import new icons and components)
+import { Edit, Users, Eye, Trash2, Loader2, AlertCircle } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { useToast } from '@/components/ui/use-toast';
 
 interface DashboardJobRowProps {
   job: CompanyJob;
@@ -20,8 +35,26 @@ const toTitleCase = (str: string | null | undefined) => {
 };
 
 export const DashboardJobRow: React.FC<DashboardJobRowProps> = ({ job }) => {
-  // We'll add logic for applicant counts later
   const applicantCount = 0; // Placeholder
+  // [!code ++] (Add state for dialog)
+  const [isDeactivateAlertOpen, setIsDeactivateAlertOpen] = useState(false);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  // [!code ++] (Add mutation for deactivating)
+  const deactivateMutation = useMutation({
+    mutationFn: () => setJobActiveStatus(job.id, false),
+    onSuccess: () => {
+      toast({ title: 'Job Deactivated' });
+      // Refresh job list and company profile (for job_count)
+      queryClient.invalidateQueries({ queryKey: ['companyJobs', job.company_id] });
+      queryClient.invalidateQueries({ queryKey: ['companyProfile', job.company_id] });
+      setIsDeactivateAlertOpen(false);
+    },
+    onError: (error) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
+  });
 
   return (
     <Card className="card-medical">
@@ -31,7 +64,7 @@ export const DashboardJobRow: React.FC<DashboardJobRowProps> = ({ job }) => {
             <h3 className="text-lg font-semibold">{job.title}</h3>
             <div className="mt-2 flex flex-wrap gap-2">
               <Badge variant={job.is_active ? 'default' : 'outline'}>
-                {job.is_active ? 'Active' : 'Draft'}
+                {job.is_active ? 'Active' : 'Deactivated'}
               </Badge>
               <Badge variant="secondary">{toTitleCase(job.job_type)}</Badge>
               <Badge variant="secondary">{toTitleCase(job.location_type)}</Badge>
@@ -54,6 +87,39 @@ export const DashboardJobRow: React.FC<DashboardJobRowProps> = ({ job }) => {
                 <Edit className="h-4 w-4" />
               </Link>
             </Button>
+            {/* [!code ++] (Add Deactivate Button and Dialog) */}
+            <AlertDialog open={isDeactivateAlertOpen} onOpenChange={setIsDeactivateAlertOpen}>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="destructive_outline"
+                  size="icon"
+                  disabled={!job.is_active}
+                  title="Deactivate Job"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will deactivate the job posting and hide it from the public.
+                    This action will update your company's total job count.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    onClick={() => deactivateMutation.mutate()}
+                    disabled={deactivateMutation.isPending}
+                  >
+                    {deactivateMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Deactivate
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         </div>
       </CardContent>
