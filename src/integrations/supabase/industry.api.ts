@@ -176,6 +176,38 @@ export const getCompanyProfileDetails = async (companyId: string): Promise<Compa
   return data as CompanyProfileDetails;
 };
 
+/**
+ * --- ADDED: Fetches a single job's details by its ID. ---
+ * This is used by JobDetailPage.tsx and EditJobPage.tsx
+ */
+export const getJobById = async (jobId: string): Promise<CompanyJob> => {
+  const { data, error } = await supabase
+    .from('company_jobs')
+    .select(`*`) // Selects all columns from the job
+    .eq('id', jobId)
+    .single();
+
+  if (error) throw error;
+  if (!data) throw new Error('Job not found');
+  return data;
+};
+
+/**
+ * --- ADDED: Fetches a single collab's details by its ID. ---
+ * This is used by CollabDetailPage.tsx and EditCollabPage.tsx
+ */
+export const getCollabById = async (collabId: string): Promise<Collaboration> => {
+  const { data, error } = await supabase
+    .from('collaborations')
+    .select(`*`) // Selects all columns from the collab
+    .eq('id', collabId)
+    .single();
+
+  if (error) throw error;
+  if (!data) throw new Error('Collaboration not found');
+  return data;
+};
+
 // --- Authenticated Write Functions (RPC & Standard) ---
 
 /**
