@@ -5,7 +5,8 @@ import { useAuth } from '@/hooks/useAuth';
 import {
   getCollabById,
   updateCollaboration,
-  softDeleteCollaboration,
+  // [!code --] (softDeleteCollaboration does not exist in our API file)
+  setCollabActiveStatus, // [!code ++] (This is the correct function)
   UpdateCollabPayload,
   Collaboration,
 } from '@/integrations/supabase/industry.api';
@@ -49,9 +50,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Enums } from '@/types'; // Import Enums for validation
+import { Enums } from '@/types';
 
-// 1. Define the validation schema (same as PostCollabPage)
 const collabFormSchema = z.object({
   title: z.string().min(5, { message: 'Title must be at least 5 characters.' }),
   description: z.string().min(20, { message: 'Description must be at least 20 characters.' }),
@@ -72,7 +72,6 @@ export default function EditCollabPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // 2. Setup the form
   const form = useForm<CollabFormData>({
     resolver: zodResolver(collabFormSchema),
     defaultValues: {
@@ -81,18 +80,16 @@ export default function EditCollabPage() {
       location: '',
       duration: '',
       required_specialty: '',
-      collaboration_type: 'other', // Default to 'other' until data is loaded
+      collaboration_type: 'other',
     },
   });
 
-  // 3. Fetch the existing collaboration data
   const { data: collabData, isLoading: isLoadingCollab } = useQuery<Collaboration, Error>({
     queryKey: ['collabDetails', collabId],
     queryFn: () => getCollabById(collabId!),
     enabled: !!collabId,
     onSuccess: (data) => {
       if (data) {
-        // 4. Pre-fill the form once data is loaded
         form.reset({
           title: data.title,
           description: data.description,
@@ -105,13 +102,16 @@ export default function EditCollabPage() {
     },
   });
 
-  // 5. Setup the UPDATE mutation
+  // [!code --] (This was incorrect, the API fn takes one object)
+  // const updateMutation = useMutation({
+  //   mutationFn: (payload: UpdateCollabPayload) => updateCollaboration(collabId!, payload),
+  // [!code ++] (FIX: The API function 'updateCollaboration' expects a single payload object)
   const updateMutation = useMutation({
-    mutationFn: (payload: UpdateCollabPayload) => updateCollaboration(collabId!, payload),
+    mutationFn: (payload: UpdateCollabPayload) => updateCollaboration(payload),
     onSuccess: () => {
       toast({ title: 'Collaboration Updated Successfully!' });
-      // Invalidate queries to refresh data on other pages
       queryClient.invalidateQueries({ queryKey: ['collabDetails', collabId] });
+      // [!code ++] (Invalidate the company profile query, since collab_count may change)
       queryClient.invalidateQueries({ queryKey: ['companyProfile', collabData?.company_id] });
       navigate('/industryhub/dashboard');
     },
@@ -120,9 +120,12 @@ export default function EditCollabPage() {
     },
   });
 
-  // 6. Setup the DELETE (soft) mutation
+  // [!code --] (This was incorrect, 'softDeleteCollaboration' does not exist in our API)
+  // const deleteMutation = useMutation({
+  //   mutationFn: () => softDeleteCollaboration(collabId!),
+  // [!code ++] (FIX: Use the correct RPC 'setCollabActiveStatus' which also updates company counters)
   const deleteMutation = useMutation({
-    mutationFn: () => softDeleteCollaboration(collabId!),
+    mutationFn: () => setCollabActiveStatus(collabId!, false),
     onSuccess: () => {
       toast({ title: 'Collaboration Deactivated', description: 'The collaboration post has been archived.' });
       queryClient.invalidateQueries({ queryKey: ['collabDetails', collabId] });
@@ -134,19 +137,22 @@ export default function EditCollabPage() {
     },
   });
 
-  // 7. Handle form submission
   const onSubmit = (data: CollabFormData) => {
     const specialtiesArray = data.required_specialty
       ? data.required_specialty.split(',').map(s => s.trim()).filter(Boolean)
       : [];
     
+    // [!code --] (This payload was missing the ID)
+    // const payload: UpdateCollabPayload = {
+    // [!code ++] (FIX: The payload must match our 'UpdateCollabPayload' type, including the ID)
     const payload: UpdateCollabPayload = {
-      title: data.title,
-      description: data.description,
-      collaboration_type: data.collaboration_type,
-      location: data.location || null,
-      duration: data.duration || null,
-      required_specialty: specialtiesArray,
+      p_collab_id: collabId!,
+      p_title: data.title,
+      p_description: data.description,
+      p_collaboration_type: data.collaboration_type,
+      p_location: data.location || null,
+      p_duration: data.duration || null,
+      p_required_specialty: specialtiesArray,
     };
     updateMutation.mutate(payload);
   };
