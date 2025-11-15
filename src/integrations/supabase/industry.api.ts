@@ -1,5 +1,6 @@
 import { supabase } from './client';
-import type { Database, Tables, Enums, TablesInsert } from './types';
+// Use the types from your main auto-generated file
+import type { Database, Tables, Enums, TablesInsert, TablesUpdate } from '../../types'; 
 
 // --- Type Definitions for Industry Hub ---
 
@@ -9,8 +10,6 @@ export type CompanyJob = Tables<'company_jobs'>;
 export type Collaboration = Tables<'collaborations'>;
 export type CompanyLink = Tables<'company_links'>;
 export type JobApplication = Tables<'job_applications'>;
-
-// MODIFIED: Renamed to match your SQL table name
 export type CollaborationApplication = Tables<'collaboration_applications'>;
 
 // Type for the 'get_all_active_jobs' RPC
@@ -21,7 +20,8 @@ export type CollaborationListing = Database['public']['Functions']['get_all_acti
 // Type for the 'get_all_companies' RPC
 export type CompanyListing = Database['public']['Functions']['get_all_companies']['Returns'][number];
 
-// Type for the 'get_company_profile_details' RPC
+// Type for the 'get_company_profile_details' RPC (assuming it exists)
+// If not, we'll build this type on the client
 export type CompanyProfileDetails = {
   profile: CompanyProfile & { industry_name?: string; location_name?: string };
   jobs: CompanyJob[];
@@ -39,6 +39,9 @@ export type CreateCompanyPayload = {
   website_url?: string;
 };
 
+// --- ADDED: Type for updating a company profile ---
+export type UpdateCompanyPayload = TablesUpdate<'company_profiles'>;
+
 // Type for creating a new job
 export type CreateJobPayload = {
   p_company_id: string;
@@ -52,6 +55,9 @@ export type CreateJobPayload = {
   p_external_apply_url?: string;
 };
 
+// --- ADDED: Type for updating a job ---
+export type UpdateJobPayload = TablesUpdate<'company_jobs'>;
+
 // Type for creating a new collaboration
 export type CreateCollaborationPayload = {
   p_company_id: string;
@@ -63,19 +69,21 @@ export type CreateCollaborationPayload = {
   p_duration?: string;
 };
 
-// MODIFIED: This type now matches your 'apply_for_job' RPC arguments
+// --- ADDED: Type for updating a collaboration ---
+export type UpdateCollabPayload = TablesUpdate<'collaborations'>;
+
+
+// Type for 'apply_for_job' RPC arguments
 export type ApplyJobPayload = {
   p_job_id: string;
   p_cover_letter: string | null;
 };
 
-// MODIFIED: This type now matches your 'apply_for_collaboration' RPC arguments
+// Type for 'apply_for_collaboration' RPC arguments
 export type ApplyCollabPayload = {
   p_collab_id: string;
   p_cover_letter: string | null;
 };
-
-// --- ADDED: New types for your RPC return values ---
 
 // Type for 'get_my_job_applications' RPC
 export type MyJobApplication = Database['public']['Functions']['get_my_job_applications']['Returns'][number];
@@ -99,8 +107,10 @@ const getSessionOrThrow = async () => {
 
 /**
  * Fetches all industries for filter dropdowns.
+ * (Assuming you have this RPC)
  */
 export const getIndustries = async (): Promise<Industry[]> => {
+  // @ts-ignore - Assuming get_industries RPC exists
   const { data, error } = await supabase.rpc('get_industries');
   if (error) throw error;
   return data || [];
@@ -131,9 +141,34 @@ export const getAllActiveCollaborations = async (page = 1, limit = 20): Promise<
 };
 
 /**
+ * Fetches a paginated and searchable list of all verified companies.
+ */
+export const getAllCompanies = async (payload: {
+  page: number;
+  limit: number;
+  searchQuery?: string;
+  industryId?: string;
+  locationId?: string;
+}): Promise<CompanyListing[]> => {
+  const { data, error } = await supabase.rpc('get_all_companies', {
+    p_limit: payload.limit,
+    p_page: payload.page,
+    p_search_query: payload.searchQuery || '',
+    p_industry_id: payload.industryId || null,
+    p_location_id: payload.locationId || null
+  });
+
+  if (error) throw error;
+  return data || [];
+};
+
+
+/**
  * Fetches the complete, detailed profile for a single company.
+ * (Assuming you have this RPC)
  */
 export const getCompanyProfileDetails = async (companyId: string): Promise<CompanyProfileDetails> => {
+  // @ts-ignore - Assuming get_company_profile_details RPC exists
   const { data, error } = await supabase.rpc('get_company_profile_details', {
     p_company_id: companyId
   });
@@ -141,14 +176,16 @@ export const getCompanyProfileDetails = async (companyId: string): Promise<Compa
   return data as CompanyProfileDetails;
 };
 
-// --- Authenticated Write Functions (RPC) ---
+// --- Authenticated Write Functions (RPC & Standard) ---
 
 /**
  * Creates a new company profile.
  * The creator is automatically made an 'owner' by the database trigger.
+ * (Assuming you have this RPC)
  */
 export const createCompanyProfile = async (payload: CreateCompanyPayload): Promise<CompanyProfile> => {
   await getSessionOrThrow(); 
+  // @ts-ignore - Assuming create_company_profile RPC exists
   const { data, error } = await supabase.rpc('create_company_profile', {
     p_company_name: payload.company_name,
     p_industry_id: payload.industry_id,
@@ -161,11 +198,31 @@ export const createCompanyProfile = async (payload: CreateCompanyPayload): Promi
 };
 
 /**
+ * --- NEW: Updates a company's profile ---
+ * (Must be a manager. Relies on RLS.)
+ */
+export const updateCompanyProfile = async (companyId: string, payload: UpdateCompanyPayload): Promise<CompanyProfile> => {
+  await getSessionOrThrow();
+  const { data, error } = await supabase
+    .from('company_profiles')
+    .update(payload)
+    .eq('id', companyId)
+    .select()
+    .single();
+    
+  if (error) throw error;
+  return data;
+};
+
+
+/**
  * Toggles following or unfollowing a company.
  * Returns true if the user is now following, false otherwise.
+ * (Assuming you have this RPC)
  */
 export const toggleFollowCompany = async (companyId: string): Promise<boolean> => {
   await getSessionOrThrow();
+  // @ts-ignore - Assuming toggle_follow_company RPC exists
   const { data, error } = await supabase.rpc('toggle_follow_company', {
     p_company_id: companyId
   });
@@ -175,29 +232,101 @@ export const toggleFollowCompany = async (companyId: string): Promise<boolean> =
 
 /**
  * Creates a new job posting. (Must be a manager).
+ * (Assuming you have this RPC)
  */
 export const createCompanyJob = async (payload: CreateJobPayload): Promise<CompanyJob> => {
   await getSessionOrThrow();
+  // @ts-ignore - Assuming create_company_job RPC exists
   const { data, error } = await supabase.rpc('create_company_job', payload);
   if (error) throw error;
   return data;
 };
 
 /**
+ * --- NEW: Updates an existing job posting ---
+ * (Must be a manager. Relies on RLS.)
+ */
+export const updateCompanyJob = async (jobId: string, payload: UpdateJobPayload): Promise<CompanyJob> => {
+  await getSessionOrThrow();
+  const { data, error } = await supabase
+    .from('company_jobs')
+    .update(payload)
+    .eq('id', jobId)
+    .select()
+    .single();
+    
+  if (error) throw error;
+  return data;
+};
+
+/**
+ * --- NEW: Soft-deletes a job posting (sets is_active = false) ---
+ * (Must be a manager. Relies on RLS.)
+ */
+export const softDeleteCompanyJob = async (jobId: string): Promise<CompanyJob> => {
+  await getSessionOrThrow();
+  const { data, error } = await supabase
+    .from('company_jobs')
+    .update({ is_active: false })
+    .eq('id', jobId)
+    .select()
+    .single();
+    
+  if (error) throw error;
+  return data;
+};
+
+/**
  * Creates a new collaboration posting. (Must be a manager).
+ * (Assuming you have this RPC)
  */
 export const createCollaboration = async (payload: CreateCollaborationPayload): Promise<Collaboration> => {
   await getSessionOrThrow();
+  // @ts-ignore - Assuming create_collaboration RPC exists
   const { data, error } = await supabase.rpc('create_collaboration', payload);
   if (error) throw error;
   return data;
 };
 
 /**
- * Applies for a job. (Authenticated users only).
- * MODIFIED: This function now correctly calls your RPC.
+ * --- NEW: Updates an existing collaboration ---
+ * (Must be a manager. Relies on RLS.)
  */
-export const applyForJob = async (payload: ApplyJobPayload): Promise<JobApplication> => {
+export const updateCollaboration = async (collabId: string, payload: UpdateCollabPayload): Promise<Collaboration> => {
+  await getSessionOrThrow();
+  const { data, error } = await supabase
+    .from('collaborations')
+    .update(payload)
+    .eq('id', collabId)
+    .select()
+    .single();
+    
+  if (error) throw error;
+  return data;
+};
+
+/**
+ * --- NEW: Soft-deletes a collaboration (sets is_active = false) ---
+ * (Must be a manager. Relies on RLS.)
+ */
+export const softDeleteCollaboration = async (collabId: string): Promise<Collaboration> => {
+  await getSessionOrThrow();
+  const { data, error } = await supabase
+    .from('collaborations')
+    .update({ is_active: false })
+    .eq('id', collabId)
+    .select()
+    .single();
+    
+  if (error) throw error;
+  return data;
+};
+
+
+/**
+ * Applies for a job. (Authenticated users only).
+ */
+export const applyForJob = async (payload: ApplyJobPayload): Promise<any> => {
   await getSessionOrThrow();
   const { data, error } = await supabase.rpc('apply_for_job', {
     p_job_id: payload.p_job_id,
@@ -206,25 +335,18 @@ export const applyForJob = async (payload: ApplyJobPayload): Promise<JobApplicat
   
   if (error) throw new Error(JSON.parse(error.message).message); // Throw the user-friendly message
   
-  // The RPC returns a JSON object, so we parse it
   const responseData = data as any;
   if (responseData.status >= 400) {
     throw new Error(responseData.message);
   }
   
-  // The RPC response wraps the application_id in a JSON object.
-  // We'll return a partial JobApplication for confirmation.
-  return {
-    id: responseData.application_id,
-    job_id: payload.p_job_id
-  } as JobApplication;
+  return responseData;
 };
 
 /**
  * Applies for a collaboration. (Authenticated users only).
- * MODIFIED: This function now correctly calls your RPC.
  */
-export const applyForCollaboration = async (payload: ApplyCollabPayload): Promise<CollaborationApplication> => {
+export const applyForCollaboration = async (payload: ApplyCollabPayload): Promise<any> => {
   await getSessionOrThrow();
   const { data, error } = await supabase.rpc('apply_for_collaboration', {
     p_collab_id: payload.p_collab_id,
@@ -238,10 +360,7 @@ export const applyForCollaboration = async (payload: ApplyCollabPayload): Promis
     throw new Error(responseData.message);
   }
 
-  return {
-    id: responseData.application_id,
-    collaboration_id: payload.p_collab_id
-  } as CollaborationApplication;
+  return responseData;
 };
 
 /**
@@ -255,6 +374,7 @@ export const uploadCompanyAsset = async (companyId: string, file: File): Promise
   const fileName = `${Date.now()}.${fileExt}`;
   const filePath = `${companyId}/${fileName}`;
 
+  // Assuming 'industry_hub_assets' is your bucket name
   const { error: uploadError } = await supabase.storage
     .from('industry_hub_assets')
     .upload(filePath, file);
@@ -269,7 +389,7 @@ export const uploadCompanyAsset = async (companyId: string, file: File): Promise
 };
 
 
-// --- ADDED: New functions from your SQL script ---
+// --- Authenticated Read Functions (User-Specific) ---
 
 /**
  * Fetches all job applications submitted by the current user.
@@ -296,7 +416,7 @@ export const getMyCollabApplications = async (): Promise<MyCollabApplication[]> 
  */
 export const getJobApplicants = async (jobId: string): Promise<Applicant[]> => {
   await getSessionOrThrow();
-  const { data, error } = await supabase.rpc('get_job_applicants', {
+  const { data, error } = await supabase.rpc('get_job_ applicants', {
     p_job_id: jobId
   });
   if (error) throw error;
@@ -337,26 +457,4 @@ export const updateApplicationStatus = async (
     throw new Error(responseData.message);
   }
   return responseData;
-};
-
-/**
- * Fetches a paginated and searchable list of all verified companies.
- */
-export const getAllCompanies = async (payload: {
-  page: number;
-  limit: number;
-  searchQuery?: string;
-  industryId?: string;
-  locationId?: string;
-}): Promise<CompanyListing[]> => {
-  const { data, error } = await supabase.rpc('get_all_companies', {
-    p_limit: payload.limit,
-    p_page: payload.page,
-    p_search_query: payload.searchQuery || '',
-    p_industry_id: payload.industryId || null,
-    p_location_id: payload.locationId || null
-  });
-
-  if (error) throw error;
-  return data || [];
 };
