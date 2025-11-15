@@ -12,6 +12,31 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "13.0.5"
   }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       academic_achievements: {
@@ -304,6 +329,404 @@ export type Database = {
             columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      collaboration_applications: {
+        Row: {
+          applicant_email: string
+          applicant_id: string
+          applicant_resume_url: string | null
+          collaboration_id: string
+          company_id: string
+          cover_letter: string | null
+          created_at: string
+          id: string
+          status: Database["public"]["Enums"]["application_status_enum"]
+          updated_at: string
+        }
+        Insert: {
+          applicant_email: string
+          applicant_id: string
+          applicant_resume_url?: string | null
+          collaboration_id: string
+          company_id: string
+          cover_letter?: string | null
+          created_at?: string
+          id?: string
+          status?: Database["public"]["Enums"]["application_status_enum"]
+          updated_at?: string
+        }
+        Update: {
+          applicant_email?: string
+          applicant_id?: string
+          applicant_resume_url?: string | null
+          collaboration_id?: string
+          company_id?: string
+          cover_letter?: string | null
+          created_at?: string
+          id?: string
+          status?: Database["public"]["Enums"]["application_status_enum"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "collaboration_applications_applicant_id_fkey"
+            columns: ["applicant_id"]
+            isOneToOne: false
+            referencedRelation: "blocked_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "collaboration_applications_applicant_id_fkey"
+            columns: ["applicant_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "collaboration_applications_collaboration_id_fkey"
+            columns: ["collaboration_id"]
+            isOneToOne: false
+            referencedRelation: "collaborations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "collaboration_applications_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      collaborations: {
+        Row: {
+          applicants_count: number
+          collaboration_type: Database["public"]["Enums"]["collab_type_enum"]
+          company_id: string
+          created_at: string
+          description: string
+          duration: string | null
+          id: string
+          is_active: boolean
+          location: string | null
+          required_specialty: string[]
+          title: string
+        }
+        Insert: {
+          applicants_count?: number
+          collaboration_type: Database["public"]["Enums"]["collab_type_enum"]
+          company_id: string
+          created_at?: string
+          description: string
+          duration?: string | null
+          id?: string
+          is_active?: boolean
+          location?: string | null
+          required_specialty?: string[]
+          title: string
+        }
+        Update: {
+          applicants_count?: number
+          collaboration_type?: Database["public"]["Enums"]["collab_type_enum"]
+          company_id?: string
+          created_at?: string
+          description?: string
+          duration?: string | null
+          id?: string
+          is_active?: boolean
+          location?: string | null
+          required_specialty?: string[]
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "collaborations_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_collaborations_company_id"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_followers: {
+        Row: {
+          company_id: string
+          created_at: string
+          user_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          user_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_followers_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_followers_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "blocked_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_followers_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_jobs: {
+        Row: {
+          company_id: string
+          created_at: string
+          description: string
+          experience_level: string | null
+          external_apply_url: string | null
+          id: string
+          is_active: boolean
+          job_type: string | null
+          location_text: string | null
+          location_type: string | null
+          specialties_required: string[]
+          title: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          description: string
+          experience_level?: string | null
+          external_apply_url?: string | null
+          id?: string
+          is_active?: boolean
+          job_type?: string | null
+          location_text?: string | null
+          location_type?: string | null
+          specialties_required?: string[]
+          title: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          description?: string
+          experience_level?: string | null
+          external_apply_url?: string | null
+          id?: string
+          is_active?: boolean
+          job_type?: string | null
+          location_text?: string | null
+          location_type?: string | null
+          specialties_required?: string[]
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_jobs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_company_jobs_company_id"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_links: {
+        Row: {
+          company_id: string
+          description: string | null
+          id: string
+          link_type: Database["public"]["Enums"]["link_type_enum"]
+          title: string
+          url: string
+        }
+        Insert: {
+          company_id: string
+          description?: string | null
+          id?: string
+          link_type: Database["public"]["Enums"]["link_type_enum"]
+          title: string
+          url: string
+        }
+        Update: {
+          company_id?: string
+          description?: string | null
+          id?: string
+          link_type?: Database["public"]["Enums"]["link_type_enum"]
+          title?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_links_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_managers: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          role: string
+          user_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          role?: string
+          user_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_managers_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_managers_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "blocked_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_managers_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_profiles: {
+        Row: {
+          collaboration_count: number
+          company_banner_url: string | null
+          company_logo_url: string | null
+          company_name: string
+          company_size: string | null
+          created_at: string
+          creator_id: string
+          description: string
+          followers_count: number
+          founded_year: number | null
+          id: string
+          industry_id: string | null
+          is_verified: boolean
+          job_count: number
+          location_id: string | null
+          tier: string | null
+          website_url: string | null
+        }
+        Insert: {
+          collaboration_count?: number
+          company_banner_url?: string | null
+          company_logo_url?: string | null
+          company_name: string
+          company_size?: string | null
+          created_at?: string
+          creator_id: string
+          description: string
+          followers_count?: number
+          founded_year?: number | null
+          id?: string
+          industry_id?: string | null
+          is_verified?: boolean
+          job_count?: number
+          location_id?: string | null
+          tier?: string | null
+          website_url?: string | null
+        }
+        Update: {
+          collaboration_count?: number
+          company_banner_url?: string | null
+          company_logo_url?: string | null
+          company_name?: string
+          company_size?: string | null
+          created_at?: string
+          creator_id?: string
+          description?: string
+          followers_count?: number
+          founded_year?: number | null
+          id?: string
+          industry_id?: string | null
+          is_verified?: boolean
+          job_count?: number
+          location_id?: string | null
+          tier?: string | null
+          website_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_profiles_creator_id_fkey"
+            columns: ["creator_id"]
+            isOneToOne: false
+            referencedRelation: "blocked_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_profiles_creator_id_fkey"
+            columns: ["creator_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_profiles_industry_id_fkey"
+            columns: ["industry_id"]
+            isOneToOne: false
+            referencedRelation: "industries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_profiles_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
             referencedColumns: ["id"]
           },
         ]
@@ -718,6 +1141,39 @@ export type Database = {
         }
         Relationships: []
       }
+      featured_videos: {
+        Row: {
+          author_channel_id: string | null
+          author_name: string
+          author_type: Database["public"]["Enums"]["video_author_type"]
+          created_at: string
+          description: string | null
+          id: string
+          title: string
+          youtube_video_id: string
+        }
+        Insert: {
+          author_channel_id?: string | null
+          author_name: string
+          author_type: Database["public"]["Enums"]["video_author_type"]
+          created_at?: string
+          description?: string | null
+          id?: string
+          title: string
+          youtube_video_id: string
+        }
+        Update: {
+          author_channel_id?: string | null
+          author_name?: string
+          author_type?: Database["public"]["Enums"]["video_author_type"]
+          created_at?: string
+          description?: string | null
+          id?: string
+          title?: string
+          youtube_video_id?: string
+        }
+        Relationships: []
+      }
       feedback: {
         Row: {
           category: string
@@ -772,6 +1228,24 @@ export type Database = {
         }
         Relationships: []
       }
+      industries: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
       institutions: {
         Row: {
           id: string
@@ -792,34 +1266,40 @@ export type Database = {
       }
       job_applications: {
         Row: {
-          applicant_id: string | null
-          applied_at: string | null
+          applicant_email: string
+          applicant_id: string
+          applicant_resume_url: string | null
+          company_id: string
           cover_letter: string | null
+          created_at: string
           id: string
-          job_id: string | null
-          resume_url: string | null
-          status: string | null
-          updated_at: string | null
+          job_id: string
+          status: Database["public"]["Enums"]["application_status_enum"]
+          updated_at: string
         }
         Insert: {
-          applicant_id?: string | null
-          applied_at?: string | null
+          applicant_email: string
+          applicant_id: string
+          applicant_resume_url?: string | null
+          company_id: string
           cover_letter?: string | null
+          created_at?: string
           id?: string
-          job_id?: string | null
-          resume_url?: string | null
-          status?: string | null
-          updated_at?: string | null
+          job_id: string
+          status?: Database["public"]["Enums"]["application_status_enum"]
+          updated_at?: string
         }
         Update: {
-          applicant_id?: string | null
-          applied_at?: string | null
+          applicant_email?: string
+          applicant_id?: string
+          applicant_resume_url?: string | null
+          company_id?: string
           cover_letter?: string | null
+          created_at?: string
           id?: string
-          job_id?: string | null
-          resume_url?: string | null
-          status?: string | null
-          updated_at?: string | null
+          job_id?: string
+          status?: Database["public"]["Enums"]["application_status_enum"]
+          updated_at?: string
         }
         Relationships: [
           {
@@ -837,10 +1317,17 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "job_applications_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "job_applications_job_id_fkey"
             columns: ["job_id"]
             isOneToOne: false
-            referencedRelation: "job_postings"
+            referencedRelation: "company_jobs"
             referencedColumns: ["id"]
           },
         ]
@@ -1220,9 +1707,9 @@ export type Database = {
         Row: {
           connection_requests: boolean | null
           created_at: string | null
-          direct_messages: boolean
+          direct_messages: boolean | null
           email_enabled: boolean | null
-          follows_activity: boolean
+          follows_activity: boolean | null
           forum_updates: boolean | null
           id: string
           job_alerts: boolean | null
@@ -1232,9 +1719,9 @@ export type Database = {
         Insert: {
           connection_requests?: boolean | null
           created_at?: string | null
-          direct_messages?: boolean
+          direct_messages?: boolean | null
           email_enabled?: boolean | null
-          follows_activity?: boolean
+          follows_activity?: boolean | null
           forum_updates?: boolean | null
           id?: string
           job_alerts?: boolean | null
@@ -1244,9 +1731,9 @@ export type Database = {
         Update: {
           connection_requests?: boolean | null
           created_at?: string | null
-          direct_messages?: boolean
+          direct_messages?: boolean | null
           email_enabled?: boolean | null
-          follows_activity?: boolean
+          follows_activity?: boolean | null
           forum_updates?: boolean | null
           id?: string
           job_alerts?: boolean | null
@@ -1556,6 +2043,39 @@ export type Database = {
             foreignKeyName: "profile_analytics_profile_id_fkey"
             columns: ["profile_id"]
             isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profile_views: {
+        Row: {
+          created_at: string
+          profile_id: string
+          viewer_id: string
+        }
+        Insert: {
+          created_at?: string
+          profile_id: string
+          viewer_id: string
+        }
+        Update: {
+          created_at?: string
+          profile_id?: string
+          viewer_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profile_views_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "blocked_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profile_views_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -2534,6 +3054,14 @@ export type Database = {
       }
     }
     Functions: {
+      apply_for_collaboration: {
+        Args: { p_collab_id: string; p_cover_letter?: string }
+        Returns: Json
+      }
+      apply_for_job: {
+        Args: { p_cover_letter?: string; p_job_id: string }
+        Returns: Json
+      }
       are_users_connected: {
         Args: { user_a: string; user_b: string }
         Returns: boolean
@@ -2571,6 +3099,83 @@ export type Database = {
       delete_post: { Args: { p_thread_id: string }; Returns: undefined }
       delete_space: { Args: { p_space_id: string }; Returns: undefined }
       delete_thread: { Args: { p_thread_id: string }; Returns: undefined }
+      get_all_active_collaborations: {
+        Args: {
+          p_industry_id?: string
+          p_limit?: number
+          p_location_id?: string
+          p_page?: number
+        }
+        Returns: {
+          collab_id: string
+          collaboration_type: Database["public"]["Enums"]["collab_type_enum"]
+          company_id: string
+          company_logo_url: string
+          company_name: string
+          company_tier: string
+          created_at: string
+          duration: string
+          location: string
+          required_specialty: string[]
+          title: string
+        }[]
+      }
+      get_all_active_jobs: {
+        Args: {
+          p_industry_id?: string
+          p_limit?: number
+          p_location_id?: string
+          p_page?: number
+        }
+        Returns: {
+          company_id: string
+          company_logo_url: string
+          company_name: string
+          company_tier: string
+          created_at: string
+          experience_level: string
+          job_id: string
+          job_type: string
+          location_text: string
+          location_type: string
+          specialties_required: string[]
+          title: string
+        }[]
+      }
+      get_all_companies: {
+        Args: {
+          p_industry_id?: string
+          p_limit: number
+          p_location_id?: string
+          p_page: number
+          p_search_query?: string
+        }
+        Returns: {
+          company_logo_url: string
+          company_name: string
+          company_size: string
+          description: string
+          id: string
+          industry_name: string
+          location_name: string
+          tier: Database["public"]["Enums"]["company_tier_enum"]
+        }[]
+      }
+      get_collaboration_applicants: {
+        Args: { p_collab_id: string }
+        Returns: {
+          applicant_avatar_url: string
+          applicant_email: string
+          applicant_headline: string
+          applicant_id: string
+          applicant_name: string
+          applicant_resume_url: string
+          application_id: string
+          applied_at: string
+          cover_letter: string
+          status: Database["public"]["Enums"]["application_status_enum"]
+        }[]
+      }
       get_followers_with_status: {
         Args: { p_profile_id: string }
         Returns: Database["public"]["CompositeTypes"]["profile_with_status"][]
@@ -2590,6 +3195,21 @@ export type Database = {
           isOneToOne: false
           isSetofReturn: true
         }
+      }
+      get_job_applicants: {
+        Args: { p_job_id: string }
+        Returns: {
+          applicant_avatar_url: string
+          applicant_email: string
+          applicant_headline: string
+          applicant_id: string
+          applicant_name: string
+          applicant_resume_url: string
+          application_id: string
+          applied_at: string
+          cover_letter: string
+          status: Database["public"]["Enums"]["application_status_enum"]
+        }[]
       }
       get_job_recommendations: {
         Args: { target_user_id: string }
@@ -2625,6 +3245,7 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      get_my_admin_company_id: { Args: never; Returns: string }
       get_my_blocked_users: {
         Args: never
         Returns: {
@@ -2633,6 +3254,19 @@ export type Database = {
           current_position: string
           full_name: string
           profile_picture_url: string
+        }[]
+      }
+      get_my_collaboration_applications: {
+        Args: never
+        Returns: {
+          application_id: string
+          applied_at: string
+          collab_id: string
+          collab_title: string
+          company_logo_url: string
+          company_name: string
+          cover_letter: string
+          status: Database["public"]["Enums"]["application_status_enum"]
         }[]
       }
       get_my_connections: {
@@ -2674,6 +3308,20 @@ export type Database = {
           unread_count: number
         }[]
       }
+      get_my_job_applications: {
+        Args: never
+        Returns: {
+          application_id: string
+          applied_at: string
+          company_logo_url: string
+          company_name: string
+          cover_letter: string
+          job_id: string
+          job_title: string
+          status: Database["public"]["Enums"]["application_status_enum"]
+        }[]
+      }
+      get_my_notifications: { Args: never; Returns: Json[] }
       get_my_unread_inbox_count: { Args: never; Returns: number }
       get_pending_connection_requests: {
         Args: never
@@ -2739,12 +3387,34 @@ export type Database = {
         }[]
       }
       get_public_space_id: { Args: never; Returns: string }
+      get_space_details_by_id: {
+        Args: { p_space_id: string }
+        Returns: {
+          created_at: string
+          creator_full_name: string
+          creator_id: string
+          creator_organization: string
+          creator_position: string
+          creator_specialization: string
+          description: string
+          id: string
+          join_level: Database["public"]["Enums"]["space_join_level"]
+          moderators: Json
+          name: string
+          space_type: Database["public"]["Enums"]["space_type"]
+        }[]
+      }
       get_space_id_for_thread: {
         Args: { thread_id_to_check: string }
         Returns: string
       }
       get_spaces_with_details: {
-        Args: never
+        Args: {
+          p_filter_type?: string
+          p_limit?: number
+          p_offset?: number
+          p_search_query?: string
+        }
         Returns: {
           created_at: string
           creator_full_name: string
@@ -2761,7 +3431,12 @@ export type Database = {
         }[]
       }
       get_threads: {
-        Args: { p_limit?: number; p_page?: number; p_space_id?: string }
+        Args: {
+          p_limit?: number
+          p_page?: number
+          p_search_query?: string
+          p_space_id?: string
+        }
         Returns: {
           attachments: Json
           comment_count: number
@@ -2770,6 +3445,7 @@ export type Database = {
           creator_id: string
           creator_organization: string
           creator_position: string
+          creator_profile_picture_url: string
           creator_specialization: string
           first_message_body: string
           first_message_id: number
@@ -2799,6 +3475,8 @@ export type Database = {
           profile_picture_url: string
           similarity_score: number
           specialization: string
+          student_year: string
+          user_role: Database["public"]["Enums"]["user_role"]
           years_experience: string
         }[]
       }
@@ -2810,6 +3488,7 @@ export type Database = {
         Args: { p_profile_id: string }
         Returns: undefined
       }
+      is_company_manager: { Args: { p_company_id: string }; Returns: boolean }
       is_space_member: { Args: { space_id_to_check: string }; Returns: boolean }
       is_space_moderator_or_admin: {
         Args: { p_space_id: string; p_user_id: string }
@@ -2891,6 +3570,7 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      purge_old_read_notifications: { Args: never; Returns: undefined }
       remove_connection: {
         Args: { user_to_remove_id: string }
         Returns: undefined
@@ -2931,6 +3611,14 @@ export type Database = {
         Returns: undefined
       }
       unblock_user: { Args: { unblocked_user_id: string }; Returns: undefined }
+      update_application_status: {
+        Args: {
+          p_application_id: string
+          p_application_type: string
+          p_new_status: Database["public"]["Enums"]["application_status_enum"]
+        }
+        Returns: Json
+      }
       update_member_role: {
         Args: {
           p_membership_id: string
@@ -3005,6 +3693,7 @@ export type Database = {
           p_specialization_id?: string
           p_specialization_other?: string
           p_student_year_value?: string
+          p_user_role?: Database["public"]["Enums"]["user_role"]
         }
         Returns: undefined
       }
@@ -3018,6 +3707,14 @@ export type Database = {
       }
     }
     Enums: {
+      application_status_enum:
+        | "pending"
+        | "viewed"
+        | "in_progress"
+        | "rejected"
+        | "hired"
+      collab_type_enum: "clinical_trial" | "research" | "advisory" | "other"
+      company_tier_enum: "standard" | "premium" | "deluxe"
       connection_status: "pending" | "accepted" | "blocked" | "ignored"
       connection_status_type:
         | "connected"
@@ -3032,6 +3729,7 @@ export type Database = {
         | "ten_plus"
       forum_type: "PUBLIC" | "PRIVATE"
       job_type: "full_time" | "part_time" | "contract" | "internship" | "locum"
+      link_type_enum: "product" | "social" | "url" | "linkedin"
       membership_role: "ADMIN" | "MODERATOR" | "MEMBER"
       membership_status: "ACTIVE" | "PENDING" | "BANNED"
       notification_type:
@@ -3106,6 +3804,7 @@ export type Database = {
         | "plastic_surgery"
         | "other"
       user_role: "professional" | "premium" | "deluxe" | "student"
+      video_author_type: "founder" | "partner"
     }
     CompositeTypes: {
       attachment_input: {
@@ -3249,8 +3948,20 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
+      application_status_enum: [
+        "pending",
+        "viewed",
+        "in_progress",
+        "rejected",
+        "hired",
+      ],
+      collab_type_enum: ["clinical_trial", "research", "advisory", "other"],
+      company_tier_enum: ["standard", "premium", "deluxe"],
       connection_status: ["pending", "accepted", "blocked", "ignored"],
       connection_status_type: [
         "connected",
@@ -3267,6 +3978,7 @@ export const Constants = {
       ],
       forum_type: ["PUBLIC", "PRIVATE"],
       job_type: ["full_time", "part_time", "contract", "internship", "locum"],
+      link_type_enum: ["product", "social", "url", "linkedin"],
       membership_role: ["ADMIN", "MODERATOR", "MEMBER"],
       membership_status: ["ACTIVE", "PENDING", "BANNED"],
       notification_type: [
@@ -3344,17 +4056,7 @@ export const Constants = {
         "other",
       ],
       user_role: ["professional", "premium", "deluxe", "student"],
+      video_author_type: ["founder", "partner"],
     },
   },
 } as const
-
-export type FeaturedVideo = {
-  id: string;
-  created_at: string;
-  title: string;
-  description: string | null;
-  youtube_video_id: string;
-  author_type: 'founder' | 'partner';
-  author_name: string;
-  author_channel_id?: string | null;
-};
