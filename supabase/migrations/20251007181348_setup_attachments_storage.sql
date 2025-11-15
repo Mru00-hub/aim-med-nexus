@@ -1,10 +1,12 @@
 -- Step 1: Create a dedicated bucket in Supabase Storage for message attachments.
 -- We make the bucket public for easy file access via URL, but access control will be
 -- handled by RLS policies on the storage objects and on the message_attachments table.
-INSERT INTO storage.buckets (id, name, public)
-VALUES ('message_attachments', 'message_attachments', true)
-ON CONFLICT (id) DO NOTHING;
-
+SELECT storage.create_bucket(
+  'message_attachments',
+  '{ "public": true }'::jsonb,
+  NULL, -- Use default file size limit
+  NULL  -- Use default allowed MIME types
+);
 
 -- Step 2: Clean up the message_attachments table by removing the redundant user_id column.
 -- The 'uploaded_by' column already correctly tracks the file owner.
