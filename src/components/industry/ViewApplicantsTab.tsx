@@ -53,19 +53,27 @@ export const ViewApplicantsTab: React.FC = () => {
   const jobIds = companyProfile?.jobs.filter(j => j.is_active).map(j => j.id) || [];
   const collabIds = companyProfile?.collaborations.filter(c => c.is_active).map(c => c.id) || [];
 
-  // 3. Fetch Job Applicants (Parallel Queries)
-  const jobApplicantsQueries = jobIds.map(jobId => useQuery<Applicant[], Error>({
-    queryKey: ['jobApplicants', jobId],
-    queryFn: () => getJobApplicants(jobId),
-    enabled: !!companyId && !!jobId,
-  }));
+  // 3. Fetch Job Applicants (using useQueries)
+  const jobApplicantsQueries = useQueries({
+    queries: jobIds.map(jobId => {
+      return {
+        queryKey: ['jobApplicants', jobId],
+        queryFn: () => getJobApplicants(jobId),
+        enabled: !!companyId && !!jobId,
+      };
+    }),
+  });
 
-  // 4. Fetch Collab Applicants (Parallel Queries)
-  const collabApplicantsQueries = collabIds.map(collabId => useQuery<Applicant[], Error>({
-    queryKey: ['collabApplicants', collabId],
-    queryFn: () => getCollabApplicants(collabId),
-    enabled: !!companyId && !!collabId,
-  }));
+  // 4. Fetch Collab Applicants (using useQueries)
+  const collabApplicantsQueries = useQueries({
+    queries: collabIds.map(collabId => {
+      return {
+        queryKey: ['collabApplicants', collabId],
+        queryFn: () => getCollabApplicants(collabId),
+        enabled: !!companyId && !!collabId,
+      };
+    }),
+  });
 
   const isLoadingApplicants = jobApplicantsQueries.some(q => q.isLoading) || collabApplicantsQueries.some(q => q.isLoading);
 
