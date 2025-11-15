@@ -7,19 +7,27 @@ import { getCompanyProfileDetails } from '@/integrations/supabase/industry.api';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { Button } from '@/components/ui/button';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Loader2, AlertCircle, Plus, Edit, Briefcase, MessageSquare, Users } from 'lucide-react';
+import { Loader2, AlertCircle, Plus, Edit, Briefcase, MessageSquare, Users, Building, Link as LinkIcon, UserCog, Settings } from 'lucide-react';
 
-// Imported/Finalized Components (from the provided repo structure)
+// [!code --] (Old imports)
+// import { ManageJobsTab } from '@/components/industry/ManageJobsTab';
+// import { ManageCollabsTab } from '@/components/industry/ManageCollabsTab';
+// import { ViewApplicantsTab } from '@/components/industry/ViewApplicantsTab';
+// [!code ++] (New imports for our new components)
 import { ManageJobsTab } from '@/components/industry/ManageJobsTab';
 import { ManageCollabsTab } from '@/components/industry/ManageCollabsTab';
-import { ViewApplicantsTab } from '@/components/industry/ViewApplicantsTab'; // From previous step
+import { ViewApplicantsTab } from '@/components/industry/ViewApplicantsTab';
+import { ManageProductsAndLinksTab } from '@/components/industry/ManageProductsAndLinksTab';
+import { ManageManagersTab } from '@/components/industry/ManageManagersTab';
+
 
 export default function CompanyDashboardPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState('jobs'); // Set default tab
+  const [activeTab, setActiveTab] = useState('jobs'); 
 
   // 1. Fetch the user's company ID (Permission Check)
   const {
@@ -30,7 +38,6 @@ export default function CompanyDashboardPage() {
   } = useQuery<string | null, Error>({
     queryKey: ['myAdminCompanyId'],
     queryFn: async () => {
-      // This RPC finds the company ID managed by the current user
       const { data, error } = await supabase.rpc('get_my_admin_company_id');
       if (error) throw new Error(error.message);
       return data;
@@ -47,8 +54,6 @@ export default function CompanyDashboardPage() {
   });
 
   // --- Render States ---
-
-  // Loading State
   if (isLoadingId) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -57,17 +62,13 @@ export default function CompanyDashboardPage() {
     );
   }
 
-  // Access Denied / No Company State (Triggered if RPC returns null or fails)
   if (!companyId) {
-    // If the RPC returns null (no company), or an error occurs.
     if (!isLoadingId) {
-      // Immediately navigate if the user needs to create a company
       if (!isErrorId && !companyId) {
         navigate('/industryhub/create-company');
         return null;
       }
       
-      // Show an error if the fetch failed
       return (
         <div className="flex min-h-screen flex-col">
           <Header />
@@ -85,10 +86,10 @@ export default function CompanyDashboardPage() {
         </div>
       );
     }
-    return null; // Should be handled by navigation or loading state
+    return null; 
   }
   
-  const companyName = companyDetails?.profile.company_name;
+  const companyName = companyDetails?.company_name;
 
   return (
     <div className="flex min-h-screen flex-col bg-gray-50/50">
@@ -114,7 +115,6 @@ export default function CompanyDashboardPage() {
                 </Link>
               </Button>
               <Button asChild variant="outline" className="flex-1">
-                {/* Note: EditCompanyPage doesn't need ID in URL as it fetches it */}
                 <Link to="/industryhub/edit-company"> 
                   <Edit className="mr-2 h-4 w-4" />
                   Edit Profile
@@ -166,6 +166,14 @@ export default function CompanyDashboardPage() {
                 <Users className="mr-2 h-4 w-4" />
                 View Applicants
               </TabsTrigger>
+              <TabsTrigger value="links" className="flex items-center">
+                <LinkIcon className="mr-2 h-4 w-4" />
+                Products & Links
+              </TabsTrigger>
+              <TabsTrigger value="managers" className="flex items-center">
+                <UserCog className="mr-2 h-4 w-4" />
+                Managers
+              </TabsTrigger>
             </TabsList>
             
             <TabsContent value="jobs" className="mt-8">
@@ -180,6 +188,16 @@ export default function CompanyDashboardPage() {
             
             <TabsContent value="applicants" className="mt-8">
               <ViewApplicantsTab />
+            </TabsContent>
+
+            {/* [!code --] (This is where the old placeholders were) */}
+            {/* [!code ++] (Replace placeholders with the new components) */}
+            <TabsContent value="links" className="mt-8">
+              <ManageProductsAndLinksTab companyId={companyId} />
+            </TabsContent>
+            
+            <TabsContent value="managers" className="mt-8">
+              <ManageManagersTab companyId={companyId} />
             </TabsContent>
             
           </Tabs>
