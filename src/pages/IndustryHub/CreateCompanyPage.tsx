@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
@@ -25,11 +25,9 @@ import {
 } from '@/components/ui/select';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Loader2, AlertCircle, Building, Info } from 'lucide-react';
-
-// We'll use react-hook-form for validation, assuming it's in the project
-// based on the src/components/ui/form.tsx
 import { useForm, Controller } from 'react-hook-form';
 import { Label } from '@/components/ui/label';
+import { SearchableSelect } from '@/components/ui/searchable-select'; // Import the new component
 
 type FormData = {
   company_name: string;
@@ -38,8 +36,8 @@ type FormData = {
   location_id: string;
   description: string;
   website_url: string;
-  company_size: string; // Add this
-  founded_year: string; 
+  company_size: string;
+  founded_year: string;
 };
 
 export default function CreateCompanyPage() {
@@ -51,20 +49,70 @@ export default function CreateCompanyPage() {
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
 
-  // --- Data for Form Selects ---
+  // --- Data for Industry Select ---
   const { data: industries, isLoading: isLoadingIndustries } = useQuery({
     queryKey: ['industries'],
     queryFn: getIndustries,
   });
 
-  const { data: locations, isLoading: isLoadingLocations } = useQuery({
-    queryKey: ['locations'],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('locations').select('*');
-      if (error) throw new Error(error.message);
-      return data;
-    },
-  });
+  // --- NEW: Logic for Searchable Location Select ---
+  const [locations, setLocations] = useState<{ id: string; label: string }[]>([]);
+  const [locationSearch, setLocationSearch] = useState("");
+  const [isLocLoading, setIsLocLoading] = useState(false);
+  const isMounted = useRef(false);
+
+  useEffect(() => {
+    const fetchSearchLocations = async () => {
+      setIsLocLoading(true);
+      const { data, error } = await supabase
+        .from('locations')
+        .select('id, label')
+        .neq('label', 'Other')
+        .or(`label.ilike.%${locationSearch}%`)
+        .order('label')
+        .limit(50);
+      
+      if (data) setLocations(data);
+      if (error) console.error('Error fetching search locations:', error);
+      setIsLocLoading(false);
+    };
+    
+    const fetchInitialLocations = async () => {
+       setIsLocLoading(true);
+       const { data, error } = await supabase
+        .from('locations')
+        .select('id, label')
+        .neq('label', 'Other')
+        .order('label')
+        .limit(10);
+      
+       if (data) setLocations(data);
+       if (error) console.error('Error fetching initial locations:', error);
+       setIsLocLoading(false);
+    };
+
+    if (!isMounted.current) {
+      isMounted.current = true;
+      fetchInitialLocations();
+      return;
+    }
+
+    const searchTimer = setTimeout(() => {
+      if (locationSearch.length < 2) {
+        fetchInitialLocations();
+      } else {
+        fetchSearchLocations();
+      }
+    }, 500); // 500ms debounce
+    
+    return () => clearTimeout(searchTimer);
+  }, [locationSearch]);
+
+  const locationOptions = useMemo(() => 
+    locations.map(loc => ({ value: loc.id, label: loc.label })),
+    [locations]
+  );
+  // --- END: New Location Logic ---
 
   const companySizeOptions = [
     '1-10 employees',
@@ -81,7 +129,7 @@ export default function CreateCompanyPage() {
   const {
     control,
     handleSubmit,
-    watch, 
+    watch,
     formState: { errors },
   } = useForm<FormData>({
     defaultValues: {
@@ -91,7 +139,7 @@ export default function CreateCompanyPage() {
       location_id: '',
       description: '',
       website_url: '',
-      company_size: '', // Add this
+      company_size: '',
       founded_year: '',
     },
   });
@@ -117,7 +165,6 @@ export default function CreateCompanyPage() {
         title: 'Company Profile Created!',
         description: 'You can now manage your new company page.',
       });
-      // Navigate to the dashboard for the new company
       navigate(`/industryhub/dashboard`);
     },
     onError: (error) => {
@@ -129,11 +176,10 @@ export default function CreateCompanyPage() {
     },
   });
 
-    const onSubmit = async (data: FormData) => {
+  const onSubmit = async (data: FormData) => {
     let logoUrl: string | undefined = undefined;
     
     try {
-      // Step 1: Upload logo if it exists
       if (logoFile) {
         setIsUploading(true);
         const { publicUrl } = await uploadNewCompanyLogo(logoFile);
@@ -141,7 +187,6 @@ export default function CreateCompanyPage() {
         setIsUploading(false);
       }
 
-      // Step 2: Prepare final payload
       const payload: CreateCompanyPayload = {
         company_name: data.company_name,
         description: data.description,
@@ -154,7 +199,6 @@ export default function CreateCompanyPage() {
         company_logo_url: logoUrl,
       };
 
-      // Step 3: Call the mutation
       mutation.mutate(payload);
 
     } catch (error: any) {
@@ -166,7 +210,7 @@ export default function CreateCompanyPage() {
       });
     }
   };
-  
+
   return (
     <div className="flex min-h-screen flex-col bg-gray-50/50">
       <Header />
@@ -210,6 +254,7 @@ export default function CreateCompanyPage() {
                 )}
               </div>
 
+              {/* Company Logo */}
               <div className="space-y-2">
                 <Label htmlFor="company_logo">Company Logo (Optional)</Label>
                 <div className="flex items-center gap-4">
@@ -252,13 +297,13 @@ export default function CreateCompanyPage() {
                           {isLoadingIndustries ? (
                             <SelectItem value="loading" disabled>Loading...</SelectItem>
                           ) : (
-                            <> 
-                            {industries?.map((industry) => (
-                              <SelectItem key={industry.id} value={industry.id}>
-                                {industry.name}
-                              </SelectItem>
-                            ))}
-                            <SelectItem value="other">Other</SelectItem>
+                            <>
+                              {industries?.map((industry) => (
+                                <SelectItem key={industry.id} value={industry.id}>
+                                  {industry.name}
+                                </SelectItem>
+                              ))}
+                              <SelectItem value="other">Other</SelectItem>
                             </>
                           )}
                         </SelectContent>
@@ -272,27 +317,22 @@ export default function CreateCompanyPage() {
 
                 <div className="space-y-2">
                   <Label htmlFor="location_id">Location *</Label>
+                  {/* --- UPDATED: SearchableSelect for Location --- */}
                   <Controller
                     name="location_id"
                     control={control}
                     rules={{ required: 'Location is required' }}
                     render={({ field }) => (
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <SelectTrigger id="location_id">
-                          <SelectValue placeholder="Select a location..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {isLoadingLocations ? (
-                            <SelectItem value="loading" disabled>Loading...</SelectItem>
-                          ) : (
-                            locations?.map((location) => (
-                              <SelectItem key={location.id} value={location.id}>
-                                {location.label}
-                              </SelectItem>
-                            ))
-                          )}
-                        </SelectContent>
-                      </Select>
+                      <SearchableSelect
+                        value={field.value}
+                        onValueChange={field.onChange}
+                        options={locationOptions}
+                        onSearchChange={setLocationSearch}
+                        isLoading={isLocLoading}
+                        placeholder="Select your location..."
+                        searchPlaceholder="Search locations... (min 2 chars)"
+                        emptyMessage="No location found."
+                      />
                     )}
                   />
                   {errors.location_id && (
@@ -301,6 +341,7 @@ export default function CreateCompanyPage() {
                 </div>
               </div>
 
+              {/* "Other Industry" field */}
               {watchedIndustryId === 'other' && (
                 <div className="space-y-2">
                   <Label htmlFor="industry_other">Please specify industry *</Label>
@@ -322,6 +363,7 @@ export default function CreateCompanyPage() {
                 </div>
               )}
 
+              {/* Company Size & Founded Year */}
               <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="company_size">Company Size *</Label>
