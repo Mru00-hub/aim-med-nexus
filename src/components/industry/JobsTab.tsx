@@ -202,7 +202,7 @@ export const JobsTab: React.FC = () => {
                 {/* These values come from your Enums */}
                 <SelectItem value="fresh">Fresh</SelectItem>
                 <SelectItem value="one_to_three">1-3 years</SelectItem>
-                <SelectItem value="three_to_five">3-5 years</VSelectItem>
+                <SelectItem value="three_to_five">3-5 years</SelectItem>
                 <SelectItem value="five_to_ten">5-10 years</SelectItem>
                 <SelectItem value="ten_plus">10+ years</SelectItem>
               </SelectContent>
