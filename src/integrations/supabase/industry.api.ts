@@ -46,7 +46,7 @@ export type CollaborationDetails = {
   applicants_count: number;
   created_at: string;
 };
-
+export type CompanyManager = Tables<'company_managers'>;
 export type CompanyLink = Tables<'company_links'>;
 export type JobApplication = Tables<'job_applications'>;
 export type CollaborationApplication = Tables<'collaboration_applications'>;
@@ -62,11 +62,29 @@ export type CompanyListing = Database['public']['Functions']['get_all_companies'
 // Type for the 'get_company_profile_details' RPC (assuming it exists)
 // If not, we'll build this type on the client
 export type CompanyProfileDetails = {
-  profile: CompanyProfile & { industry_name?: string; location_name?: string };
-  jobs: CompanyJob[];
-  collaborations: Collaboration[];
+  // Basic company data
+  id: string;
+  company_name: string;
+  description: string;
+  company_logo_url: string | null;
+  company_banner_url: string | null;
+  website_url: string | null;
+  company_size: string | null;
+  founded_year: number | null;
+  created_at: string;
+  creator_id: string;
+  
+  // Our custom fields
+  is_owner: boolean;
+  follower_count: number;
+  job_count: number;
+  collaboration_count: number;
+  is_following: boolean; // Renamed from 'is_followed_by_viewer'
+
+  // Nested JSON arrays from the RPC
+  jobs: CompanyJob[]; // Assumes CompanyJob matches 'company_jobs' table
+  collaborations: Collaboration[]; // Assumes Collaboration matches 'collaborations' table
   links: CompanyLink[];
-  is_followed_by_viewer: boolean;
 };
 
 // Type for creating a new company profile
@@ -79,7 +97,18 @@ export type CreateCompanyPayload = {
 };
 
 // --- ADDED: Type for updating a company profile ---
-export type UpdateCompanyPayload = TablesUpdate<'company_profiles'>;
+export type UpdateCompanyPayload = {
+  p_company_id: string; // The UUID of the company to update
+  p_company_name?: string | null;
+  p_description?: string | null;
+  p_website_url?: string | null;
+  p_company_logo_url?: string | null;
+  p_company_banner_url?: string | null;
+  p_company_size?: string | null;
+  p_founded_year?: number | null;
+  p_industry_id?: string | null;
+  p_location_id?: string | null;
+};
 
 // Type for creating a new job
 export type CreateJobPayload = {
@@ -95,7 +124,17 @@ export type CreateJobPayload = {
 };
 
 // --- ADDED: Type for updating a job ---
-export type UpdateJobPayload = TablesUpdate<'company_jobs'>;
+export type UpdateJobPayload = {
+  p_job_id: string; // The UUID of the job to update
+  p_title?: string | null;
+  p_description?: string | null;
+  p_specialties_required?: string[] | null;
+  p_job_type?: string | null;
+  p_location_type?: string | null;
+  p_location_text?: string | null;
+  p_experience_level?: string | null;
+  p_external_apply_url?: string | null;
+};
 
 // Type for creating a new collaboration
 export type CreateCollaborationPayload = {
@@ -109,8 +148,15 @@ export type CreateCollaborationPayload = {
 };
 
 // --- ADDED: Type for updating a collaboration ---
-export type UpdateCollabPayload = TablesUpdate<'collaborations'>;
-
+export type UpdateCollabPayload = {
+  p_collab_id: string; // The UUID of the collaboration to update
+  p_title?: string | null;
+  p_description?: string | null;
+  p_collaboration_type?: Enums<'collab_type_enum'> | null;
+  p_required_specialty?: string[] | null;
+  p_duration?: string | null;
+  p_location?: string | null;
+};
 
 // Type for 'apply_for_job' RPC arguments
 export type ApplyJobPayload = {
@@ -123,7 +169,39 @@ export type ApplyCollabPayload = {
   p_collab_id: string;
   p_cover_letter: string | null;
 };
+export type AddManagerPayload = {
+  p_company_id: string;
+  p_user_id: string;
+  p_role: 'ADMIN' | 'MEMBER'; // Use specific string literals
+};
 
+export type UpdateManagerRolePayload = {
+  p_manager_record_id: string; // The UUID of the 'company_managers' row
+  p_new_role: 'ADMIN' | 'MEMBER';
+};
+
+export type RemoveManagerPayload = {
+  p_manager_record_id: string; // The UUID of the 'company_managers' row
+};
+export type AddLinkPayload = {
+  p_company_id: string;
+  p_link_type: Enums<'link_type_enum'>;
+  p_title: string;
+  p_url: string;
+  p_description?: string | null;
+};
+
+export type UpdateLinkPayload = {
+  p_link_id: string; // The UUID of the 'company_links' row
+  p_link_type?: Enums<'link_type_enum'> | null;
+  p_title?: string | null;
+  p_url?: string | null;
+  p_description?: string | null;
+};
+
+export type DeleteLinkPayload = {
+  p_link_id: string; // The UUID of the 'company_links' row
+};
 // Type for 'get_my_job_applications' RPC
 export type MyJobApplication = Database['public']['Functions']['get_my_job_applications']['Returns'][number];
 
@@ -285,13 +363,27 @@ export const createCompanyProfile = async (payload: CreateCompanyPayload): Promi
  * --- NEW: Updates a company's profile ---
  * (Must be a manager. Relies on RLS.)
  */
-export const updateCompanyProfile = async (companyId: string, payload: UpdateCompanyPayload): Promise<CompanyProfile> => {
+export const updateCompanyProfile = async (
+  payload: UpdateCompanyPayload
+): Promise<CompanyProfile> => {
   await getSessionOrThrow();
+  
+  // We must map the payload to the RPC arguments
+  const rpcParams = {
+    p_company_id: payload.id,
+    p_company_name: payload.company_name,
+    p_description: payload.description,
+    p_website_url: payload.website_url,
+    p_company_logo_url: payload.company_logo_url,
+    p_company_banner_url: payload.company_banner_url,
+    p_company_size: payload.company_size,
+    p_founded_year: payload.founded_year,
+    p_industry_id: payload.industry_id,
+    p_location_id: payload.location_id,
+  };
+
   const { data, error } = await supabase
-    .from('company_profiles')
-    .update(payload)
-    .eq('id', companyId)
-    .select()
+    .rpc('update_company_profile', rpcParams)
     .single();
     
   if (error) throw error;
@@ -330,30 +422,42 @@ export const createCompanyJob = async (payload: CreateJobPayload): Promise<Compa
  * --- NEW: Updates an existing job posting ---
  * (Must be a manager. Relies on RLS.)
  */
-export const updateCompanyJob = async (jobId: string, payload: UpdateJobPayload): Promise<CompanyJob> => {
+export const updateCompanyJob = async (
+  payload: UpdateJobPayload
+): Promise<CompanyJob> => {
   await getSessionOrThrow();
+  
+  // Map payload to RPC arguments
+  const rpcParams = {
+    p_job_id: payload.id,
+    p_title: payload.title,
+    p_description: payload.description,
+    p_specialties_required: payload.specialties_required,
+    p_job_type: payload.job_type,
+    p_location_type: payload.location_type,
+    p_location_text: payload.location_text,
+    p_experience_level: payload.experience_level,
+    p_external_apply_url: payload.external_apply_url,
+  };
+
   const { data, error } = await supabase
-    .from('company_jobs')
-    .update(payload)
-    .eq('id', jobId)
-    .select()
+    .rpc('update_company_job', rpcParams)
     .single();
     
   if (error) throw error;
   return data;
 };
 
-/**
- * --- NEW: Soft-deletes a job posting (sets is_active = false) ---
- * (Must be a manager. Relies on RLS.)
- */
-export const softDeleteCompanyJob = async (jobId: string): Promise<CompanyJob> => {
+export const setJobActiveStatus = async (
+  jobId: string, 
+  isActive: boolean
+): Promise<{ job_id: string; is_active: boolean }> => {
   await getSessionOrThrow();
   const { data, error } = await supabase
-    .from('company_jobs')
-    .update({ is_active: false })
-    .eq('id', jobId)
-    .select()
+    .rpc('set_job_active_status', {
+      p_job_id: jobId,
+      p_is_active: isActive
+    })
     .single();
     
   if (error) throw error;
@@ -376,13 +480,24 @@ export const createCollaboration = async (payload: CreateCollaborationPayload): 
  * --- NEW: Updates an existing collaboration ---
  * (Must be a manager. Relies on RLS.)
  */
-export const updateCollaboration = async (collabId: string, payload: UpdateCollabPayload): Promise<Collaboration> => {
+export const updateCollaboration = async (
+  payload: UpdateCollabPayload
+): Promise<Collaboration> => {
   await getSessionOrThrow();
+  
+  // Map payload to RPC arguments
+  const rpcParams = {
+    p_collab_id: payload.id,
+    p_title: payload.title,
+    p_description: payload.description,
+    p_collaboration_type: payload.collaboration_type,
+    p_required_specialty: payload.required_specialty,
+    p_duration: payload.duration,
+    p_location: payload.location,
+  };
+
   const { data, error } = await supabase
-    .from('collaborations')
-    .update(payload)
-    .eq('id', collabId)
-    .select()
+    .rpc('update_collaboration', rpcParams)
     .single();
     
   if (error) throw error;
@@ -393,13 +508,16 @@ export const updateCollaboration = async (collabId: string, payload: UpdateColla
  * --- NEW: Soft-deletes a collaboration (sets is_active = false) ---
  * (Must be a manager. Relies on RLS.)
  */
-export const softDeleteCollaboration = async (collabId: string): Promise<Collaboration> => {
+export const setCollabActiveStatus = async (
+  collabId: string,
+  isActive: boolean
+): Promise<{ collaboration_id: string; is_active: boolean }> => {
   await getSessionOrThrow();
   const { data, error } = await supabase
-    .from('collaborations')
-    .update({ is_active: false })
-    .eq('id', collabId)
-    .select()
+    .rpc('set_collaboration_active_status', {
+      p_collab_id: collabId,
+      p_is_active: isActive
+    })
     .single();
     
   if (error) throw error;
@@ -557,5 +675,32 @@ export const getCompanyHeaderData = async (companyId: string): Promise<{ company
     console.error('Error fetching company header:', error);
     return null;
   }
+  return data;
+};
+export const addCompanyManager = async (payload: AddManagerPayload): Promise<CompanyManager> => {
+  await getSessionOrThrow();
+  const { data, error } = await supabase
+    .rpc('add_company_manager', payload)
+    .single();
+    
+  if (error) throw error;
+  return data;
+};
+export const updateCompanyManagerRole = async (payload: UpdateManagerRolePayload): Promise<CompanyManager> => {
+  await getSessionOrThrow();
+  const { data, error } = await supabase
+    .rpc('update_company_manager_role', payload)
+    .single();
+    
+  if (error) throw error;
+  return data;
+};
+export const removeCompanyManager = async (payload: RemoveManagerPayload): Promise<{ status: string; manager_record_id: string }> => {
+  await getSessionOrThrow();
+  const { data, error } = await supabase
+    .rpc('remove_company_manager', payload)
+    .single();
+    
+  if (error) throw error;
   return data;
 };
