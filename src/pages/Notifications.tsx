@@ -167,7 +167,7 @@ const NotificationCard = ({
       <CardContent className="p-4">
         <div className="flex items-start gap-3">
           <div
-            className={`w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center ${ {/* [!code --] (Icon container smaller) */}
+            className={`w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center ${ 
               !notification.is_read ? 'bg-gradient-primary' : 'bg-muted'
             }`}
           >
