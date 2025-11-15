@@ -5,8 +5,6 @@ import { Footer } from '@/components/layout/Footer';
 import {
   Card,
   CardContent,
-  CardHeader,
-  CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -25,7 +23,9 @@ import {
   AlertCircle,
   CheckSquare,
   Loader2,
-  UserPlus, 
+  UserPlus,
+  Mail, // For DMs
+  UserCheck, // For connection accepted
 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import {
@@ -34,62 +34,107 @@ import {
   markAllNotificationsAsRead,
   deleteNotification,
   NotificationWithActor,
+  NotificationType, // [!code ++] Import the full type
 } from '@/integrations/supabase/notifications.api';
-import { useSocialCounts } from '@/context/SocialCountsContext'; 
+import { useSocialCounts } from '@/context/SocialCountsContext';
 import { formatDistanceToNow } from 'date-fns';
 
+// [!code ++]
+// This function is now comprehensive for all notification types
 const getNotificationDetails = (notification: NotificationWithActor) => {
-  const { type, actor, space } = notification; // [!code ++] (add space)
+  const { type, actor, space, thread, job, collaboration, job_application, collaboration_application } = notification;
   const actorName = actor?.full_name || 'Someone';
-  const spaceName = space?.name || 'your space'; // [!code ++]
+  const spaceName = space?.name || 'a space';
 
   let icon: React.ElementType = Bell;
   let title = 'New Notification';
   let description = 'You have a new update.';
 
   switch (type) {
+    // --- System ---
     case 'system_update':
       icon = Star;
       title = notification.announcement?.title || 'System Update';
       description = notification.announcement?.body || 'Check out the latest features and announcements.';
       break;
-    case 'new_public_post_by_followed_user': // <-- Keep this
-      icon = MessageSquare;
-      title = 'New Post';
-      description = `${actorName} (who you follow) created a new post.`;
-      break;
-    case 'new_public_space_by_followed_user': // <-- Keep this
-      icon = Users;
-      title = 'New Space';
-      description = `${actorName} (who you follow) created a new space.`;
+
+    // --- Social ---
+    case 'new_connection_request':
+      icon = UserPlus;
+      title = 'Connection Request';
+      description = `${actorName} wants to connect with you.`;
       break;
     case 'connection_accepted':
-      icon = CheckSquare;
+      icon = UserCheck;
       title = 'Connection Accepted';
       description = `${actorName} accepted your connection request.`;
       break;
-    case 'job_application_update':
-      icon = Briefcase;
-      title = 'Job Application Update';
-      description = `Your application for a job has been updated.`;
+    case 'new_direct_message':
+      icon = Mail;
+      title = 'New Message';
+      description = `${actorName} sent you a new direct message.`;
+      break;
+
+    // --- Community / Forums ---
+    case 'new_public_post_by_followed_user':
+      icon = MessageSquare;
+      title = 'New Post';
+      description = `${actorName} (who you follow) posted: "${thread?.title || 'a new post'}".`;
+      break;
+    case 'new_public_space_by_followed_user':
+      icon = Users;
+      title = 'New Space';
+      description = `${actorName} (who you follow) created a new space: "${space?.name || '...'}".`;
       break;
     case 'new_reply_to_your_message':
       icon = MessageSquare;
       title = 'New Reply';
-      description = `${actorName} replied to your message on a post / thread.`;
+      description = `${actorName} replied to your message in "${thread?.title || 'a post'}".`;
       break;
-    case 'new_direct_message': // This is for DMs
-      icon = Users; // Use 'Users' icon to distinguish from public posts
-      title = 'New Message';
-      description = `${actorName} sent you a new direct message.`;
+    case 'new_thread':
+      icon = MessageSquare;
+      title = 'New Post in Space';
+      description = `${actorName} posted "${thread?.title || 'a new post'}" in ${spaceName}.`;
       break;
-    case 'space_join_request': // [!code ++]
-      icon = UserPlus; // [!code ++]
-      title = 'Pending Request'; // [!code ++]
-      description = `${actorName} requested to join ${spaceName}.`; // [!code ++]
-      break; // [!code ++]
+    case 'new_space':
+      icon = Users;
+      title = 'Space Update';
+      description = `Your request to join ${spaceName} was approved.`;
+      break;
+
+    // --- Jobs & Opportunities (Manager/Applicant) ---
+    case 'job_application_update':
+      icon = Briefcase;
+      title = 'Application Update';
+      description = `Your application for "${job_application?.job_title || 'a job'}" was updated to: ${job_application?.status || '...'}.`;
+      break;
+    case 'new_job_posting':
+      icon = Briefcase;
+      title = 'New Job Posting';
+      description = `${actorName} posted a new job: "${job?.title || '...'}".`;
+      break;
+    case 'new_collaboration_posting':
+      icon = Construction;
+      title = 'New Collaboration';
+      description = `${actorName} posted a new collaboration: "${collaboration?.title || '...'}".`;
+      break;
+    case 'new_job_applicant':
+      icon = UserPlus;
+      title = 'New Job Applicant';
+      description = `${actorName} applied for your job: "${job_application?.job_title || '...'}".`;
+      break;
+    case 'new_collaboration_applicant':
+      icon = UserPlus;
+      title = 'New Collab Applicant';
+      description = `${actorName} applied for your collaboration: "${collaboration_application?.collaboration_title || '...'}".`;
+      break;
+
+    // --- Fallback (Should not be reached) ---
     default:
       console.warn(`Unknown notification type: ${type}`);
+      icon = AlertCircle;
+      title = 'Unknown Notification';
+      description = 'An unknown notification type was received.';
   }
 
   return { icon, title, description };
@@ -115,20 +160,20 @@ const NotificationCard = ({
         !notification.is_read ? 'border-l-4 border-l-primary bg-primary/5' : ''
       }`}
       onClick={() => {
-        if (notification.type !== 'system_update') {
-          onClick(notification);
-        }
+        // [!code --] (Removed system_update check, all cards are clickable)
+        onClick(notification);
       }}
     >
-      <CardContent className="p-6">
-        <div className="flex items-start gap-4">
+      {/* [!code --] UI IMPROVEMENT: Padding reduced from p-6 to p-4 */}
+      <CardContent className="p-4">
+        <div className="flex items-start gap-3"> {/* [!code --] (Gap reduced) */}
           <div
-            className={`w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center ${
+            className={`w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center ${ {/* [!code --] (Icon container smaller) */}
               !notification.is_read ? 'bg-gradient-primary' : 'bg-muted'
             }`}
           >
             <Icon
-              className={`h-5 w-5 ${
+              className={`h-4 w-4 ${ {/* [!code --] (Icon smaller) */}
                 !notification.is_read
                   ? 'text-primary-foreground'
                   : 'text-muted-foreground'
@@ -137,9 +182,9 @@ const NotificationCard = ({
           </div>
 
           <div className="flex-1 min-w-0">
-            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-2 gap-1 sm:gap-0">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-1 gap-1 sm:gap-0"> {/* [!code --] (Margin reduced) */}
               <h3
-                className={`font-semibold truncate ${
+                className={`font-semibold truncate text-base ${ {/* [!code --] (Size specified) */}
                   !notification.is_read
                     ? 'text-foreground'
                     : 'text-muted-foreground'
@@ -162,17 +207,15 @@ const NotificationCard = ({
               </div>
             </div>
 
-            {notification.type === 'system_update' ? (
-              <p className="text-muted-foreground mb-3 mt-2 whitespace-pre-wrap"> 
-                {description}
-              </p>
-            ) : (
-              <p className="text-muted-foreground mb-3">{description}</p> 
-            )}
-
-            <div className="flex flex-wrap items-center gap-3">
+            {/* [!code --] UI IMPROVEMENT: Description is smaller text */}
+            <p className="text-sm text-muted-foreground mb-2 whitespace-pre-wrap">
+              {description}
+            </p>
+            
+            {/* [!code --] UI IMPROVEMENT: Buttons are smaller and less obtrusive */}
+            <div className="flex flex-wrap items-center gap-1">
               <Button
-                size="sm"
+                size="xs"
                 variant="ghost"
                 onClick={(e) => {
                   e.stopPropagation();
@@ -184,7 +227,7 @@ const NotificationCard = ({
                 Mark Read
               </Button>
               <Button
-                size="sm"
+                size="xs"
                 variant="ghost"
                 className="text-destructive hover:text-destructive hover:bg-destructive/10"
                 onClick={(e) => {
@@ -205,18 +248,19 @@ const NotificationCard = ({
 
 const NotificationSkeleton = () => (
   <Card className="card-medical">
-    <CardContent className="p-6">
-      <div className="flex items-start gap-4">
-        <Skeleton className="w-10 h-10 rounded-full flex-shrink-0" />
-        <div className="flex-1 space-y-3">
+    {/* [!code --] (Padding reduced) */}
+    <CardContent className="p-4">
+      <div className="flex items-start gap-3">
+        <Skeleton className="w-8 h-8 rounded-full flex-shrink-0" />
+        <div className="flex-1 space-y-2">
           <div className="flex justify-between">
             <Skeleton className="h-5 w-1/2" />
             <Skeleton className="h-4 w-1/4" />
           </div>
           <Skeleton className="h-4 w-3/4" />
-          <div className="flex gap-3">
-            <Skeleton className="h-8 w-24" />
-            <Skeleton className="h-8 w-24" />
+          <div className="flex gap-2">
+            <Skeleton className="h-6 w-20" />
+            <Skeleton className="h-6 w-20" />
           </div>
         </div>
       </div>
@@ -227,7 +271,7 @@ const NotificationSkeleton = () => (
 export default function Notifications() {
   const [activeTab, setActiveTab] = useState('all');
   const { toast } = useToast();
-  const { refetchNotifCount, markNotificationAsRead } = useSocialCounts();
+  const { refetchNotifCount } = useSocialCounts(); // [!code --] Removed unused markNotificationAsRead
   const navigate = useNavigate();
 
   const [notifications, setNotifications] = useState<NotificationWithActor[]>([]);
@@ -254,24 +298,42 @@ export default function Notifications() {
 
   const unreadCount = useMemo(() => notifications.filter(n => !n.is_read).length, [notifications]);
 
+  // [!code ++]
+  // This logic is now updated to sort all 14 notification types
   const filteredNotifications = useMemo(() => {
     if (activeTab === 'all') return notifications;
     if (activeTab === 'unread') return notifications.filter(n => !n.is_read);
     
+    // "Updates" are content-based (posts, spaces, system)
     if (activeTab === 'updates') {
       return notifications.filter(
         n =>
           n.type === 'system_update' ||
-          n.type === 'new_public_post_by_followed_user' || 
+          n.type === 'new_public_post_by_followed_user' ||
           n.type === 'new_public_space_by_followed_user' ||
-          n.type === 'new_reply_to_your_message' // Replies to posts
+          n.type === 'new_reply_to_your_message' ||
+          n.type === 'new_thread' ||
+          n.type === 'new_space' ||
+          n.type === 'new_job_posting' ||
+          n.type === 'new_collaboration_posting'
       );
     }
+    // "Social" is person-to-person (connections, DMs)
     if (activeTab === 'social') {
       return notifications.filter(
         n => 
+          n.type === 'new_connection_request' ||
           n.type === 'connection_accepted' ||
-          n.type === 'new_direct_message' // DMs are social
+          n.type === 'new_direct_message'
+      );
+    }
+    // "Jobs" is application-related (for applicants or managers)
+    if (activeTab === 'job') {
+      return notifications.filter(
+        n =>
+          n.type === 'job_application_update' ||
+          n.type === 'new_job_applicant' ||
+          n.type === 'new_collaboration_applicant'
       );
     }
     return [];
@@ -279,14 +341,12 @@ export default function Notifications() {
 
   const handleMarkAsRead = async (id: string) => {
     const previousState = [...notifications];
-
-    // Optimistically update UI state immediately
     setNotifications(current =>
       current.map(n => (n.id === id ? { ...n, is_read: true } : n))
     );
-
     try {
       await markNotificationAsRead(id);
+      refetchNotifCount(); // [!code ++] Refresh count after marking read
     } catch (err) {
       toast({
         title: 'Error',
@@ -299,12 +359,10 @@ export default function Notifications() {
 
   const handleMarkAllAsRead = async () => {
     const previousState = [...notifications];
-    const previousUnreadCount = unreadCount;
-
     setNotifications(current => current.map(n => ({ ...n, is_read: true })));
-
     try {
       await markAllNotificationsAsRead();
+      refetchNotifCount(); // [!code ++] Refresh count
     } catch (err) {
       toast({
         title: 'Error',
@@ -317,11 +375,7 @@ export default function Notifications() {
 
   const handleDelete = async (id: string) => {
     const previousState = [...notifications];
-    const notificationToDelete = previousState.find(n => n.id === id);
-    const wasUnread = notificationToDelete && !notificationToDelete.is_read;
-
     setNotifications(current => current.filter(n => n.id !== id));
-
     try {
       await deleteNotification(id);
       toast({ title: 'Deleted', description: 'Notification removed.' });
@@ -336,22 +390,35 @@ export default function Notifications() {
     }
   };
 
+  // [!code ++]
+  // This handler is now comprehensive for all new types
   const handleNotificationClick = (notification: NotificationWithActor) => {
     if (!notification.is_read) {
       handleMarkAsRead(notification.id);
     }
 
-    if (notification.type === 'system_update') {
-      return; // No navigation
-    }
-
-    const entityId = (notification as any).entity_id;
+    const entityId = notification.entity_id;
     const actorId = notification.actor_id;
 
     switch (notification.type) {
-      // Post/Space related
+      // --- System ---
+      case 'system_update':
+        // Clicks on system updates can now show the full announcement
+        if (notification.announcement_id) {
+          // You could open a modal here with notification.announcement
+          toast({
+            title: notification.announcement?.title || 'System Update',
+            description: <div className="whitespace-pre-wrap">{notification.announcement?.body || ''}</div>,
+            duration: 10000,
+          });
+          return;
+        }
+        break;
+
+      // --- Community / Forums ---
       case 'new_public_post_by_followed_user':
       case 'new_reply_to_your_message':
+      case 'new_thread':
         if (entityId) {
           navigate(`/community/thread/${entityId}`); // Navigate to the post
           return;
@@ -359,13 +426,15 @@ export default function Notifications() {
         break;
 
       case 'new_public_space_by_followed_user':
+      case 'new_space':
         if (entityId) {
           navigate(`/community/space/${entityId}`); // Navigate to the space
           return;
         }
         break;
 
-      // Social related
+      // --- Social ---
+      case 'new_connection_request':
       case 'connection_accepted':
         if (actorId) {
           navigate(`/profile/${actorId}`); // Navigate to the user's profile
@@ -374,26 +443,44 @@ export default function Notifications() {
         break;
         
       case 'new_direct_message':
+        navigate(`/inbox`); // Navigate to the inbox
+        return;
+        
+      // --- Jobs & Opportunities ---
+      case 'new_job_posting':
         if (entityId) {
-          navigate(`/inbox`); // Navigate to the conversation
+          navigate(`/industry-hub/job/${entityId}`);
+          return;
+        }
+        break;
+      case 'new_collaboration_posting':
+        if (entityId) {
+          navigate(`/industry-hub/collaboration/${entityId}`);
           return;
         }
         break;
 
-      case 'space_join_request': // [!code ++]
-        if (entityId) { // [!code ++]
-          navigate(`/community/space/${entityId}/members`); // Navigate to the space's member management page [!code ++]
-          return; // [!code ++]
-        } // [!code ++]
-        break;
+      case 'job_application_update':
+        navigate(`/my-profile/applications`); // Navigate to user's "my applications" page
+        return;
 
-      // 'job_application_update' will fall through to the toast
+      case 'new_job_applicant':
+      case 'new_collaboration_applicant':
+        // Navigate to the company dashboard.
+        // We can't get the job/collab ID from the RPC (flaw),
+        // but we can at least send the manager to their applications page.
+        // We use the entity_id (application_id) to highlight it.
+        if (entityId) {
+          navigate(`/company/dashboard/applications?highlight=${entityId}`);
+          return;
+        }
+        break;
     }
 
-    // Fallback for types without navigation
+    // Fallback for any types without specific navigation
     toast({
-      title: 'Navigation Not Yet Implemented',
-      description: 'You will soon be able to click this to see the content.',
+      title: 'No Navigation',
+      description: 'This notification is informational.',
     });
   };
 
@@ -454,22 +541,13 @@ export default function Notifications() {
       <Header />
 
       <main className="container-medical flex-grow py-8">
-        <Alert className="mb-8 border-primary/50">
-          <Construction className="h-5 w-5" />
-          <AlertTitle className="font-bold text-lg">
-            Notifications Hub
-          </AlertTitle>
-          <AlertDescription className="text-base">
-            This is your new feed for all platform and community updates. Job
-            alerts are coming soon!
-          </AlertDescription>
-        </Alert>
+        {/* [!code --] Removed the 'Coming Soon' Alert */}
 
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-8 gap-6 animate-fade-in">
           <div>
             <h1 className="text-3xl font-bold mb-2">Notifications</h1>
             <p className="text-muted-foreground text-lg">
-              Stay updated with your community and platform activity.
+              All your platform and community activity in one place.
             </p>
           </div>
 
@@ -514,19 +592,9 @@ export default function Notifications() {
                 {renderContent()}
               </TabsContent>
 
+              {/* [!code --] This tab is now fully functional */}
               <TabsContent value="job" className="space-y-4">
-                <Card className="card-medical">
-                  <CardContent className="p-12 text-center">
-                    <Briefcase className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                    <h3 className="text-lg font-semibold mb-2">
-                      Job Notifications Coming Soon
-                    </h3>
-                    <p className="text-muted-foreground">
-                      We're building a dedicated job board. Soon, you'll get
-                      updates on applications and new job matches right here.
-                    </p>
-                  </CardContent>
-                </Card>
+                {renderContent()}
               </TabsContent>
             </Tabs>
           </div>
