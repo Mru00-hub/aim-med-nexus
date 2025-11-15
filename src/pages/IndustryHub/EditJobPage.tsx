@@ -4,8 +4,12 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
 import {
   getJobById,
-  updateCompanyJob,
-  softDeleteCompanyJob,
+  // [!code --] (This function name was incorrect)
+  // updateCompanyJob,
+  // softDeleteCompanyJob,
+  // [!code ++] (These are the correct function names from our API file)
+  updateCompanyJob as updateCompanyJobRpc,
+  setJobActiveStatus,
   UpdateJobPayload,
 } from '@/integrations/supabase/industry.api';
 import { supabase } from '@/integrations/supabase/client';
@@ -49,7 +53,6 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Skeleton } from '@/components/ui/skeleton';
 
-// 1. Define the validation schema (same as PostJobPage)
 const jobFormSchema = z.object({
   title: z.string().min(5, { message: 'Title must be at least 5 characters.' }),
   description: z.string().min(20, { message: 'Description must be at least 20 characters.' }),
@@ -70,7 +73,6 @@ export default function EditJobPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // 2. Fetch data for dropdowns
   const { data: experienceLevels } = useQuery({
     queryKey: ['experienceLevels'],
     queryFn: async () => {
@@ -80,7 +82,6 @@ export default function EditJobPage() {
     }
   });
 
-  // 3. Setup the form
   const form = useForm<JobFormData>({
     resolver: zodResolver(jobFormSchema),
     defaultValues: {
@@ -92,14 +93,12 @@ export default function EditJobPage() {
     },
   });
 
-  // 4. Fetch the existing job data
   const { data: jobData, isLoading: isLoadingJob } = useQuery({
     queryKey: ['jobDetails', jobId],
     queryFn: () => getJobById(jobId!),
     enabled: !!jobId,
     onSuccess: (data) => {
       if (data) {
-        // 5. Pre-fill the form once data is loaded
         form.reset({
           title: data.title,
           description: data.description,
@@ -114,12 +113,14 @@ export default function EditJobPage() {
     },
   });
 
-  // 6. Setup the UPDATE mutation
+  // [!code --] (This was incorrect, the API fn takes one object)
+  // const updateMutation = useMutation({
+  //   mutationFn: (payload: UpdateJobPayload) => updateCompanyJob(jobId!, payload),
+  // [!code ++] (FIX: The API function 'updateCompanyJobRpc' expects a single payload object)
   const updateMutation = useMutation({
-    mutationFn: (payload: UpdateJobPayload) => updateCompanyJob(jobId!, payload),
+    mutationFn: (payload: UpdateJobPayload) => updateCompanyJobRpc(payload),
     onSuccess: () => {
       toast({ title: 'Job Updated Successfully!' });
-      // Invalidate queries to refresh data on other pages
       queryClient.invalidateQueries({ queryKey: ['jobDetails', jobId] });
       queryClient.invalidateQueries({ queryKey: ['companyProfile', jobData?.company_id] });
       navigate('/industryhub/dashboard');
@@ -129,9 +130,12 @@ export default function EditJobPage() {
     },
   });
 
-  // 7. Setup the DELETE (soft) mutation
+  // [!code --] (This was incorrect, 'softDeleteCompanyJob' does not exist in our API)
+  // const deleteMutation = useMutation({
+  //   mutationFn: () => softDeleteCompanyJob(jobId!),
+  // [!code ++] (FIX: Use the correct RPC 'setJobActiveStatus' which also updates company counters)
   const deleteMutation = useMutation({
-    mutationFn: () => softDeleteCompanyJob(jobId!),
+    mutationFn: () => setJobActiveStatus(jobId!, false),
     onSuccess: () => {
       toast({ title: 'Job Deactivated', description: 'The job posting has been archived.' });
       queryClient.invalidateQueries({ queryKey: ['jobDetails', jobId] });
@@ -143,21 +147,24 @@ export default function EditJobPage() {
     },
   });
 
-  // 8. Handle form submission
   const onSubmit = (data: JobFormData) => {
     const specialtiesArray = data.specialties_required
       ? data.specialties_required.split(',').map(s => s.trim()).filter(Boolean)
       : [];
     
+    // [!code --] (This payload was missing the ID)
+    // const payload: UpdateJobPayload = {
+    // [!code ++] (FIX: The payload must match our 'UpdateJobPayload' type, including the ID)
     const payload: UpdateJobPayload = {
-      title: data.title,
-      description: data.description,
-      job_type: data.job_type,
-      experience_level: data.experience_level,
-      location_type: data.location_type,
-      location_text: data.location_text,
-      specialties_required: specialtiesArray,
-      external_apply_url: data.external_apply_url || null,
+      p_job_id: jobId!,
+      p_title: data.title,
+      p_description: data.description,
+      p_job_type: data.job_type,
+      p_experience_level: data.experience_level,
+      p_location_type: data.location_type,
+      p_location_text: data.location_text,
+      p_specialties_required: specialtiesArray,
+      p_external_apply_url: data.external_apply_url || null,
     };
     updateMutation.mutate(payload);
   };
@@ -220,7 +227,6 @@ export default function EditJobPage() {
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
                 
-                {/* ... All FormField components are identical to PostJobPage.tsx ... */}
                 {/* Title */}
                 <FormField
                   control={form.control}
