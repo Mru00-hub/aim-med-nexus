@@ -100,12 +100,15 @@ export default function CreateCompanyPage() {
 
   const onSubmit = (data: FormData) => {
     const payload = {
-    ...data,
-    website_url: data.website_url || undefined,
-    industry_id: data.industry_id === 'other' ? undefined : data.industry_id,
-    industry_other: data.industry_id === 'other' ? data.industry_other : undefined,
+      ...data,
+      website_url: data.website_url || undefined,
+      industry_id: data.industry_id === 'other' ? undefined : data.industry_id,
+      industry_other: data.industry_id === 'other' ? data.industry_other : undefined,
+    };
+    
+    mutation.mutate(payload); // <-- This was the missing line
   };
-
+  
   return (
     <div className="flex min-h-screen flex-col bg-gray-50/50">
       <Header />
