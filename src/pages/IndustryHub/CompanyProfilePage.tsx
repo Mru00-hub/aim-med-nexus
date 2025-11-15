@@ -90,7 +90,8 @@ export default function CompanyProfilePage() {
           ['companyProfile', companyId],
           {
             ...previousData,
-            is_followed_by_viewer: !previousData.is_followed_by_viewer,
+            is_followed_by_viewer: !previousData.is_followed_by_viewer, // [!code --]
+            is_following: !previousData.is_following, // [!code ++]
           }
         );
       }
@@ -129,8 +130,8 @@ export default function CompanyProfilePage() {
   const handleContactClick = () => {
     // We navigate to the inbox, pre-filling the user.
     // We assume the company creator's ID is on the profile.
-    if (data?.profile.creator_id) {
-      handleAuthAction(() => navigate(`/inbox?with=${data.profile.creator_id}`));
+    if (data?.creator_id) {
+      handleAuthAction(() => navigate(`/inbox?with=${data.creator_id}`));
     } else {
       toast({ title: "Cannot contact company", description: "This company has not set up a contact." });
     }
@@ -168,7 +169,7 @@ export default function CompanyProfilePage() {
   }
 
   // --- Data is loaded, destructure it ---
-  const { profile: company, jobs, collaborations, links, is_followed_by_viewer } = data;
+  const { profile: company, jobs, collaborations, links, is_following } = data;
 
   return (
     <div className="min-h-screen bg-background">
@@ -177,8 +178,8 @@ export default function CompanyProfilePage() {
         {/* === Section 1: Hero Header (Now with real data) === */}
         <div className="relative w-full h-48 md:h-64">
           <img
-            src={company.company_banner_url || CityCareBanner} // Use fallback
-            alt={`${company.company_name} banner`}
+            src={data.company_banner_url || CityCareBanner} // Use fallback
+            alt={`${data.company_name} banner`}
             className="w-full h-full object-cover"
           />
           <div className="absolute inset-0 bg-black/30" />
@@ -188,7 +189,7 @@ export default function CompanyProfilePage() {
           <div className="flex flex-col md:flex-row gap-6 -mt-16 md:-mt-20 z-10 relative">
             <div className="flex-shrink-0 w-32 h-32 md:w-40 md:h-40 rounded-lg bg-white shadow-xl border-4 border-background flex items-center justify-center">
               <Avatar className="h-full w-full rounded-md">
-                <AvatarImage src={company.company_logo_url || ''} className="object-cover" />
+                <AvatarImage src={data.company_logo_url || ''} className="object-cover" />
                 <AvatarFallback className="rounded-md bg-gradient-primary">
                   <Building className="h-16 w-16 md:h-20 md:w-20 text-white" />
                 </AvatarFallback>
@@ -199,43 +200,43 @@ export default function CompanyProfilePage() {
               <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
                 <div>
                   <h1 className="text-3xl md:text-4xl font-bold flex items-center gap-2">
-                    {company.company_name}
-                    {company.tier && (
+                    {data.company_name}
+                    {data.tier && (
                       <Badge className="bg-gradient-premium text-white text-sm ml-2">
-                        {toTitleCase(company.tier)} Partner
+                        {toTitleCase(data.tier)} Partner
                       </Badge>
                     )}
                   </h1>
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-2">
                     <div className="flex items-center text-muted-foreground">
                       <HeartPulse className="h-4 w-4 mr-1.5" />
-                      {company.industry_name || 'Industry'}
+                      {data.industry_name || 'Industry'}
                     </div>
                     <div className="flex items-center text-muted-foreground">
                       <MapPin className="h-4 w-4 mr-1.5" />
-                      {company.location_name || 'Global'}
+                      {data.location_name || 'Global'}
                     </div>
-                    {company.website_url && (
+                    {data.website_url && (
                       <a 
-                        href={company.website_url} 
+                        href={data.website_url} 
                         target="_blank" 
                         rel="noopener noreferrer" 
                         className="flex items-center text-blue-600 hover:underline"
                       >
                         <Globe className="h-4 w-4 mr-1" />
-                        {company.website_url.replace('https://', '')}
+                        {data.website_url.replace('https://', '')}
                       </a>
                     )}
                   </div>
                 </div>
                 <div className="flex gap-2 flex-shrink-0">
                   <Button 
-                    variant={is_followed_by_viewer ? "default" : "outline"} 
+                    variant={is_following ? "default" : "outline"} 
                     onClick={handleFollowClick}
                     disabled={followMutation.isPending}
                   >
                     <Users className="h-4 w-4 mr-2" />
-                    {is_followed_by_viewer ? 'Following' : 'Follow'}
+                    {is_following ? 'Following' : 'Follow'}
                   </Button>
                   <Button className="btn-medical" onClick={handleContactClick}>
                     <MessageSquare className="h-4 w-4 mr-2" />Contact Company
@@ -262,7 +263,7 @@ export default function CompanyProfilePage() {
                 <div className="md:col-span-2">
                   <Card className="card-medical">
                     <CardHeader>
-                      <CardTitle>About {company.company_name}</CardTitle>
+                      <CardTitle>About {data.company_name}</CardTitle>
                     </CardHeader>
                     <CardContent className="prose prose-sm md:prose-base max-w-none text-muted-foreground space-y-4">
                       {company.description.split('\n\n').map((paragraph, index) => (
@@ -277,30 +278,30 @@ export default function CompanyProfilePage() {
                       <CardTitle>At a Glance</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      {company.company_size && (
+                      {data.company_size && (
                         <div className="flex items-start gap-3">
                           <Users className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-1" />
                           <div>
                             <span className="text-sm text-muted-foreground">Company Size</span>
-                            <p className="font-semibold">{company.company_size}</p>
+                            <p className="font-semibold">{data.company_size}</p>
                           </div>
                         </div>
                       )}
-                      {company.location_name && (
+                      {data.location_name && (
                         <div className="flex items-start gap-3">
                           <MapPin className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-1" />
                           <div>
                             <span className="text-sm text-muted-foreground">Location</span>
-                            <p className="font-semibold">{company.location_name}</p>
+                            <p className="font-semibold">{data.location_name}</p>
                           </div>
                         </div>
                       )}
-                      {company.founded_year && (
+                      {data.founded_year && (
                         <div className="flex items-start gap-3">
                           <Calendar className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-1" />
                           <div>
                             <span className="text-sm text-muted-foreground">Founded</span>
-                            <p className="font-semibold">{company.founded_year}</p>
+                            <p className="font-semibold">{data.founded_year}</p>
                           </div>
                         </div>
                       )}
