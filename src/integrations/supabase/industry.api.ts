@@ -146,11 +146,14 @@ const getSessionOrThrow = async () => {
 
 /**
  * Fetches all industries for filter dropdowns.
- * (Assuming you have this RPC)
  */
 export const getIndustries = async (): Promise<Industry[]> => {
-  // @ts-ignore - Assuming get_industries RPC exists
-  const { data, error } = await supabase.rpc('get_industries');
+  // CORRECTED: Changed from a non-existent RPC to a direct table query
+  const { data, error } = await supabase
+    .from('industries')
+    .select('*')
+    .order('name', { ascending: true }); // Optional: alphabetize them
+
   if (error) throw error;
   return data || [];
 };
