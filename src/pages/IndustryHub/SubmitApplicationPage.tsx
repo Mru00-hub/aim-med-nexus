@@ -5,8 +5,8 @@ import { useAuth } from '@/hooks/useAuth';
 import {
   getJobById,
   getCollabById,
-  applyToJob,
-  applyToCollab,
+  applyForJob,
+  applyForCollab,
   MyJobApplication,
   MyCollabApplication,
 } from '@/integrations/supabase/industry.api';
