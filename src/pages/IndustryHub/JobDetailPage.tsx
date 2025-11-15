@@ -48,7 +48,7 @@ export default function JobDetailPage() {
     enabled: !!jobId,
   });
 
-  const handleApplyClick = ()d => {
+  const handleApplyClick = () => {
     if (user) {
       // Navigate to the application form page, passing job ID
       navigate(`/jobs/apply/${jobId}`);
