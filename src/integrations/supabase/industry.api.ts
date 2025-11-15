@@ -18,6 +18,8 @@ export type JobListing = Database['public']['Functions']['get_all_active_jobs'][
 
 // Type for the 'get_all_active_collaborations' RPC
 export type CollaborationListing = Database['public']['Functions']['get_all_active_collaborations']['Returns'][number];
+// Type for the 'get_all_companies' RPC
+export type CompanyListing = Database['public']['Functions']['get_all_companies']['Returns'][number];
 
 // Type for the 'get_company_profile_details' RPC
 export type CompanyProfileDetails = {
@@ -335,4 +337,26 @@ export const updateApplicationStatus = async (
     throw new Error(responseData.message);
   }
   return responseData;
+};
+
+/**
+ * Fetches a paginated and searchable list of all verified companies.
+ */
+export const getAllCompanies = async (payload: {
+  page: number;
+  limit: number;
+  searchQuery?: string;
+  industryId?: string;
+  locationId?: string;
+}): Promise<CompanyListing[]> => {
+  const { data, error } = await supabase.rpc('get_all_companies', {
+    p_limit: payload.limit,
+    p_page: payload.page,
+    p_search_query: payload.searchQuery || '',
+    p_industry_id: payload.industryId || null,
+    p_location_id: payload.locationId || null
+  });
+
+  if (error) throw error;
+  return data || [];
 };
