@@ -704,3 +704,33 @@ export const removeCompanyManager = async (payload: RemoveManagerPayload): Promi
   if (error) throw error;
   return data;
 };
+
+export const addCompanyLink = async (payload: AddLinkPayload): Promise<CompanyLink> => {
+  await getSessionOrThrow();
+  const { data, error } = await supabase
+    .rpc('add_company_link', payload)
+    .single();
+    
+  if (error) throw error;
+  return data;
+};
+
+export const updateCompanyLink = async (payload: UpdateLinkPayload): Promise<CompanyLink> => {
+  await getSessionOrThrow();
+  const { data, error } = await supabase
+    .rpc('update_company_link', payload)
+    .single();
+    
+  if (error) throw error;
+  return data;
+};
+
+export const deleteCompanyLink = async (payload: DeleteLinkPayload): Promise<{ status: string; link_id: string }> => {
+  await getSessionOrThrow();
+  const { data, error } = await supabase
+    .rpc('delete_company_link', payload)
+    .single();
+    
+  if (error) throw error;
+  return data;
+};
