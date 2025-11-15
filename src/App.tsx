@@ -23,7 +23,6 @@ console.log('workerSrc (global setup):', pdfjs.GlobalWorkerOptions.workerSrc);
 
 // --- All Page Imports (remain the same) ---
 import Index from "./pages/Index";
-import Jobs from "./pages/Jobs";
 import Partnerships from "./pages/Partnerships";
 import Feedback from "./pages/Feedback";
 import Notifications from "./pages/Notifications";
@@ -55,6 +54,19 @@ import CreateThread from "./pages/Community/CreateThread";
 import CreatePostPage from "./pages/Community/CreatePostPage";
 import MembersPage from './pages/Community/MembersPage';
 import UpdatePassword from './pages/UpdatePassword';
+
+import JobsAndOpportunitiesPage from './pages/IndustryHub/JobsAndOpportunitiesPage';
+import JobDetailPage from './pages/IndustryHub/JobDetailPage';
+import CollabDetailPage from './pages/IndustryHub/CollabDetailPage';
+import CreateCompanyPage from './pages/IndustryHub/CreateCompanyPage';
+import CompanyDashboardPage from './pages/IndustryHub/CompanyDashboardPage';
+import PostJobPage from './pages/IndustryHub/PostJobPage';
+import PostCollabPage from './pages/IndustryHub/PostCollabPage';
+import EditJobPage from './pages/IndustryHub/EditJobPage';
+import EditCollabPage from './pages/IndustryHub/EditCollabPage';
+import EditCompanyPage from './pages/IndustryHub/EditCompanyPage';
+import SubmitApplicationPage from './pages/IndustryHub/SubmitApplicationPage';
+import MyApplicationsPage from './pages/IndustryHub/MyApplicationsPage';
 
 const queryClient = new QueryClient();
 
@@ -122,8 +134,11 @@ const AppContent = () => {
             <Route path="/jobs" element={<Jobs />} />
             <Route path="/partnerships" element={<Partnerships />} />
             <Route path="/community" element={<Forums />} /> 
+            <Route path="/jobs" element={<JobsAndOpportunitiesPage />} />
             <Route path="/industryhub" element={<IndustryHub />} /> 
-            <Route path="/industryhub/company/example" element={<CompanyProfilePage />} />
+            <Route path="/industryhub/company/:companyId" element={<CompanyProfilePage />} />
+            <Route path="/jobs/details/:jobId" element={<JobDetailPage />} />
+            <Route path="/collabs/details/:collabId" element={<CollabDetailPage />} />
 
             <Route path="/info/help" element={<HelpPage />} />
             <Route path="/info/support" element={<SupportPage />} />
@@ -154,6 +169,20 @@ const AppContent = () => {
               <Route path="/community/space/:spaceId" element={<SpaceDetailPage />} />
               <Route path="/community/space/:spaceId/members" element={<MembersPage />} />
               <Route path="/community/thread/:threadId" element={<ThreadDetailPage />} />
+              <Route path="/industryhub/create-company" element={<CreateCompanyPage />} />
+              <Route path="/industryhub/dashboard" element={<CompanyDashboardPage />} />
+              <Route path="/industryhub/edit-company" element={<EditCompanyPage />} />
+              
+              <Route path="/industryhub/post-job" element={<PostJobPage />} />
+              <Route path="/industryhub/dashboard/edit-job/:jobId" element={<EditJobPage />} />
+
+              <Route path="/industryhub/post-collab" element={<PostCollabPage />} />
+              <Route path="/industryhub/dashboard/edit-collab/:collabId" element={<EditCollabPage />} />
+              
+              <Route path="/industryhub/my-applications" element={<MyApplicationsPage />} />
+              
+              <Route path="/apply/job/:jobId" element={<SubmitApplicationPage />} />
+              <Route path="/apply/collab/:collabId" element={<SubmitApplicationPage />} />
             </Route>
             
             <Route path="*" element={<NotFound />} />
