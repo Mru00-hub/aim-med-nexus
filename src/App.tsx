@@ -131,7 +131,6 @@ const AppContent = () => {
             <Route path="/" element={<Index />} />
             <Route path="/please-verify" element={<PleaseVerify />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
-            <Route path="/jobs" element={<Jobs />} />
             <Route path="/partnerships" element={<Partnerships />} />
             <Route path="/community" element={<Forums />} /> 
             <Route path="/jobs" element={<JobsAndOpportunitiesPage />} />
