@@ -62,7 +62,6 @@ export default function EditCompanyPage() {
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [bannerFile, setBannerFile] = useState<File | null>(null);
 
-  // 1. Fetch Company ID of the current admin (from PostJobPage logic)
   const { data: companyId } = useQuery<string | null, Error>({
     queryKey: ['myAdminCompanyId'],
     queryFn: async () => {
@@ -73,22 +72,31 @@ export default function EditCompanyPage() {
     enabled: !!user,
   });
 
-  // 2. Fetch the existing company profile data
   const { data: profileData, isLoading: isLoadingProfile, isError } = useQuery({
     queryKey: ['companyProfile', companyId],
     queryFn: () => getCompanyProfileDetails(companyId!),
     enabled: !!companyId,
     onSuccess: (data) => {
       if (data) {
-        // 4. Pre-fill the form once data is loaded
+        // [!code --] (This was the OLD, nested data structure)
+        // form.reset({
+        //   company_name: data.profile.company_name,
+        //   description: data.profile.description,
+        //   industry_id: data.profile.industry_id,
+        //   location_id: data.profile.location_id,
+        //   website_url: data.profile.website_url || '',
+        //   company_size: data.profile.company_size || '',
+        //   founded_year: data.profile.founded_year ? String(data.profile.founded_year) : '',
+        // });
+        // [!code ++] (FIX: Reset form with the new FLAT data structure from our RPC)
         form.reset({
-          company_name: data.profile.company_name,
-          description: data.profile.description,
-          industry_id: data.profile.industry_id,
-          location_id: data.profile.location_id,
-          website_url: data.profile.website_url || '',
-          company_size: data.profile.company_size || '',
-          founded_year: data.profile.founded_year ? String(data.profile.founded_year) : '',
+          company_name: data.company_name,
+          description: data.description,
+          industry_id: data.industry_id,
+          location_id: data.location_id,
+          website_url: data.website_url || '',
+          company_size: data.company_size || '',
+          founded_year: data.founded_year ? String(data.founded_year) : '',
         });
       }
     },
@@ -105,7 +113,6 @@ export default function EditCompanyPage() {
     },
   });
 
-  // 4. Setup the form
   const form = useForm<CompanyFormData>({
     resolver: zodResolver(companyFormSchema),
     defaultValues: {
@@ -120,33 +127,38 @@ export default function EditCompanyPage() {
     mutationFn: async ({ payload, newLogo, newBanner }: { payload: UpdateCompanyPayload, newLogo: File | null, newBanner: File | null }) => {
       if (!companyId) throw new Error("Company ID is missing.");
       
-      let logoUrl = profileData?.profile.company_logo_url;
-      let bannerUrl = profileData?.profile.company_banner_url;
+      // [!code --] (This was the OLD, nested data structure)
+      // let logoUrl = profileData?.profile.company_logo_url;
+      // let bannerUrl = profileData?.profile.company_banner_url;
+      // [!code ++] (FIX: Use the new FLAT data structure)
+      let logoUrl = profileData?.company_logo_url;
+      let bannerUrl = profileData?.company_banner_url;
 
-      // Handle Logo Upload
       if (newLogo) {
         const logoUploadResult = await uploadCompanyAsset(companyId, newLogo);
         logoUrl = logoUploadResult.publicUrl;
       }
       
-      // Handle Banner Upload
       if (newBanner) {
         const bannerUploadResult = await uploadCompanyAsset(companyId, newBanner);
         bannerUrl = bannerUploadResult.publicUrl;
       }
 
-      // Merge URLs into the final payload
+      // [!code ++] (FIX: Add the p_company_id to the payload, as required by the RPC)
       const finalPayload: UpdateCompanyPayload = {
         ...payload,
-        company_logo_url: logoUrl,
-        company_banner_url: bannerUrl,
+        p_company_id: companyId, // [!code ++]
+        p_company_logo_url: logoUrl,
+        p_company_banner_url: bannerUrl,
       };
 
-      return updateCompanyProfile(companyId, finalPayload);
+      // [!code --] (This was the old, incorrect call)
+      // return updateCompanyProfile(companyId, finalPayload);
+      // [!code ++] (FIX: Call the API function with the single payload object)
+      return updateCompanyProfile(finalPayload);
     },
     onSuccess: () => {
       toast({ title: 'Company Profile Updated Successfully!' });
-      // Invalidate queries to refresh data on other pages
       queryClient.invalidateQueries({ queryKey: ['companyProfile', companyId] });
       navigate(`/industryhub/company/${companyId}`);
     },
@@ -157,14 +169,17 @@ export default function EditCompanyPage() {
 
   // 6. Handle form submission
   const onSubmit = (data: CompanyFormData) => {
-    const payload: UpdateCompanyPayload = {
-      company_name: data.company_name,
-      description: data.description,
-      industry_id: data.industry_id,
-      location_id: data.location_id,
-      website_url: data.website_url || null,
-      company_size: data.company_size || null,
-      founded_year: data.founded_year ? parseInt(data.founded_year) : null,
+    // [!code --] (This payload was missing the ID)
+    // const payload: UpdateCompanyPayload = {
+    // [!code ++] (FIX: The payload here only needs the form data, the mutation adds the ID)
+    const payload: Omit<UpdateCompanyPayload, 'p_company_id'> = { // [!code ++]
+      p_company_name: data.company_name,
+      p_description: data.description,
+      p_industry_id: data.industry_id,
+      p_location_id: data.location_id,
+      p_website_url: data.website_url || null,
+      p_company_size: data.company_size || null,
+      p_founded_year: data.founded_year ? parseInt(data.founded_year) : null,
     };
     
     updateMutation.mutate({ payload, newLogo: logoFile, newBanner: bannerFile });
@@ -246,7 +261,10 @@ export default function EditCompanyPage() {
                         />
                       </FormControl>
                       <FormDescription>
-                        {logoFile ? `New file selected: ${logoFile.name}` : profileData?.profile.company_logo_url ? 'Existing logo will be kept unless new file is selected.' : 'No logo uploaded yet.'}
+                        {/* [!code --] (Old data structure) */}
+                        {/* {logoFile ? `New file selected: ${logoFile.name}` : profileData?.profile.company_logo_url ? 'Existing logo will be kept unless new file is selected.' : 'No logo uploaded yet.'} */}
+                        {/* [!code ++] (FIX: Use flat data structure) */}
+                        {logoFile ? `New file selected: ${logoFile.name}` : profileData?.company_logo_url ? 'Existing logo will be kept unless new file is selected.' : 'No logo uploaded yet.'}
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -263,7 +281,10 @@ export default function EditCompanyPage() {
                         />
                       </FormControl>
                       <FormDescription>
-                        {bannerFile ? `New file selected: ${bannerFile.name}` : profileData?.profile.company_banner_url ? 'Existing banner will be kept unless new file is selected.' : 'No banner uploaded yet.'}
+                        {/* [!code --] (Old data structure) */}
+                        {/* {bannerFile ? `New file selected: ${bannerFile.name}` : profileData?.profile.company_banner_url ? 'Existing banner will be kept unless new file is selected.' : 'No banner uploaded yet.'} */}
+                        {/* [!code ++] (FIX: Use flat data structure) */}
+                        {bannerFile ? `New file selected: ${bannerFile.name}` : profileData?.company_banner_url ? 'Existing banner will be kept unless new file is selected.' : 'No banner uploaded yet.'}
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
