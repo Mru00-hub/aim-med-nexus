@@ -114,7 +114,7 @@ export default function JobDetailPage() {
         <div className="container mx-auto max-w-5xl">
           <Button
             variant="ghost"
-            onClick={() => navigate('/jobs-and-opportunities')} // Link back to the main jobs page
+            onClick={() => navigate('/jobs')} // Link back to the main jobs page
             className="mb-4 text-muted-foreground"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
@@ -185,7 +185,7 @@ export default function JobDetailPage() {
                     </Button>
                   ) : (
                     <Button size="lg" className="w-full" onClick={handleApplyClick}>
-                      {user ? 'Apply Now on AIM MedNexus' : 'Sign in to Apply'}
+                      {user ? 'Apply Now on AIMedNet' : 'Sign in to Apply'}
                     </Button>
                   )}
                 </CardContent>
