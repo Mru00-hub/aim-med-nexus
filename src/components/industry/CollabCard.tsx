@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { CollaborationListing } from '@/integrations/supabase/industry.api'; // Our RPC type
+import { CollaborationListing } from '@/integrations/supabase/industry.api';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,7 +9,6 @@ import {
   MapPin,
   Briefcase,
   Calendar,
-  Users,
   ExternalLink,
   FlaskConical,
 } from 'lucide-react';
@@ -36,10 +35,10 @@ export const CollabCard: React.FC<CollabCardProps> = ({ collab }) => {
     title,
     company_id,
     company_name,
-    location,
+    location_name,
     collaboration_type,
     duration,
-    required_specialty = [],
+    specializations = [],
     created_at,
   } = collab;
 
@@ -87,7 +86,7 @@ export const CollabCard: React.FC<CollabCardProps> = ({ collab }) => {
               </div>
               <div className="flex items-center gap-1">
                 <MapPin className="h-4 w-4" />
-                <span>{location || 'Remote'}</span>
+                <span>{location_name || 'Remote'}</span>
               </div>
               <Badge variant="outline" className="w-fit text-xs">
                 {toTitleCase(collaboration_type)}
@@ -96,14 +95,14 @@ export const CollabCard: React.FC<CollabCardProps> = ({ collab }) => {
 
             {/* Skills */}
             <div className="mb-3 flex flex-wrap gap-2">
-              {required_specialty.slice(0, 4).map((skill) => (
-                <Badge key={skill} variant="secondary" className="text-xs">
-                  {toTitleCase(skill)}
+              {specializations.slice(0, 4).map((spec) => (
+                <Badge key={spec.id} variant="secondary" className="text-xs">
+                  {spec.label}
                 </Badge>
               ))}
-              {required_specialty.length > 4 && (
+              {specializations.length > 4 && (
                  <Badge variant="secondary" className="text-xs">
-                  +{required_specialty.length - 4} more
+                  +{specializations.length - 4} more
                 </Badge>
               )}
             </div>
