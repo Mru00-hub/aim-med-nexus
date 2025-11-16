@@ -139,13 +139,13 @@ export default function CompanyDashboardPage() {
           {/* Post Actions (Quick Links) */}
           <div className="mb-8 grid grid-cols-2 gap-4 md:grid-cols-4">
               <Button asChild variant="secondary">
-                <Link to={`/industryhub/post-job/${companyId}`}>
+                <Link to="/industryhub/post-job">
                   <Plus className="mr-2 h-4 w-4" />
                   Post Job
                 </Link>
               </Button>
               <Button asChild variant="secondary">
-                <Link to={`/industryhub/post-collab/${companyId}`}>
+                <Link to="/industryhub/post-collab">
                   <Plus className="mr-2 h-4 w-4" />
                   Post Collab
                 </Link>
