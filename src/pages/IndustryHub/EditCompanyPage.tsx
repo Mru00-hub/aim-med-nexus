@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams} from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
 import {
   getCompanyProfileDetails,
   updateCompanyProfile,
   uploadCompanyAsset,
+  uploadNewCompanyLogo, 
   UpdateCompanyPayload,
   getIndustries,
 } from '@/integrations/supabase/industry.api';
@@ -63,13 +64,21 @@ const companyFormSchema = z.object({
   location_id: z.string({ required_error: 'Location is required.' }),
   website_url: z.string().url({ message: 'Must be a valid URL.' }).optional().or(z.literal('')),
   company_size: z.string().optional(),
-  founded_year: z.string().optional(),
+  founded_year: z.preprocess(
+    (arg) => (arg === "" ? undefined : arg), // Convert empty string to undefined
+    z.coerce.number() // Try to convert the (non-empty) string to a number
+      .int({ message: 'Year must be a whole number.' })
+      .min(1800, { message: 'Year must be after 1800.' })
+      .max(new Date().getFullYear(), { message: 'Year cannot be in the future.' })
+      .optional()
+  ),
 });
 
 type CompanyFormData = z.infer<typeof companyFormSchema>;
 
 export default function EditCompanyPage() {
   const navigate = useNavigate();
+  const { companyId } = useParams<{ companyId: string }>();
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -135,16 +144,6 @@ export default function EditCompanyPage() {
     [locations]
   );
 
-  const { data: companyId } = useQuery<string | null, Error>({
-    queryKey: ['myAdminCompanyId'],
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_my_admin_company_id');
-      if (error) throw new Error(error.message);
-      return data;
-    },
-    enabled: !!user,
-  });
-
   const { data: profileData, isLoading: isLoadingProfile, isError } = useQuery({
     queryKey: ['companyProfile', companyId],
     queryFn: () => getCompanyProfileDetails(companyId!),
@@ -158,7 +157,7 @@ export default function EditCompanyPage() {
           location_id: data.location_id || undefined,
           website_url: data.website_url || '',
           company_size: data.company_size || undefined,
-          founded_year: data.founded_year ? String(data.founded_year) : '',
+          founded_year: data.founded_year ? String(data.founded_year) : undefined,
         });
       }
     },
@@ -233,7 +232,7 @@ export default function EditCompanyPage() {
       p_location_id: data.location_id,
       p_website_url: data.website_url || null,
       p_company_size: data.company_size || null,
-      p_founded_year: data.founded_year ? parseInt(data.founded_year) : null,
+      p_founded_year: data.founded_year || null,
     };
     
     updateMutation.mutate({ payload, newLogo: logoFile, newBanner: bannerFile });
@@ -260,27 +259,30 @@ export default function EditCompanyPage() {
     },
   });
 
-  if (isLoadingProfile || !companyId) {
-    if (isError && !companyId) {
-      return (
-        <div className="flex min-h-screen flex-col">
-          <Header />
-          <main className="container-medical flex-1 py-12">
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Access Denied</AlertTitle>
-              <AlertDescription>
-                You are not authorized to edit a company profile or your company ID could not be found.
-              </AlertDescription>
-            </Alert>
-          </main>
-          <Footer />
-        </div>
-      );
-    }
+  if (isLoadingProfile) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (isError || !profileData) {
+     // This catches both query errors and cases where 'companyId' is missing
+     return (
+      <div className="flex min-h-screen flex-col">
+        <Header />
+        <main className="container-medical flex-1 py-12">
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Error Loading Profile</AlertTitle>
+            <AlertDescription>
+              The company profile could not be loaded. Please ensure you have
+              the correct URL and are authorized to edit this company.
+            </AlertDescription>
+          </Alert>
+        </main>
+        <Footer />
       </div>
     );
   }
