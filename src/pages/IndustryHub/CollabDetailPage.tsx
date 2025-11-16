@@ -91,18 +91,16 @@ export default function CollabDetailPage() {
     );
   }
 
-  // Destructure collaboration data
+    // Destructure collaboration data
   const {
     title,
     company_id,
     company_name,
-    location,
     collaboration_type,
     duration,
-    required_specialty = [],
     description,
-    // Note: Our Collab table doesn't have an external_apply_url,
-    // so we will only use the internal "Apply" button.
+    location_name,
+    specializations = [],
   } = collab;
 
   return (
@@ -132,7 +130,7 @@ export default function CollabDetailPage() {
                     </div>
                     <div className="flex items-center gap-1.5">
                       <MapPin className="h-4 w-4" />
-                      <span>{location || 'Remote'}</span>
+                      <span>{location_name || 'Remote'}</span>
                     </div>
                     <div className="flex items-center gap-1.5">
                       <Clock className="h-4 w-4" />
@@ -152,13 +150,13 @@ export default function CollabDetailPage() {
                   </div>
 
                   {/* Skills/Specialties */}
-                  {required_specialty.length > 0 && (
+                  {specializations.length > 0 && (
                     <div>
                       <h3 className="mb-3 text-lg font-semibold">Required Skills & Specialties</h3>
                       <div className="flex flex-wrap gap-2">
-                        {required_specialty.map((skill) => (
-                          <Badge key={skill} variant="secondary" className="text-base font-normal">
-                            {toTitleCase(skill)}
+                        {specializations.map((spec) => (
+                          <Badge key={spec.id} variant="secondary" className="text-base font-normal">
+                            {spec.label}
                           </Badge>
                         ))}
                       </div>
@@ -174,7 +172,7 @@ export default function CollabDetailPage() {
               <Card className="shadow-sm">
                 <CardContent className="p-6">
                   <Button size="lg" className="w-full" onClick={handleApplyClick}>
-                    {user ? 'Apply Now on AIM MedNexus' : 'Sign in to Apply'}
+                    {user ? 'Apply Now on AIMedNet' : 'Sign in to Apply'}
                   </Button>
                 </CardContent>
               </Card>
