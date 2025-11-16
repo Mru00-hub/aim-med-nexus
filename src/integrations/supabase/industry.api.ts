@@ -252,10 +252,23 @@ export const getIndustries = async (): Promise<Industry[]> => {
 /**
  * Fetches a paginated list of all active jobs from all companies.
  */
-export const getAllActiveJobs = async (page = 1, limit = 20): Promise<JobListing[]> => {
+export const getAllActiveJobs = async (
+  page: number = 1,
+  limit: number = 12,
+  filters: {
+    industryId?: string;
+    locationId?: string;
+    searchQuery?: string;
+    specializationIds?: string[];
+  }
+): Promise<JobListing[]> => {
   const { data, error } = await supabase.rpc('get_all_active_jobs', {
     p_limit: limit,
-    p_page: page
+    p_page: page,
+    p_industry_id: filters.industryId || null,
+    p_location_id: filters.locationId || null,
+    p_search_query: filters.searchQuery || '',
+    p_specialization_ids: filters.specializationIds || [],
   });
   if (error) throw error;
   return data || [];
