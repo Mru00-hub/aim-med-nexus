@@ -21,20 +21,63 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Loader2, AlertCircle, Info, Search, X, Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { SearchableSelect } from '@/components/ui/searchable-select'; // <-- ADD THIS
+import { useMemo, useRef } from 'react'; // <-- ADD THIS
 
 // Simple debounce hook
-const useDebounce = (value: string, delay: number) => {
-  const [debouncedValue, setDebouncedValue] = useState(value);
+function useDebouncedFetch(
+  tableName: 'locations' | 'industries' | 'specializations',
+  searchTerm: string,
+  setData: React.Dispatch<React.SetStateAction<{id: string, label: string}[]>>,
+  setLoading: React.Dispatch<React.SetStateAction<boolean>>
+) {
+  const isMounted = useRef(false);
+  // --- FIX: This hook needs the correct 'name' column logic ---
+  const selectColumn = tableName === 'industries' ? 'name' : 'label';
   useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedValue(value);
-    }, delay);
-    return () => {
-      clearTimeout(handler);
+    const fetchSearchData = async () => {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from(tableName)
+        .select(`id, ${selectColumn}`)
+        .neq(selectColumn, 'Other') // <-- FIX
+        .or(`${selectColumn}.ilike.%${searchTerm}%`) // <-- FIX
+        .order(selectColumn) // <-- FIX
+        .limit(50);
+      if (data) setData(data.map(d => ({ id: d.id, label: d[selectColumn] }))); 
+      if (error) console.error(`Error fetching ${tableName}:`, error);
+      setLoading(false);
     };
-  }, [value, delay]);
-  return debouncedValue;
-};
+
+    const fetchInitialData = async () => {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from(tableName)
+        .select(`id, ${selectColumn}`)
+        .neq(selectColumn, 'Other') // <-- FIX
+        .order(selectColumn) // <-- FIX
+        .limit(10);
+      if (data) setData(data.map(d => ({ id: d.id, label: d[selectColumn] })));
+      if (error) console.error(`Error fetching initial ${tableName}:`, error);
+      setLoading(false);
+    };
+    if (!isMounted.current) {
+      isMounted.current = true;
+      fetchInitialData();
+      return;
+    }
+
+    const searchTimer = setTimeout(() => {
+      if (searchTerm.length < 2) {
+        fetchInitialData();
+      } else {
+        fetchSearchData();
+      }
+    }, 500);
+
+    return () => clearTimeout(searchTimer);
+  }, [searchTerm, tableName, setData, setLoading, selectColumn]);
+}
 
 export default function IndustryHub() {
   const [filters, setFilters] = useState({
@@ -46,20 +89,25 @@ export default function IndustryHub() {
   const navigate = useNavigate(); // 2. Get navigate function
   const { user } = useAuth();
 
-  // Fetch data for filters
-  const { data: industries } = useQuery({
-    queryKey: ['industries'],
-    queryFn: getIndustries,
-  });
+    // --- Data Fetching for Filters ---
+  const [locations, setLocations] = useState<{id: string, label: string}[]>([]);
+  const [industries, setIndustries] = useState<{id: string, label: string}[]>([]);
+  const [locationSearch, setLocationSearch] = useState("");
+  const [industrySearch, setIndustrySearch] = useState("");
+  const [isLocLoading, setIsLocLoading] = useState(false);
+  const [isIndLoading, setIsIndLoading] = useState(false);
 
-  const { data: locations } = useQuery({
-    queryKey: ['locations'],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('locations').select('*');
-      if (error) throw new Error(error.message);
-      return data;
-    },
-  });
+  useDebouncedFetch('locations', locationSearch, setLocations, setIsLocLoading);
+  useDebouncedFetch('industries', industrySearch, setIndustries, setIsIndLoading);
+
+  const locationOptions = useMemo(() => 
+    locations.map(loc => ({ value: loc.id, label: loc.label })),
+    [locations]
+  );
+  const industryOptions = useMemo(() => 
+    industries.map(ind => ({ value: ind.id, label: ind.label })),
+    [industries]
+  );
 
   // Main query for companies using infinite scroll
   const {
@@ -179,7 +227,7 @@ export default function IndustryHub() {
             <AlertTitle className="font-semibold">Welcome to the Hub</AlertTitle>
             <AlertDescription>
               All company profiles are managed directly by the organizations
-              themselves. AIMMedNet does not endorse or verify all information.
+              themselves. AIMedNet does not endorse or verify all information.
             </AlertDescription>
           </Alert>
 
@@ -198,37 +246,27 @@ export default function IndustryHub() {
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               </div>
               
-              <Select
+              <SearchableSelect
                 value={filters.industryId}
-                onValueChange={(value) => handleFilterChange('industryId', value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="All Industries" />
-                </SelectTrigger>
-                <SelectContent>
-                  {industries?.map((industry) => (
-                    <SelectItem key={industry.id} value={industry.id}>
-                      {industry.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                onValueChange={(value) => handleFilterChange('industryId', value || '')}
+                options={industryOptions}
+                onSearchChange={setIndustrySearch}
+                isLoading={isIndLoading}
+                placeholder="All Industries"
+                searchPlaceholder="Search industries..."
+                emptyMessage="No industries found."
+              />
 
-              <Select
+              <SearchableSelect
                 value={filters.locationId}
-                onValueChange={(value) => handleFilterChange('locationId', value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="All Locations" />
-                </SelectTrigger>
-                <SelectContent>
-                  {locations?.map((location) => (
-                    <SelectItem key={location.id} value={location.id}>
-                      {location.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                onValueChange={(value) => handleFilterChange('locationId', value || '')}
+                options={locationOptions}
+                onSearchChange={setLocationSearch}
+                isLoading={isLocLoading}
+                placeholder="All Locations"
+                searchPlaceholder="Search locations..."
+                emptyMessage="No locations found."
+              />
             </div>
             
             {(filters.search || filters.industryId || filters.locationId) && (
