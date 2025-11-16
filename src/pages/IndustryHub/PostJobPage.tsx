@@ -46,8 +46,8 @@ const jobFormSchema = z.object({
   job_type: z.string({ required_error: 'Please select a job type.' }),
   experience_level: z.string({ required_error: 'Please select an experience level.' }),
   location_type: z.string({ required_error: 'Please select a location type.' }),
-  location_id: z.string({ required_error: 'Location is required.' }), // Changed
-  specialization_ids: z.array(z.string()).optional(), // Changed
+  location_id: z.string({ required_error: 'Location is required.' }),
+  specialization_ids: z.array(z.string()).optional(),
   external_apply_url: z.string().url({ message: 'Please enter a valid URL.' }).optional().or(z.literal('')),
 });
 
