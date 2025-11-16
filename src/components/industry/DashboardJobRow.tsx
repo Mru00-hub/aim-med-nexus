@@ -29,6 +29,7 @@ type JobFromRPC = {
   location_name: string | null;
   specializations: { id: string; label: string }[];
   company_id: string;
+  applicants_count: number;
 };
 
 interface DashboardJobRowProps {
@@ -45,7 +46,7 @@ const toTitleCase = (str: string | null | undefined) => {
 };
 
 export const DashboardJobRow: React.FC<DashboardJobRowProps> = ({ job }) => {
-  const applicantCount = 0; // Placeholder
+  const applicantCount = job.applicants_count;
   const [isDeactivateAlertOpen, setIsDeactivateAlertOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -93,7 +94,7 @@ export const DashboardJobRow: React.FC<DashboardJobRowProps> = ({ job }) => {
           </div>
           <div className="flex w-full flex-shrink-0 gap-2 sm:w-auto">
             <Button variant="outline" size="sm" asChild>
-              <Link to={`/industryhub/dashboard/applicants/job/${job.id}`}>
+              <Link to={`/industryhub/dashboard/${job.company_id}?tab=applicants`}>
                 <Users className="mr-2 h-4 w-4" />
                 Applicants ({applicantCount})
               </Link>
@@ -104,7 +105,7 @@ export const DashboardJobRow: React.FC<DashboardJobRowProps> = ({ job }) => {
               </Link>
             </Button>
             <Button variant="outline" size="icon" asChild>
-              <Link to={`/industryhub/dashboard/edit-job/${job.id}`}>
+              <Link to={`/industryhub/dashboard/${job.company_id}/edit-job/${job.id}`}>
                 <Edit className="h-4 w-4" />
               </Link>
             </Button>
