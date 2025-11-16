@@ -226,6 +226,39 @@ export type CompanyManagerWithProfile = CompanyManager & {
     profile_picture_url: string | null;
   } | null;
 };
+
+// --- ADD THIS TYPE DEFINITION ---
+export type Collaboration = {
+  id: string;
+  company_id: string;
+  title: string;
+  collaboration_type: Enums<'collab_type_enum'>;
+  description: string;
+  duration: string | null;
+  location_id: string | null;
+  is_active: boolean;
+  applicants_count: number;
+  created_at: string;
+  location_name: string | null;
+  specializations: { id: string; label: string }[];
+};
+// --- END OF NEW TYPE ---
+// --- ADD THIS TYPE DEFINITION ---
+export type CompanyJob = {
+  id: string;
+  company_id: string;
+  title: string;
+  job_type: string;
+  experience_level: string;
+  location_type: string;
+  location_id: string | null;
+  is_active: boolean;
+  created_at: string;
+  location_name: string | null;
+  applicants_count: number; // This is the new field you added
+  specializations: { id: string; label: string }[];
+};
+// --- END OF NEW TYPE ---
 // --- Helper: Enforce Authentication ---
 const getSessionOrThrow = async () => {
   const { data: { session }, error } = await supabase.auth.getSession();
