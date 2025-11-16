@@ -28,6 +28,7 @@ type CollabFromRPC = {
   location_name: string | null;
   specializations: { id: string; label: string }[];
   company_id: string;
+  applicants_count: number;
 };
 
 interface DashboardCollabRowProps {
@@ -44,7 +45,7 @@ const toTitleCase = (str: string | null | undefined) => {
 };
 
 export const DashboardCollabRow: React.FC<DashboardCollabRowProps> = ({ collab }) => {
-  const applicantCount = 0; // Placeholder
+  const applicantCount = collab.applicants_count;
   const [isDeactivateAlertOpen, setIsDeactivateAlertOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -97,7 +98,7 @@ export const DashboardCollabRow: React.FC<DashboardCollabRowProps> = ({ collab }
           </div>
           <div className="flex w-full flex-shrink-0 gap-2 sm:w-auto">
             <Button variant="outline" size="sm" asChild>
-              <Link to={`/industryhub/dashboard/applicants/collab/${collab.id}`}>
+              <Link to={`/industryhub/dashboard/${collab.company_id}?tab=applicants`}>
                 <Users className="mr-2 h-4 w-4" />
                 Applicants ({applicantCount})
               </Link>
@@ -108,7 +109,7 @@ export const DashboardCollabRow: React.FC<DashboardCollabRowProps> = ({ collab }
               </Link>
             </Button>
             <Button variant="outline" size="icon" asChild>
-              <Link to={`/industryhub/dashboard/edit-collab/${collab.id}`}>
+              <Link to={`/industryhub/dashboard/${collab.company_id}/edit-collab/${collab.id}`}>
                 <Edit className="h-4 w-4" />
               </Link>
             </Button>
