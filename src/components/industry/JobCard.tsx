@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { JobListing } from '@/integrations/supabase/industry.api'; // Our RPC type
+import { JobListing } from '@/integrations/supabase/industry.api';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,7 +9,6 @@ import {
   MapPin,
   Briefcase,
   Calendar,
-  Users,
   ExternalLink,
 } from 'lucide-react';
 
@@ -17,7 +16,7 @@ interface JobCardProps {
   job: JobListing;
 }
 
-// Helper to format text (from your file)
+// Helper to format text
 const toTitleCase = (str: string | null | undefined) => {
   if (!str) return '';
   return str.replace(/_/g, ' ').replace(
@@ -35,14 +34,14 @@ export const JobCard: React.FC<JobCardProps> = ({ job }) => {
     title,
     company_id,
     company_name,
-    location_text,
+    location_name,
     job_type,
     experience_level,
-    specialties_required = [],
-    created_at, // We'll need to format this
+    specializations = [],
+    created_at,
   } = job;
 
-  // Simple date formatter (you can replace with date-fns)
+  // Simple date formatter
   const timeAgo = (dateStr: string) => {
     const date = new Date(dateStr);
     const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
@@ -60,7 +59,6 @@ export const JobCard: React.FC<JobCardProps> = ({ job }) => {
   };
 
   const handleApply = () => {
-    // This will go to the 'SubmitApplicationPage'
     navigate(`/jobs/apply/${job_id}`);
   };
 
@@ -93,7 +91,7 @@ export const JobCard: React.FC<JobCardProps> = ({ job }) => {
               </div>
               <div className="flex items-center gap-1">
                 <MapPin className="h-4 w-4" />
-                <span>{location_text}</span>
+                <span>{location_name || 'Not specified'}</span>
               </div>
               <Badge variant="outline" className="w-fit text-xs">
                 {toTitleCase(job_type)}
@@ -102,14 +100,14 @@ export const JobCard: React.FC<JobCardProps> = ({ job }) => {
 
             {/* Skills */}
             <div className="mb-3 flex flex-wrap gap-2">
-              {specialties_required.slice(0, 4).map((skill) => (
-                <Badge key={skill} variant="secondary" className="text-xs">
-                  {toTitleCase(skill)}
+              {specializations.slice(0, 4).map((spec) => (
+                <Badge key={spec.id} variant="secondary" className="text-xs">
+                  {spec.label}
                 </Badge>
               ))}
-              {specialties_required.length > 4 && (
+              {specializations.length > 4 && (
                  <Badge variant="secondary" className="text-xs">
-                  +{specialties_required.length - 4} more
+                  +{specializations.length - 4} more
                 </Badge>
               )}
             </div>
@@ -123,7 +121,6 @@ export const JobCard: React.FC<JobCardProps> = ({ job }) => {
                 <Calendar className="h-4 w-4" />
                 <span>{timeAgo(created_at)}</span>
               </div>
-              {/* We don't have applicants count from the RPC, but can add if needed */}
             </div>
           </div>
           
@@ -134,8 +131,6 @@ export const JobCard: React.FC<JobCardProps> = ({ job }) => {
                 <Button className="btn-medical" onClick={handleApply}>
                   Apply Now
                 </Button>
-                {/* We'll add "Save Job" functionality later */}
-                {/* <Button variant="outline" size="sm">Save Job</Button> */}
               </>
             ) : (
               <>
