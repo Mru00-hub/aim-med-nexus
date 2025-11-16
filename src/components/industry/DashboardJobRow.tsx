@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { setJobActiveStatus, CompanyJob } from '@/integrations/supabase/industry.api';
+import { setJobActiveStatus } from '@/integrations/supabase/industry.api';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Edit, Users, Eye, Trash2, Loader2, AlertCircle } from 'lucide-react';
+import { Edit, Users, Eye, Trash2, Loader2, MapPin } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,8 +19,20 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/components/ui/use-toast';
 
+// This type should match the 'jobs' object from the get_company_profile_details RPC
+type JobFromRPC = {
+  id: string;
+  title: string;
+  is_active: boolean;
+  job_type: string;
+  location_type: string;
+  location_name: string | null;
+  specializations: { id: string; label: string }[];
+  company_id: string;
+};
+
 interface DashboardJobRowProps {
-  job: CompanyJob;
+  job: JobFromRPC;
 }
 
 // Helper to format text
@@ -43,7 +55,6 @@ export const DashboardJobRow: React.FC<DashboardJobRowProps> = ({ job }) => {
     onSuccess: () => {
       toast({ title: 'Job Deactivated' });
       // Refresh job list and company profile (for job_count)
-      queryClient.invalidateQueries({ queryKey: ['companyJobs', job.company_id] });
       queryClient.invalidateQueries({ queryKey: ['companyProfile', job.company_id] });
       setIsDeactivateAlertOpen(false);
     },
@@ -58,13 +69,27 @@ export const DashboardJobRow: React.FC<DashboardJobRowProps> = ({ job }) => {
         <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center">
           <div className="flex-1">
             <h3 className="text-lg font-semibold">{job.title}</h3>
+            {/* Badges for Status, Type, and Location */}
             <div className="mt-2 flex flex-wrap gap-2">
               <Badge variant={job.is_active ? 'default' : 'outline'}>
                 {job.is_active ? 'Active' : 'Deactivated'}
               </Badge>
               <Badge variant="secondary">{toTitleCase(job.job_type)}</Badge>
-              <Badge variant="secondary">{toTitleCase(job.location_type)}</Badge>
+              <Badge variant="secondary" className="flex items-center">
+                <MapPin className="mr-1.5 h-3 w-3" />
+                {toTitleCase(job.location_type)} ({job.location_name || 'N/A'})
+              </Badge>
             </div>
+            {/* Badges for Specializations */}
+            {job.specializations.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {job.specializations.map((spec) => (
+                  <Badge key={spec.id} variant="secondary" className="font-normal">
+                    {spec.label}
+                  </Badge>
+                ))}
+              </div>
+            )}
           </div>
           <div className="flex w-full flex-shrink-0 gap-2 sm:w-auto">
             <Button variant="outline" size="sm" asChild>
