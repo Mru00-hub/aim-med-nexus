@@ -118,7 +118,7 @@ export const CollabsTab: React.FC<TabFilterProps> = ({
             { title: "Grant Writing Guide", desc: "Tips for securing research funding", icon: "✍️" },
             { title: "Ethics & IRB", desc: "Navigate ethics committee approvals", icon: "🛡️" },
             { title: "Statistical Analysis", desc: "Tools and guides for your data", icon: "📊" },
-            { title: "Publishing Tips", desc: "Get your research published", icon: "G" }
+            { title: "Publishing Tips", desc: "Get your research published", icon: "📰" }
           ].map((resource) => (
             <Card key={resource.title} className="card-medical text-center">
               <CardContent className="p-6">
@@ -133,4 +133,3 @@ export const CollabsTab: React.FC<TabFilterProps> = ({
     </div>
   );
 };
-
