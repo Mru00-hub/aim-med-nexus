@@ -6,7 +6,8 @@ import {
   createCompanyProfile,
   getIndustries,
   CreateCompanyPayload,
-  uploadNewCompanyLogo,
+  uploadCompanyAsset,
+  updateCompanyProfile,
 } from '@/integrations/supabase/industry.api';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
@@ -39,7 +40,7 @@ type FormData = {
   company_size: string;
   founded_year: string;
 };
-
+const DRAFT_KEY = 'create-company-draft';
 export default function CreateCompanyPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -47,7 +48,6 @@ export default function CreateCompanyPage() {
 
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
 
   // --- Data for Industry Select ---
   const { data: industries, isLoading: isLoadingIndustries } = useQuery({
@@ -131,6 +131,7 @@ export default function CreateCompanyPage() {
     handleSubmit,
     watch,
     formState: { errors },
+    reset,
   } = useForm<FormData>({
     defaultValues: {
       company_name: '',
@@ -146,6 +147,32 @@ export default function CreateCompanyPage() {
 
   const watchedIndustryId = watch('industry_id');
 
+  useEffect(() => {
+    const savedDraft = localStorage.getItem(DRAFT_KEY);
+    if (savedDraft) {
+      try {
+        const draftData = JSON.parse(savedDraft);
+        reset(draftData); // Populate the form with saved data
+        toast({
+          title: "Draft Restored",
+          description: "Your previous work has been loaded.",
+        });
+      } catch (error) {
+        console.error("Failed to parse draft:", error);
+        localStorage.removeItem(DRAFT_KEY); // Clear bad data
+      }
+    }
+  }, [reset, toast]); // Dependencies
+
+  // --- ADDED: Save draft on form changes ---
+  useEffect(() => {
+    const subscription = watch((value) => {
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(value));
+    });
+    // Unsubscribe on component unmount
+    return () => subscription.unsubscribe();
+  }, [watch]);
+
   const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
@@ -159,13 +186,45 @@ export default function CreateCompanyPage() {
 
   // --- API Mutation ---
   const mutation = useMutation({
-    mutationFn: (newCompany: CreateCompanyPayload) => createCompanyProfile(newCompany),
+    mutationFn: async (data: FormData) => {
+      // --- Step 1: Create the company profile (text data only) ---
+      const payload: CreateCompanyPayload = {
+        company_name: data.company_name,
+        description: data.description,
+        location_id: data.location_id,
+        website_url: data.website_url || undefined,
+        industry_id: data.industry_id === 'other' ? undefined : data.industry_id,
+        industry_other: data.industry_id === 'other' ? data.industry_other : undefined,
+        company_size: data.company_size || undefined,
+        founded_year: data.founded_year ? parseInt(data.founded_year, 10) : undefined,
+        // No 'company_logo_url' here!
+      };
+      
+      const newCompany = await createCompanyProfile(payload);
+      
+      // --- Step 2: Upload logo (if one was selected) ---
+      if (logoFile) {
+        // Use the newCompany.id to build the secure path
+        const { publicUrl } = await uploadCompanyAsset(newCompany.id, logoFile);
+        
+        // --- Step 3: Update the profile row with the logo URL ---
+        await updateCompanyProfile({
+          p_company_id: newCompany.id,
+          p_company_logo_url: publicUrl,
+        });
+      }
+      
+      // Return the company data for onSuccess
+      return newCompany;
+    },
     onSuccess: (data) => {
+      localStorage.removeItem(DRAFT_KEY);
       toast({
         title: 'Company Profile Created!',
         description: 'You can now manage your new company page.',
       });
-      navigate(`/industryhub/dashboard`);
+      // Navigate using the new company ID or to the dashboard
+      navigate(`/industryhub/dashboard`); 
     },
     onError: (error) => {
       toast({
@@ -177,40 +236,29 @@ export default function CreateCompanyPage() {
   });
 
   const onSubmit = async (data: FormData) => {
-    let logoUrl: string | undefined = undefined;
-    
-    try {
-      if (logoFile) {
-        setIsUploading(true);
-        const { publicUrl } = await uploadNewCompanyLogo(logoFile);
-        logoUrl = publicUrl;
-        setIsUploading(false);
-      }
-
-      const payload: CreateCompanyPayload = {
-        company_name: data.company_name,
-        description: data.description,
-        location_id: data.location_id,
-        website_url: data.website_url || undefined,
-        industry_id: data.industry_id === 'other' ? undefined : data.industry_id,
-        industry_other: data.industry_id === 'other' ? data.industry_other : undefined,
-        company_size: data.company_size || undefined,
-        founded_year: data.founded_year ? parseInt(data.founded_year, 10) : undefined,
-        company_logo_url: logoUrl,
-      };
-
-      mutation.mutate(payload);
-
-    } catch (error: any) {
-      setIsUploading(false);
-      toast({ 
-        title: "Error", 
-        description: error.message || "Failed to upload logo. Please try again.",
-        variant: "destructive" 
-      });
-    }
+    mutation.mutate(data);
   };
 
+  const handleClearForm = () => {
+    // Reset form to default values
+    reset({
+      company_name: '',
+      industry_id: '',
+      industry_other: '',
+      location_id: '',
+      description: '',
+      website_url: '',
+      company_size: '',
+      founded_year: '',
+    });
+    // Clear file state
+    setLogoFile(null);
+    setLogoPreview(null);
+    // Clear storage
+    localStorage.removeItem(DRAFT_KEY);
+    toast({ title: "Form Cleared", description: "The form has been reset." });
+  };
+  
   return (
     <div className="flex min-h-screen flex-col bg-gray-50/50">
       <Header />
@@ -275,7 +323,7 @@ export default function CreateCompanyPage() {
                     accept="image/png, image/jpeg, image/webp"
                     onChange={handleLogoChange}
                     className="file:text-primary-foreground"
-                    disabled={isUploading || mutation.isPending}
+                    disabled={mutation.isPending}
                   />
                 </div>
               </div>
@@ -456,14 +504,22 @@ export default function CreateCompanyPage() {
               {/* Submit */}
               <div className="flex justify-end">
                 <Button 
+                  type="button" 
+                  variant="outline"
+                  onClick={handleClearForm}
+                  disabled={mutation.isPending}
+                >
+                  Clear Form
+                </Button>
+                <Button 
                   type="submit" 
                   size="lg" 
-                  disabled={isUploading || mutation.isPending}
+                  disabled={mutation.isPending}
                 >
-                  {(isUploading || mutation.isPending) && (
+                  {mutation.isPending && (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   )}
-                  {isUploading ? 'Uploading Logo...' : (mutation.isPending ? 'Creating...' : 'Create Profile')}
+                  {mutation.isPending ? 'Creating Profile...' : 'Create Profile'}
                 </Button>
               </div>
             </form>
