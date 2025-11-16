@@ -1,14 +1,13 @@
-import React, { useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
 import {
   getCollabById,
   updateCollaboration,
-  // [!code --] (softDeleteCollaboration does not exist in our API file)
-  setCollabActiveStatus, // [!code ++] (This is the correct function)
+  setCollabActiveStatus,
   UpdateCollabPayload,
-  Collaboration,
+  CollaborationDetails,
 } from '@/integrations/supabase/industry.api';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
@@ -51,6 +50,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Enums } from '@/types';
+import { SearchableSelect } from '@/components/ui/searchable-select';
+import { SearchableMultiSelect } from '@/components/ui/searchable-multi-select';
 
 const collabFormSchema = z.object({
   title: z.string().min(5, { message: 'Title must be at least 5 characters.' }),
@@ -58,9 +59,9 @@ const collabFormSchema = z.object({
   collaboration_type: z.enum(['clinical_trial', 'research', 'advisory', 'other'], {
     required_error: 'Please select a collaboration type.',
   }),
-  location: z.string().optional(),
+  location_id: z.string().optional(),
   duration: z.string().optional(),
-  required_specialty: z.string().optional(), // Comma-separated string
+  specialization_ids: z.array(z.string()).optional(),
 });
 
 type CollabFormData = z.infer<typeof collabFormSchema>;
@@ -72,19 +73,99 @@ export default function EditCollabPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // --- Location Fetching Logic ---
+  const [locations, setLocations] = useState<{ id: string; label: string }[]>([]);
+  const [locationSearch, setLocationSearch] = useState("");
+  const [isLocLoading, setIsLocLoading] = useState(false);
+  const isLocMounted = useRef(false);
+
+  useEffect(() => {
+    const fetchSearchLocations = async () => {
+      setIsLocLoading(true);
+      const { data, error } = await supabase.from('locations').select('id, label')
+        .neq('label', 'Other').or(`label.ilike.%${locationSearch}%`).order('label').limit(50);
+      if (data) setLocations(data);
+      if (error) console.error('Error fetching search locations:', error);
+      setIsLocLoading(false);
+    };
+    const fetchInitialLocations = async () => {
+       setIsLocLoading(true);
+       const { data, error } = await supabase.from('locations').select('id, label')
+        .neq('label', 'Other').order('label').limit(10);
+       if (data) setLocations(data);
+       if (error) console.error('Error fetching initial locations:', error);
+       setIsLocLoading(false);
+    };
+    if (!isLocMounted.current) {
+      isLocMounted.current = true;
+      fetchInitialLocations();
+      return;
+    }
+    const searchTimer = setTimeout(() => {
+      if (locationSearch.length < 2) fetchInitialLocations();
+      else fetchSearchLocations();
+    }, 500);
+    return () => clearTimeout(searchTimer);
+  }, [locationSearch]);
+
+  const locationOptions = useMemo(() => 
+    locations.map(loc => ({ value: loc.id, label: loc.label })),
+    [locations]
+  );
+
+  // --- Specialization Fetching Logic ---
+  const [specializations, setSpecializations] = useState<{ id: string; label: string }[]>([]);
+  const [specializationSearch, setSpecializationSearch] = useState("");
+  const [isSpecLoading, setIsSpecLoading] = useState(false);
+  const isSpecMounted = useRef(false);
+
+  useEffect(() => {
+    const fetchSearchSpecializations = async () => {
+      setIsSpecLoading(true);
+      const { data, error } = await supabase.from('specializations').select('id, label')
+        .neq('label', 'Other').or(`label.ilike.%${specializationSearch}%`).order('label').limit(50);
+      if (data) setSpecializations(data);
+      if (error) console.error('Error fetching specializations:', error);
+      setIsSpecLoading(false);
+    };
+    const fetchInitialSpecializations = async () => {
+      setIsSpecLoading(true);
+      const { data, error } = await supabase.from('specializations').select('id, label')
+        .neq('label', 'Other').order('label').limit(10);
+      if (data) setSpecializations(data);
+      if (error) console.error('Error fetching initial specializations:', error);
+      setIsSpecLoading(false);
+    };
+    if (!isSpecMounted.current) {
+      isSpecMounted.current = true;
+      fetchInitialSpecializations();
+      return;
+    }
+    const searchTimer = setTimeout(() => {
+      if (specializationSearch.length < 2) fetchInitialSpecializations();
+      else fetchSearchSpecializations();
+    }, 500);
+    return () => clearTimeout(searchTimer);
+  }, [specializationSearch]);
+
+  const specializationOptions = useMemo(() =>
+    specializations.map(spec => ({ value: spec.id, label: spec.label })),
+    [specializations]
+  );
+
   const form = useForm<CollabFormData>({
     resolver: zodResolver(collabFormSchema),
     defaultValues: {
       title: '',
       description: '',
-      location: '',
+      location_id: '',
       duration: '',
-      required_specialty: '',
+      specialization_ids: [],
       collaboration_type: 'other',
     },
   });
 
-  const { data: collabData, isLoading: isLoadingCollab } = useQuery<Collaboration, Error>({
+  const { data: collabData, isLoading: isLoadingCollab } = useQuery<CollaborationDetails, Error>({
     queryKey: ['collabDetails', collabId],
     queryFn: () => getCollabById(collabId!),
     enabled: !!collabId,
@@ -94,24 +175,19 @@ export default function EditCollabPage() {
           title: data.title,
           description: data.description,
           collaboration_type: data.collaboration_type as Enums<'collab_type_enum'>,
-          location: data.location || '',
+          location_id: data.location_id || '',
           duration: data.duration || '',
-          required_specialty: (data.required_specialty || []).join(', '),
+          specialization_ids: (data.specializations || []).map(s => s.id),
         });
       }
     },
   });
 
-  // [!code --] (This was incorrect, the API fn takes one object)
-  // const updateMutation = useMutation({
-  //   mutationFn: (payload: UpdateCollabPayload) => updateCollaboration(collabId!, payload),
-  // [!code ++] (FIX: The API function 'updateCollaboration' expects a single payload object)
   const updateMutation = useMutation({
     mutationFn: (payload: UpdateCollabPayload) => updateCollaboration(payload),
     onSuccess: () => {
       toast({ title: 'Collaboration Updated Successfully!' });
       queryClient.invalidateQueries({ queryKey: ['collabDetails', collabId] });
-      // [!code ++] (Invalidate the company profile query, since collab_count may change)
       queryClient.invalidateQueries({ queryKey: ['companyProfile', collabData?.company_id] });
       navigate('/industryhub/dashboard');
     },
@@ -120,10 +196,6 @@ export default function EditCollabPage() {
     },
   });
 
-  // [!code --] (This was incorrect, 'softDeleteCollaboration' does not exist in our API)
-  // const deleteMutation = useMutation({
-  //   mutationFn: () => softDeleteCollaboration(collabId!),
-  // [!code ++] (FIX: Use the correct RPC 'setCollabActiveStatus' which also updates company counters)
   const deleteMutation = useMutation({
     mutationFn: () => setCollabActiveStatus(collabId!, false),
     onSuccess: () => {
@@ -138,21 +210,14 @@ export default function EditCollabPage() {
   });
 
   const onSubmit = (data: CollabFormData) => {
-    const specialtiesArray = data.required_specialty
-      ? data.required_specialty.split(',').map(s => s.trim()).filter(Boolean)
-      : [];
-    
-    // [!code --] (This payload was missing the ID)
-    // const payload: UpdateCollabPayload = {
-    // [!code ++] (FIX: The payload must match our 'UpdateCollabPayload' type, including the ID)
     const payload: UpdateCollabPayload = {
       p_collab_id: collabId!,
       p_title: data.title,
       p_description: data.description,
       p_collaboration_type: data.collaboration_type,
-      p_location: data.location || null,
+      p_location_id: data.location_id || null,
       p_duration: data.duration || null,
-      p_required_specialty: specialtiesArray,
+      p_specialization_ids: data.specialization_ids,
     };
     updateMutation.mutate(payload);
   };
@@ -256,12 +321,21 @@ export default function EditCollabPage() {
                 <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                   <FormField
                     control={form.control}
-                    name="location"
+                    name="location_id"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Location (Optional)</FormLabel>
                         <FormControl>
-                          <Input {...field} />
+                          <SearchableSelect
+                            value={field.value}
+                            onValueChange={field.onChange}
+                            options={locationOptions}
+                            onSearchChange={setLocationSearch}
+                            isLoading={isLocLoading}
+                            placeholder="Select or search for a location..."
+                            searchPlaceholder="Search locations..."
+                            emptyMessage="No location found."
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -285,15 +359,24 @@ export default function EditCollabPage() {
                 {/* Specialties / Skills */}
                 <FormField
                   control={form.control}
-                  name="required_specialty"
+                  name="specialization_ids"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Specialties / Skills (Optional)</FormLabel>
                       <FormControl>
-                        <Textarea {...field} />
+                        <SearchableMultiSelect
+                          values={field.value || []}
+                          onValuesChange={field.onChange}
+                          options={specializationOptions}
+                          onSearchChange={setSpecializationSearch}
+                          isLoading={isSpecLoading}
+                          placeholder="Select specialties..."
+                          searchPlaceholder="Search specialties..."
+                          emptyMessage="No specialties found."
+                        />
                       </FormControl>
                       <FormDescription>
-                        Enter a comma-separated list of required skills or specialties.
+                        Select all skills or specialties that apply.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
