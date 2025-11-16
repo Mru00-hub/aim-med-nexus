@@ -4,6 +4,7 @@ import { getAllActiveJobs } from '@/integrations/supabase/industry.api';
 import { JobCard } from '@/components/industry/JobCard';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Card, CardContent, CardTitle } from '@/components/ui/card';
 import { Loader2, AlertCircle, Briefcase } from 'lucide-react';
 import { TabFilterProps } from './JobsAndOpportunitiesPage'; // Import props from parent
 
