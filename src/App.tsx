@@ -169,14 +169,14 @@ const AppContent = () => {
               <Route path="/community/space/:spaceId/members" element={<MembersPage />} />
               <Route path="/community/thread/:threadId" element={<ThreadDetailPage />} />
               <Route path="/industryhub/create-company" element={<CreateCompanyPage />} />
-              <Route path="/industryhub/dashboard" element={<CompanyDashboardPage />} />
-              <Route path="/industryhub/edit-company" element={<EditCompanyPage />} />
+              <Route path="/industryhub/dashboard/:companyId" element={<CompanyDashboardPage />} />
+              <Route path="/industryhub/edit-company/:companyId" element={<EditCompanyPage />} />
               
-              <Route path="/industryhub/post-job" element={<PostJobPage />} />
-              <Route path="/industryhub/dashboard/edit-job/:jobId" element={<EditJobPage />} />
+              <Route path="/industryhub/post-job/:companyId" element={<PostJobPage />} />
+              <Route path="/industryhub/dashboard/:companyId/edit-job/:jobId" element={<EditJobPage />} />
 
-              <Route path="/industryhub/post-collab" element={<PostCollabPage />} />
-              <Route path="/industryhub/dashboard/edit-collab/:collabId" element={<EditCollabPage />} />
+              <Route path="/industryhub/post-collab/:companyId" element={<PostCollabPage />} />
+              <Route path="/industryhub/dashboard/:companyId/edit-collab/:collabId" element={<EditCollabPage />} />
               
               <Route path="/industryhub/my-applications" element={<MyApplicationsPage />} />
               
