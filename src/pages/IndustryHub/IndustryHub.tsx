@@ -24,6 +24,19 @@ import { useAuth } from '@/hooks/useAuth';
 import { SearchableSelect } from '@/components/ui/searchable-select'; // <-- ADD THIS
 import { useMemo, useRef } from 'react'; // <-- ADD THIS
 
+const useDebounce = (value: string, delay: number) => {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+  return debouncedValue;
+};
+
 // Simple debounce hook
 function useDebouncedFetch(
   tableName: 'locations' | 'industries' | 'specializations',
