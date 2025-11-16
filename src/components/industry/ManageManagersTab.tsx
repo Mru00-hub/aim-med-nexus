@@ -275,17 +275,12 @@ export const ManageManagersTab: React.FC<ManageManagersTabProps> = ({ companyId 
             return (
               <Card key={manager.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4">
                 
-                {/* --- UPDATED: Wrapped in a Link --- */}
+                {/* --- UPDATED: Avatar removed --- */}
                 <Link 
                   to={`/profile/${manager.user_id}`} 
-                  className="flex items-center gap-3 flex-1 min-w-0 group"
+                  className="flex items-center gap-3 flex-1 min-w-0 group py-1"
                   title="View profile"
                 >
-                  <ProfileAvatar
-                    src={manager.profile?.profile_picture_url}
-                    alt={manager.profile?.full_name || 'Manager'}
-                    fallback={manager.profile?.full_name || 'M'}
-                  />
                   <div className="flex-1 min-w-0">
                     <h4 className="font-semibold truncate group-hover:underline">{manager.profile?.full_name || '...'} {isSelf && '(You)'}</h4>
                     <p className="text-sm text-muted-foreground">{manager.role}</p>
