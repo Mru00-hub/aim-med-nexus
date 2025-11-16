@@ -94,6 +94,14 @@ export default function JobsAndOpportunitiesPage() {
     }
   };
 
+  const handlePostCollaborationClick = () => {
+    if (user) {
+      navigate('/industryhub/post-collab'); 
+    } else {
+      navigate('/login', { state: { from: '/industryhub/post-collab' } });
+    }
+  };
+
   const clearFilters = () => {
     setSearchQuery("");
     setLocationId(undefined);
@@ -120,7 +128,7 @@ export default function JobsAndOpportunitiesPage() {
                 Find your next role or collaboration in the medical community.
               </p>
             </div>
-            <div className="flex flex-col md:flex-row gap-2 w-full md:w-auto">
+            <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
               <Button
                 variant="outline"
                 className="w-full flex-shrink-0 md:w-auto"
@@ -129,11 +137,19 @@ export default function JobsAndOpportunitiesPage() {
                 My Applications
               </Button>
               <Button
+                variant="outline"
+                className="w-full flex-shrink-0 md:w-auto"
+                onClick={handlePostCollaborationClick}
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Post Collaboration
+              </Button>
+              <Button
                 className="w-full flex-shrink-0 md:w-auto"
                 onClick={handlePostOpportunityClick}
               >
                 <Plus className="mr-2 h-4 w-4" />
-                Post an Opportunity
+                Post Job
               </Button>
             </div>
           </div>
