@@ -101,7 +101,6 @@ export type CreateCompanyPayload = {
   website_url?: string;
   company_size?: string;
   founded_year?: number;
-  company_logo_url?: string;
 };
 
 // --- ADDED: Type for updating a company profile ---
@@ -751,26 +750,4 @@ export const getCompanyManagers = async (companyId: string): Promise<CompanyMana
     throw error;
   }
   return data as CompanyManagerWithProfile[];
-};
-
-/**
- * Uploads a logo file for a new company.
- */
-export const uploadNewCompanyLogo = async (file: File): Promise<{ publicUrl: string }> => {
-  const session = await getSessionOrThrow();
-  const fileExt = file.name.split('.').pop();
-  const fileName = `${Date.now()}.${fileExt}`;
-  
-  const filePath = `${session.user.id}/${fileName}`;
-  const { error: uploadError } = await supabase.storage
-    .from('industry_hub_assets')
-    .upload(filePath, file);
-
-  if (uploadError) throw uploadError;
-
-  const { data } = supabase.storage
-    .from('industry_hub_assets')
-    .getPublicUrl(filePath);
-
-  return data;
 };
