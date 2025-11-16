@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useNavigate, Link, useSearchParams } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams, useParams, useRouteMatch } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { getCompanyProfileDetails } from '@/integrations/supabase/industry.api';
@@ -34,10 +34,11 @@ export default function CompanyDashboardPage() {
   }, [activeTab, setSearchParams]);
 
   // 1. Fetch the user's company ID (Permission Check)
+  const { companyId: routeCompanyId } = useParams<{ companyId: string }>();
   const {
-    data: companyId,
-    isLoading: isLoadingId,
-    isError: isErrorId,
+    data: adminCompanyId,
+    isLoading: isLoadingAdminId,
+    isError: isErrorAdminId,
     error: idError,
   } = useQuery<string | null, Error>({
     queryKey: ['myAdminCompanyId'],
@@ -48,6 +49,7 @@ export default function CompanyDashboardPage() {
     },
     enabled: !!user,
   });
+  const companyId = routeCompanyId;
 
   // 2. Fetch the Company Name for a better header display
   const { data: companyDetails } = useQuery({
@@ -58,7 +60,7 @@ export default function CompanyDashboardPage() {
   });
 
   // --- Render States ---
-  if (isLoadingId) {
+  if (isLoadingAdminId) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -66,9 +68,16 @@ export default function CompanyDashboardPage() {
     );
   }
 
-  if (!companyId) {
-    if (!isLoadingId) {
-      if (!isErrorId && !companyId) {
+  if (!companyId || companyId !== adminCompanyId) {
+    if (adminCompanyId) {
+        // If the user has an admin ID but tried to view the wrong company, redirect to the correct one.
+        navigate(`/industryhub/dashboard/${adminCompanyId}`, { replace: true });
+        return null;
+    }
+
+    if (!isLoadingAdminId) {
+      if (!isErrorAdminId && !adminCompanyId) {
+        // If they aren't an admin at all, send them to create a company
         navigate('/industryhub/create-company');
         return null;
       }
@@ -81,7 +90,7 @@ export default function CompanyDashboardPage() {
               <AlertCircle className="h-4 w-4" />
               <AlertTitle>Access Denied</AlertTitle>
               <AlertDescription>
-                Your company profile could not be loaded. Please ensure you are authorized. 
+                You are not authorized to manage this company profile. 
                 Error: {idError?.message || 'Unknown error.'}
               </AlertDescription>
             </Alert>
@@ -119,7 +128,7 @@ export default function CompanyDashboardPage() {
                 </Link>
               </Button>
               <Button asChild variant="outline" className="flex-1">
-                <Link to="/industryhub/edit-company"> 
+                <Link to={`/industryhub/edit-company/${companyId}`}> 
                   <Edit className="mr-2 h-4 w-4" />
                   Edit Profile
                 </Link>
@@ -130,13 +139,13 @@ export default function CompanyDashboardPage() {
           {/* Post Actions (Quick Links) */}
           <div className="mb-8 grid grid-cols-2 gap-4 md:grid-cols-4">
               <Button asChild variant="secondary">
-                <Link to="/industryhub/post-job">
+                <Link to={`/industryhub/post-job/${companyId}`}>
                   <Plus className="mr-2 h-4 w-4" />
                   Post Job
                 </Link>
               </Button>
               <Button asChild variant="secondary">
-                <Link to="/industryhub/post-collab">
+                <Link to={`/industryhub/post-collab/${companyId}`}>
                   <Plus className="mr-2 h-4 w-4" />
                   Post Collab
                 </Link>
