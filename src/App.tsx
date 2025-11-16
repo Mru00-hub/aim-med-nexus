@@ -180,8 +180,8 @@ const AppContent = () => {
               
               <Route path="/industryhub/my-applications" element={<MyApplicationsPage />} />
               
-              <Route path="/apply/job/:jobId" element={<SubmitApplicationPage />} />
-              <Route path="/apply/collab/:collabId" element={<SubmitApplicationPage />} />
+              <Route path="/jobs/apply/:jobId" element={<SubmitApplicationPage />} />
+              <Route path="/collabs/apply/:collabId" element={<SubmitApplicationPage />} />
             </Route>
             
             <Route path="*" element={<NotFound />} />
