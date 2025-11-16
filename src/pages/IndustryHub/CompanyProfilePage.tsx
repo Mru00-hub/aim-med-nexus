@@ -177,11 +177,13 @@ export default function CompanyProfilePage() {
       <main>
         {/* === Section 1: Hero Header (Now with real data) === */}
         <div className="relative w-full h-48 md:h-64">
-          <img
-            src={data.company_banner_url || CityCareBanner} // Use fallback
-            alt={`${data.company_name} banner`}
-            className="w-full h-full object-cover"
-          />
+          {data.company_banner_url && (
+            <img
+              src={data.company_banner_url}
+              alt={`${data.company_name} banner`}
+              className="w-full h-full object-cover"
+            />
+          )}
           <div className="absolute inset-0 bg-black/30" />
         </div>
 
