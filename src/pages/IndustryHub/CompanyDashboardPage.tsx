@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { getCompanyProfileDetails } from '@/integrations/supabase/industry.api';
@@ -27,7 +27,11 @@ import { ManageManagersTab } from '@/components/industry/ManageManagersTab';
 export default function CompanyDashboardPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState('jobs'); 
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'jobs'); 
+  useEffect(() => {
+    setSearchParams({ tab: activeTab }, { replace: true });
+  }, [activeTab, setSearchParams]);
 
   // 1. Fetch the user's company ID (Permission Check)
   const {
@@ -137,7 +141,7 @@ export default function CompanyDashboardPage() {
                   Post Collab
                 </Link>
               </Button>
-              <Button asChild variant="secondary" onClick={() => setActiveTab('applicants')}>
+              <Button variant="secondary" onClick={() => setActiveTab('applicants')}>
                   <Users className="mr-2 h-4 w-4" />
                   View Applicants
               </Button>
