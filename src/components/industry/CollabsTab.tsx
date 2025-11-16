@@ -1,64 +1,19 @@
-import React, { useState, useEffect } from 'react';
-import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/hooks/useAuth';
+import React from 'react';
+import { useInfiniteQuery } from '@tanstack/react-query';
 import { getAllActiveCollaborations } from '@/integrations/supabase/industry.api';
-import { supabase } from '@/integrations/supabase/client';
-import { CollabCard } from '@/components/industry/CollabCard'; // Uses our new card
-import {
-  Card,
-  CardContent,
-} from '@/components/ui/card';
+import { CollabCard } from '@/components/industry/CollabCard';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import {
-  Loader2,
-  AlertCircle,
-  Search,
-  X,
-  Plus,
-  Users as CollabIcon,
-  Filter,
-} from 'lucide-react';
+import { Loader2, AlertCircle, Users as CollabIcon } from 'lucide-react';
+import { TabFilterProps } from './JobsAndOpportunitiesPage'; // Import props from parent
 
-// Debounce hook
-const useDebounce = (value: string, delay: number) => {
-  const [debouncedValue, setDebouncedValue] = useState(value);
-  useEffect(() => {
-    const handler = setTimeout(() => setDebouncedValue(value), delay);
-    return () => clearTimeout(handler);
-  }, [value, delay]);
-  return debouncedValue;
-};
-
-export const CollabsTab: React.FC = () => {
-  const { user } = useAuth();
-  const navigate = useNavigate();
-  const [filters, setFilters] = useState({
-    search: '',
-    locationId: '',
-    collabType: '',
-  });
-  const debouncedSearch = useDebounce(filters.search, 500);
-
-  // --- Data for Filters ---
-  const { data: locations } = useQuery({
-    queryKey: ['locations'],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('locations').select('*');
-      if (error) throw new Error(error.message);
-      return data;
-    },
-  });
-
+export const CollabsTab: React.FC<TabFilterProps> = ({
+  searchQuery,
+  locationId,
+  industryId,
+  specializationIds,
+}) => {
   // --- Main Query for Collabs ---
   const {
     data,
@@ -71,12 +26,18 @@ export const CollabsTab: React.FC = () => {
   } = useInfiniteQuery({
     queryKey: [
       'allCollabs',
-      debouncedSearch,
-      filters.locationId,
-      filters.collabType,
+      searchQuery,
+      locationId,
+      industryId,
+      specializationIds,
     ],
     queryFn: ({ pageParam = 1 }) =>
-      getAllActiveCollaborations(pageParam, 12), // TODO: Update API to accept all filters
+      getAllActiveCollaborations(pageParam, 12, {
+        searchQuery,
+        locationId,
+        industryId,
+        specializationIds,
+      }),
     initialPageParam: 1,
     getNextPageParam: (lastPage, allPages) => {
       return lastPage.length === 12 ? allPages.length + 1 : undefined;
@@ -84,21 +45,6 @@ export const CollabsTab: React.FC = () => {
   });
 
   const allCollabs = data?.pages.flatMap((page) => page) ?? [];
-
-  const handleFilterChange = (
-    key: 'locationId' | 'collabType',
-    value: string
-  ) => {
-    setFilters((prev) => ({ ...prev, [key]: value }));
-  };
-
-  const handleAuthAction = (path: string) => {
-    if (user) {
-      navigate(path);
-    } else {
-      navigate('/login', { state: { from: path } });
-    }
-  };
 
   // --- Render Functions ---
   const renderContent = () => {
@@ -117,7 +63,7 @@ export const CollabsTab: React.FC = () => {
           <AlertTitle>Error Loading Collaborations</AlertTitle>
           <AlertDescription>
             {error instanceof Error ? error.message : 'An unknown error occurred.'}
-          </AlertDescription>
+          </PrimaryAlertDescription>
         </Alert>
       );
     }
@@ -127,12 +73,6 @@ export const CollabsTab: React.FC = () => {
         <div className="flex h-64 flex-col items-center justify-center gap-4">
           <CollabIcon className="h-16 w-16 text-muted-foreground/30" />
           <p className="text-muted-foreground">No collaborations found matching your criteria.</p>
-          <Button
-            variant="outline"
-            onClick={() => setFilters({ search: '', locationId: '', collabType: '' })}
-          >
-            Clear Filters
-          </Button>
         </div>
       );
     }
@@ -147,73 +87,9 @@ export const CollabsTab: React.FC = () => {
   };
 
   return (
-    <>
-      {/* --- Filter Card --- */}
-      <Card className="card-medical mb-8 animate-slide-up">
-        <CardContent className="pt-6">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-            <div className="relative md:col-span-2">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Search titles, companies, or skills..."
-                className="pl-10"
-                value={filters.search}
-                onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
-              />
-            </div>
-            <Select
-              value={filters.locationId}
-              onValueChange={(value) => handleFilterChange('locationId', value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Location" />
-              </SelectTrigger>
-              <SelectContent>
-                {locations?.map((loc) => (
-                  <SelectItem key={loc.id} value={loc.id}>{loc.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select
-              value={filters.collabType}
-              onValueChange={(value) => handleFilterChange('collabType', value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Collaboration Type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="clinical_trial">Clinical Trial</SelectItem>
-                <SelectItem value="research">Research</SelectItem>
-                <SelectItem value="advisory">Advisory</SelectItem>
-                <SelectItem value="other">Other</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-4">
-             <div className="md:col-span-2">
-               <Button className="btn-medical w-full">
-                 <Filter className="h-4 w-4 mr-2" />
-                 Search Collaborations
-               </Button>
-             </div>
-             <div className="flex items-center md:col-span-2">
-              <Button
-                className="btn-medical w-full"
-                onClick={() => handleAuthAction('/industryhub/post-collab')}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Post a Collaboration
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* --- Collabs List --- */}
-      <div className="space-y-6 animate-slide-up">
-        <h2 className="text-2xl font-semibold">Latest Collaborations</h2>
-        {renderContent()}
-      </div>
+    <div className="space-y-6">
+      <h2 className="text-2xl font-semibold">Latest Collaborations</h2>
+      {renderContent()}
 
       {/* --- Pagination / Load More --- */}
       <div className="mt-12 flex justify-center">
@@ -234,8 +110,8 @@ export const CollabsTab: React.FC = () => {
         )}
       </div>
       
-      {/* --- Research Resources (Similar to Career Resources) --- */}
-      <div className="mt-16 animate-fade-in">
+      {/* --- Research Resources --- */}
+      <div className="mt-16">
         <h2 className="text-2xl font-semibold mb-6">Research & Collaboration Resources</h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {[
@@ -254,7 +130,7 @@ export const CollabsTab: React.FC = () => {
           ))}
         </div>
       </div>
-    </>
+    </div>
   );
 };
 
