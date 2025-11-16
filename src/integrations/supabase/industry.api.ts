@@ -270,7 +270,10 @@ export const getAllActiveJobs = async (
     p_search_query: filters.searchQuery || '',
     p_specialization_ids: filters.specializationIds || [],
   });
-  if (error) throw error;
+  if (error) {
+    console.error("Error in getAllActiveJobs:", error); // <-- ADD THIS
+    throw error;
+  }
   return data || [];
 };
 
@@ -295,7 +298,10 @@ export const getAllActiveCollaborations = async (
     p_search_query: filters.searchQuery || '',
     p_specialization_ids: filters.specializationIds || [],
   });
-  if (error) throw error;
+  if (error) {
+    console.error("Error in getAllActiveCollaborations:", error); // <-- ADD THIS
+    throw error;
+  }
   return data || [];
 };
 
@@ -354,7 +360,10 @@ export const getJobById = async (jobId: string): Promise<CompanyJobDetails> => {
     })
     .single();
 
-  if (error) throw error;
+  if (error) {
+    console.error("Error in getJobById:", error); // <-- ADD THIS
+    throw error;
+  }
   if (!data) throw new Error('Job not found');
   
   return data;
@@ -375,7 +384,10 @@ export const getCollabById = async (collabId: string): Promise<CollaborationDeta
     })
     .single();
 
-  if (error) throw error;
+  if (error) {
+    console.error("Error in getCollabById:", error); // <-- ADD THIS
+    throw error;
+  }
   if (!data) throw new Error('Collaboration not found');
   
   return data;
