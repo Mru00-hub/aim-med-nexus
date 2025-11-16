@@ -145,11 +145,9 @@ export default function CompanyDashboardPage() {
                   <Users className="mr-2 h-4 w-4" />
                   View Applicants
               </Button>
-               <Button asChild variant="secondary">
-                <Link to="/settings/notifications">
-                  <Settings className="mr-2 h-4 w-4" />
-                  Settings
-                </Link>
+              <Button variant="secondary" onClick={() => setActiveTab('managers')}>
+                 <UserCog className="mr-2 h-4 w-4" />
+                 Manage Managers
               </Button>
           </div>
           <hr className="my-8" />
