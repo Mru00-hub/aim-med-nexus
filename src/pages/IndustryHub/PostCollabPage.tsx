@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
@@ -30,23 +30,23 @@ import {
   FormMessage,
   FormDescription,
 } from '@/components/ui/form';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Loader2, AlertCircle, Users, ArrowLeft } from 'lucide-react';
+import { Loader2, Users, ArrowLeft } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Enums } from '@/types'; // Import your Enums type
+import { Enums } from '@/types';
+import { SearchableSelect } from '@/components/ui/searchable-select';
+import { SearchableMultiSelect } from '@/components/ui/searchable-multi-select';
 
-// 1. Define the validation schema
 const collabFormSchema = z.object({
   title: z.string().min(5, { message: 'Title must be at least 5 characters.' }),
   description: z.string().min(20, { message: 'Description must be at least 20 characters.' }),
   collaboration_type: z.enum(['clinical_trial', 'research', 'advisory', 'other'], {
     required_error: 'Please select a collaboration type.',
   }),
-  location: z.string().optional(),
+  location_id: z.string().optional(),
   duration: z.string().optional(),
-  required_specialty: z.string().optional(), // Comma-separated string
+  specialization_ids: z.array(z.string()).optional(),
 });
 
 type CollabFormData = z.infer<typeof collabFormSchema>;
@@ -57,7 +57,86 @@ export default function PostCollabPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // 2. Fetch the Company ID of the current admin
+  // --- Location Fetching Logic ---
+  const [locations, setLocations] = useState<{ id: string; label: string }[]>([]);
+  const [locationSearch, setLocationSearch] = useState("");
+  const [isLocLoading, setIsLocLoading] = useState(false);
+  const isLocMounted = useRef(false);
+
+  useEffect(() => {
+    const fetchSearchLocations = async () => {
+      setIsLocLoading(true);
+      const { data, error } = await supabase.from('locations').select('id, label')
+        .neq('label', 'Other').or(`label.ilike.%${locationSearch}%`).order('label').limit(50);
+      if (data) setLocations(data);
+      if (error) console.error('Error fetching search locations:', error);
+      setIsLocLoading(false);
+    };
+    const fetchInitialLocations = async () => {
+       setIsLocLoading(true);
+       const { data, error } = await supabase.from('locations').select('id, label')
+        .neq('label', 'Other').order('label').limit(10);
+       if (data) setLocations(data);
+       if (error) console.error('Error fetching initial locations:', error);
+       setIsLocLoading(false);
+    };
+    if (!isLocMounted.current) {
+      isLocMounted.current = true;
+      fetchInitialLocations();
+      return;
+    }
+    const searchTimer = setTimeout(() => {
+      if (locationSearch.length < 2) fetchInitialLocations();
+      else fetchSearchLocations();
+    }, 500);
+    return () => clearTimeout(searchTimer);
+  }, [locationSearch]);
+
+  const locationOptions = useMemo(() => 
+    locations.map(loc => ({ value: loc.id, label: loc.label })),
+    [locations]
+  );
+
+  // --- Specialization Fetching Logic ---
+  const [specializations, setSpecializations] = useState<{ id: string; label: string }[]>([]);
+  const [specializationSearch, setSpecializationSearch] = useState("");
+  const [isSpecLoading, setIsSpecLoading] = useState(false);
+  const isSpecMounted = useRef(false);
+
+  useEffect(() => {
+    const fetchSearchSpecializations = async () => {
+      setIsSpecLoading(true);
+      const { data, error } = await supabase.from('specializations').select('id, label')
+        .neq('label', 'Other').or(`label.ilike.%${specializationSearch}%`).order('label').limit(50);
+      if (data) setSpecializations(data);
+      if (error) console.error('Error fetching specializations:', error);
+      setIsSpecLoading(false);
+    };
+    const fetchInitialSpecializations = async () => {
+      setIsSpecLoading(true);
+      const { data, error } = await supabase.from('specializations').select('id, label')
+        .neq('label', 'Other').order('label').limit(10);
+      if (data) setSpecializations(data);
+      if (error) console.error('Error fetching initial specializations:', error);
+      setIsSpecLoading(false);
+    };
+    if (!isSpecMounted.current) {
+      isSpecMounted.current = true;
+      fetchInitialSpecializations();
+      return;
+    }
+    const searchTimer = setTimeout(() => {
+      if (specializationSearch.length < 2) fetchInitialSpecializations();
+      else fetchSearchSpecializations();
+    }, 500);
+    return () => clearTimeout(searchTimer);
+  }, [specializationSearch]);
+
+  const specializationOptions = useMemo(() =>
+    specializations.map(spec => ({ value: spec.id, label: spec.label })),
+    [specializations]
+  );
+
   const {
     data: companyId,
     isLoading: isLoadingId,
@@ -72,19 +151,17 @@ export default function PostCollabPage() {
     enabled: !!user,
   });
 
-  // 3. Setup the form
   const form = useForm<CollabFormData>({
     resolver: zodResolver(collabFormSchema),
     defaultValues: {
       title: '',
       description: '',
-      location: '',
+      location_id: '',
       duration: '',
-      required_specialty: '',
+      specialization_ids: [],
     },
   });
 
-  // 4. Setup the mutation to create the collaboration
   const mutation = useMutation({
     mutationFn: (payload: CreateCollaborationPayload) => createCollaboration(payload),
     onSuccess: () => {
@@ -92,7 +169,6 @@ export default function PostCollabPage() {
         title: 'Collaboration Posted Successfully!',
         description: 'Your new post is now active on the opportunities board.',
       });
-      // Invalidate company profile details to refetch the collabs list
       queryClient.invalidateQueries({ queryKey: ['companyProfile', companyId] });
       navigate('/industryhub/dashboard');
     },
@@ -105,31 +181,25 @@ export default function PostCollabPage() {
     },
   });
 
-  // 5. Handle the form submission
   const onSubmit = (data: CollabFormData) => {
     if (!companyId) {
       toast({ title: 'Error', description: 'Could not find your company.', variant: 'destructive' });
       return;
     }
 
-    const specialtiesArray = data.required_specialty
-      ? data.required_specialty.split(',').map(s => s.trim()).filter(Boolean)
-      : [];
-
     const payload: CreateCollaborationPayload = {
       p_company_id: companyId,
       p_title: data.title,
       p_description: data.description,
       p_collaboration_type: data.collaboration_type as Enums<'collab_type_enum'>,
-      p_location: data.location || undefined,
+      p_location_id: data.location_id || undefined,
       p_duration: data.duration || undefined,
-      p_required_specialty: specialtiesArray,
+      p_specialization_ids: data.specialization_ids,
     };
     
     mutation.mutate(payload);
   };
 
-  // --- Render States ---
   if (isLoadingId) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -147,7 +217,7 @@ export default function PostCollabPage() {
       });
       navigate('/industryhub/create-company');
     }
-    return null; // The redirect will handle this
+    return null;
   }
 
   return (
@@ -221,12 +291,21 @@ export default function PostCollabPage() {
                 <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                   <FormField
                     control={form.control}
-                    name="location"
+                    name="location_id"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Location (Optional)</FormLabel>
                         <FormControl>
-                          <Input placeholder="e.g., Delhi, IN or Remote" {...field} />
+                          <SearchableSelect
+                            value={field.value}
+                            onValueChange={field.onChange}
+                            options={locationOptions}
+                            onSearchChange={setLocationSearch}
+                            isLoading={isLocLoading}
+                            placeholder="Select or search for a location..."
+                            searchPlaceholder="Search locations..."
+                            emptyMessage="No location found."
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -250,18 +329,24 @@ export default function PostCollabPage() {
                 {/* Specialties / Skills */}
                 <FormField
                   control={form.control}
-                  name="required_specialty"
+                  name="specialization_ids"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Specialties / Skills (Optional)</FormLabel>
                       <FormControl>
-                        <Textarea
-                          placeholder="e.g., Cardiology, Data Collection, Research"
-                          {...field}
+                        <SearchableMultiSelect
+                          values={field.value || []}
+                          onValuesChange={field.onChange}
+                          options={specializationOptions}
+                          onSearchChange={setSpecializationSearch}
+                          isLoading={isSpecLoading}
+                          placeholder="Select specialties..."
+                          searchPlaceholder="Search specialties..."
+                          emptyMessage="No specialties found."
                         />
                       </FormControl>
                       <FormDescription>
-                        Enter a comma-separated list of required skills or specialties.
+                        Select all skills or specialties that apply.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
