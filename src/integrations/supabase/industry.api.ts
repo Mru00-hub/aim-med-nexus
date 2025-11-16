@@ -773,3 +773,18 @@ export const uploadNewCompanyLogo = async (file: File): Promise<{ publicUrl: str
 
   return data;
 };
+
+/**
+ * Deactivates a company profile and all its postings.
+ * (Must be an ADMIN).
+ */
+export const deactivateCompanyProfile = async (companyId: string): Promise<void> => {
+  await getSessionOrThrow();
+  
+  const { error } = await supabase.rpc('deactivate_company_profile', {
+    p_company_id: companyId
+  });
+
+  if (error) throw error;
+  return;
+};
