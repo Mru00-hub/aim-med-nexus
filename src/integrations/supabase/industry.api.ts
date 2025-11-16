@@ -317,7 +317,12 @@ export const getAllCompanies = async (payload: {
     p_location_id: payload.locationId || null
   });
 
-  if (error) throw error;
+  if (error) {
+  // Log the full error to the console for you to see
+  console.error(`Error in ${'getAllCompanies'}:`, error.message); 
+  // Throw a real Error so React Query can catch it
+  throw new Error(error.message); 
+  }
   return data || [];
 };
 
