@@ -6,8 +6,7 @@ import {
   createCompanyProfile,
   getIndustries,
   CreateCompanyPayload,
-  uploadCompanyAsset,
-  updateCompanyProfile,
+  uploadNewCompanyLogo, 
 } from '@/integrations/supabase/industry.api';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
@@ -186,47 +185,18 @@ export default function CreateCompanyPage() {
 
   // --- API Mutation ---
   const mutation = useMutation({
-    mutationFn: async (data: FormData) => {
-      // --- Step 1: Create the company profile (text data only) ---
-      const payload: CreateCompanyPayload = {
-        company_name: data.company_name,
-        description: data.description,
-        location_id: data.location_id,
-        website_url: data.website_url || undefined,
-        industry_id: data.industry_id === 'other' ? undefined : data.industry_id,
-        industry_other: data.industry_id === 'other' ? data.industry_other : undefined,
-        company_size: data.company_size || undefined,
-        founded_year: data.founded_year ? parseInt(data.founded_year, 10) : undefined,
-        // No 'company_logo_url' here!
-      };
-      
-      const newCompany = await createCompanyProfile(payload);
-      
-      // --- Step 2: Upload logo (if one was selected) ---
-      if (logoFile) {
-        // Use the newCompany.id to build the secure path
-        const { publicUrl } = await uploadCompanyAsset(newCompany.id, logoFile);
-        
-        // --- Step 3: Update the profile row with the logo URL ---
-        await updateCompanyProfile({
-          p_company_id: newCompany.id,
-          p_company_logo_url: publicUrl,
-        });
-      }
-      
-      // Return the company data for onSuccess
-      return newCompany;
-    },
+    // The mutation function now *only* creates the profile
+    mutationFn: (payload: CreateCompanyPayload) => createCompanyProfile(payload),
     onSuccess: (data) => {
-      localStorage.removeItem(DRAFT_KEY);
       toast({
         title: 'Company Profile Created!',
         description: 'You can now manage your new company page.',
       });
-      // Navigate using the new company ID or to the dashboard
-      navigate(`/industryhub/dashboard`); 
+      navigate(`/industryhub/dashboard`);
     },
     onError: (error) => {
+      // This will catch errors from create_company_profile
+      setIsUploading(false); // Make sure to stop loading
       toast({
         title: 'Error Creating Profile',
         description: error.message,
@@ -236,7 +206,42 @@ export default function CreateCompanyPage() {
   });
 
   const onSubmit = async (data: FormData) => {
-    mutation.mutate(data);
+    let logoUrl: string | undefined = undefined;
+    
+    try {
+      // Step 1: Upload logo if it exists.
+      if (logoFile) {
+        setIsUploading(true);
+        const { publicUrl } = await uploadNewCompanyLogo(logoFile);
+        logoUrl = publicUrl;
+        setIsUploading(false); // Stop "uploading" state
+      }
+
+      // Step 2: Prepare the *full* payload, including the new URL
+      const payload: CreateCompanyPayload = {
+        company_name: data.company_name,
+        description: data.description,
+        location_id: data.location_id,
+        website_url: data.website_url || undefined,
+        industry_id: data.industry_id === 'other' ? undefined : data.industry_id,
+        industry_other: data.industry_id === 'other' ? data.industry_other : undefined,
+        company_size: data.company_size || undefined,
+        founded_year: data.founded_year ? parseInt(data.founded_year, 10) : undefined,
+        company_logo_url: logoUrl, // Pass the new URL
+      };
+
+      // Step 3: Call the mutation with the complete payload
+      mutation.mutate(payload);
+
+    } catch (error: any) {
+      // This will only catch errors from the uploadNewCompanyLogo step
+      setIsUploading(false);
+      toast({ 
+        title: "Logo Upload Failed", 
+        description: error.message || "Could not upload logo. Please try again.",
+        variant: "destructive" 
+      });
+    }
   };
 
   const handleClearForm = () => {
