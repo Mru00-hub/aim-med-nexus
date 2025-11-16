@@ -101,6 +101,7 @@ export type CreateCompanyPayload = {
   website_url?: string;
   company_size?: string;
   founded_year?: number;
+  company_logo_url?: string; 
 };
 
 // --- ADDED: Type for updating a company profile ---
@@ -391,7 +392,8 @@ export const createCompanyProfile = async (payload: CreateCompanyPayload): Promi
     p_founded_year: payload.founded_year || null,
     p_industry_id: payload.industry_id || null,
     p_location_id: payload.location_id,
-    p_industry_other: payload.industry_other || null
+    p_industry_other: payload.industry_other || null,
+    p_company_logo_url: payload.company_logo_url || null
   });
   
   if (error) throw error;
@@ -749,4 +751,25 @@ export const getCompanyManagers = async (companyId: string): Promise<CompanyMana
     throw error;
   }
   return data as CompanyManagerWithProfile[];
+};
+
+export const uploadNewCompanyLogo = async (file: File): Promise<{ publicUrl: string }> => {
+  const session = await getSessionOrThrow();
+  const fileExt = file.name.split('.').pop();
+  const fileName = `${Date.now()}.${fileExt}`;
+  
+  // Uploads to the user_id folder, which our new RLS policy allows
+  const filePath = `${session.user.id}/${fileName}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from('industry_hub_assets')
+    .upload(filePath, file);
+
+  if (uploadError) throw uploadError;
+
+  const { data } = supabase.storage
+    .from('industry_hub_assets')
+    .getPublicUrl(filePath);
+
+  return data;
 };
