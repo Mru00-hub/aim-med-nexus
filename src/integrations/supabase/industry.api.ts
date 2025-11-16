@@ -335,7 +335,6 @@ export const getCompanyProfileDetails = async (companyId: string): Promise<Compa
   const { data, error } = await supabase.rpc('get_company_profile_details', {
     p_company_id: companyId
   });
-  .single(); 
   if (error) throw error;
   return data as CompanyProfileDetails;
 };
