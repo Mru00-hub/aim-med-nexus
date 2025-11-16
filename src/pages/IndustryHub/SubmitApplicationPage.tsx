@@ -61,9 +61,9 @@ export default function SubmitApplicationPage() {
       };
       
       if (applicationType === 'job') {
-        return applyToJob(payload);
+        return applyForJob(payload);
       } else {
-        return applyToCollab(payload);
+        return applyForCollab(payload);
       }
     },
     onSuccess: (newData: any) => {
