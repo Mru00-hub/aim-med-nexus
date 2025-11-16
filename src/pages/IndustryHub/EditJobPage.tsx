@@ -176,21 +176,21 @@ export default function EditJobPage() {
     queryKey: ['jobDetails', jobId],
     queryFn: () => getJobById(jobId!),
     enabled: !!jobId,
-    onSuccess: (data) => {
-      if (data) {
-        form.reset({
-          title: data.title,
-          description: data.description,
-          job_type: data.job_type || undefined,
-          experience_level: data.experience_level || undefined,
-          location_type: data.location_type || undefined,
-          location_id: data.location_id || '',
-          specialization_ids: (data.specializations || []).map(s => s.id),
-          external_apply_url: data.external_apply_url || '',
-        });
-      }
-    },
   });
+  useEffect(() => {
+    if (jobData) {
+      form.reset({
+        title: jobData.title,
+        description: jobData.description,
+        job_type: jobData.job_type || undefined,
+        experience_level: jobData.experience_level || undefined,
+        location_type: jobData.location_type || undefined,
+        location_id: jobData.location_id || '',
+        specialization_ids: (jobData.specializations || []).map(s => s.id),
+        external_apply_url: jobData.external_apply_url || '',
+      });
+    }
+  }, [jobData, form.reset]);
 
   const updateMutation = useMutation({
     mutationFn: (payload: UpdateJobPayload) => updateCompanyJobRpc(payload),
@@ -198,7 +198,7 @@ export default function EditJobPage() {
       toast({ title: 'Job Updated Successfully!' });
       queryClient.invalidateQueries({ queryKey: ['jobDetails', jobId] });
       queryClient.invalidateQueries({ queryKey: ['companyProfile', jobData?.company_id] });
-      navigate('/industryhub/dashboard');
+      navigate(`/industryhub/dashboard/${jobData?.company_id}`);
     },
     onError: (error) => {
       toast({ title: 'Error Updating Job', description: error.message, variant: 'destructive' });
@@ -211,7 +211,7 @@ export default function EditJobPage() {
       toast({ title: 'Job Deactivated', description: 'The job posting has been archived.' });
       queryClient.invalidateQueries({ queryKey: ['jobDetails', jobId] });
       queryClient.invalidateQueries({ queryKey: ['companyProfile', jobData?.company_id] });
-      navigate('/industryhub/dashboard');
+      navigate(`/industryhub/dashboard/${jobData?.company_id}`);
     },
     onError: (error) => {
       toast({ title: 'Error Deleting Job', description: error.message, variant: 'destructive' });
@@ -268,7 +268,7 @@ export default function EditJobPage() {
       <main className="container-medical flex-1 py-12">
         <Button
           variant="ghost"
-          onClick={() => navigate('/industryhub/dashboard')}
+          onClick={() => navigate(`/industryhub/dashboard/${jobData?.company_id}`)}
           className="mb-4"
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
