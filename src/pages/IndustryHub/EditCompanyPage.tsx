@@ -54,6 +54,11 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Trash2 } from 'lucide-react';
 import { deactivateCompanyProfile } from '@/integrations/supabase/industry.api';
+function seedDropdownList<T extends { id: string }>(list: T[], item: T | null | undefined): T[] {
+  if (!item) return list;
+  if (list.find(i => i.id === item.id)) return list;
+  return [item, ...list];
+}
 
 // --- Zod Schema ---
 const companyFormSchema = z.object({
@@ -108,7 +113,15 @@ export default function EditCompanyPage() {
     };
 
     const fetchInitialLocations = async () => {
-       setIsLocLoading(true);
+       let currentLoc = null;
+       if (profileData?.location_id && profileData.location_id !== 'other') {
+          const { data } = await supabase
+            .from('locations')
+            .select('id, label')
+            .eq('id', profileData.location_id)
+            .single();
+          currentLoc = data;
+       }
        const { data, error } = await supabase
         .from('locations')
         .select('id, label')
@@ -116,7 +129,7 @@ export default function EditCompanyPage() {
         .order('label')
         .limit(10); // Fetch top 10
       
-       if (data) setLocations(data);
+       if (data) setLocations(seedDropdownList(data, currentLoc)); 
        if (error) console.error('Error fetching initial locations:', error);
        setIsLocLoading(false);
     };
@@ -137,7 +150,7 @@ export default function EditCompanyPage() {
     
     return () => clearTimeout(searchTimer);
 
-  }, [locationSearch]);
+  }, [locationSearch, profileData]);
 
   const locationOptions = useMemo(() => 
     locations.map(loc => ({ value: loc.id, label: loc.label })),
@@ -151,7 +164,24 @@ export default function EditCompanyPage() {
   });
 
   // 3. Fetch data for dropdowns
-  const { data: industries } = useQuery({ queryKey: ['industries'], queryFn: getIndustries });
+  const { data: industries } = useQuery({
+    queryKey: ['industries', profileData?.industry_id], 
+    queryFn: async () => {
+      let currentIndustry = null;
+      if (profileData?.industry_id && profileData.industry_id !== 'other') {
+        const { data } = await supabase
+          .from('industries')
+          .select('id, name')
+          .eq('id', profileData.industry_id)
+          .single();
+        currentIndustry = data ? { id: data.id, name: data.name } : null;
+      }
+
+      const allIndustries = await getIndustries();
+      return seedDropdownList(allIndustries, currentIndustry);
+    },
+    enabled: !!profileData, // <-- Only run after profileData is loaded
+  });
 
   const form = useForm<CompanyFormData>({
     resolver: zodResolver(companyFormSchema),
@@ -447,12 +477,16 @@ export default function EditCompanyPage() {
                             <SelectTrigger><SelectValue placeholder="Select size..." /></SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="1-50">1-50 employees</SelectItem>
-                            <SelectItem value="51-200">51-200 employees</SelectItem>
-                            <SelectItem value="201-500">201-500 employees</SelectItem>
-                            <SelectItem value="501-1000">501-1000 employees</SelectItem>
-                            <SelectItem value="1000+">1000+ employees</SelectItem>
+                            <SelectItem value="1-10 employees">1-10 employees</SelectItem>
+                            <SelectItem value="11-50 employees">11-50 employees</SelectItem>
+                            <SelectItem value="51-200 employees">51-200 employees</SelectItem>
+                            <SelectItem value="201-500 employees">201-500 employees</SelectItem>
+                            <SelectItem value="501-1,000 employees">501-1,000 employees</SelectItem>
+                            <SelectItem value="1,001-5,000 employees">1,001-5,000 employees</SelectItem>
+                            <SelectItem value="5,001-10,000 employees">5,001-10,000 employees</SelectItem>
+                            <SelectItem value="10,001+ employees">10,001+ employees</SelectItem>
                           </SelectContent>
+
                         </Select>
                         <FormMessage />
                       </FormItem>
