@@ -5,6 +5,8 @@ import { Footer } from '@/components/layout/Footer';
 import {
   Card,
   CardContent,
+  CardHeader,
+  CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -400,9 +402,7 @@ export default function Notifications() {
     switch (notification.type) {
       // --- System ---
       case 'system_update':
-        // Clicks on system updates can now show the full announcement
         if (notification.announcement_id) {
-          // You could open a modal here with notification.announcement
           toast({
             title: notification.announcement?.title || 'System Update',
             description: <div className="whitespace-pre-wrap">{notification.announcement?.body || ''}</div>,
@@ -446,29 +446,27 @@ export default function Notifications() {
       // --- Jobs & Opportunities ---
       case 'new_job_posting':
         if (entityId) {
-          navigate(`/industry-hub/job/${entityId}`);
+          navigate(`/jobs/details/${entityId}`); // Correct path
           return;
         }
         break;
       case 'new_collaboration_posting':
         if (entityId) {
-          navigate(`/industry-hub/collaboration/${entityId}`);
+          navigate(`/collabs/details/${entityId}`); // Correct path
           return;
         }
         break;
 
       case 'job_application_update':
-        navigate(`/my-profile/applications`); // Navigate to user's "my applications" page
+        navigate(`/industryhub/my-applications`); // Correct path
         return;
 
       case 'new_job_applicant':
       case 'new_collaboration_applicant':
-        // Navigate to the company dashboard.
-        // We can't get the job/collab ID from the RPC (flaw),
-        // but we can at least send the manager to their applications page.
-        // We use the entity_id (application_id) to highlight it.
+        // Send manager to their dashboard's applicants tab
         if (entityId) {
-          navigate(`/company/dashboard/applications?highlight=${entityId}`);
+          const tab = notification.type === 'new_job_applicant' ? 'job' : 'collab';
+          navigate(`/industryhub/dashboard?tab=applicants&type=${tab}&highlight=${entityId}`);
           return;
         }
         break;
