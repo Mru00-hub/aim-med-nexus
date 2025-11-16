@@ -95,6 +95,11 @@ export default function EditCompanyPage() {
   const [locationSearch, setLocationSearch] = useState("");
   const [isLocLoading, setIsLocLoading] = useState(false);
   const isMounted = useRef(false);
+  const { data: profileData, isLoading: isLoadingProfile, isError } = useQuery({
+    queryKey: ['companyProfile', companyId],
+    queryFn: () => getCompanyProfileDetails(companyId!),
+    enabled: !!companyId,
+  });
 
   useEffect(() => {
     const fetchSearchLocations = async () => {
@@ -156,12 +161,6 @@ export default function EditCompanyPage() {
     locations.map(loc => ({ value: loc.id, label: loc.label })),
     [locations]
   );
-
-  const { data: profileData, isLoading: isLoadingProfile, isError } = useQuery({
-    queryKey: ['companyProfile', companyId],
-    queryFn: () => getCompanyProfileDetails(companyId!),
-    enabled: !!companyId,
-  });
 
   // 3. Fetch data for dropdowns
   const { data: industries } = useQuery({
