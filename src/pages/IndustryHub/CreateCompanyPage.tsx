@@ -47,6 +47,7 @@ export default function CreateCompanyPage() {
 
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   // --- Data for Industry Select ---
   const { data: industries, isLoading: isLoadingIndustries } = useQuery({
@@ -192,11 +193,9 @@ export default function CreateCompanyPage() {
         title: 'Company Profile Created!',
         description: 'You can now manage your new company page.',
       });
-      navigate(`/industryhub/dashboard`);
+      navigate(`/industryhub/dashboard/${data.id}`);
     },
     onError: (error) => {
-      // This will catch errors from create_company_profile
-      setIsUploading(false); // Make sure to stop loading
       toast({
         title: 'Error Creating Profile',
         description: error.message,
@@ -519,12 +518,12 @@ export default function CreateCompanyPage() {
                 <Button 
                   type="submit" 
                   size="lg" 
-                  disabled={mutation.isPending}
+                  disabled={isUploading || mutation.isPending}
                 >
-                  {mutation.isPending && (
+                  {(isUploading || mutation.isPending) && (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   )}
-                  {mutation.isPending ? 'Creating Profile...' : 'Create Profile'}
+                  {isUploading ? 'Uploading Logo...' : (mutation.isPending ? 'Creating Profile...' : 'Create Profile')}
                 </Button>
               </div>
             </form>
