@@ -120,7 +120,7 @@ export default function JobsAndOpportunitiesPage() {
                 Find your next role or collaboration in the medical community.
               </p>
             </div>
-            <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+            <div className="flex flex-col md:flex-row gap-2 w-full md:w-auto">
               <Button
                 variant="outline"
                 className="w-full flex-shrink-0 md:w-auto"
@@ -273,9 +273,9 @@ function useDebouncedFetch(
       const { data, error } = await supabase
         .from(tableName)
         .select(`id, ${selectColumn}`)  // Assuming 'industries' also uses 'label'
-        .neq('label', 'Other')
-        .or(`label.ilike.%${searchTerm}%`)
-        .order('label')
+        .neq(selectColumn, 'Other') // <-- FIX
+        .or(`${selectColumn}.ilike.%${searchTerm}%`) // <-- FIX
+        .order(selectColumn) // <-- FIX
         .limit(50);
       if (data) setData(data.map(d => ({ id: d.id, label: d[selectColumn] }))); 
       if (error) console.error(`Error fetching ${tableName}:`, error);
@@ -287,8 +287,8 @@ function useDebouncedFetch(
       const { data, error } = await supabase
         .from(tableName)
         .select(`id, ${selectColumn}`)
-        .neq('label', 'Other')
-        .order('label')
+        .neq(selectColumn, 'Other') // <-- FIX
+        .order(selectColumn)
         .limit(10);
       if (data) setData(data.map(d => ({ id: d.id, label: d[selectColumn] })));
       if (error) console.error(`Error fetching initial ${tableName}:`, error);
