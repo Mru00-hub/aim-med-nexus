@@ -120,22 +120,33 @@ export default function JobsAndOpportunitiesPage() {
                 Find your next role or collaboration in the medical community.
               </p>
             </div>
-            <Button
-              className="w-full flex-shrink-0 md:w-auto"
-              onClick={handlePostOpportunityClick}
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Post an Opportunity
-            </Button>
+            <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+              <Button
+                variant="outline"
+                className="w-full flex-shrink-0 md:w-auto"
+                onClick={() => navigate(user ? '/industryhub/my-applications' : '/login')}
+              >
+                My Applications
+              </Button>
+              <Button
+                className="w-full flex-shrink-0 md:w-auto"
+                onClick={handlePostOpportunityClick}
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Post an Opportunity
+              </Button>
+            </div>
           </div>
-
+          
           {/* --- New Filter Bar --- */}
           <Card className="mb-8 shadow-sm">
             <CardContent className="p-4">
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 {/* Search Input */}
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  {/* Added label */}
+                  <label className="text-sm font-medium leading-none mb-2 block">Search</label>
+                  <Search className="absolute left-3 bottom-2.5 h-4 w-4 text-muted-foreground" />
                   <Input
                     placeholder="Search by title or keyword..."
                     className="pl-9"
@@ -145,42 +156,54 @@ export default function JobsAndOpportunitiesPage() {
                 </div>
                 
                 {/* Location Filter */}
-                <SearchableSelect
-                  value={locationId}
-                  onValueChange={setLocationId}
-                  options={locationOptions}
-                  onSearchChange={setLocationSearch}
-                  isLoading={isLocLoading}
-                  placeholder="Filter by location..."
-                  searchPlaceholder="Search locations..."
-                  emptyMessage="No locations found."
-                  showOther={false}
-                />
+                <div>
+                  {/* Added label */}
+                  <label className="text-sm font-medium leading-none mb-2 block">Location</label>
+                  <SearchableSelect
+                    value={locationId}
+                    onValueChange={setLocationId}
+                    options={locationOptions}
+                    onSearchChange={setLocationSearch}
+                    isLoading={isLocLoading}
+                    placeholder="Select a location..."
+                    searchPlaceholder="Search locations..."
+                    emptyMessage="No locations found."
+                    showOther={false}
+                  />
+                </div>
                 
                 {/* Industry Filter */}
-                <SearchableSelect
-                  value={industryId}
-                  onValueChange={setIndustryId}
-                  options={industryOptions}
-                  onSearchChange={setIndustrySearch}
-                  isLoading={isIndLoading}
-                  placeholder="Filter by industry..."
-                  searchPlaceholder="Search industries..."
-                  emptyMessage="No industries found."
-                  showOther={false}
-                />
+                <div>
+                  {/* Added label */}
+                  <label className="text-sm font-medium leading-none mb-2 block">Industry</label>
+                  <SearchableSelect
+                    value={industryId}
+                    onValueChange={setIndustryId}
+                    options={industryOptions}
+                    onSearchChange={setIndustrySearch}
+                    isLoading={isIndLoading}
+                    placeholder="Select an industry..."
+                    searchPlaceholder="Search industries..."
+                    emptyMessage="No industries found."
+                    showOther={false}
+                  />
+                </div>
                 
                 {/* Specialization Filter */}
-                <SearchableMultiSelect
-                  values={specializationIds}
-                  onValuesChange={setSpecializationIds}
-                  options={specializationOptions}
-                  onSearchChange={setSpecializationSearch}
-                  isLoading={isSpecLoading}
-                  placeholder="Filter by specialty..."
-                  searchPlaceholder="Search specialties..."
-                  emptyMessage="No specialties found."
-                />
+                <div>
+                  {/* Added label */}
+                  <label className="text-sm font-medium leading-none mb-2 block">Specialty</label>
+                  <SearchableMultiSelect
+                    values={specializationIds}
+                    onValuesChange={setSpecializationIds}
+                    options={specializationOptions}
+                    onSearchChange={setSpecializationSearch}
+                    isLoading={isSpecLoading}
+                    placeholder="Select specialties..."
+                    searchPlaceholder="Search specialties..."
+                    emptyMessage="No specialties found."
+                  />
+                </div>
               </div>
               
               {/* Clear Filters Button */}
@@ -242,18 +265,19 @@ function useDebouncedFetch(
   setLoading: React.Dispatch<React.SetStateAction<boolean>>
 ) {
   const isMounted = useRef(false);
+  const selectColumn = tableName === 'industries' ? 'name' : 'label';
 
   useEffect(() => {
     const fetchSearchData = async () => {
       setLoading(true);
       const { data, error } = await supabase
         .from(tableName)
-        .select('id, label') // Assuming 'industries' also uses 'label'
+        .select(`id, ${selectColumn}`)  // Assuming 'industries' also uses 'label'
         .neq('label', 'Other')
         .or(`label.ilike.%${searchTerm}%`)
         .order('label')
         .limit(50);
-      if (data) setData(data.map(d => ({ id: d.id, label: d.label })));
+      if (data) setData(data.map(d => ({ id: d.id, label: d[selectColumn] }))); 
       if (error) console.error(`Error fetching ${tableName}:`, error);
       setLoading(false);
     };
@@ -262,11 +286,11 @@ function useDebouncedFetch(
       setLoading(true);
       const { data, error } = await supabase
         .from(tableName)
-        .select('id, label')
+        .select(`id, ${selectColumn}`)
         .neq('label', 'Other')
         .order('label')
         .limit(10);
-      if (data) setData(data.map(d => ({ id: d.id, label: d.label })));
+      if (data) setData(data.map(d => ({ id: d.id, label: d[selectColumn] })));
       if (error) console.error(`Error fetching initial ${tableName}:`, error);
       setLoading(false);
     };
@@ -286,5 +310,5 @@ function useDebouncedFetch(
     }, 500);
 
     return () => clearTimeout(searchTimer);
-  }, [searchTerm, tableName, setData, setLoading]);
+  }, [searchTerm, tableName, setData, setLoading, selectColumn]);
 }
