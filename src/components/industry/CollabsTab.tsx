@@ -63,7 +63,7 @@ export const CollabsTab: React.FC<TabFilterProps> = ({
           <AlertTitle>Error Loading Collaborations</AlertTitle>
           <AlertDescription>
             {error instanceof Error ? error.message : 'An unknown error occurred.'}
-          </PrimaryAlertDescription>
+          </AlertDescription>
         </Alert>
       );
     }
