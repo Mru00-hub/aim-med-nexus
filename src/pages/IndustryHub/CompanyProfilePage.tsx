@@ -232,6 +232,13 @@ export default function CompanyProfilePage() {
                   </div>
                 </div>
                 <div className="flex gap-2 flex-shrink-0">
+                  {data.is_owner && (
+                    <Button asChild className="btn-medical">
+                      <Link to={`/industryhub/dashboard/${data.id}`}>
+                        Go to Dashboard
+                      </Link>
+                    </Button>
+                  )}
                   <Button 
                     variant={is_following ? "default" : "outline"} 
                     onClick={handleFollowClick}
