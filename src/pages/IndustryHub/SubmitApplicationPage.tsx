@@ -6,7 +6,7 @@ import {
   getJobById,
   getCollabById,
   applyForJob,
-  applyForCollab,
+  applyForCollaboration,
   MyJobApplication,
   MyCollabApplication,
 } from '@/integrations/supabase/industry.api';
@@ -63,7 +63,7 @@ export default function SubmitApplicationPage() {
       if (applicationType === 'job') {
         return applyForJob(payload);
       } else {
-        return applyForCollab(payload);
+        return applyForCollaboration(payload);
       }
     },
     onSuccess: (newData: any) => {
