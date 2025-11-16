@@ -386,13 +386,12 @@ export const createCompanyProfile = async (payload: CreateCompanyPayload): Promi
   const { data, error } = await supabase.rpc('create_company_profile', {
     p_company_name: payload.company_name,
     p_description: payload.description,
-    p_location_id: payload.location_id,
     p_website_url: payload.website_url || null,
-    p_industry_id: payload.industry_id || null,
-    p_industry_other: payload.industry_other || null,
     p_company_size: payload.company_size || null,
     p_founded_year: payload.founded_year || null,
-    p_company_logo_url: payload.company_logo_url || null
+    p_industry_id: payload.industry_id || null,
+    p_location_id: payload.location_id,
+    p_industry_other: payload.industry_other || null
   });
   
   if (error) throw error;
