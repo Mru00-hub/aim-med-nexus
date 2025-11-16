@@ -277,10 +277,23 @@ export const getAllActiveJobs = async (
 /**
  * Fetches a paginated list of all active collaborations.
  */
-export const getAllActiveCollaborations = async (page = 1, limit = 20): Promise<CollaborationListing[]> => {
+export const getAllActiveCollaborations = async (
+  page: number = 1,
+  limit: number = 12,
+  filters: {
+    industryId?: string;
+    locationId?: string;
+    searchQuery?: string;
+    specializationIds?: string[];
+  }
+): Promise<CollaborationListing[]> => {
   const { data, error } = await supabase.rpc('get_all_active_collaborations', {
     p_limit: limit,
-    p_page: page
+    p_page: page,
+    p_industry_id: filters.industryId || null,
+    p_location_id: filters.locationId || null,
+    p_search_query: filters.searchQuery || '',
+    p_specialization_ids: filters.specializationIds || [],
   });
   if (error) throw error;
   return data || [];
