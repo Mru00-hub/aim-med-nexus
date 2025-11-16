@@ -170,7 +170,7 @@ export default function PostCollabPage() {
         description: 'Your new post is now active on the opportunities board.',
       });
       queryClient.invalidateQueries({ queryKey: ['companyProfile', companyId] });
-      navigate('/industryhub/dashboard');
+      navigate(`/industryhub/dashboard/${companyId}`);
     },
     onError: (error) => {
       toast({
@@ -226,7 +226,7 @@ export default function PostCollabPage() {
       <main className="container-medical flex-1 py-12">
         <Button
           variant="ghost"
-          onClick={() => navigate('/industryhub/dashboard')}
+          onClick={() => navigate(`/industryhub/dashboard/${companyId}`)}
           className="mb-4"
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
