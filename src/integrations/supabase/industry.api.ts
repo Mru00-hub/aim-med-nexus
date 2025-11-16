@@ -22,8 +22,8 @@ export type CompanyJobDetails = {
   experience_level: string;
   location_type: string;
   location_id: string | null; // Changed
-  location_name: string | null; // Added (from JOIN in RPC)
-  specializations: { id: string; label: string }[]; // Added (from JOIN in RPC)
+  location_name: string | null; // Added
+  specializations: { id: string; label: string }[]; // Changed
   external_apply_url: string | null;
   is_active: boolean;
   created_at: string;
@@ -41,14 +41,15 @@ export type CollaborationDetails = {
   // --- Data from collaborations ---
   collaboration_type: Enums<'collab_type_enum'>;
   description: string;
+  specializations: { id: string; label: string }[]; // Changed
   location_id: string | null; // Changed
-  location_name: string | null; // Added (from JOIN in RPC)
-  specializations: { id: string; label: string }[]; // Added (from JOIN in RPC)
+  location_name: string | null; // Added
   duration: string;
   is_active: boolean;
   applicants_count: number;
   created_at: string;
 };
+
 export type CompanyManager = Tables<'company_managers'>;
 export type CompanyLink = Tables<'company_links'>;
 export type JobApplication = Tables<'job_applications'>;
