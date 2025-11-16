@@ -148,19 +148,6 @@ export default function EditCompanyPage() {
     queryKey: ['companyProfile', companyId],
     queryFn: () => getCompanyProfileDetails(companyId!),
     enabled: !!companyId,
-    onSuccess: (data) => {
-      if (data) {
-        form.reset({
-          company_name: data.company_name,
-          description: data.description,
-          industry_id: data.industry_id || undefined,
-          location_id: data.location_id || undefined,
-          website_url: data.website_url || '',
-          company_size: data.company_size || undefined,
-          founded_year: data.founded_year ? String(data.founded_year) : undefined,
-        });
-      }
-    },
   });
 
   // 3. Fetch data for dropdowns
@@ -180,6 +167,20 @@ export default function EditCompanyPage() {
     },
   });
 
+  useEffect(() => {
+    // When the query data comes in, reset the form
+    if (profileData) {
+      form.reset({
+        company_name: profileData.company_name,
+        description: profileData.description,
+        industry_id: profileData.industry_id || undefined,
+        location_id: profileData.location_id || undefined,
+        website_url: profileData.website_url || '',
+        company_size: profileData.company_size || undefined,
+        founded_year: profileData.founded_year || undefined, // Pass the number directly
+      });
+    }
+  }, [profileData, form.reset]);
 
   const watchedIndustryId = form.watch('industry_id');
 
