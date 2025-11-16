@@ -92,19 +92,20 @@ export default function JobDetailPage() {
     );
   }
 
-  // Destructure job data
+    // Destructure job data
   const {
     title,
     company_id,
     company_name,
-    location_text,
     location_type,
     job_type,
     experience_level,
-    specialties_required = [],
+    location_name,
+    specializations = [],
     description,
     external_apply_url,
   } = job;
+
 
   return (
     <div className="flex min-h-screen flex-col bg-gray-50/50">
@@ -133,7 +134,7 @@ export default function JobDetailPage() {
                     </div>
                     <div className="flex items-center gap-1.5">
                       <MapPin className="h-4 w-4" />
-                      <span>{toTitleCase(location_type)} ({location_text})</span>
+                      <span>{toTitleCase(location_type)} ({location_name || 'Not specified'})</span>
                     </div>
                     <div className="flex items-center gap-1.5">
                       <GraduationCap className="h-4 w-4" />
@@ -154,13 +155,13 @@ export default function JobDetailPage() {
                   </div>
 
                   {/* Skills/Specialties */}
-                  {specialties_required.length > 0 && (
+                  {specializations.length > 0 && (
                     <div>
                       <h3 className="mb-3 text-lg font-semibold">Required Skills & Specialties</h3>
                       <div className="flex flex-wrap gap-2">
-                        {specialties_required.map((skill) => (
-                          <Badge key={skill} variant="secondary" className="text-base font-normal">
-                            {toTitleCase(skill)}
+                        {specializations.map((spec) => (
+                          <Badge key={spec.id} variant="secondary" className="text-base font-normal">
+                            {spec.label}
                           </Badge>
                         ))}
                       </div>
