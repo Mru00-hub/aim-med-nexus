@@ -462,16 +462,21 @@ export default function Notifications() {
         return;
 
       case 'new_job_applicant':
-      case 'new_collaboration_applicant':
-        // Send manager to their dashboard's applicants tab
-        if (entityId) {
+      case 'new_collaboration_applicant': { // Added brackets for local scope
+        // --- THIS IS THE FIX ---
+        // Get the companyId from the application object on the notification
+        const companyId = notification.job_application?.company_id || notification.collaboration_application?.company_id;
+
+        if (entityId && companyId) {
           const tab = notification.type === 'new_job_applicant' ? 'job' : 'collab';
-          navigate(`/industryhub/dashboard?tab=applicants&type=${tab}&highlight=${entityId}`);
+          
+          // Navigate to the new dynamic route
+          navigate(`/industryhub/dashboard/${companyId}?tab=applicants&type=${tab}&highlight=${entityId}`);
           return;
         }
+        // If we're missing an ID, we'll fall through to the default toast
         break;
-    }
-
+      }
     // Fallback for any types without specific navigation
     toast({
       title: 'No Navigation',
