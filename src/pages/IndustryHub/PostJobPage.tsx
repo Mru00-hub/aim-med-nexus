@@ -185,7 +185,7 @@ export default function PostJobPage() {
       });
       // Invalidate company profile details to refetch the jobs list
       queryClient.invalidateQueries({ queryKey: ['companyProfile', companyId] });
-      navigate('/industryhub/dashboard');
+      navigate(`/industryhub/dashboard/${companyId}`);
     },
     onError: (error) => {
       toast({
@@ -248,7 +248,7 @@ export default function PostJobPage() {
       <main className="container-medical flex-1 py-12">
         <Button
           variant="ghost"
-          onClick={() => navigate('/industryhub/dashboard')}
+          onClick={() => navigate(`/industryhub/dashboard/${companyId}`)}
           className="mb-4"
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
