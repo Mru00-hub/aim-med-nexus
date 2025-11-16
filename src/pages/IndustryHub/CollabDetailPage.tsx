@@ -110,7 +110,7 @@ export default function CollabDetailPage() {
         <div className="container mx-auto max-w-5xl">
           <Button
             variant="ghost"
-            onClick={() => navigate('/jobs-and-opportunities')} // Link back to the main opportunities page
+            onClick={() => navigate('/jobs')} // Link back to the main opportunities page
             className="mb-4 text-muted-foreground"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
