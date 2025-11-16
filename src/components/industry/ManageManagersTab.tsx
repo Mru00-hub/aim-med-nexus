@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+// src/components/industry/ManageManagersTab.tsx
+import React, { useState, useEffect, useMemo, useRef } from 'react'; // --- ADDED: useEffect, useMemo, useRef ---
+import { Link } from 'react-router-dom'; // --- ADDED: Link ---
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   getCompanyManagers,
@@ -10,6 +12,7 @@ import {
   RemoveManagerPayload,
   CompanyManagerWithProfile,
 } from '@/integrations/supabase/industry.api';
+import { supabase } from '@/integrations/supabase/client'; // --- ADDED: supabase ---
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -32,7 +35,7 @@ import {
   FormMessage,
   FormDescription,
 } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
+import { Input } from '@/components/ui/input'; // --- This will be replaced, but keep it for now ---
 import {
   Select,
   SelectContent,
@@ -47,10 +50,17 @@ import { useToast } from '@/components/ui/use-toast';
 import { Plus, Trash2, Loader2, UserCog, User } from 'lucide-react';
 import { ProfileAvatar } from '@/components/layout/ProfileAvatar';
 import { useAuth } from '@/hooks/useAuth';
+import { SearchableSelect } from '@/components/ui/searchable-select'; // --- ADDED: SearchableSelect ---
 
 interface ManageManagersTabProps {
   companyId: string;
 }
+
+// --- ADDED: Profile type for searching ---
+type ProfileOption = {
+  id: string;
+  label: string;
+};
 
 const managerFormSchema = z.object({
   user_id: z.string().uuid('Must be a valid User ID (UUID)'),
@@ -63,10 +73,67 @@ export const ManageManagersTab: React.FC<ManageManagersTabProps> = ({ companyId 
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // --- ADDED: State for profile search ---
+  const [profiles, setProfiles] = useState<ProfileOption[]>([]);
+  const [profileSearch, setProfileSearch] = useState("");
+  const [isProfileLoading, setIsProfileLoading] = useState(false);
+  const isProfileMounted = useRef(false);
+
   const { data: managers, isLoading: isLoadingManagers } = useQuery({
     queryKey: ['companyManagers', companyId],
     queryFn: () => getCompanyManagers(companyId),
   });
+
+  // --- ADDED: Debounced fetch for profiles ---
+  useEffect(() => {
+    const fetchSearchProfiles = async () => {
+      setIsProfileLoading(true);
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .or(`full_name.ilike.%${profileSearch}%`)
+        .limit(10);
+      
+      if (data) setProfiles(data.map(p => ({ id: p.id, label: p.full_name || p.id })));
+      if (error) console.error('Error fetching profiles:', error);
+      setIsProfileLoading(false);
+    };
+
+    const fetchInitialProfiles = async () => {
+      setIsProfileLoading(true);
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .limit(10);
+      
+      if (data) setProfiles(data.map(p => ({ id: p.id, label: p.full_name || p.id })));
+      if (error) console.error('Error fetching initial profiles:', error);
+      setIsProfileLoading(false);
+    };
+
+    if (!isProfileMounted.current) {
+      isProfileMounted.current = true;
+      fetchInitialProfiles();
+      return;
+    }
+
+    const searchTimer = setTimeout(() => {
+      if (profileSearch.length < 2) {
+        fetchInitialProfiles();
+      } else {
+        fetchSearchProfiles();
+      }
+    }, 500);
+    
+    return () => clearTimeout(searchTimer);
+
+  }, [profileSearch]);
+
+  const profileOptions = useMemo(() => 
+    profiles.map(p => ({ value: p.id, label: p.label })),
+    [profiles]
+  );
+  // --- END: Added profile search logic ---
 
   const form = useForm<ManagerFormData>({
     resolver: zodResolver(managerFormSchema),
@@ -80,7 +147,7 @@ export const ManageManagersTab: React.FC<ManageManagersTabProps> = ({ companyId 
     queryClient.invalidateQueries({ queryKey: ['companyManagers', companyId] });
   };
 
-  // --- Mutations ---
+  // --- Mutations (no change) ---
   const addManagerMutation = useMutation({
     mutationFn: addCompanyManager,
     onSuccess: () => {
@@ -109,7 +176,7 @@ export const ManageManagersTab: React.FC<ManageManagersTabProps> = ({ companyId 
     onError: (err) => toast({ title: 'Error', description: err.message, variant: 'destructive' }),
   });
 
-  // --- Handlers ---
+  // --- Handlers (no change) ---
   const onAddManager = (data: ManagerFormData) => {
     const payload: AddManagerPayload = {
       p_company_id: companyId,
@@ -133,23 +200,36 @@ export const ManageManagersTab: React.FC<ManageManagersTabProps> = ({ companyId 
       <Card className="lg:col-span-1">
         <CardHeader>
           <CardTitle>Add New Manager</CardTitle>
-          <CardDescription>Add a new user to help manage this company page.</CardDescription>
+          <CardDescription>Search for a user and assign them a role.</CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onAddManager)} className="space-y-4">
+              
+              {/* --- REPLACED: Input with SearchableSelect --- */}
               <FormField
                 control={form.control}
                 name="user_id"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>User ID</FormLabel>
-                    <FormControl><Input {...field} placeholder="User's UUID..." /></FormControl>
-                    <FormDescription>Find the User ID from their profile page.</FormDescription>
+                    <FormLabel>User</FormLabel>
+                    <SearchableSelect
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      options={profileOptions}
+                      onSearchChange={setProfileSearch}
+                      isLoading={isProfileLoading}
+                      placeholder="Search for a user..."
+                      searchPlaceholder="Search by name..."
+                      emptyMessage="No user found."
+                    />
+                    <FormDescription>Select a user to add as a manager.</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
+              {/* --- END: Replacement --- */}
+
               <FormField
                 control={form.control}
                 name="role"
@@ -194,17 +274,25 @@ export const ManageManagersTab: React.FC<ManageManagersTabProps> = ({ companyId 
             const isSelf = manager.user_id === user?.id;
             return (
               <Card key={manager.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4">
-                <div className="flex items-center gap-3 flex-1 min-w-0">
+                
+                {/* --- UPDATED: Wrapped in a Link --- */}
+                <Link 
+                  to={`/profile/${manager.user_id}`} 
+                  className="flex items-center gap-3 flex-1 min-w-0 group"
+                  title="View profile"
+                >
                   <ProfileAvatar
                     src={manager.profile?.profile_picture_url}
                     alt={manager.profile?.full_name || 'Manager'}
                     fallback={manager.profile?.full_name || 'M'}
                   />
                   <div className="flex-1 min-w-0">
-                    <h4 className="font-semibold truncate">{manager.profile?.full_name || '...'} {isSelf && '(You)'}</h4>
+                    <h4 className="font-semibold truncate group-hover:underline">{manager.profile?.full_name || '...'} {isSelf && '(You)'}</h4>
                     <p className="text-sm text-muted-foreground">{manager.role}</p>
                   </div>
-                </div>
+                </Link>
+                {/* --- END: Update --- */}
+
                 <div className="flex gap-2 mt-4 sm:mt-0 sm:ml-4 flex-shrink-0">
                   <Button
                     variant="outline"
@@ -257,4 +345,3 @@ export const ManageManagersTab: React.FC<ManageManagersTabProps> = ({ companyId 
     </div>
   );
 };
-
