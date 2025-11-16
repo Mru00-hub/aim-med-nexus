@@ -169,19 +169,19 @@ export default function EditCollabPage() {
     queryKey: ['collabDetails', collabId],
     queryFn: () => getCollabById(collabId!),
     enabled: !!collabId,
-    onSuccess: (data) => {
-      if (data) {
-        form.reset({
-          title: data.title,
-          description: data.description,
-          collaboration_type: data.collaboration_type as Enums<'collab_type_enum'>,
-          location_id: data.location_id || '',
-          duration: data.duration || '',
-          specialization_ids: (data.specializations || []).map(s => s.id),
-        });
-      }
-    },
   });
+  useEffect(() => {
+    if (collabData) {
+      form.reset({
+        title: collabData.title,
+        description: collabData.description,
+        collaboration_type: collabData.collaboration_type as Enums<'collab_type_enum'>,
+        location_id: collabData.location_id || '',
+        duration: collabData.duration || '',
+        specialization_ids: (collabData.specializations || []).map(s => s.id),
+      });
+    }
+  }, [collabData, form.reset]);
 
   const updateMutation = useMutation({
     mutationFn: (payload: UpdateCollabPayload) => updateCollaboration(payload),
@@ -189,7 +189,7 @@ export default function EditCollabPage() {
       toast({ title: 'Collaboration Updated Successfully!' });
       queryClient.invalidateQueries({ queryKey: ['collabDetails', collabId] });
       queryClient.invalidateQueries({ queryKey: ['companyProfile', collabData?.company_id] });
-      navigate('/industryhub/dashboard');
+      navigate(`/industryhub/dashboard/${collabData?.company_id}`); 
     },
     onError: (error) => {
       toast({ title: 'Error Updating Collaboration', description: error.message, variant: 'destructive' });
@@ -202,7 +202,7 @@ export default function EditCollabPage() {
       toast({ title: 'Collaboration Deactivated', description: 'The collaboration post has been archived.' });
       queryClient.invalidateQueries({ queryKey: ['collabDetails', collabId] });
       queryClient.invalidateQueries({ queryKey: ['companyProfile', collabData?.company_id] });
-      navigate('/industryhub/dashboard');
+      navigate(`/industryhub/dashboard/${collabData?.company_id}`); 
     },
     onError: (error) => {
       toast({ title: 'Error Deleting Collaboration', description: error.message, variant: 'destructive' });
@@ -256,7 +256,7 @@ export default function EditCollabPage() {
       <main className="container-medical flex-1 py-12">
         <Button
           variant="ghost"
-          onClick={() => navigate('/industryhub/dashboard')}
+          onClick={() => navigate(`/industryhub/dashboard/${collabData?.company_id}`)}
           className="mb-4"
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
