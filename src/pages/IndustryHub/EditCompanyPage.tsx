@@ -40,6 +40,19 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SearchableSelect } from '@/components/ui/searchable-select';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { Trash2 } from 'lucide-react';
+import { deactivateCompanyProfile } from '@/integrations/supabase/industry.api';
 
 // --- Zod Schema ---
 const companyFormSchema = z.object({
@@ -226,6 +239,21 @@ export default function EditCompanyPage() {
       setter(e.target.files[0]);
     }
   };
+
+  const deactivateMutation = useMutation({
+    mutationFn: () => deactivateCompanyProfile(companyId!),
+    onSuccess: () => {
+      toast({ title: 'Company Profile Deactivated' });
+      // Invalidate all company queries
+      queryClient.invalidateQueries({ queryKey: ['myAdminCompanyId'] });
+      queryClient.invalidateQueries({ queryKey: ['companyProfile', companyId] });
+      // Send user away from the dashboard, as they are no longer an admin
+      navigate('/industryhub'); 
+    },
+    onError: (error) => {
+      toast({ title: 'Error Deactivating Profile', description: error.message, variant: 'destructive' });
+    },
+  });
 
   if (isLoadingProfile || !companyId) {
     if (isError && !companyId) {
@@ -476,6 +504,46 @@ export default function EditCompanyPage() {
                     Save Profile Changes
                   </Button>
                 </div>
+                <Card className="border-destructive bg-destructive/5">
+                  <CardHeader>
+                    <CardTitle className="text-destructive">Danger Zone</CardTitle>
+                    <CardDescription className="text-destructive/80">
+                      Deactivating your company will unpublish all jobs, collaborations,
+                      and remove all manager access. This action is irreversible.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="destructive" type="button">
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Deactivate This Company
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This will permanently deactivate your company, unpublish all
+                            its jobs and collaborations, and remove all managers.
+                            This action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            onClick={() => deactivateMutation.mutate()}
+                            disabled={deactivateMutation.isPending}
+                          >
+                            {deactivateMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Yes, Deactivate Company
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </CardContent>
+                </Card>
               </form>
             </Form>
           </CardContent>
