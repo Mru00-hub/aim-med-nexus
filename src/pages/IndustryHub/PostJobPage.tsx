@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
@@ -36,6 +36,8 @@ import { Loader2, AlertCircle, Briefcase, ArrowLeft } from 'lucide-react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { SearchableSelect } from '@/components/ui/searchable-select';
+import { SearchableMultiSelect } from '@/components/ui/searchable-multi-select'; 
 
 // 1. Define the validation schema with Zod
 const jobFormSchema = z.object({
@@ -44,8 +46,8 @@ const jobFormSchema = z.object({
   job_type: z.string({ required_error: 'Please select a job type.' }),
   experience_level: z.string({ required_error: 'Please select an experience level.' }),
   location_type: z.string({ required_error: 'Please select a location type.' }),
-  location_text: z.string().min(2, { message: 'Location is required.' }),
-  specialties_required: z.string().optional(), // We'll parse this string into an array
+  location_id: z.string({ required_error: 'Location is required.' }), // Changed
+  specialization_ids: z.array(z.string()).optional(), // Changed
   external_apply_url: z.string().url({ message: 'Please enter a valid URL.' }).optional().or(z.literal('')),
 });
 
@@ -56,6 +58,85 @@ export default function PostJobPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  const [locations, setLocations] = useState<{ id: string; label: string }[]>([]);
+  const [locationSearch, setLocationSearch] = useState("");
+  const [isLocLoading, setIsLocLoading] = useState(false);
+  const isLocMounted = useRef(false);
+
+  useEffect(() => {
+    const fetchSearchLocations = async () => {
+      setIsLocLoading(true);
+      const { data, error } = await supabase.from('locations').select('id, label')
+        .neq('label', 'Other').or(`label.ilike.%${locationSearch}%`).order('label').limit(50);
+      if (data) setLocations(data);
+      if (error) console.error('Error fetching search locations:', error);
+      setIsLocLoading(false);
+    };
+    const fetchInitialLocations = async () => {
+       setIsLocLoading(true);
+       const { data, error } = await supabase.from('locations').select('id, label')
+        .neq('label', 'Other').order('label').limit(10);
+       if (data) setLocations(data);
+       if (error) console.error('Error fetching initial locations:', error);
+       setIsLocLoading(false);
+    };
+    if (!isLocMounted.current) {
+      isLocMounted.current = true;
+      fetchInitialLocations();
+      return;
+    }
+    const searchTimer = setTimeout(() => {
+      if (locationSearch.length < 2) fetchInitialLocations();
+      else fetchSearchLocations();
+    }, 500);
+    return () => clearTimeout(searchTimer);
+  }, [locationSearch]);
+
+  const locationOptions = useMemo(() => 
+    locations.map(loc => ({ value: loc.id, label: loc.label })),
+    [locations]
+  );
+
+  // --- 4. Add Specialization Fetching Logic ---
+  const [specializations, setSpecializations] = useState<{ id: string; label: string }[]>([]);
+  const [specializationSearch, setSpecializationSearch] = useState("");
+  const [isSpecLoading, setIsSpecLoading] = useState(false);
+  const isSpecMounted = useRef(false);
+
+  useEffect(() => {
+    const fetchSearchSpecializations = async () => {
+      setIsSpecLoading(true);
+      const { data, error } = await supabase.from('specializations').select('id, label')
+        .neq('label', 'Other').or(`label.ilike.%${specializationSearch}%`).order('label').limit(50);
+      if (data) setSpecializations(data);
+      if (error) console.error('Error fetching specializations:', error);
+      setIsSpecLoading(false);
+    };
+    const fetchInitialSpecializations = async () => {
+      setIsSpecLoading(true);
+      const { data, error } = await supabase.from('specializations').select('id, label')
+        .neq('label', 'Other').order('label').limit(10);
+      if (data) setSpecializations(data);
+      if (error) console.error('Error fetching initial specializations:', error);
+      setIsSpecLoading(false);
+    };
+    if (!isSpecMounted.current) {
+      isSpecMounted.current = true;
+      fetchInitialSpecializations();
+      return;
+    }
+    const searchTimer = setTimeout(() => {
+      if (specializationSearch.length < 2) fetchInitialSpecializations();
+      else fetchSearchSpecializations();
+    }, 500);
+    return () => clearTimeout(searchTimer);
+  }, [specializationSearch]);
+
+  const specializationOptions = useMemo(() =>
+    specializations.map(spec => ({ value: spec.id, label: spec.label })),
+    [specializations]
+  );
 
   // 2. Fetch the Company ID of the current admin
   const {
@@ -88,8 +169,8 @@ export default function PostJobPage() {
     defaultValues: {
       title: '',
       description: '',
-      location_text: '',
-      specialties_required: '',
+      location_id: '', // Changed
+      specialization_ids: [], // Changed
       external_apply_url: '',
     },
   });
@@ -122,11 +203,7 @@ export default function PostJobPage() {
       return;
     }
 
-    // Parse the comma-separated specialties into an array
-    const specialtiesArray = data.specialties_required
-      ? data.specialties_required.split(',').map(s => s.trim()).filter(Boolean)
-      : [];
-
+    // No more comma splitting
     const payload: CreateJobPayload = {
       p_company_id: companyId,
       p_title: data.title,
@@ -134,8 +211,8 @@ export default function PostJobPage() {
       p_job_type: data.job_type,
       p_experience_level: data.experience_level,
       p_location_type: data.location_type,
-      p_location_text: data.location_text,
-      p_specialties_required: specialtiesArray,
+      p_location_id: data.location_id, // Changed
+      p_specialization_ids: data.specialization_ids, // Changed
       p_external_apply_url: data.external_apply_url || undefined,
     };
     
@@ -280,16 +357,22 @@ export default function PostJobPage() {
                 {/* Location Text */}
                 <FormField
                   control={form.control}
-                  name="location_text"
+                  name="location_id"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Location *</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., Delhi, IN or Remote" {...field} />
+                        <SearchableSelect
+                          value={field.value}
+                          onValueChange={field.onChange}
+                          options={locationOptions}
+                          onSearchChange={setLocationSearch}
+                          isLoading={isLocLoading}
+                          placeholder="Select or search for a location..."
+                          searchPlaceholder="Search locations..."
+                          emptyMessage="No location found."
+                        />
                       </FormControl>
-                      <FormDescription>
-                        This is the city or location text that will be displayed.
-                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -298,18 +381,24 @@ export default function PostJobPage() {
                 {/* Specialties */}
                 <FormField
                   control={form.control}
-                  name="specialties_required"
+                  name="specialization_ids"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Specialties / Skills (Optional)</FormLabel>
                       <FormControl>
-                        <Textarea
-                          placeholder="e.g., Cardiology, Python, Data Analysis"
-                          {...field}
+                        <SearchableMultiSelect
+                          values={field.value}
+                          onValuesChange={field.onChange}
+                          options={specializationOptions}
+                          onSearchChange={setSpecializationSearch}
+                          isLoading={isSpecLoading}
+                          placeholder="Select specialties..."
+                          searchPlaceholder="Search specialties..."
+                          emptyMessage="No specialties found."
                         />
                       </FormControl>
                       <FormDescription>
-                        Enter a comma-separated list of required skills or specialties.
+                        Select all skills or specialties that apply.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
