@@ -172,10 +172,10 @@ const AppContent = () => {
               <Route path="/industryhub/dashboard/:companyId" element={<CompanyDashboardPage />} />
               <Route path="/industryhub/edit-company/:companyId" element={<EditCompanyPage />} />
               
-              <Route path="/industryhub/post-job/:companyId" element={<PostJobPage />} />
+              <Route path="/industryhub/post-job" element={<PostJobPage />} />
               <Route path="/industryhub/dashboard/:companyId/edit-job/:jobId" element={<EditJobPage />} />
 
-              <Route path="/industryhub/post-collab/:companyId" element={<PostCollabPage />} />
+              <Route path="/industryhub/post-collab" element={<PostCollabPage />} />
               <Route path="/industryhub/dashboard/:companyId/edit-collab/:collabId" element={<EditCollabPage />} />
               
               <Route path="/industryhub/my-applications" element={<MyApplicationsPage />} />
