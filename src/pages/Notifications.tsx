@@ -477,6 +477,7 @@ export default function Notifications() {
         // If we're missing an ID, we'll fall through to the default toast
         break;
       }
+    }
     // Fallback for any types without specific navigation
     toast({
       title: 'No Navigation',
