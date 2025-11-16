@@ -154,10 +154,10 @@ export default function EditCompanyPage() {
         form.reset({
           company_name: data.company_name,
           description: data.description,
-          industry_id: data.industry_id,
-          location_id: data.location_id,
+          industry_id: data.industry_id || undefined,
+          location_id: data.location_id || undefined,
           website_url: data.website_url || '',
-          company_size: data.company_size || '',
+          company_size: data.company_size || undefined,
           founded_year: data.founded_year ? String(data.founded_year) : '',
         });
       }
@@ -174,8 +174,13 @@ export default function EditCompanyPage() {
       description: '',
       website_url: '',
       industry_other: '',
+      industry_id: undefined,
+      location_id: undefined,
+      company_size: undefined,
+      founded_year: undefined,
     },
   });
+
 
   const watchedIndustryId = form.watch('industry_id');
 
