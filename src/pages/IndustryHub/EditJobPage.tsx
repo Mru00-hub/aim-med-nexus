@@ -1,16 +1,13 @@
-import React, { useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
 import {
   getJobById,
-  // [!code --] (This function name was incorrect)
-  // updateCompanyJob,
-  // softDeleteCompanyJob,
-  // [!code ++] (These are the correct function names from our API file)
   updateCompanyJob as updateCompanyJobRpc,
   setJobActiveStatus,
   UpdateJobPayload,
+  CompanyJobDetails,
 } from '@/integrations/supabase/industry.api';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
@@ -52,6 +49,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Skeleton } from '@/components/ui/skeleton';
+import { SearchableSelect } from '@/components/ui/searchable-select';
+import { SearchableMultiSelect } from '@/components/ui/searchable-multi-select';
 
 const jobFormSchema = z.object({
   title: z.string().min(5, { message: 'Title must be at least 5 characters.' }),
@@ -59,8 +58,8 @@ const jobFormSchema = z.object({
   job_type: z.string({ required_error: 'Please select a job type.' }),
   experience_level: z.string({ required_error: 'Please select an experience level.' }),
   location_type: z.string({ required_error: 'Please select a location type.' }),
-  location_text: z.string().min(2, { message: 'Location is required.' }),
-  specialties_required: z.string().optional(),
+  location_id: z.string({ required_error: 'Location is required.' }),
+  specialization_ids: z.array(z.string()).optional(),
   external_apply_url: z.string().url({ message: 'Please enter a valid URL.' }).optional().or(z.literal('')),
 });
 
@@ -72,6 +71,86 @@ export default function EditJobPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // --- Location Fetching Logic ---
+  const [locations, setLocations] = useState<{ id: string; label: string }[]>([]);
+  const [locationSearch, setLocationSearch] = useState("");
+  const [isLocLoading, setIsLocLoading] = useState(false);
+  const isLocMounted = useRef(false);
+
+  useEffect(() => {
+    const fetchSearchLocations = async () => {
+      setIsLocLoading(true);
+      const { data, error } = await supabase.from('locations').select('id, label')
+        .neq('label', 'Other').or(`label.ilike.%${locationSearch}%`).order('label').limit(50);
+      if (data) setLocations(data);
+      if (error) console.error('Error fetching search locations:', error);
+      setIsLocLoading(false);
+    };
+    const fetchInitialLocations = async () => {
+       setIsLocLoading(true);
+       const { data, error } = await supabase.from('locations').select('id, label')
+        .neq('label', 'Other').order('label').limit(10);
+       if (data) setLocations(data);
+       if (error) console.error('Error fetching initial locations:', error);
+       setIsLocLoading(false);
+    };
+    if (!isLocMounted.current) {
+      isLocMounted.current = true;
+      fetchInitialLocations();
+      return;
+    }
+    const searchTimer = setTimeout(() => {
+      if (locationSearch.length < 2) fetchInitialLocations();
+      else fetchSearchLocations();
+    }, 500);
+    return () => clearTimeout(searchTimer);
+  }, [locationSearch]);
+
+  const locationOptions = useMemo(() => 
+    locations.map(loc => ({ value: loc.id, label: loc.label })),
+    [locations]
+  );
+
+  // --- Specialization Fetching Logic ---
+  const [specializations, setSpecializations] = useState<{ id: string; label: string }[]>([]);
+  const [specializationSearch, setSpecializationSearch] = useState("");
+  const [isSpecLoading, setIsSpecLoading] = useState(false);
+  const isSpecMounted = useRef(false);
+
+  useEffect(() => {
+    const fetchSearchSpecializations = async () => {
+      setIsSpecLoading(true);
+      const { data, error } = await supabase.from('specializations').select('id, label')
+        .neq('label', 'Other').or(`label.ilike.%${specializationSearch}%`).order('label').limit(50);
+      if (data) setSpecializations(data);
+      if (error) console.error('Error fetching specializations:', error);
+      setIsSpecLoading(false);
+    };
+    const fetchInitialSpecializations = async () => {
+      setIsSpecLoading(true);
+      const { data, error } = await supabase.from('specializations').select('id, label')
+        .neq('label', 'Other').order('label').limit(10);
+      if (data) setSpecializations(data);
+      if (error) console.error('Error fetching initial specializations:', error);
+      setIsSpecLoading(false);
+    };
+    if (!isSpecMounted.current) {
+      isSpecMounted.current = true;
+      fetchInitialSpecializations();
+      return;
+    }
+    const searchTimer = setTimeout(() => {
+      if (specializationSearch.length < 2) fetchInitialSpecializations();
+      else fetchSearchSpecializations();
+    }, 500);
+    return () => clearTimeout(searchTimer);
+  }, [specializationSearch]);
+
+  const specializationOptions = useMemo(() =>
+    specializations.map(spec => ({ value: spec.id, label: spec.label })),
+    [specializations]
+  );
 
   const { data: experienceLevels } = useQuery({
     queryKey: ['experienceLevels'],
@@ -87,13 +166,13 @@ export default function EditJobPage() {
     defaultValues: {
       title: '',
       description: '',
-      location_text: '',
-      specialties_required: '',
+      location_id: '',
+      specialization_ids: [],
       external_apply_url: '',
     },
   });
 
-  const { data: jobData, isLoading: isLoadingJob } = useQuery({
+  const { data: jobData, isLoading: isLoadingJob } = useQuery<CompanyJobDetails, Error>({
     queryKey: ['jobDetails', jobId],
     queryFn: () => getJobById(jobId!),
     enabled: !!jobId,
@@ -105,18 +184,14 @@ export default function EditJobPage() {
           job_type: data.job_type || undefined,
           experience_level: data.experience_level || undefined,
           location_type: data.location_type || undefined,
-          location_text: data.location_text || '',
-          specialties_required: (data.specialties_required || []).join(', '),
+          location_id: data.location_id || '',
+          specialization_ids: (data.specializations || []).map(s => s.id),
           external_apply_url: data.external_apply_url || '',
         });
       }
     },
   });
 
-  // [!code --] (This was incorrect, the API fn takes one object)
-  // const updateMutation = useMutation({
-  //   mutationFn: (payload: UpdateJobPayload) => updateCompanyJob(jobId!, payload),
-  // [!code ++] (FIX: The API function 'updateCompanyJobRpc' expects a single payload object)
   const updateMutation = useMutation({
     mutationFn: (payload: UpdateJobPayload) => updateCompanyJobRpc(payload),
     onSuccess: () => {
@@ -130,10 +205,6 @@ export default function EditJobPage() {
     },
   });
 
-  // [!code --] (This was incorrect, 'softDeleteCompanyJob' does not exist in our API)
-  // const deleteMutation = useMutation({
-  //   mutationFn: () => softDeleteCompanyJob(jobId!),
-  // [!code ++] (FIX: Use the correct RPC 'setJobActiveStatus' which also updates company counters)
   const deleteMutation = useMutation({
     mutationFn: () => setJobActiveStatus(jobId!, false),
     onSuccess: () => {
@@ -148,13 +219,6 @@ export default function EditJobPage() {
   });
 
   const onSubmit = (data: JobFormData) => {
-    const specialtiesArray = data.specialties_required
-      ? data.specialties_required.split(',').map(s => s.trim()).filter(Boolean)
-      : [];
-    
-    // [!code --] (This payload was missing the ID)
-    // const payload: UpdateJobPayload = {
-    // [!code ++] (FIX: The payload must match our 'UpdateJobPayload' type, including the ID)
     const payload: UpdateJobPayload = {
       p_job_id: jobId!,
       p_title: data.title,
@@ -162,8 +226,8 @@ export default function EditJobPage() {
       p_job_type: data.job_type,
       p_experience_level: data.experience_level,
       p_location_type: data.location_type,
-      p_location_text: data.location_text,
-      p_specialties_required: specialtiesArray,
+      p_location_id: data.location_id,
+      p_specialization_ids: data.specialization_ids,
       p_external_apply_url: data.external_apply_url || null,
     };
     updateMutation.mutate(payload);
@@ -310,19 +374,25 @@ export default function EditJobPage() {
                   />
                 </div>
 
-                {/* Location Text */}
+                {/* Location ID */}
                 <FormField
                   control={form.control}
-                  name="location_text"
+                  name="location_id"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Location *</FormLabel>
                       <FormControl>
-                        <Input {...field} />
+                        <SearchableSelect
+                          value={field.value}
+                          onValueChange={field.onChange}
+                          options={locationOptions}
+                          onSearchChange={setLocationSearch}
+                          isLoading={isLocLoading}
+                          placeholder="Select or search for a location..."
+                          searchPlaceholder="Search locations..."
+                          emptyMessage="No location found."
+                        />
                       </FormControl>
-                      <FormDescription>
-                        This is the city or location text that will be displayed.
-                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -331,15 +401,24 @@ export default function EditJobPage() {
                 {/* Specialties */}
                 <FormField
                   control={form.control}
-                  name="specialties_required"
+                  name="specialization_ids"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Specialties / Skills (Optional)</FormLabel>
                       <FormControl>
-                        <Textarea {...field} />
+                        <SearchableMultiSelect
+                          values={field.value || []}
+                          onValuesChange={field.onChange}
+                          options={specializationOptions}
+                          onSearchChange={setSpecializationSearch}
+                          isLoading={isSpecLoading}
+                          placeholder="Select specialties..."
+                          searchPlaceholder="Search specialties..."
+                          emptyMessage="No specialties found."
+                        />
                       </FormControl>
                       <FormDescription>
-                        Enter a comma-separated list of required skills or specialties.
+                        Select all skills or specialties that apply.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -426,3 +505,4 @@ export default function EditJobPage() {
     </div>
   );
 }
+
