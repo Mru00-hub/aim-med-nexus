@@ -145,25 +145,25 @@ Deno.serve(async (req) => {
     const resend = new Resend(Deno.env.get('RESEND_API_KEY'));
 
     // 2. Get the user's profile & notification preferences
-    const { data: user, error: userError } = await supabaseAdmin
+    const { data: profile, error: profileError } = await supabaseAdmin
       .from('profiles')
-      .select(`
-        email,
-        full_name,
-        prefs:notification_preferences (
-          email_enabled,
-          direct_messages,
-          connection_requests,
-          job_alerts,
-          forum_updates,
-          follows_activity
-        )
-      `)
+      .select('email, full_name')
       .eq('id', notification.user_id)
       .single();
 
-    if (userError) throw new Error(`User not found: ${userError.message}`);
-    if (!user || !user.email) throw new Error('User has no email.');
+    if (profileError) throw new Error(`User profile not found: ${profileError.message}`);
+    if (!profile || !profile.email) throw new Error('User has no profile or email.');
+
+    // 3. Get the user's notification preferences
+    const { data: preferences, error: prefsError } = await supabaseAdmin
+      .from('notification_preferences')
+      .select('email_enabled, direct_messages, connection_requests, job_alerts, forum_updates, follows_activity')
+      .eq('user_id', notification.user_id)
+      .maybeSingle(); // Use maybeSingle() in case no row exists
+
+    if (prefsError) {
+      console.warn(`Could not find preferences for user ${notification.user_id}. Using defaults. Error: ${prefsError.message}`);
+    }
 
     // 3. Check if this *type* of email is enabled
     const prefs = (user.prefs && user.prefs.length > 0) ? user.prefs[0] : { email_enabled: true }; 
