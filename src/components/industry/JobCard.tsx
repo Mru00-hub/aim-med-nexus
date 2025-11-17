@@ -30,6 +30,7 @@ const toTitleCase = (str: string | null | undefined) => {
 export const JobCard: React.FC<JobCardProps> = ({ job }) => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast(); 
 
   const {
     job_id,
