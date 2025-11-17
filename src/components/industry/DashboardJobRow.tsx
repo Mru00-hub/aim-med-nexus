@@ -5,7 +5,7 @@ import { setJobActiveStatus } from '@/integrations/supabase/industry.api';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Edit, Users, Eye, Trash2, Loader2, MapPin } from 'lucide-react';
+import { Edit, Users, Eye, Trash2, Loader2, MapPin, Share2 } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -64,6 +64,15 @@ export const DashboardJobRow: React.FC<DashboardJobRowProps> = ({ job }) => {
     },
   });
 
+  const handleShare = () => {
+    const url = `${window.location.origin}/jobs/details/${job.id}`;
+    navigator.clipboard.writeText(url);
+    toast({
+      title: "Link copied",
+      description: "Public job link copied to clipboard",
+    });
+  };
+
   return (
     <Card className="card-medical">
       <CardContent className="p-4">
@@ -93,6 +102,9 @@ export const DashboardJobRow: React.FC<DashboardJobRowProps> = ({ job }) => {
             )}
           </div>
           <div className="flex w-full flex-shrink-0 gap-2 sm:w-auto">
+            <Button variant="outline" size="icon" onClick={handleShare} title="Share Public Link">
+              <Share2 className="h-4 w-4" />
+            </Button>
             <Button variant="outline" size="sm" asChild>
               <Link to={`/industryhub/dashboard/${job.company_id}?tab=applicants`}>
                 <Users className="mr-2 h-4 w-4" />
@@ -126,7 +138,6 @@ export const DashboardJobRow: React.FC<DashboardJobRowProps> = ({ job }) => {
                   <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                   <AlertDialogDescription>
                     This will deactivate the job posting and hide it from the public.
-                    This action will update your company's total job count.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
