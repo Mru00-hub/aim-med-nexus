@@ -5,12 +5,14 @@ import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/components/ui/use-toast';
 import {
   MapPin,
   Briefcase,
   Calendar,
   ExternalLink,
   FlaskConical,
+  Share2,
 } from 'lucide-react';
 
 interface CollabCardProps {
@@ -29,6 +31,7 @@ const toTitleCase = (str: string | null | undefined) => {
 export const CollabCard: React.FC<CollabCardProps> = ({ collab }) => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast(); 
 
   const {
     collab_id,
@@ -59,6 +62,16 @@ export const CollabCard: React.FC<CollabCardProps> = ({ collab }) => {
 
   const handleSignIn = () => {
     navigate('/login', { state: { from: `/collabs/details/${collab_id}` } });
+  };
+
+  const handleShare = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const url = `${window.location.origin}/collabs/details/${collab_id}`;
+    navigator.clipboard.writeText(url);
+    toast({
+      title: "Link copied",
+      description: "Collaboration link copied to clipboard",
+    });
   };
 
   return (
@@ -123,14 +136,36 @@ export const CollabCard: React.FC<CollabCardProps> = ({ collab }) => {
           {/* Action Buttons */}
           <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-shrink-0">
             {user ? (
-              <Button className="btn-medical" onClick={handleApply}>
-                Apply Now
-              </Button>
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  size="icon" 
+                  onClick={handleShare}
+                  title="Share"
+                  className="shrink-0"
+                >
+                  <Share2 className="h-4 w-4" />
+                </Button>
+                <Button className="btn-medical flex-1" onClick={handleApply}>
+                  Apply Now
+                </Button>
+              </div>
             ) : (
               <>
-                <Button variant="outline" onClick={handleSignIn}>
-                  Sign in to Apply
-                </Button>
+                <div className="flex gap-2">
+                   <Button 
+                    variant="outline" 
+                    size="icon" 
+                    onClick={handleShare}
+                    title="Share"
+                    className="shrink-0"
+                  >
+                    <Share2 className="h-4 w-4" />
+                  </Button>
+                  <Button variant="outline" className="flex-1" onClick={handleSignIn}>
+                    Sign in to Apply
+                  </Button>
+                </div>
                 <Button variant="ghost" size="sm" asChild>
                   <Link to={`/collabs/details/${collab_id}`}>
                     <ExternalLink className="h-4 w-4 mr-2" />
