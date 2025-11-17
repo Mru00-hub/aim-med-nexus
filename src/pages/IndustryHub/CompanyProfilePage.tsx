@@ -20,7 +20,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   Building, Globe, Users, MapPin, Calendar, MessageSquare,
   Briefcase, Link as LinkIcon, Linkedin, Twitter, ExternalLink,
-  HeartPulse, Stethoscope, FlaskConical, BookOpen, Loader2, AlertCircle
+  HeartPulse, Stethoscope, FlaskConical, BookOpen, Loader2, AlertCircle, Share2
 } from 'lucide-react';
 import CityCareBanner from '@/assets/1761020986644.jpg'; // We'll keep this as a fallback
 
@@ -137,6 +137,15 @@ export default function CompanyProfilePage() {
     }
   };
 
+  const handleShare = () => {
+    const url = window.location.href;
+    navigator.clipboard.writeText(url);
+    toast({
+      title: "Link copied",
+      description: "Company profile link copied to clipboard",
+    });
+  };
+
   // --- Render States ---
   if (isLoading) {
     return (
@@ -232,6 +241,15 @@ export default function CompanyProfilePage() {
                   </div>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto mt-4 md:mt-0 flex-shrink-0">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={handleShare}
+                    title="Share Profile"
+                    className="hidden sm:flex" // Hide on mobile if space is tight, or remove 'hidden sm:flex' to show always
+                  >
+                    <Share2 className="h-4 w-4" />
+                  </Button>
                   {data.is_owner && (
                     <Button asChild className="btn-medical w-full sm:w-auto">
                       <Link to={`/industryhub/dashboard/${data.id}`}>
@@ -250,6 +268,13 @@ export default function CompanyProfilePage() {
                   </Button>
                   <Button className="btn-medical w-full sm:w-auto" onClick={handleContactClick}>
                     <MessageSquare className="h-4 w-4 mr-2" />Contact
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={handleShare}
+                    className="w-full sm:hidden mt-2" 
+                  >
+                    <Share2 className="h-4 w-4 mr-2" /> Share Profile
                   </Button>
                 </div>
               </div>
