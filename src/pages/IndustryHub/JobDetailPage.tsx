@@ -8,6 +8,7 @@ import { Footer } from '@/components/layout/Footer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/components/ui/use-toast';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   Loader2,
@@ -19,6 +20,7 @@ import {
   ArrowLeft,
   GraduationCap,
   ExternalLink,
+  Share2,
 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { CompanySidebarCard } from '@/components/industry/CompanySidebarCard';
@@ -36,6 +38,7 @@ export default function JobDetailPage() {
   const { jobId } = useParams<{ jobId: string }>();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   const {
     data: job,
@@ -56,6 +59,15 @@ export default function JobDetailPage() {
       // Redirect to login, but tell it where to come back to
       navigate('/login', { state: { from: `/jobs/apply/${jobId}` } });
     }
+  };
+
+  const handleShare = () => {
+    const url = window.location.href;
+    navigator.clipboard.writeText(url);
+    toast({
+      title: "Link copied",
+      description: "Job opportunity link copied to clipboard",
+    });
   };
 
   if (isLoading) {
@@ -188,6 +200,10 @@ export default function JobDetailPage() {
                       {user ? 'Apply Now on AIMedNet' : 'Sign in to Apply'}
                     </Button>
                   )}
+                  <Button variant="outline" className="w-full" onClick={handleShare}>
+                    <Share2 className="mr-2 h-4 w-4" />
+                    Share Opportunity
+                  </Button>
                 </CardContent>
               </Card>
 
