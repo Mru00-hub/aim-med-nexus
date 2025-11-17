@@ -8,6 +8,7 @@ import { Footer } from '@/components/layout/Footer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/components/ui/use-toast';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   Loader2,
@@ -18,6 +19,7 @@ import {
   ArrowLeft,
   FlaskConical,
   Users,
+  Share2,
 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { CompanySidebarCard } from '@/components/industry/CompanySidebarCard';
@@ -55,6 +57,15 @@ export default function CollabDetailPage() {
       // Redirect to login, but tell it where to come back to
       navigate('/login', { state: { from: `/collabs/apply/${collabId}` } });
     }
+  };
+
+  const handleShare = () => {
+    const url = window.location.href; // Current Page URL
+    navigator.clipboard.writeText(url);
+    toast({
+      title: "Link copied",
+      description: "Collaboration link copied to clipboard",
+    });
   };
 
   if (isLoading) {
@@ -170,9 +181,13 @@ export default function CollabDetailPage() {
             <div className="space-y-6 lg:col-span-1">
               {/* Apply Card */}
               <Card className="shadow-sm">
-                <CardContent className="p-6">
+                <CardContent className="p-6 flex flex-col gap-3">
                   <Button size="lg" className="w-full" onClick={handleApplyClick}>
                     {user ? 'Apply Now on AIMedNet' : 'Sign in to Apply'}
+                  </Button>
+                  <Button variant="outline" className="w-full" onClick={handleShare}>
+                    <Share2 className="mr-2 h-4 w-4" />
+                    Share Opportunity
                   </Button>
                 </CardContent>
               </Card>
