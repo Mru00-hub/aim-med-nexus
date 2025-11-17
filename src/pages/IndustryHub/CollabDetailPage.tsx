@@ -37,6 +37,7 @@ export default function CollabDetailPage() {
   const { collabId } = useParams<{ collabId: string }>();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast(); 
 
   const {
     data: collab,
@@ -133,7 +134,10 @@ export default function CollabDetailPage() {
             <div className="lg:col-span-2">
               <Card className="shadow-sm">
                 <CardHeader>
-                  <CardTitle className="text-3xl font-bold">{title}</CardTitle>
+                  <div className="flex justify-between items-start">
+                    <CardTitle className="text-3xl font-bold">{title}</CardTitle>
+                    {/* Mobile Share Button (Visible on small screens if needed, or keep in sidebar) */}
+                  </div>
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-2 text-muted-foreground">
                     <div className="flex items-center gap-1.5">
                       <FlaskConical className="h-4 w-4" />
@@ -150,7 +154,6 @@ export default function CollabDetailPage() {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  {/* Project Description */}
                   <div>
                     <h3 className="mb-2 text-lg font-semibold">Project Description</h3>
                     <div className="prose prose-sm max-w-none text-muted-foreground">
@@ -159,7 +162,7 @@ export default function CollabDetailPage() {
                       </p>
                     </div>
                   </div>
-
+                  
                   {/* Skills/Specialties */}
                   {specializations.length > 0 && (
                     <div>
