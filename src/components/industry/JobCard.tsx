@@ -5,11 +5,13 @@ import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/components/ui/use-toast';
 import {
   MapPin,
   Briefcase,
   Calendar,
   ExternalLink,
+  Share2,
 } from 'lucide-react';
 
 interface JobCardProps {
@@ -64,6 +66,16 @@ export const JobCard: React.FC<JobCardProps> = ({ job }) => {
 
   const handleSignIn = () => {
     navigate('/login', { state: { from: `/jobs/details/${job_id}` } });
+  };
+
+  const handleShare = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent clicking card link
+    const url = `${window.location.origin}/jobs/details/${job_id}`;
+    navigator.clipboard.writeText(url);
+    toast({
+      title: "Link copied",
+      description: "Job link copied to clipboard",
+    });
   };
 
   return (
@@ -127,16 +139,36 @@ export const JobCard: React.FC<JobCardProps> = ({ job }) => {
           {/* Action Buttons */}
           <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-shrink-0">
             {user ? (
-              <>
-                <Button className="btn-medical" onClick={handleApply}>
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  size="icon" 
+                  onClick={handleShare}
+                  title="Share"
+                  className="shrink-0"
+                >
+                  <Share2 className="h-4 w-4" />
+                </Button>
+                <Button className="btn-medical flex-1" onClick={handleApply}>
                   Apply Now
                 </Button>
-              </>
+              </div>
             ) : (
               <>
-                <Button variant="outline" onClick={handleSignIn}>
-                  Sign in to Apply
-                </Button>
+                <div className="flex gap-2">
+                   <Button 
+                    variant="outline" 
+                    size="icon" 
+                    onClick={handleShare}
+                    title="Share"
+                    className="shrink-0"
+                  >
+                    <Share2 className="h-4 w-4" />
+                  </Button>
+                  <Button variant="outline" className="flex-1" onClick={handleSignIn}>
+                    Sign in to Apply
+                  </Button>
+                </div>
                 <Button variant="ghost" size="sm" asChild>
                   <Link to={`/jobs/details/${job_id}`}>
                     <ExternalLink className="h-4 w-4 mr-2" />
