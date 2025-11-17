@@ -134,7 +134,17 @@ function getNotificationEmail(
 
 Deno.serve(async (req) => {
   const payload = await req.json();
-  const notification = payload.record;
+  const notification = {
+    ...payload.record, // The base notification (id, user_id, type, etc.)
+    actor: payload.actor,
+    thread: payload.thread,
+    space: payload.space,
+    job: payload.job,
+    collaboration: payload.collaboration,
+    job_application: payload.job_application,
+    collaboration_application: payload.collaboration_application,
+    announcement: payload.announcement
+  };
 
   try {
     // 1. Initialize Admin Clients
@@ -145,7 +155,7 @@ Deno.serve(async (req) => {
     const resend = new Resend(Deno.env.get('RESEND_API_KEY'));
 
     // 2. Get the user's profile
-    const { data: profile, error: profileError } = await supabaseAdmin // <-- Declared as 'profile'
+    const { data: profile, error: profileError } = await supabaseAdmin
       .from('profiles')
       .select('email, full_name')
       .eq('id', notification.user_id)
@@ -165,7 +175,7 @@ Deno.serve(async (req) => {
       console.warn(`Could not find preferences for user ${notification.user_id}. Using defaults. Error: ${prefsError.message}`);
     }
     
-    // 4. Check if this *type* of email is enabled
+    // 4. Check preferences
     const prefs = preferences || { email_enabled: true }; 
     if (!prefs.email_enabled) {
       return new Response(JSON.stringify({ message: 'User has all emails disabled.' }), {
@@ -191,7 +201,7 @@ Deno.serve(async (req) => {
         break;
       case 'new_reply_to_your_message':
       case 'new_thread':
-      case 'new_space': // <-- Typo 'NEW_s:' removed
+      case 'new_space':
         canSend = prefs.forum_updates ?? true;
         break;
       case 'new_public_post_by_followed_user':
@@ -211,23 +221,14 @@ Deno.serve(async (req) => {
       });
     }
     
-    // 5. Get the *full* notification data (with all joins)
-    const { data: fullNotification, error: rpcError } = await supabaseAdmin
-      .rpc('get_my_notifications') 
-      .eq('id', notification.id) 
-      .single();
-      
-    if (rpcError) throw new Error(`Could not fetch full notification: ${rpcError.message}`);
-    if (!fullNotification) throw new Error('Full notification not found.');
-
+    // 5. (REMOVED) No need to call get_my_notifications
+    
     // 6. Generate and Send Email
-    // --- FIX: Use 'profile.full_name' not 'user.full_name' ---
-    const { subject, html } = getNotificationEmail(profile.full_name, fullNotification);
+    const { subject, html } = getNotificationEmail(profile.full_name, notification); // Pass the full object
 
     await resend.emails.send({
       from: 'AIMedNet <notifications@aimmednexus.in>',
-      // --- FIX: Use 'profile.email' not 'user.email' ---
-      to: profile.email, 
+      to: profile.email,
       subject: subject,
       html: html,
     });
