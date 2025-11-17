@@ -4,10 +4,11 @@ import {
   addCompanyLink,
   updateCompanyLink,
   deleteCompanyLink,
+  uploadCompanyAsset, // <-- Don't forget this import
   AddLinkPayload,
   UpdateLinkPayload,
   CompanyLink,
-  getCompanyProfileDetails, // We'll get links from the main profile query
+  getCompanyProfileDetails,
 } from '@/integrations/supabase/industry.api';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -16,7 +17,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogFooter,
   DialogDescription,
 } from '@/components/ui/dialog';
@@ -38,7 +38,6 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-  FormDescription
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -53,20 +52,23 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useToast } from '@/components/ui/use-toast';
-import { Plus, Edit, Trash2, Loader2, Link as LinkIcon } from 'lucide-react';
+import { Plus, Edit, Trash2, Loader2, Link as LinkIcon, Image as ImageIcon } from 'lucide-react';
 import { Enums } from '@/types';
 
 interface ManageProductsAndLinksTabProps {
   companyId: string;
 }
 
-// Zod schema for the form
+// Zod schema including file validation
 const linkFormSchema = z.object({
   link_type: z.enum(['product', 'social', 'linkedin', 'url']),
   title: z.string().min(3, 'Title is required'),
   url: z.string().url('Must be a valid URL'),
   description: z.string().optional(),
+  // We don't validate the file strictly here because it's optional 
+  // and handled via state, but we can add a helper if needed.
 });
+
 type LinkFormData = z.infer<typeof linkFormSchema>;
 
 export const ManageProductsAndLinksTab: React.FC<ManageProductsAndLinksTabProps> = ({ companyId }) => {
@@ -74,8 +76,11 @@ export const ManageProductsAndLinksTab: React.FC<ManageProductsAndLinksTabProps>
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingLink, setEditingLink] = useState<CompanyLink | null>(null);
+  
+  // State for file upload
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
-  // Get links data from the cached company profile query
   const { data: profileData, isLoading: isLoadingProfile } = useQuery({
     queryKey: ['companyProfile', companyId],
     queryFn: () => getCompanyProfileDetails(companyId),
@@ -96,6 +101,7 @@ export const ManageProductsAndLinksTab: React.FC<ManageProductsAndLinksTabProps>
     queryClient.invalidateQueries({ queryKey: ['companyProfile', companyId] });
     setIsDialogOpen(false);
     setEditingLink(null);
+    setImageFile(null);
     form.reset();
   };
 
@@ -129,6 +135,7 @@ export const ManageProductsAndLinksTab: React.FC<ManageProductsAndLinksTabProps>
 
   // --- Handlers ---
   const handleOpenDialog = (link: CompanyLink | null = null) => {
+    setImageFile(null); // Reset file on open
     if (link) {
       setEditingLink(link);
       form.reset({
@@ -149,31 +156,49 @@ export const ManageProductsAndLinksTab: React.FC<ManageProductsAndLinksTabProps>
     setIsDialogOpen(true);
   };
 
-  const onSubmit = (data: LinkFormData) => {
+  const onSubmit = async (data: LinkFormData) => {
+    let finalImageUrl = (editingLink as any)?.image_url || null;
+
+    // 1. Upload Image if selected
+    if (imageFile) {
+      setIsUploading(true);
+      try {
+        const { publicUrl } = await uploadCompanyAsset(companyId, imageFile);
+        finalImageUrl = publicUrl;
+      } catch (error) {
+        toast({ title: "Upload Failed", description: "Could not upload the image.", variant: "destructive" });
+        setIsUploading(false);
+        return; // Stop submission
+      }
+      setIsUploading(false);
+    }
+
     if (editingLink) {
-      // This is an Update
+      // Update
       const payload: UpdateLinkPayload = {
         p_link_id: editingLink.id,
         p_title: data.title,
         p_url: data.url,
         p_link_type: data.link_type as Enums<'link_type_enum'>,
         p_description: data.description,
+        p_image_url: finalImageUrl, // Pass the URL
       };
       updateLinkMutation.mutate(payload);
     } else {
-      // This is a Create
+      // Create
       const payload: AddLinkPayload = {
         p_company_id: companyId,
         p_title: data.title,
         p_url: data.url,
         p_link_type: data.link_type as Enums<'link_type_enum'>,
         p_description: data.description,
+        p_image_url: finalImageUrl, // Pass the URL
       };
       addLinkMutation.mutate(payload);
     }
   };
 
-  const isMutating = addLinkMutation.isPending || updateLinkMutation.isPending;
+  const isMutating = addLinkMutation.isPending || updateLinkMutation.isPending || isUploading;
 
   return (
     <Card>
@@ -194,46 +219,52 @@ export const ManageProductsAndLinksTab: React.FC<ManageProductsAndLinksTabProps>
           <p className="text-sm text-muted-foreground text-center p-4">No products or links added yet.</p>
         )}
 
-        {links.map((link) => (
-          <Card key={link.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4">
-            <div className="flex-1 min-w-0">
-              <span className="text-xs uppercase font-semibold text-primary">{link.link_type}</span>
-              <h4 className="font-semibold truncate">{link.title}</h4>
-              <p className="text-sm text-muted-foreground truncate">{link.url}</p>
-              {link.description && <p className="text-sm text-muted-foreground mt-1">{link.description}</p>}
-            </div>
-            <div className="flex gap-2 mt-4 sm:mt-0 sm:ml-4 flex-shrink-0">
-              <Button variant="outline" size="sm" onClick={() => handleOpenDialog(link)}>
-                <Edit className="h-4 w-4" />
-              </Button>
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="destructive_outline" size="sm">
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Delete "{link.title}"?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This action cannot be undone. Are you sure you want to permanently delete this link?
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction
-                      className="bg-destructive hover:bg-destructive/90"
-                      onClick={() => deleteLinkMutation.mutate({ p_link_id: link.id })}
-                      disabled={deleteLinkMutation.isPending}
-                    >
-                      {deleteLinkMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Delete'}
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </div>
-          </Card>
-        ))}
+        {links.map((link) => {
+           const imageUrl = (link as any).image_url;
+           return (
+            <Card key={link.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4">
+              {/* Tiny Thumbnail Preview in List */}
+              {imageUrl && (
+                <img src={imageUrl} alt={link.title} className="h-12 w-12 object-cover rounded-md mr-4 mb-2 sm:mb-0" />
+              )}
+              <div className="flex-1 min-w-0">
+                <span className="text-xs uppercase font-semibold text-primary">{link.link_type}</span>
+                <h4 className="font-semibold truncate">{link.title}</h4>
+                <p className="text-sm text-muted-foreground truncate">{link.url}</p>
+              </div>
+              <div className="flex gap-2 mt-4 sm:mt-0 sm:ml-4 flex-shrink-0">
+                <Button variant="outline" size="sm" onClick={() => handleOpenDialog(link)}>
+                  <Edit className="h-4 w-4" />
+                </Button>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive_outline" size="sm">
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete "{link.title}"?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This action cannot be undone.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        className="bg-destructive hover:bg-destructive/90"
+                        onClick={() => deleteLinkMutation.mutate({ p_link_id: link.id })}
+                        disabled={deleteLinkMutation.isPending}
+                      >
+                        {deleteLinkMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Delete'}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+            </Card>
+           );
+        })}
       </CardContent>
 
       {/* --- Add/Edit Dialog --- */}
@@ -241,7 +272,7 @@ export const ManageProductsAndLinksTab: React.FC<ManageProductsAndLinksTabProps>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{editingLink ? 'Edit' : 'Add'} Product or Link</DialogTitle>
-            <DialogDescription>Fill in the details for your link. The "Type" helps categorize it on your profile.</DialogDescription>
+            <DialogDescription>Fill in the details for your link.</DialogDescription>
           </DialogHeader>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -266,6 +297,7 @@ export const ManageProductsAndLinksTab: React.FC<ManageProductsAndLinksTabProps>
                   </FormItem>
                 )}
               />
+              
               <FormField
                 control={form.control}
                 name="title"
@@ -277,6 +309,7 @@ export const ManageProductsAndLinksTab: React.FC<ManageProductsAndLinksTabProps>
                   </FormItem>
                 )}
               />
+              
               <FormField
                 control={form.control}
                 name="url"
@@ -288,6 +321,29 @@ export const ManageProductsAndLinksTab: React.FC<ManageProductsAndLinksTabProps>
                   </FormItem>
                 )}
               />
+
+              {/* --- Image Upload Input --- */}
+              <FormItem>
+                <FormLabel>Product Image (Optional)</FormLabel>
+                <div className="flex items-center gap-4">
+                  <FormControl>
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => setImageFile(e.target.files ? e.target.files[0] : null)}
+                      className="file:text-primary"
+                      disabled={isMutating}
+                    />
+                  </FormControl>
+                  {/* Show a generic icon or checkmark if file selected */}
+                  {imageFile && <ImageIcon className="h-5 w-5 text-green-600" />}
+                </div>
+                {/* Show existing image hint */}
+                {editingLink && (editingLink as any).image_url && !imageFile && (
+                  <p className="text-xs text-muted-foreground mt-1">Current image will be kept unless you upload a new one.</p>
+                )}
+              </FormItem>
+
               <FormField
                 control={form.control}
                 name="description"
@@ -299,13 +355,14 @@ export const ManageProductsAndLinksTab: React.FC<ManageProductsAndLinksTabProps>
                   </FormItem>
                 )}
               />
+              
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} disabled={isMutating}>
                   Cancel
                 </Button>
                 <Button type="submit" disabled={isMutating}>
                   {isMutating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  {editingLink ? 'Save Changes' : 'Add Link'}
+                  {isUploading ? 'Uploading...' : (editingLink ? 'Save Changes' : 'Add Link')}
                 </Button>
               </DialogFooter>
             </form>
@@ -315,4 +372,3 @@ export const ManageProductsAndLinksTab: React.FC<ManageProductsAndLinksTabProps>
     </Card>
   );
 };
-
