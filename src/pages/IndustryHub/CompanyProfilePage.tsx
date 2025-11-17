@@ -176,12 +176,12 @@ export default function CompanyProfilePage() {
       <Header />
       <main>
         {/* === Section 1: Hero Header (Now with real data) === */}
-        <div className="relative w-full h-48 md:h-64">
+        <div className="relative w-full h-48 md:h-64 bg-muted">
           {data.company_banner_url && (
             <img
               src={data.company_banner_url}
               alt={`${data.company_name} banner`}
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover object-center"
             />
           )}
           <div className="absolute inset-0 bg-black/30" />
@@ -231,9 +231,9 @@ export default function CompanyProfilePage() {
                     )}
                   </div>
                 </div>
-                <div className="flex gap-2 flex-shrink-0">
+                <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto mt-4 md:mt-0 flex-shrink-0">
                   {data.is_owner && (
-                    <Button asChild className="btn-medical">
+                    <Button asChild className="btn-medical w-full sm:w-auto">
                       <Link to={`/industryhub/dashboard/${data.id}`}>
                         Go to Dashboard
                       </Link>
@@ -243,12 +243,13 @@ export default function CompanyProfilePage() {
                     variant={is_following ? "default" : "outline"} 
                     onClick={handleFollowClick}
                     disabled={followMutation.isPending}
+                    className="w-full sm:w-auto"
                   >
                     <Users className="h-4 w-4 mr-2" />
                     {is_following ? 'Following' : 'Follow'}
                   </Button>
-                  <Button className="btn-medical" onClick={handleContactClick}>
-                    <MessageSquare className="h-4 w-4 mr-2" />Contact Company
+                  <Button className="btn-medical w-full sm:w-auto" onClick={handleContactClick}>
+                    <MessageSquare className="h-4 w-4 mr-2" />Contact
                   </Button>
                 </div>
               </div>
