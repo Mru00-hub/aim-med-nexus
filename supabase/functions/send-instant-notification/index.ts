@@ -12,13 +12,13 @@ function getNotificationEmail(
   let description = 'You have a new update on AIMedNet.';
   let link = 'https://aimmednexus.in/notifications'; // Default link
 
-  // This logic is now a complete copy of your getNotificationDetails function
+  // This logic is from your getNotificationDetails function
   switch (notification.type) {
     // --- System ---
     case 'system_update':
       subject = notification.announcement?.title || 'System Update';
-      description = notification.announcement?.body || 'Check out the latest features and announcements.';
-      link = 'https://aimmednexus.in/notifications'; // System updates don't have a deep link
+      description = notification.announcement?.body || 'Check out the latest features.';
+      link = 'https://aimmednexus.in/notifications';
       break;
 
     // --- Social ---
@@ -38,7 +38,7 @@ function getNotificationEmail(
       link = 'https://aimmednexus.in/inbox';
       break;
 
-    // --- Community / Forums (Added) ---
+    // --- Community / Forums ---
     case 'new_public_post_by_followed_user':
       subject = `New post from ${actorName}`;
       description = `${actorName} (who you follow) posted: "${notification.thread?.title || 'a new post'}".`;
@@ -65,18 +65,18 @@ function getNotificationEmail(
       link = `https://aimmednexus.in/community/space/${notification.entity_id}`;
       break;
 
-    // --- Jobs & Opportunities (Manager/Applicant) ---
+    // --- Jobs & Opportunities ---
     case 'job_application_update':
       subject = 'An update on your job application';
       description = `Your application for "${notification.job_application?.job_title || 'a job'}" was updated to: ${notification.job_application?.status || '...'}.`;
       link = 'https://aimmednexus.in/industryhub/my-applications';
       break;
-    case 'new_job_posting': // --- ADDED ---
+    case 'new_job_posting':
       subject = `New Job Posting: ${notification.job?.title || '...'}`;
       description = `${actorName} posted a new job: "${notification.job?.title || '...'}".`;
       link = `https://aimmednexus.in/jobs/details/${notification.entity_id}`;
       break;
-    case 'new_collaboration_posting': // --- ADDED ---
+    case 'new_collaboration_posting':
       subject = `New Collaboration: ${notification.collaboration?.title || '...'}`;
       description = `${actorName} posted a new collaboration: "${notification.collaboration?.title || '...'}".`;
       link = `https://aimmednexus.in/collabs/details/${notification.entity_id}`;
@@ -86,7 +86,7 @@ function getNotificationEmail(
       description = `${actorName} applied for your job: "${notification.job_application?.job_title || '...'}".`;
       link = `https://aimmednexus.in/industryhub/dashboard/${notification.job_application?.company_id}?tab=applicants`;
       break;
-    case 'new_collaboration_applicant': // --- ADDED ---
+    case 'new_collaboration_applicant':
       subject = 'You have a new collaboration applicant';
       description = `${actorName} applied for your collaboration: "${notification.collaboration_application?.collaboration_title || '...'}".`;
       link = `https://aimmednexus.in/industryhub/dashboard/${notification.collaboration_application?.company_id}?tab=applicants`;
@@ -144,8 +144,8 @@ Deno.serve(async (req) => {
     );
     const resend = new Resend(Deno.env.get('RESEND_API_KEY'));
 
-    // 2. Get the user's profile & notification preferences
-    const { data: profile, error: profileError } = await supabaseAdmin
+    // 2. Get the user's profile
+    const { data: profile, error: profileError } = await supabaseAdmin // <-- Declared as 'profile'
       .from('profiles')
       .select('email, full_name')
       .eq('id', notification.user_id)
@@ -159,21 +159,20 @@ Deno.serve(async (req) => {
       .from('notification_preferences')
       .select('email_enabled, direct_messages, connection_requests, job_alerts, forum_updates, follows_activity')
       .eq('user_id', notification.user_id)
-      .maybeSingle(); // Use maybeSingle() in case no row exists
+      .maybeSingle(); 
 
     if (prefsError) {
       console.warn(`Could not find preferences for user ${notification.user_id}. Using defaults. Error: ${prefsError.message}`);
     }
-
-    // 3. Check if this *type* of email is enabled
-    const prefs = (user.prefs && user.prefs.length > 0) ? user.prefs[0] : { email_enabled: true }; 
+    
+    // 4. Check if this *type* of email is enabled
+    const prefs = preferences || { email_enabled: true }; 
     if (!prefs.email_enabled) {
       return new Response(JSON.stringify({ message: 'User has all emails disabled.' }), {
         headers: { 'Content-Type': 'application/json' },
       });
     }
 
-    // --- ADDED: Comprehensive Preference Checks ---
     let canSend = false;
     switch (notification.type) {
       case 'new_direct_message':
@@ -192,7 +191,7 @@ Deno.serve(async (req) => {
         break;
       case 'new_reply_to_your_message':
       case 'new_thread':
-      case 'new_space':
+      case 'new_space': // <-- Typo 'NEW_s:' removed
         canSend = prefs.forum_updates ?? true;
         break;
       case 'new_public_post_by_followed_user':
@@ -200,12 +199,11 @@ Deno.serve(async (req) => {
         canSend = prefs.follows_activity ?? true;
         break;
       case 'system_update':
-        canSend = true; // System updates always send (unless email_enabled is false)
+        canSend = true; 
         break;
       default:
-        canSend = true; // Default to sending if not specified
+        canSend = true;
     }
-    // --- END: Added Checks ---
 
     if (!canSend) {
       return new Response(JSON.stringify({ message: 'User has this type of email disabled.' }), {
@@ -213,21 +211,23 @@ Deno.serve(async (req) => {
       });
     }
     
-    // 4. Get the *full* notification data (with all joins)
+    // 5. Get the *full* notification data (with all joins)
     const { data: fullNotification, error: rpcError } = await supabaseAdmin
-      .rpc('get_my_notifications') // This RPC already has all the joins
-      .eq('id', notification.id) // Filter it to just this one
+      .rpc('get_my_notifications') 
+      .eq('id', notification.id) 
       .single();
       
     if (rpcError) throw new Error(`Could not fetch full notification: ${rpcError.message}`);
     if (!fullNotification) throw new Error('Full notification not found.');
 
-    // 5. Generate and Send Email
-    const { subject, html } = getNotificationEmail(user.full_name, fullNotification);
+    // 6. Generate and Send Email
+    // --- FIX: Use 'profile.full_name' not 'user.full_name' ---
+    const { subject, html } = getNotificationEmail(profile.full_name, fullNotification);
 
     await resend.emails.send({
       from: 'AIMedNet <notifications@aimmednexus.in>',
-      to: user.email,
+      // --- FIX: Use 'profile.email' not 'user.email' ---
+      to: profile.email, 
       subject: subject,
       html: html,
     });
@@ -237,7 +237,6 @@ Deno.serve(async (req) => {
     });
   } catch (error) {
     console.error('Error in send-instant-notification:', error.message);
-    // Return 200 so the trigger doesn't retry
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { 'Content-Type': 'application/json' },
     });
