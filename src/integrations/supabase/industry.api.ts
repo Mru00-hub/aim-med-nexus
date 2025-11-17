@@ -198,6 +198,7 @@ export type AddLinkPayload = {
   p_title: string;
   p_url: string;
   p_description?: string | null;
+  p_image_url?: string | null;
 };
 
 export type UpdateLinkPayload = {
@@ -206,6 +207,7 @@ export type UpdateLinkPayload = {
   p_title?: string | null;
   p_url?: string | null;
   p_description?: string | null;
+  p_image_url?: string | null;
 };
 
 export type DeleteLinkPayload = {
