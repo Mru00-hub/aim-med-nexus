@@ -185,7 +185,7 @@ const NotificationCard = ({
           <div className="flex-1 min-w-0">
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-1 gap-1 sm:gap-0"> 
               <h3
-                className={`font-semibold truncate text-base ${ 
+                className={`font-semibold text-base ${ 
                   !notification.is_read
                     ? 'text-foreground'
                     : 'text-muted-foreground'
@@ -208,7 +208,7 @@ const NotificationCard = ({
               </div>
             </div>
 
-            <p className="text-sm text-muted-foreground mb-2 whitespace-pre-wrap">
+            <p className="text-sm text-muted-foreground mb-2 break-words whitespace-normal">
               {description}
             </p>
             
