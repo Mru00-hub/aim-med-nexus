@@ -189,7 +189,7 @@ export const SpaceHeader: React.FC<SpaceHeaderProps> = ({
                   </>
                 ) : isUserAdminOrMod ? (
                   <Button size="sm" variant="outline" onClick={() => setIsEditing(true)}><Pencil className="h-4 w-4 mr-2" /> Edit</Button>
-                ) : currentUserRole === 'ACTIVE' ? (
+                ) : currentUserRole ? (
                   <AlertDialog>
                     <AlertDialogTrigger asChild><Button size="sm" variant="outline">Leave Space</Button></AlertDialogTrigger>
                     <AlertDialogContent>
