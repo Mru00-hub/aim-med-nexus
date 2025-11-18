@@ -109,7 +109,7 @@ function getNotificationEmail(payload: any) {
   // Personalize Greeting
   // Note: Usually we send the user's name in the trigger payload or fetch it. 
   // If it's not in the payload, we default to 'Hi there'.
-  const greeting = 'Hi there'; // Or pass user name in payload if available
+  const greeting = payload.user_name ? `Hi ${payload.user_name}` : 'Hi there';
 
   // HTML Template
   const html = `
