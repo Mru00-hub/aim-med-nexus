@@ -88,6 +88,11 @@ const getNotificationDetails = (notification: NotificationWithActor) => {
       title = 'New Space';
       description = `${actorName} (who you follow) created a new space: "${space?.name || '...'}".`;
       break;
+    case 'space_join_request':
+      icon = UserPlus;
+      title = 'Space Join Request';
+      description = `${actorName} has requested to join the space "${spaceName}".`;
+      break;
     case 'new_reply_to_your_message':
       icon = MessageSquare;
       title = 'New Reply';
@@ -424,6 +429,7 @@ export default function Notifications() {
 
       case 'new_public_space_by_followed_user':
       case 'new_space':
+      case 'space_join_request':
         if (entityId) {
           navigate(`/community/space/${entityId}`); // Navigate to the space
           return;
