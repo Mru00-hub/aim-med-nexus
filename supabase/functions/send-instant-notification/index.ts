@@ -72,6 +72,19 @@ function getNotificationEmail(payload: any) {
       description = `Your request to join ${spaceName} was approved.`;
       link = `https://aimmednexus.in/community/space/${notification.entity_id}`;
       break;
+    case 'space_join_request':
+      subject = 'New Request to Join Space';
+      description = `${actorName} has requested to join the space "${payload.space?.name || '...'}".`;
+      // Adjust link to where admins manage requests
+      link = `https://aimmednexus.in/community/space/${notification.entity_id}`; 
+      break;
+
+    // [!code ++] Add this for New Replies (General)
+    case 'new_reply':
+      subject = `New reply in "${payload.thread?.title || 'a thread'}"`;
+      description = `${actorName} replied in a thread you are following.`;
+      link = `https://aimmednexus.in/community/thread/${notification.entity_id}`;
+      break;
 
     // --- Jobs & Opportunities ---
     case 'job_application_update':
