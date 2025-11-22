@@ -71,6 +71,7 @@ export type NotificationWithActor = {
   job: {
     title: string;
     company_id: string;
+    company_name?: string;
   } | null;
 
   company: {
@@ -82,6 +83,7 @@ export type NotificationWithActor = {
   collaboration: {
     title: string;
     company_id: string;
+    company_name?: string;
   } | null;
 
   // [!code ++]
