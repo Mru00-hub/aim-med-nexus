@@ -57,11 +57,25 @@ function getNotificationEmail(payload: any) {
       description = `${actorName} (who you follow) created a new space: "${payload.space?.name || '...'}".`;
       link = `https://aimmednexus.in/community/space/${notification.entity_id}`;
       break;
-    case 'new_reply_to_your_message':
-      subject = `New reply from ${actorName}`;
-      description = `${actorName} replied to your message in "${payload.thread?.title || 'a post'}".`;
+      
+    // 1. General Thread Activity (Top-level comment on your post)
+    case 'new_reply':
+      // Subject: Focuses on the Topic
+      subject = `New comment on: "${payload.thread?.title || 'your post'}"`;
+      // Body: "User X commented on your post"
+      description = `${actorName} commented on your post in "${payload.space?.name || 'the community'}".`;
       link = `https://aimmednexus.in/community/thread/${notification.entity_id}`;
       break;
+
+    // 2. Specific Conversation (Direct reply to your comment)
+    case 'new_reply_to_your_message':
+      // Subject: Focuses on the Person
+      subject = `${actorName} replied to you`;
+      // Body: "User X replied to your comment in Thread Y"
+      description = `${actorName} replied to your comment in "${payload.thread?.title || 'a discussion'}".`;
+      link = `https://aimmednexus.in/community/thread/${notification.entity_id}`;
+      break;
+
     case 'new_thread':
       subject = `New post in ${spaceName}`;
       description = `${actorName} posted "${payload.thread?.title || 'a new post'}" in ${spaceName}.`;
@@ -77,13 +91,6 @@ function getNotificationEmail(payload: any) {
       description = `${actorName} has requested to join the space "${payload.space?.name || '...'}".`;
       // Adjust link to where admins manage requests
       link = `https://aimmednexus.in/community/space/${notification.entity_id}`; 
-      break;
-
-    // [!code ++] Add this for New Replies (General)
-    case 'new_reply':
-      subject = `New reply in "${payload.thread?.title || 'a thread'}"`;
-      description = `${actorName} replied in a thread you are following.`;
-      link = `https://aimmednexus.in/community/thread/${notification.entity_id}`;
       break;
 
     // --- Jobs & Opportunities ---
@@ -111,6 +118,24 @@ function getNotificationEmail(payload: any) {
       subject = 'You have a new collaboration applicant';
       description = `${actorName} applied for your collaboration: "${payload.collaboration_application?.collaboration_title || '...'}".`;
       link = `https://aimmednexus.in/industryhub/dashboard/${payload.collaboration_application?.company_id}?tab=applicants`;
+      break;
+    case 'new_company':
+      const companyName = payload.company?.name || 'a new company';
+      subject = `New Company on Industry Hub: ${companyName}`;
+      description = `${actorName} created a new company page: "${companyName}". Check it out!`;
+      // Assuming your route is /industryhub/company/:id
+      link = `https://aimmednexus.in/industryhub/company/${notification.entity_id}`;
+      break;
+    case 'new_follower':
+      subject = `${actorName} started following you`;
+      description = `${actorName} is now following you. View their profile to connect.`;
+      link = `https://aimmednexus.in/profile/${notification.actor_id}`;
+      break;
+    case 'new_reaction':
+      // Note: entity_id is thread_id based on our SQL fix
+      subject = `${actorName} reacted to your post`;
+      description = `${actorName} reacted to a message you posted in "${payload.thread?.title || 'a conversation'}".`;
+      link = `https://aimmednexus.in/community/thread/${notification.entity_id}`;
       break;
 
     // --- Fallback ---
