@@ -25,7 +25,10 @@ export type NotificationType =
   | 'new_job_posting' // [!code ++]
   | 'new_collaboration_posting' // [!code ++]
   | 'new_job_applicant' // [!code ++]
-  | 'new_collaboration_applicant'; // [!code ++]
+  | 'new_collaboration_applicant'
+  | 'new_company'
+  | 'new_follower'
+  | 'new_reaction';
 
 // This is the main type for a notification, joining the actor's profile info
 export type NotificationWithActor = {
@@ -68,6 +71,10 @@ export type NotificationWithActor = {
   job: {
     title: string;
     company_id: string;
+  } | null;
+
+  company: {
+    name: string;
   } | null;
 
   // [!code ++]
@@ -131,6 +138,9 @@ export const getNotifications = async (): Promise<NotificationWithActor[]> => {
     'new_collaboration_posting',
     'new_job_applicant',
     'new_collaboration_applicant',
+    'new_company',
+    'new_follower',
+    'new_reaction'
   ];
 
   // Return only the data that matches our known types
