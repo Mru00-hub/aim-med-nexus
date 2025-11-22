@@ -43,6 +43,7 @@ export const CollabCard: React.FC<CollabCardProps> = ({ collab }) => {
     duration,
     specializations = [],
     created_at,
+    external_apply_url,
   } = collab;
 
   // Simple date formatter
@@ -72,6 +73,41 @@ export const CollabCard: React.FC<CollabCardProps> = ({ collab }) => {
       title: "Link copied",
       description: "Collaboration link copied to clipboard",
     });
+  };
+
+  const renderApplyButton = () => {
+    // PRIORITY 1: External Link
+    if (external_apply_url) {
+      return (
+        <Button className="btn-medical flex-1" asChild>
+          <a 
+            href={external_apply_url} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+          >
+            Apply Externally
+            <ExternalLink className="ml-2 h-4 w-4" />
+          </a>
+        </Button>
+      );
+    }
+
+    // PRIORITY 2: Logged In (Internal)
+    if (user) {
+      return (
+        <Button className="btn-medical flex-1" onClick={handleApply}>
+          Apply Now
+        </Button>
+      );
+    }
+
+    // PRIORITY 3: Logged Out (Internal)
+    return (
+      <Button variant="outline" className="flex-1" onClick={handleSignIn}>
+        Sign in to Apply
+      </Button>
+    );
   };
 
   return (
@@ -135,45 +171,32 @@ export const CollabCard: React.FC<CollabCardProps> = ({ collab }) => {
           
           {/* Action Buttons */}
           <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-shrink-0">
-            {user ? (
-              <div className="flex gap-2">
-                <Button 
-                  variant="outline" 
-                  size="icon" 
-                  onClick={handleShare}
-                  title="Share"
-                  className="shrink-0"
-                >
-                  <Share2 className="h-4 w-4" />
-                </Button>
-                <Button className="btn-medical flex-1" onClick={handleApply}>
-                  Apply Now
-                </Button>
-              </div>
-            ) : (
-              <>
-                <div className="flex gap-2">
-                   <Button 
-                    variant="outline" 
-                    size="icon" 
-                    onClick={handleShare}
-                    title="Share"
-                    className="shrink-0"
-                  >
-                    <Share2 className="h-4 w-4" />
-                  </Button>
-                  <Button variant="outline" className="flex-1" onClick={handleSignIn}>
-                    Sign in to Apply
-                  </Button>
-                </div>
-                <Button variant="ghost" size="sm" asChild>
-                  <Link to={`/collabs/details/${collab_id}`}>
-                    <ExternalLink className="h-4 w-4 mr-2" />
-                    View Details
-                  </Link>
-                </Button>
-              </>
+            
+            <div className="flex gap-2">
+               <Button 
+                variant="outline" 
+                size="icon" 
+                onClick={handleShare}
+                title="Share"
+                className="shrink-0"
+              >
+                <Share2 className="h-4 w-4" />
+              </Button>
+              
+              {/* 3. Call the helper here */}
+              {renderApplyButton()}
+            </div>
+
+            {/* Show View Details only if not logged in AND not external */}
+            {!user && !external_apply_url && (
+              <Button variant="ghost" size="sm" asChild>
+                <Link to={`/collabs/details/${collab_id}`}>
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  View Details
+                </Link>
+              </Button>
             )}
+
           </div>
         </div>
       </CardContent>
