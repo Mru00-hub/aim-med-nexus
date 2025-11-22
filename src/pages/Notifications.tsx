@@ -50,6 +50,8 @@ const getNotificationDetails = (notification: NotificationWithActor) => {
   const actorName = actor?.full_name || 'Someone';
   const spaceName = space?.name || 'a space';
   const companyName = company?.name || 'a company';
+  const jobCompany = job?.company_name || 'a company';
+  const collabCompany = collaboration?.company_name || 'a company';
 
   let icon: React.ElementType = Bell;
   let title = 'New Notification';
@@ -136,12 +138,12 @@ const getNotificationDetails = (notification: NotificationWithActor) => {
     case 'new_job_posting':
       icon = Briefcase;
       title = 'New Job Posting';
-      description = `${actorName} posted a new job: "${job?.title || '...'}".`;
+      description = `${actorName} posted a new job at ${jobCompany}: "${job?.title || '...'}".`;
       break;
     case 'new_collaboration_posting':
       icon = Construction;
       title = 'New Collaboration';
-      description = `${actorName} posted a new collaboration: "${collaboration?.title || '...'}".`;
+      description = `${actorName} posted a new collaboration at ${collabCompany}: "${collaboration?.title || '...'}".`;
       break;
     case 'new_job_applicant':
       icon = UserPlus;
