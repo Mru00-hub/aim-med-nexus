@@ -60,19 +60,20 @@ function getNotificationEmail(payload: any) {
       
     // 1. General Thread Activity (Top-level comment on your post)
     case 'new_reply':
-      // Subject: Focuses on the Topic
-      subject = `New comment on: "${payload.thread?.title || 'your post'}"`;
-      // Body: "User X commented on your post"
-      description = `${actorName} commented on your post in "${payload.space?.name || 'the community'}".`;
+      const threadTitle = payload.thread?.title || 'your post';      
+      // Subject: "New comment on: [Thread Title]"
+      subject = `New comment on: "${threadTitle}"`;      
+      // Description: "User commented on [Thread Title] in [Space Name]"
+      // [!code change] This fixes the vague message
+      description = `${actorName} commented on "${threadTitle}" in ${spaceName}.`;      
       link = `https://aimmednexus.in/community/thread/${notification.entity_id}`;
       break;
 
     // 2. Specific Conversation (Direct reply to your comment)
     case 'new_reply_to_your_message':
-      // Subject: Focuses on the Person
       subject = `${actorName} replied to you`;
-      // Body: "User X replied to your comment in Thread Y"
-      description = `${actorName} replied to your comment in "${payload.thread?.title || 'a discussion'}".`;
+      // [!code change] Make this clearer too
+      description = `${actorName} replied to your comment in "${payload.thread?.title || 'a discussion'}" (${spaceName}).`;
       link = `https://aimmednexus.in/community/thread/${notification.entity_id}`;
       break;
 
