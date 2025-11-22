@@ -127,10 +127,17 @@ const getNotificationDetails = (notification: NotificationWithActor) => {
       break;
     case 'new_space':
       icon = Users;
-      title = 'Space Update';
-      description = `Your request to join ${spaceName} was approved.`;
+      title = 'Membership Approved';
+      description = `Your request to join "${spaceName}" was approved.`;
       break;
 
+    // [!code ++] New Space Created (Broadcast)
+    case 'new_space_created':
+      icon = Users;
+      title = 'New Space Alert';
+      description = `${actorName} created a new space called "${spaceName}". Click to explore!`;
+      break;
+      
     // --- Jobs & Opportunities (Manager/Applicant) ---
     case 'job_application_update':
       icon = Briefcase;
@@ -345,6 +352,7 @@ export default function Notifications() {
           n.type === 'new_reply_to_your_message' ||
           n.type === 'new_thread' ||
           n.type === 'new_space' ||
+          n.type === 'new_space_created' ||
           n.type === 'new_job_posting' ||
           n.type === 'new_collaboration_posting' ||
           n.type === 'new_company' || // [!code ++]
@@ -462,6 +470,7 @@ export default function Notifications() {
 
       case 'new_public_space_by_followed_user':
       case 'new_space':
+      case 'new_space_created':
       case 'space_join_request':
         if (entityId) {
           navigate(`/community/space/${entityId}`); // Navigate to the space
