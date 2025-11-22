@@ -219,26 +219,26 @@ export const NotificationsSettingsTab: React.FC = () => {
         />
 
         <SettingRow
-          title="Thread Replies" // <-- Make sure you updated this title
-          description="Notify me about replies to my messages." // <-- Make sure you updated this
-          checked={preferences.forum_updates}
-          onToggle={(value) => handleToggle('forum_updates', value)}
-          disabled={isSaving}
-        />
-
-        <SettingRow
-          title="Connection Requests"
-          description="Notify me about new connection requests and acceptances."
+          title="Connection & Followers" // [!code change]
+          description="Notify me about new followers, connection requests, and acceptances." // [!code change]
           checked={preferences.connection_requests}
           onToggle={(value) => handleToggle('connection_requests', value)}
           disabled={isSaving}
         />
 
         <SettingRow
-          title="Job Alerts"
-          description="Notify me about new job postings and application updates."
+          title="Industry Alerts" // [!code change]
+          description="Notify me about new companies, job postings, and application updates." // [!code change]
           checked={preferences.job_alerts}
           onToggle={(value) => handleToggle('job_alerts', value)}
+          disabled={isSaving}
+        />
+
+        <SettingRow
+          title="Forum Activity" // [!code change]
+          description="Notify me about replies, reactions, and new threads." // [!code change]
+          checked={preferences.forum_updates}
+          onToggle={(value) => handleToggle('forum_updates', value)}
           disabled={isSaving}
         />
       </CardContent>
