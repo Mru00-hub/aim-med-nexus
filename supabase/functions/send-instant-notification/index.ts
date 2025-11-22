@@ -100,13 +100,16 @@ function getNotificationEmail(payload: any) {
       link = 'https://aimmednexus.in/industryhub/my-applications';
       break;
     case 'new_job_posting':
-      subject = `New Job Posting: ${payload.job?.title || '...'}`;
-      description = `${actorName} posted a new job: "${payload.job?.title || '...'}".`;
+      const jobCompany = payload.job?.company_name || 'a company';
+      subject = `New Job at ${jobCompany}: ${payload.job?.title}`;
+      description = `${actorName} posted a new job at ${jobCompany}: "${payload.job?.title}".`;
       link = `https://aimmednexus.in/jobs/details/${notification.entity_id}`;
       break;
+
     case 'new_collaboration_posting':
-      subject = `New Collaboration: ${payload.collaboration?.title || '...'}`;
-      description = `${actorName} posted a new collaboration: "${payload.collaboration?.title || '...'}".`;
+      const collabCompany = payload.collaboration?.company_name || 'a company';
+      subject = `New Collaboration at ${collabCompany}: ${payload.collaboration?.title}`;
+      description = `${actorName} posted a new collaboration opportunity at ${collabCompany}.`;
       link = `https://aimmednexus.in/collabs/details/${notification.entity_id}`;
       break;
     case 'new_job_applicant':
