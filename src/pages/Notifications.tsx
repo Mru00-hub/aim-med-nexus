@@ -103,15 +103,17 @@ const getNotificationDetails = (notification: NotificationWithActor) => {
       title = 'Space Join Request';
       description = `${actorName} has requested to join the space "${spaceName}".`;
       break;
+    case 'new_reply':
+      icon = MessageSquare;
+      title = 'New Thread Activity';
+      // [!code change] Updated to match Email logic (Thread Title + Space Name)
+      description = `${actorName} commented on "${thread?.title || 'your post'}" in ${spaceName}.`;
+      break;
     case 'new_reply_to_your_message':
       icon = MessageSquare;
       title = 'New Reply';
-      description = `${actorName} replied to your message in "${thread?.title || 'a post'}".`;
-      break;
-    case 'new_reply': // [!code ++]
-      icon = MessageSquare;
-      title = 'New Thread Activity';
-      description = `${actorName} commented on your post in "${spaceName}".`;
+      // [!code change] Updated to match Email logic (Context: Thread Title + Space Name)
+      description = `${actorName} replied to your comment in "${thread?.title || 'a discussion'}" (${spaceName}).`;
       break;
     case 'new_reaction': // [!code ++]
       icon = Heart;
