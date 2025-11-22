@@ -28,6 +28,8 @@ import {
   UserPlus,
   Mail, // For DMs
   UserCheck, // For connection accepted
+  Building2, // [!code ++] For Companies
+  Heart,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import {
@@ -44,9 +46,10 @@ import { formatDistanceToNow } from 'date-fns';
 // [!code ++]
 // This function is now comprehensive for all notification types
 const getNotificationDetails = (notification: NotificationWithActor) => {
-  const { type, actor, space, thread, job, collaboration, job_application, collaboration_application } = notification;
+  const { type, actor, space, thread, job, collaboration, job_application, collaboration_application, company } = notification;
   const actorName = actor?.full_name || 'Someone';
   const spaceName = space?.name || 'a space';
+  const companyName = company?.name || 'a company';
 
   let icon: React.ElementType = Bell;
   let title = 'New Notification';
@@ -76,6 +79,11 @@ const getNotificationDetails = (notification: NotificationWithActor) => {
       title = 'New Message';
       description = `${actorName} sent you a new direct message.`;
       break;
+    case 'new_follower': // [!code ++]
+      icon = UserPlus;
+      title = 'New Follower';
+      description = `${actorName} started following you.`;
+      break;
 
     // --- Community / Forums ---
     case 'new_public_post_by_followed_user':
@@ -97,6 +105,16 @@ const getNotificationDetails = (notification: NotificationWithActor) => {
       icon = MessageSquare;
       title = 'New Reply';
       description = `${actorName} replied to your message in "${thread?.title || 'a post'}".`;
+      break;
+    case 'new_reply': // [!code ++]
+      icon = MessageSquare;
+      title = 'New Thread Activity';
+      description = `${actorName} commented on your post in "${spaceName}".`;
+      break;
+    case 'new_reaction': // [!code ++]
+      icon = Heart;
+      title = 'New Reaction';
+      description = `${actorName} reacted to your post.`;
       break;
     case 'new_thread':
       icon = MessageSquare;
@@ -134,6 +152,11 @@ const getNotificationDetails = (notification: NotificationWithActor) => {
       icon = UserPlus;
       title = 'New Collab Applicant';
       description = `${actorName} applied for your collaboration: "${collaboration_application?.collaboration_title || '...'}".`;
+      break;
+    case 'new_company': // [!code ++]
+      icon = Building2;
+      title = 'New Company Page';
+      description = `${actorName} created a new company page: "${companyName}".`;
       break;
 
     // --- Fallback (Should not be reached) ---
@@ -319,7 +342,9 @@ export default function Notifications() {
           n.type === 'new_thread' ||
           n.type === 'new_space' ||
           n.type === 'new_job_posting' ||
-          n.type === 'new_collaboration_posting'
+          n.type === 'new_collaboration_posting' ||
+          n.type === 'new_company' || // [!code ++]
+          n.type === 'new_reply'
       );
     }
     // "Social" is person-to-person (connections, DMs)
@@ -328,7 +353,9 @@ export default function Notifications() {
         n => 
           n.type === 'new_connection_request' ||
           n.type === 'connection_accepted' ||
-          n.type === 'new_direct_message'
+          n.type === 'new_direct_message' ||
+          n.type === 'new_follower' || // [!code ++]
+          n.type === 'new_reaction' 
       );
     }
     // "Jobs" is application-related (for applicants or managers)
@@ -421,6 +448,8 @@ export default function Notifications() {
       case 'new_public_post_by_followed_user':
       case 'new_reply_to_your_message':
       case 'new_thread':
+      case 'new_reply':    // [!code ++]
+      case 'new_reaction':
         if (entityId) {
           navigate(`/community/thread/${entityId}`); // Navigate to the post
           return;
@@ -439,6 +468,7 @@ export default function Notifications() {
       // --- Social ---
       case 'new_connection_request':
       case 'connection_accepted':
+      case 'new_follower':
         if (actorId) {
           navigate(`/profile/${actorId}`); // Navigate to the user's profile
           return;
@@ -463,9 +493,13 @@ export default function Notifications() {
         }
         break;
 
+      case 'new_company': // [!code ++]
+        if (entityId) navigate(`/industryhub/company/${entityId}`);
+        break;
+
       case 'job_application_update':
         navigate(`/industryhub/my-applications`); // Correct path
-        return;
+        break;
 
       case 'new_job_applicant':
       case 'new_collaboration_applicant': { // Added brackets for local scope
