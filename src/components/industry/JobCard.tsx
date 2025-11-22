@@ -42,6 +42,7 @@ export const JobCard: React.FC<JobCardProps> = ({ job }) => {
     experience_level,
     specializations = [],
     created_at,
+    external_apply_url,
   } = job;
 
   // Simple date formatter
@@ -77,6 +78,41 @@ export const JobCard: React.FC<JobCardProps> = ({ job }) => {
       title: "Link copied",
       description: "Job link copied to clipboard",
     });
+  };
+
+  const renderApplyButton = () => {
+    // PRIORITY 1: If it's an external link, show that (regardless of login status)
+    if (external_apply_url) {
+      return (
+        <Button className="btn-medical flex-1" asChild>
+          <a 
+            href={external_apply_url} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+          >
+            Apply Externally
+            <ExternalLink className="ml-2 h-4 w-4" />
+          </a>
+        </Button>
+      );
+    }
+
+    // PRIORITY 2: If Logged In, show internal Apply
+    if (user) {
+      return (
+        <Button className="btn-medical flex-1" onClick={handleApply}>
+          Apply Now
+        </Button>
+      );
+    }
+
+    // PRIORITY 3: If Logged Out, show Sign In
+    return (
+      <Button variant="outline" className="flex-1" onClick={handleSignIn}>
+        Sign in to Apply
+      </Button>
+    );
   };
 
   return (
@@ -139,8 +175,8 @@ export const JobCard: React.FC<JobCardProps> = ({ job }) => {
           
           {/* Action Buttons */}
           <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-shrink-0">
-            {user ? (
-              <div className="flex gap-2">
+            
+            <div className="flex gap-2">
                 <Button 
                   variant="outline" 
                   size="icon" 
@@ -150,33 +186,20 @@ export const JobCard: React.FC<JobCardProps> = ({ job }) => {
                 >
                   <Share2 className="h-4 w-4" />
                 </Button>
-                <Button className="btn-medical flex-1" onClick={handleApply}>
-                  Apply Now
-                </Button>
-              </div>
-            ) : (
-              <>
-                <div className="flex gap-2">
-                   <Button 
-                    variant="outline" 
-                    size="icon" 
-                    onClick={handleShare}
-                    title="Share"
-                    className="shrink-0"
-                  >
-                    <Share2 className="h-4 w-4" />
-                  </Button>
-                  <Button variant="outline" className="flex-1" onClick={handleSignIn}>
-                    Sign in to Apply
-                  </Button>
-                </div>
+
+                {/* 3. Call the helper function here */}
+                {renderApplyButton()}
+            </div>
+
+            {/* Show "View Details" only if user is not logged in AND it's not an external link 
+                (Optional preference, but keeps UI clean) */}
+            {!user && !external_apply_url && (
                 <Button variant="ghost" size="sm" asChild>
                   <Link to={`/jobs/details/${job_id}`}>
                     <ExternalLink className="h-4 w-4 mr-2" />
                     View Details
                   </Link>
                 </Button>
-              </>
             )}
           </div>
         </div>
