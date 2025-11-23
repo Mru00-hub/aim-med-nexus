@@ -13,6 +13,29 @@ import {
 } from '@/integrations/supabase/community.api'; 
 import { Reply, Trash2, Pencil, Paperclip, SmilePlus } from 'lucide-react';
 
+const renderMessageWithLinks = (text: string) => {
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    const parts = text.split(urlRegex);
+  
+    return parts.map((part, index) => {
+      if (part.match(urlRegex)) {
+        return (
+          <a
+            key={index}
+            href={part}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-500 hover:underline break-all" // break-all ensures long links don't overflow
+            onClick={(e) => e.stopPropagation()} 
+          >
+            {part}
+          </a>
+        );
+      }
+      return part;
+    });
+};
+
 const EmojiPicker: React.FC<{ onSelect: (emoji: string) => void }> = ({ onSelect }) => (
     <div className="flex gap-1 p-1 bg-background border rounded-full shadow-lg">
         {['👍', '❤️', '🔥', '🤔', '😂'].map(emoji => (
@@ -147,14 +170,14 @@ export const Message: React.FC<MessageProps> = ({
                     <p className="truncate opacity-80">{message.parent_message.body}</p>
                 </div>
             )}
-            <p className="text-sm break-words whitespace-pre-wrap">
-              {message.body} 
+            <div className="text-sm break-words whitespace-pre-wrap">
+              {renderMessageWithLinks(message.body)} 
               {message.is_edited && (
                 <span className="text-xs opacity-70 ml-1">
                   (edited at {new Date(message.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})
                 </span>
               )}
-            </p>
+            </div>
             {message.attachments && message.attachments.length > 0 && (
                 <div className="mt-2">
                     {message.attachments.map(att => (
