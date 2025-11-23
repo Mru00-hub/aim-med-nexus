@@ -174,6 +174,19 @@ export const getMyConnections = async (
     return (data as any) || []; 
 };
 
+export const getMyConnectionCount = async (): Promise<number> => {
+  const session = await getSessionOrThrow();
+  
+  // We count rows where I am requester OR addressee AND status is accepted
+  const { count, error } = await supabase
+    .from('user_connections')
+    .select('*', { count: 'exact', head: true }) // head: true means "don't return data, just count"
+    .or(`and(requester_id.eq.${session.user.id},status.eq.accepted),and(addressee_id.eq.${session.user.id},status.eq.accepted)`);
+
+  if (error) throw error;
+  return count || 0;
+};
+
 export const getBlockedUsers = async (): Promise<BlockedUser[]> => {
     const { data, error } = await supabase.rpc('get_my_blocked_users');
     if (error) throw error;
