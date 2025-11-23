@@ -259,12 +259,13 @@ export const ThreadView: React.FC<ThreadViewProps> = ({ threadId, spaceId, canMo
     handleEditMessage,
     handleReaction
   } = useThreadData(threadId, user?.id, profile);
-  const messageInputRef = useRef<HTMLTextAreaElement>(null); 
-  const scrollViewportRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const messageInputRef = useRef<HTMLTextAreaElement>(null);
 
   const scrollToBottom = useCallback(() => {
-    if (scrollViewportRef.current) {
-      scrollViewportRef.current.scrollTop = scrollViewportRef.current.scrollHeight;
+    if (scrollContainerRef.current) {
+      const { scrollHeight, clientHeight } = scrollContainerRef.current;
+      scrollContainerRef.current.scrollTop = scrollHeight - clientHeight;
     }
   }, []);
   
@@ -272,8 +273,10 @@ export const ThreadView: React.FC<ThreadViewProps> = ({ threadId, spaceId, canMo
    
   const handleReplyClick = (message: MessageWithDetails) => { 
     setReplyingTo(message);
-    scrollToBottom(); // <-- 2. ADD THIS to scroll down
-    setTimeout(() => messageInputRef.current?.focus(), 100);
+    setTimeout(() => {
+        scrollToBottom();
+        messageInputRef.current?.focus();
+    }, 100);
   };
   
   const onCancelReply = useCallback(() => {
@@ -292,40 +295,39 @@ export const ThreadView: React.FC<ThreadViewProps> = ({ threadId, spaceId, canMo
       </CardHeader>
 
       {/* FIX 2: Added flex-1 to ensure this takes all available remaining space */}
-      <div className="flex-1 overflow-hidden min-w-0 relative">
-        <ScrollArea className="h-full w-full" viewportRef={scrollViewportRef}>
-          <div className="p-3 md:p-4 min-w-0 pb-4">
-            {isLoading ? (
-              <div className="space-y-4">
-                <Skeleton className="h-16 w-3/4" />
-                <Skeleton className="h-16 w-2/3 ml-auto" />
-                <Skeleton className="h-16 w-3/4" />
-              </div>
+      <div 
+        ref={scrollContainerRef}
+        className="flex-1 overflow-y-auto overflow-x-hidden p-2 md:p-4 w-full scroll-smooth"
+      >
+        {isLoading ? (
+          <div className="space-y-4 px-2">
+            <Skeleton className="h-16 w-3/4" />
+            <Skeleton className="h-16 w-2/3 ml-auto" />
+            <Skeleton className="h-16 w-3/4" />
+          </div>
+        ) : (
+          // Inner container with explicit max-width to contain message bubbles
+          <div className="flex flex-col space-y-4 max-w-full">
+            {flatMessages.length === 0 ? (
+              <div className="text-center py-10 text-muted-foreground">No messages yet. Start the conversation!</div>
             ) : (
-              <div className="space-y-4">
-                {flatMessages.length === 0 ? (
-                  <div className="text-center py-10 text-muted-foreground">No messages yet. Start the conversation!</div>
-                ) : (
-                  flatMessages.map((msg) => (
-                    <Message 
-                        key={msg.id} 
-                        message={msg} 
-                        currentUserId={user?.id || ''}
-                        canModerate={canModerate}
-                        onDelete={handleDeleteMessage}
-                        onEditMessage={handleEditMessage}
-                        onReplyClick={handleReplyClick}
-                        onReaction={handleReaction}
-                    />
-                  ))
-                )}
-              </div>
+              flatMessages.map((msg) => (
+                <Message 
+                    key={msg.id} 
+                    message={msg} 
+                    currentUserId={user?.id || ''}
+                    canModerate={canModerate}
+                    onDelete={handleDeleteMessage}
+                    onEditMessage={handleEditMessage}
+                    onReplyClick={handleReplyClick}
+                    onReaction={handleReaction}
+                />
+              ))
             )}
           </div>
-        </ScrollArea>
+        )}
       </div>
       
-      {/* FIX 3: Removed 'mt-4' which was pushing the input down. Added shrink-0. */}
       <div className="p-2 md:p-4 border-t bg-background shrink-0 z-10">
         <MessageInput 
             ref={messageInputRef}
