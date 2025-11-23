@@ -141,7 +141,6 @@ const FunctionalSocial = () => {
                 <TabsTrigger value="network">
                     My Network ({connectionCount})
                 </TabsTrigger>
-                <TabsTrigger value="network" className="whitespace-nowrap">My Network</TabsTrigger>
                 <TabsTrigger value="requests" className="whitespace-nowrap">Requests ({requestCount})</TabsTrigger>
                 <TabsTrigger value="blocked" className="whitespace-nowrap">Blocked ({blockedUsers.length})</TabsTrigger>
             </TabsList>
