@@ -285,15 +285,16 @@ export const ThreadView: React.FC<ThreadViewProps> = ({ threadId, spaceId, canMo
   }
 
   return (
-    <div className="flex flex-col h-full border rounded-lg bg-card shadow-lg overflow-hidden max-w-full">
-      <CardHeader className="p-4 border-b">
-        <CardTitle className="text-xl font-bold break-words">Discussion Stream</CardTitle>
-        <p className="text-sm text-muted-foreground break-all">Thread ID: {threadId.substring(0, 8)}...</p>
+    <div className="flex flex-col h-[calc(100dvh-130px)] md:h-full w-full border-0 md:border md:rounded-lg bg-background md:bg-card shadow-none md:shadow-lg overflow-hidden">
+      <CardHeader className="p-3 md:p-4 border-b shrink-0">
+        <CardTitle className="text-lg md:text-xl font-bold break-words">Discussion Stream</CardTitle>
+        <p className="text-xs md:text-sm text-muted-foreground break-all">Thread ID: {threadId.substring(0, 8)}...</p>
       </CardHeader>
 
-      <div className="flex-1 overflow-hidden min-w-0">
+      {/* FIX 2: Added flex-1 to ensure this takes all available remaining space */}
+      <div className="flex-1 overflow-hidden min-w-0 relative">
         <ScrollArea className="h-full w-full" viewportRef={scrollViewportRef}>
-          <div className="p-2 sm:p-4 min-w-0">
+          <div className="p-3 md:p-4 min-w-0 pb-4">
             {isLoading ? (
               <div className="space-y-4">
                 <Skeleton className="h-16 w-3/4" />
@@ -324,7 +325,8 @@ export const ThreadView: React.FC<ThreadViewProps> = ({ threadId, spaceId, canMo
         </ScrollArea>
       </div>
       
-      <div className="mt-4 p-2 sm:p-4 border-t bg-background">
+      {/* FIX 3: Removed 'mt-4' which was pushing the input down. Added shrink-0. */}
+      <div className="p-2 md:p-4 border-t bg-background shrink-0 z-10">
         <MessageInput 
             ref={messageInputRef}
             threadId={threadId} 
