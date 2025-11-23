@@ -80,7 +80,9 @@ const MessageInputComponent = forwardRef<HTMLTextAreaElement, MessageInputProps>
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    // MODIFIED: Only send if Ctrl+Enter or Cmd+Enter is pressed.
+    // If just 'Enter' is pressed, we do nothing, allowing the default new line behavior.
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
       handleSend();
     }
