@@ -158,15 +158,19 @@ export const getPendingRequests = async (): Promise<ConnectionRequest[]> => {
     return data || [];
 };
 
-export const getMyConnections = async (page: number = 1, limit: number = 20): Promise<Connection[]> => {
+export const getMyConnections = async (
+  page: number = 1, 
+  limit: number = 20, 
+  search: string = ''
+): Promise<Connection[]> => {
+    
     const { data, error } = await supabase.rpc('get_my_connections_with_status', { 
       page_number: page, 
-      page_size: limit 
+      page_size: limit,
+      search_query: search // Pass it to Supabase
     });
     
     if (error) throw error;
-    
-    // We cast to 'any' then back to the specific type to satisfy TypeScript
     return (data as any) || []; 
 };
 
