@@ -13,6 +13,7 @@ export type NotificationType =
   | 'connection_accepted'
   | 'new_thread' // [!code ++] (For space members)
   | 'new_space' // [!code ++] (For membership approval / new joins)
+  | 'new_member_joined'
   | 'new_space_created'
   | 'space_join_request'
   | 'new_reply'
@@ -129,6 +130,7 @@ export const getNotifications = async (): Promise<NotificationWithActor[]> => {
     'connection_accepted',
     'new_thread',
     'new_space',
+    'new_member_joined', 
     'new_space_created',
     'system_update',
     'space_join_request',
