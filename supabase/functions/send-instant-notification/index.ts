@@ -87,6 +87,11 @@ function getNotificationEmail(payload: any) {
       description = `Your request to join ${spaceName} was approved.`;
       link = `https://aimmednexus.in/community/space/${notification.entity_id}`;
       break;
+    case 'new_member_joined':
+      subject = `New member in ${spaceName}`;
+      description = `${actorName} has just joined ${spaceName}.`;
+      link = `https://aimmednexus.in/community/space/${notification.entity_id}`;
+      break;
     case 'new_space_created':
       subject = `New Space Alert: ${spaceName}`;
       description = `${actorName} just created a new space called "${spaceName}". Click to explore.`;
