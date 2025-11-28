@@ -357,6 +357,7 @@ export default function Notifications() {
           n.type === 'new_reply_to_your_message' ||
           n.type === 'new_thread' ||
           n.type === 'new_space' ||
+          n.type === 'new_member_joined' ||
           n.type === 'new_space_created' ||
           n.type === 'new_job_posting' ||
           n.type === 'new_collaboration_posting' ||
@@ -475,6 +476,7 @@ export default function Notifications() {
 
       case 'new_public_space_by_followed_user':
       case 'new_space':
+      case 'new_member_joined':
       case 'new_space_created':
       case 'space_join_request':
         if (entityId) {
