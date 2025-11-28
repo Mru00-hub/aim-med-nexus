@@ -130,6 +130,11 @@ const getNotificationDetails = (notification: NotificationWithActor) => {
       title = 'Membership Approved';
       description = `Your request to join "${spaceName}" was approved.`;
       break;
+    case 'new_member_joined':
+      icon = UserPlus;
+      title = 'New Member';
+      description = `${actorName} joined the space "${spaceName}".`;
+      break;
 
     // [!code ++] New Space Created (Broadcast)
     case 'new_space_created':
