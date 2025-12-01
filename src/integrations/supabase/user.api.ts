@@ -289,11 +289,16 @@ export const saveProfileDetails = async (payload: SaveProfilePayload, deletedIte
         const newItem = { ...rest, profile_id: userId };
         if (id && typeof id === 'string' && id.trim().length > 0) {
             newItem.id = id;
+        } else {
+            newItem.id = crypto.randomUUID(); // <--- Client-side Generation
         }
-        if (created_at && typeof created_at === 'string' && created_at.trim().length > 0) {
+        const now = new Date().toISOString();
+        if (created_at && typeof created_at === 'string') {
             newItem.created_at = created_at;
+        } else {
+            newItem.created_at = now; // <--- Client-side Date
         }
-        newItem.updated_at = new Date().toISOString();
+        newItem.updated_at = now;
         Object.keys(newItem).forEach(key => {
             if (['id', 'created_at', 'updated_at'].includes(key)) return;
             if (newItem[key] === '' && !Array.isArray(item[key])) {
