@@ -285,12 +285,17 @@ export const saveProfileDetails = async (payload: SaveProfilePayload, deletedIte
     const userId = session.user.id;
 
     const prepareUpsert = (list: any[]) => list.map(item => {
-        const { client_id,id, ...rest } = item; 
+        const { client_id,id, created_at, updated_at, ...rest } = item; 
         const newItem = { ...rest, profile_id: userId };
         if (id && typeof id === 'string' && id.trim().length > 0) {
             newItem.id = id;
         }
+        if (created_at && typeof created_at === 'string' && created_at.trim().length > 0) {
+            newItem.created_at = created_at;
+        }
+        newItem.updated_at = new Date().toISOString();
         Object.keys(newItem).forEach(key => {
+            if (['id', 'created_at', 'updated_at'].includes(key)) return;
             if (newItem[key] === '' && !Array.isArray(item[key])) {
                 // Handle potential empty date strings specifically if necessary
                 if (key.includes('date') || key.includes('year')) {
@@ -305,7 +310,7 @@ export const saveProfileDetails = async (payload: SaveProfilePayload, deletedIte
             newItem.authors = (newItem.authors as string).split(',').map(s => s.trim()).filter(Boolean);
         }
         // Special handling for achievements array
-         if ('achievements' in newItem && typeof newItem.achievements === 'string') {
+        if ('achievements' in newItem && typeof newItem.achievements === 'string') {
             newItem.achievements = (newItem.achievements as string).split(',').map(s => s.trim()).filter(Boolean);
         }
         return newItem;
