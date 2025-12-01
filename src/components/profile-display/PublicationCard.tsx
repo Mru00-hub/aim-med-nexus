@@ -11,7 +11,13 @@ export const PublicationCard: React.FC<PublicationCardProps> = ({ pub }) => {
   return (
     <div className="p-4 border rounded-lg bg-muted/30">
       <a 
-        href={pub.url || pub.doi ? `https://doi.org/${pub.doi}` : undefined} 
+        href={
+          pub.url 
+            ? pub.url 
+            : pub.doi 
+              ? `https://doi.org/${pub.doi}` 
+              : undefined
+        } 
         target="_blank" 
         rel="noopener noreferrer" 
         className="font-semibold hover:underline data-[disabled=true]:no-underline data-[disabled=true]:cursor-default" 
