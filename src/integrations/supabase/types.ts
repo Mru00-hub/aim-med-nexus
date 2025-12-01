@@ -269,6 +269,7 @@ export type Database = {
           id: string
           profile_id: string
           title: string
+          updated_at: string | null
           url: string | null
         }
         Insert: {
@@ -279,6 +280,7 @@ export type Database = {
           id?: string
           profile_id: string
           title: string
+          updated_at?: string | null
           url?: string | null
         }
         Update: {
@@ -289,6 +291,7 @@ export type Database = {
           id?: string
           profile_id?: string
           title?: string
+          updated_at?: string | null
           url?: string | null
         }
         Relationships: [
@@ -790,6 +793,7 @@ export type Database = {
           profile_id: string
           thumbnail_url: string | null
           title: string
+          updated_at: string | null
           url: string | null
         }
         Insert: {
@@ -802,6 +806,7 @@ export type Database = {
           profile_id: string
           thumbnail_url?: string | null
           title: string
+          updated_at?: string | null
           url?: string | null
         }
         Update: {
@@ -814,6 +819,7 @@ export type Database = {
           profile_id?: string
           thumbnail_url?: string | null
           title?: string
+          updated_at?: string | null
           url?: string | null
         }
         Relationships: [
@@ -1094,7 +1100,7 @@ export type Database = {
           field_of_study: string | null
           id: string
           institution_id: string | null
-          institution_name: string
+          institution_name: string | null
           profile_id: string
           start_year: number | null
           updated_at: string
@@ -1108,7 +1114,7 @@ export type Database = {
           field_of_study?: string | null
           id?: string
           institution_id?: string | null
-          institution_name: string
+          institution_name?: string | null
           profile_id: string
           start_year?: number | null
           updated_at?: string
@@ -1122,7 +1128,7 @@ export type Database = {
           field_of_study?: string | null
           id?: string
           institution_id?: string | null
-          institution_name?: string
+          institution_name?: string | null
           profile_id?: string
           start_year?: number | null
           updated_at?: string
