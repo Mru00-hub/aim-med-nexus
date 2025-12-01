@@ -414,6 +414,7 @@ export type Database = {
           created_at: string
           description: string
           duration: string | null
+          external_apply_url: string | null
           id: string
           is_active: boolean
           location_id: string | null
@@ -426,6 +427,7 @@ export type Database = {
           created_at?: string
           description: string
           duration?: string | null
+          external_apply_url?: string | null
           id?: string
           is_active?: boolean
           location_id?: string | null
@@ -438,6 +440,7 @@ export type Database = {
           created_at?: string
           description?: string
           duration?: string | null
+          external_apply_url?: string | null
           id?: string
           is_active?: boolean
           location_id?: string | null
@@ -576,6 +579,7 @@ export type Database = {
           company_id: string
           description: string | null
           id: string
+          image_url: string | null
           link_type: Database["public"]["Enums"]["link_type_enum"]
           title: string
           url: string
@@ -584,6 +588,7 @@ export type Database = {
           company_id: string
           description?: string | null
           id?: string
+          image_url?: string | null
           link_type: Database["public"]["Enums"]["link_type_enum"]
           title: string
           url: string
@@ -592,6 +597,7 @@ export type Database = {
           company_id?: string
           description?: string | null
           id?: string
+          image_url?: string | null
           link_type?: Database["public"]["Enums"]["link_type_enum"]
           title?: string
           url?: string
@@ -1080,6 +1086,7 @@ export type Database = {
       }
       education_history: {
         Row: {
+          course_id: string | null
           created_at: string
           degree: string | null
           description: string | null
@@ -1092,6 +1099,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          course_id?: string | null
           created_at?: string
           degree?: string | null
           description?: string | null
@@ -1104,6 +1112,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          course_id?: string | null
           created_at?: string
           degree?: string | null
           description?: string | null
@@ -1116,6 +1125,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "education_history_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "education_history_profile_id_fkey"
             columns: ["profile_id"]
@@ -1132,38 +1148,43 @@ export type Database = {
           },
         ]
       }
-      email_notifications: {
+      email_queue: {
         Row: {
-          content: string
+          created_at: string | null
           id: string
-          metadata: Json | null
-          sent_at: string | null
+          notification_id: string | null
+          payload: Json
+          retry_count: number | null
           status: string | null
-          title: string
-          type: string
-          user_id: string | null
+          user_email: string
         }
         Insert: {
-          content: string
+          created_at?: string | null
           id?: string
-          metadata?: Json | null
-          sent_at?: string | null
+          notification_id?: string | null
+          payload: Json
+          retry_count?: number | null
           status?: string | null
-          title: string
-          type: string
-          user_id?: string | null
+          user_email: string
         }
         Update: {
-          content?: string
+          created_at?: string | null
           id?: string
-          metadata?: Json | null
-          sent_at?: string | null
+          notification_id?: string | null
+          payload?: Json
+          retry_count?: number | null
           status?: string | null
-          title?: string
-          type?: string
-          user_id?: string | null
+          user_email?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "email_queue_notification_id_fkey"
+            columns: ["notification_id"]
+            isOneToOne: false
+            referencedRelation: "notifications"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       experience_levels: {
         Row: {
@@ -1819,6 +1840,7 @@ export type Database = {
           actor_id: string | null
           announcement_id: string | null
           created_at: string
+          email_status: string | null
           entity_id: string | null
           id: string
           is_read: boolean
@@ -1830,6 +1852,7 @@ export type Database = {
           actor_id?: string | null
           announcement_id?: string | null
           created_at?: string
+          email_status?: string | null
           entity_id?: string | null
           id?: string
           is_read?: boolean
@@ -1841,6 +1864,7 @@ export type Database = {
           actor_id?: string | null
           announcement_id?: string | null
           created_at?: string
+          email_status?: string | null
           entity_id?: string | null
           id?: string
           is_read?: boolean
@@ -3130,6 +3154,7 @@ export type Database = {
         Args: {
           p_company_id: string
           p_description?: string
+          p_image_url?: string
           p_link_type: Database["public"]["Enums"]["link_type_enum"]
           p_title: string
           p_url: string
@@ -3253,6 +3278,7 @@ export type Database = {
           company_tier: string
           created_at: string
           duration: string
+          external_apply_url: string
           location_name: string
           specializations: Json
           title: string
@@ -3274,6 +3300,7 @@ export type Database = {
           company_tier: string
           created_at: string
           experience_level: string
+          external_apply_url: string
           job_id: string
           job_type: Database["public"]["Enums"]["job_type"]
           location_name: string
@@ -3467,7 +3494,11 @@ export type Database = {
         }[]
       }
       get_my_connections_with_status: {
-        Args: never
+        Args: {
+          page_number?: number
+          page_size?: number
+          search_query?: string
+        }
         Returns: Database["public"]["CompositeTypes"]["profile_with_status"][]
         SetofOptions: {
           from: "*"
@@ -3701,6 +3732,10 @@ export type Database = {
         }
       }
       leave_space: { Args: { p_space_id: string }; Returns: undefined }
+      lower: {
+        Args: { val: Database["public"]["Enums"]["notification_type"] }
+        Returns: string
+      }
       mark_conversation_as_read: {
         Args: { p_conversation_id: string }
         Returns: undefined
@@ -3850,6 +3885,7 @@ export type Database = {
       update_company_link: {
         Args: {
           p_description?: string
+          p_image_url?: string
           p_link_id: string
           p_link_type?: Database["public"]["Enums"]["link_type_enum"]
           p_title?: string
@@ -3976,7 +4012,7 @@ export type Database = {
         | "hired"
       collab_type_enum: "clinical_trial" | "research" | "advisory" | "other"
       company_manager_role: "ADMIN" | "MEMBER"
-      company_tier_enum: "standard" | "premium" | "deluxe"
+      company_tier_enum: "standard" | "premium" | "deluxe" | "basic"
       connection_status: "pending" | "accepted" | "blocked" | "ignored"
       connection_status_type:
         | "connected"
@@ -4010,6 +4046,12 @@ export type Database = {
         | "new_collaboration_posting"
         | "new_job_applicant"
         | "new_collaboration_applicant"
+        | "space_join_request"
+        | "new_reaction"
+        | "new_follower"
+        | "new_company"
+        | "new_space_created"
+        | "new_member_joined"
       space_join_level: "OPEN" | "INVITE_ONLY"
       space_type: "PUBLIC" | "COMMUNITY_SPACE" | "FORUM"
       specialization:
@@ -4225,7 +4267,7 @@ export const Constants = {
       ],
       collab_type_enum: ["clinical_trial", "research", "advisory", "other"],
       company_manager_role: ["ADMIN", "MEMBER"],
-      company_tier_enum: ["standard", "premium", "deluxe"],
+      company_tier_enum: ["standard", "premium", "deluxe", "basic"],
       connection_status: ["pending", "accepted", "blocked", "ignored"],
       connection_status_type: [
         "connected",
@@ -4261,6 +4303,12 @@ export const Constants = {
         "new_collaboration_posting",
         "new_job_applicant",
         "new_collaboration_applicant",
+        "space_join_request",
+        "new_reaction",
+        "new_follower",
+        "new_company",
+        "new_space_created",
+        "new_member_joined",
       ],
       space_join_level: ["OPEN", "INVITE_ONLY"],
       space_type: ["PUBLIC", "COMMUNITY_SPACE", "FORUM"],
