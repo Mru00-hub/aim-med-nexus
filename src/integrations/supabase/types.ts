@@ -1093,6 +1093,7 @@ export type Database = {
           end_year: number | null
           field_of_study: string | null
           id: string
+          institution_id: string | null
           institution_name: string
           profile_id: string
           start_year: number | null
@@ -1106,6 +1107,7 @@ export type Database = {
           end_year?: number | null
           field_of_study?: string | null
           id?: string
+          institution_id?: string | null
           institution_name: string
           profile_id: string
           start_year?: number | null
@@ -1119,6 +1121,7 @@ export type Database = {
           end_year?: number | null
           field_of_study?: string | null
           id?: string
+          institution_id?: string | null
           institution_name?: string
           profile_id?: string
           start_year?: number | null
@@ -1130,6 +1133,13 @@ export type Database = {
             columns: ["course_id"]
             isOneToOne: false
             referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "education_history_institution_id_fkey"
+            columns: ["institution_id"]
+            isOneToOne: false
+            referencedRelation: "institutions"
             referencedColumns: ["id"]
           },
           {
