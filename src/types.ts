@@ -376,6 +376,36 @@ export type Database = {
           },
         ]
       }
+      collaboration_specializations: {
+        Row: {
+          collaboration_id: string
+          specialization_id: string
+        }
+        Insert: {
+          collaboration_id: string
+          specialization_id: string
+        }
+        Update: {
+          collaboration_id?: string
+          specialization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "collaboration_specializations_collaboration_id_fkey"
+            columns: ["collaboration_id"]
+            isOneToOne: false
+            referencedRelation: "collaborations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "collaboration_specializations_specialization_id_fkey"
+            columns: ["specialization_id"]
+            isOneToOne: false
+            referencedRelation: "specializations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       collaborations: {
         Row: {
           applicants_count: number
@@ -384,10 +414,10 @@ export type Database = {
           created_at: string
           description: string
           duration: string | null
+          external_apply_url: string | null
           id: string
           is_active: boolean
-          location: string | null
-          required_specialty: string[]
+          location_id: string | null
           title: string
         }
         Insert: {
@@ -397,10 +427,10 @@ export type Database = {
           created_at?: string
           description: string
           duration?: string | null
+          external_apply_url?: string | null
           id?: string
           is_active?: boolean
-          location?: string | null
-          required_specialty?: string[]
+          location_id?: string | null
           title: string
         }
         Update: {
@@ -410,10 +440,10 @@ export type Database = {
           created_at?: string
           description?: string
           duration?: string | null
+          external_apply_url?: string | null
           id?: string
           is_active?: boolean
-          location?: string | null
-          required_specialty?: string[]
+          location_id?: string | null
           title?: string
         }
         Relationships: [
@@ -422,6 +452,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "company_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "collaborations_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
             referencedColumns: ["id"]
           },
           {
@@ -483,9 +520,8 @@ export type Database = {
           id: string
           is_active: boolean
           job_type: string | null
-          location_text: string | null
+          location_id: string | null
           location_type: string | null
-          specialties_required: string[]
           title: string
         }
         Insert: {
@@ -497,9 +533,8 @@ export type Database = {
           id?: string
           is_active?: boolean
           job_type?: string | null
-          location_text?: string | null
+          location_id?: string | null
           location_type?: string | null
-          specialties_required?: string[]
           title: string
         }
         Update: {
@@ -511,9 +546,8 @@ export type Database = {
           id?: string
           is_active?: boolean
           job_type?: string | null
-          location_text?: string | null
+          location_id?: string | null
           location_type?: string | null
-          specialties_required?: string[]
           title?: string
         }
         Relationships: [
@@ -522,6 +556,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "company_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_jobs_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
             referencedColumns: ["id"]
           },
           {
@@ -538,6 +579,7 @@ export type Database = {
           company_id: string
           description: string | null
           id: string
+          image_url: string | null
           link_type: Database["public"]["Enums"]["link_type_enum"]
           title: string
           url: string
@@ -546,6 +588,7 @@ export type Database = {
           company_id: string
           description?: string | null
           id?: string
+          image_url?: string | null
           link_type: Database["public"]["Enums"]["link_type_enum"]
           title: string
           url: string
@@ -554,6 +597,7 @@ export type Database = {
           company_id?: string
           description?: string | null
           id?: string
+          image_url?: string | null
           link_type?: Database["public"]["Enums"]["link_type_enum"]
           title?: string
           url?: string
@@ -574,7 +618,7 @@ export type Database = {
           created_at: string
           id: string
           is_active: boolean
-          role: string
+          role: Database["public"]["Enums"]["company_manager_role"]
           user_id: string
         }
         Insert: {
@@ -582,7 +626,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean
-          role?: string
+          role?: Database["public"]["Enums"]["company_manager_role"]
           user_id: string
         }
         Update: {
@@ -590,7 +634,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean
-          role?: string
+          role?: Database["public"]["Enums"]["company_manager_role"]
           user_id?: string
         }
         Relationships: [
@@ -631,6 +675,7 @@ export type Database = {
           founded_year: number | null
           id: string
           industry_id: string | null
+          is_active: boolean
           is_verified: boolean
           job_count: number
           location_id: string | null
@@ -650,6 +695,7 @@ export type Database = {
           founded_year?: number | null
           id?: string
           industry_id?: string | null
+          is_active?: boolean
           is_verified?: boolean
           job_count?: number
           location_id?: string | null
@@ -669,6 +715,7 @@ export type Database = {
           founded_year?: number | null
           id?: string
           industry_id?: string | null
+          is_active?: boolean
           is_verified?: boolean
           job_count?: number
           location_id?: string | null
@@ -702,6 +749,32 @@ export type Database = {
             columns: ["location_id"]
             isOneToOne: false
             referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_views: {
+        Row: {
+          company_id: string
+          created_at: string
+          user_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          user_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_views_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -1013,6 +1086,7 @@ export type Database = {
       }
       education_history: {
         Row: {
+          course_id: string | null
           created_at: string
           degree: string | null
           description: string | null
@@ -1025,6 +1099,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          course_id?: string | null
           created_at?: string
           degree?: string | null
           description?: string | null
@@ -1037,6 +1112,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          course_id?: string | null
           created_at?: string
           degree?: string | null
           description?: string | null
@@ -1049,6 +1125,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "education_history_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "education_history_profile_id_fkey"
             columns: ["profile_id"]
@@ -1065,38 +1148,43 @@ export type Database = {
           },
         ]
       }
-      email_notifications: {
+      email_queue: {
         Row: {
-          content: string
+          created_at: string | null
           id: string
-          metadata: Json | null
-          sent_at: string | null
+          notification_id: string | null
+          payload: Json
+          retry_count: number | null
           status: string | null
-          title: string
-          type: string
-          user_id: string | null
+          user_email: string
         }
         Insert: {
-          content: string
+          created_at?: string | null
           id?: string
-          metadata?: Json | null
-          sent_at?: string | null
+          notification_id?: string | null
+          payload: Json
+          retry_count?: number | null
           status?: string | null
-          title: string
-          type: string
-          user_id?: string | null
+          user_email: string
         }
         Update: {
-          content?: string
+          created_at?: string | null
           id?: string
-          metadata?: Json | null
-          sent_at?: string | null
+          notification_id?: string | null
+          payload?: Json
+          retry_count?: number | null
           status?: string | null
-          title?: string
-          type?: string
-          user_id?: string | null
+          user_email?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "email_queue_notification_id_fkey"
+            columns: ["notification_id"]
+            isOneToOne: false
+            referencedRelation: "notifications"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       experience_levels: {
         Row: {
@@ -1422,6 +1510,36 @@ export type Database = {
           },
         ]
       }
+      job_specializations: {
+        Row: {
+          job_id: string
+          specialization_id: string
+        }
+        Insert: {
+          job_id: string
+          specialization_id: string
+        }
+        Update: {
+          job_id?: string
+          specialization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_specializations_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "company_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_specializations_specialization_id_fkey"
+            columns: ["specialization_id"]
+            isOneToOne: false
+            referencedRelation: "specializations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       locations: {
         Row: {
           id: string
@@ -1722,6 +1840,7 @@ export type Database = {
           actor_id: string | null
           announcement_id: string | null
           created_at: string
+          email_status: string | null
           entity_id: string | null
           id: string
           is_read: boolean
@@ -1733,6 +1852,7 @@ export type Database = {
           actor_id?: string | null
           announcement_id?: string | null
           created_at?: string
+          email_status?: string | null
           entity_id?: string | null
           id?: string
           is_read?: boolean
@@ -1744,6 +1864,7 @@ export type Database = {
           actor_id?: string | null
           announcement_id?: string | null
           created_at?: string
+          email_status?: string | null
           entity_id?: string | null
           id?: string
           is_read?: boolean
@@ -3029,6 +3150,25 @@ export type Database = {
       }
     }
     Functions: {
+      add_company_link: {
+        Args: {
+          p_company_id: string
+          p_description?: string
+          p_image_url?: string
+          p_link_type: Database["public"]["Enums"]["link_type_enum"]
+          p_title: string
+          p_url: string
+        }
+        Returns: Json
+      }
+      add_company_manager: {
+        Args: {
+          p_company_id: string
+          p_role?: Database["public"]["Enums"]["company_manager_role"]
+          p_user_id: string
+        }
+        Returns: Json
+      }
       apply_for_collaboration: {
         Args: { p_collab_id: string; p_cover_letter?: string }
         Returns: Json
@@ -3052,6 +3192,46 @@ export type Database = {
         Returns: boolean
       }
       can_view_thread: { Args: { p_thread_id: string }; Returns: boolean }
+      create_collaboration: {
+        Args: {
+          p_collaboration_type: Database["public"]["Enums"]["collab_type_enum"]
+          p_company_id: string
+          p_description: string
+          p_duration?: string
+          p_location_id?: string
+          p_specialization_ids?: string[]
+          p_title: string
+        }
+        Returns: Json
+      }
+      create_company_job: {
+        Args: {
+          p_company_id: string
+          p_description: string
+          p_experience_level?: string
+          p_external_apply_url?: string
+          p_job_type?: string
+          p_location_id?: string
+          p_location_type?: string
+          p_specialization_ids?: string[]
+          p_title: string
+        }
+        Returns: Json
+      }
+      create_company_profile: {
+        Args: {
+          p_company_logo_url?: string
+          p_company_name: string
+          p_company_size?: string
+          p_description: string
+          p_founded_year?: number
+          p_industry_id?: string
+          p_industry_other?: string
+          p_location_id?: string
+          p_website_url?: string
+        }
+        Returns: Json
+      }
       create_or_get_conversation: {
         Args: { other_user_id: string }
         Returns: string
@@ -3069,6 +3249,12 @@ export type Database = {
         }
         Returns: string
       }
+      deactivate_company_profile: {
+        Args: { p_company_id: string }
+        Returns: undefined
+      }
+      delete_company_link: { Args: { p_link_id: string }; Returns: Json }
+      delete_company_profile: { Args: { p_company_id: string }; Returns: Json }
       delete_message: { Args: { p_message_id: number }; Returns: undefined }
       delete_own_user: { Args: never; Returns: undefined }
       delete_post: { Args: { p_thread_id: string }; Returns: undefined }
@@ -3080,6 +3266,8 @@ export type Database = {
           p_limit?: number
           p_location_id?: string
           p_page?: number
+          p_search_query?: string
+          p_specialization_ids?: string[]
         }
         Returns: {
           collab_id: string
@@ -3090,8 +3278,9 @@ export type Database = {
           company_tier: string
           created_at: string
           duration: string
-          location: string
-          required_specialty: string[]
+          external_apply_url: string
+          location_name: string
+          specializations: Json
           title: string
         }[]
       }
@@ -3101,6 +3290,8 @@ export type Database = {
           p_limit?: number
           p_location_id?: string
           p_page?: number
+          p_search_query?: string
+          p_specialization_ids?: string[]
         }
         Returns: {
           company_id: string
@@ -3109,11 +3300,12 @@ export type Database = {
           company_tier: string
           created_at: string
           experience_level: string
+          external_apply_url: string
           job_id: string
-          job_type: string
-          location_text: string
+          job_type: Database["public"]["Enums"]["job_type"]
+          location_name: string
           location_type: string
-          specialties_required: string[]
+          specializations: Json
           title: string
         }[]
       }
@@ -3151,6 +3343,30 @@ export type Database = {
           status: Database["public"]["Enums"]["application_status_enum"]
         }[]
       }
+      get_collaboration_details: {
+        Args: { p_collab_id: string }
+        Returns: {
+          applicants_count: number
+          collaboration_type: Database["public"]["Enums"]["collab_type_enum"]
+          company_headline: string
+          company_id: string
+          company_logo_url: string
+          company_name: string
+          created_at: string
+          description: string
+          duration: string
+          id: string
+          is_active: boolean
+          location_id: string
+          location_name: string
+          specializations: Json
+          title: string
+        }[]
+      }
+      get_company_profile_details: {
+        Args: { p_company_id: string }
+        Returns: Json
+      }
       get_followers_with_status: {
         Args: { p_profile_id: string }
         Returns: Database["public"]["CompositeTypes"]["profile_with_status"][]
@@ -3186,16 +3402,37 @@ export type Database = {
           status: Database["public"]["Enums"]["application_status_enum"]
         }[]
       }
+      get_job_details: {
+        Args: { p_job_id: string }
+        Returns: {
+          company_headline: string
+          company_id: string
+          company_logo_url: string
+          company_name: string
+          created_at: string
+          description: string
+          experience_level: string
+          external_apply_url: string
+          id: string
+          is_active: boolean
+          job_type: string
+          location_id: string
+          location_name: string
+          location_type: string
+          specializations: Json
+          title: string
+        }[]
+      }
       get_job_recommendations: {
         Args: { target_user_id: string }
         Returns: {
           company_name: string
-          experience_required: string
+          experience_level: string
           job_id: string
           job_type: Database["public"]["Enums"]["job_type"]
-          location: string
+          location_name: string
           match_score: number
-          specialization_required: string
+          specializations: Json
           title: string
         }[]
       }
@@ -3257,7 +3494,11 @@ export type Database = {
         }[]
       }
       get_my_connections_with_status: {
-        Args: never
+        Args: {
+          page_number?: number
+          page_size?: number
+          search_query?: string
+        }
         Returns: Database["public"]["CompositeTypes"]["profile_with_status"][]
         SetofOptions: {
           from: "*"
@@ -3491,6 +3732,10 @@ export type Database = {
         }
       }
       leave_space: { Args: { p_space_id: string }; Returns: undefined }
+      lower: {
+        Args: { val: Database["public"]["Enums"]["notification_type"] }
+        Returns: string
+      }
       mark_conversation_as_read: {
         Args: { p_conversation_id: string }
         Returns: undefined
@@ -3546,6 +3791,14 @@ export type Database = {
         }
       }
       purge_old_read_notifications: { Args: never; Returns: undefined }
+      record_company_view: {
+        Args: { company_id_input: string }
+        Returns: undefined
+      }
+      remove_company_manager: {
+        Args: { p_manager_record_id: string }
+        Returns: Json
+      }
       remove_connection: {
         Args: { user_to_remove_id: string }
         Returns: undefined
@@ -3566,13 +3819,22 @@ export type Database = {
         Args: { announcement_entity_id: string; system_actor_id: string }
         Returns: undefined
       }
+      set_collaboration_active_status: {
+        Args: { p_collab_id: string; p_is_active: boolean }
+        Returns: Json
+      }
       set_conversation_master_key_if_null: {
         Args: { p_conversation_id: string; p_new_key_jwk: string }
         Returns: string
       }
+      set_job_active_status: {
+        Args: { p_is_active: boolean; p_job_id: string }
+        Returns: Json
+      }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
       toggle_follow: { Args: { p_followed_id: string }; Returns: undefined }
+      toggle_follow_company: { Args: { p_company_id: string }; Returns: Json }
       toggle_reaction: {
         Args: { p_message_id: number; p_new_emoji: string }
         Returns: undefined
@@ -3591,6 +3853,66 @@ export type Database = {
           p_application_id: string
           p_application_type: string
           p_new_status: Database["public"]["Enums"]["application_status_enum"]
+        }
+        Returns: Json
+      }
+      update_collaboration: {
+        Args: {
+          p_collab_id: string
+          p_collaboration_type?: Database["public"]["Enums"]["collab_type_enum"]
+          p_description?: string
+          p_duration?: string
+          p_location_id?: string
+          p_specialization_ids?: string[]
+          p_title?: string
+        }
+        Returns: Json
+      }
+      update_company_job: {
+        Args: {
+          p_description?: string
+          p_experience_level?: string
+          p_external_apply_url?: string
+          p_job_id: string
+          p_job_type?: string
+          p_location_id?: string
+          p_location_type?: string
+          p_specialization_ids?: string[]
+          p_title?: string
+        }
+        Returns: Json
+      }
+      update_company_link: {
+        Args: {
+          p_description?: string
+          p_image_url?: string
+          p_link_id: string
+          p_link_type?: Database["public"]["Enums"]["link_type_enum"]
+          p_title?: string
+          p_url?: string
+        }
+        Returns: Json
+      }
+      update_company_manager_role: {
+        Args: {
+          p_manager_record_id: string
+          p_new_role: Database["public"]["Enums"]["company_manager_role"]
+        }
+        Returns: Json
+      }
+      update_company_profile: {
+        Args: {
+          p_company_banner_url?: string
+          p_company_id: string
+          p_company_logo_url?: string
+          p_company_name?: string
+          p_company_size?: string
+          p_description?: string
+          p_founded_year?: number
+          p_industry_id?: string
+          p_industry_other?: string
+          p_location_id?: string
+          p_website_url?: string
         }
         Returns: Json
       }
@@ -3689,7 +4011,8 @@ export type Database = {
         | "rejected"
         | "hired"
       collab_type_enum: "clinical_trial" | "research" | "advisory" | "other"
-      company_tier_enum: "standard" | "premium" | "deluxe"
+      company_manager_role: "ADMIN" | "MEMBER"
+      company_tier_enum: "standard" | "premium" | "deluxe" | "basic"
       connection_status: "pending" | "accepted" | "blocked" | "ignored"
       connection_status_type:
         | "connected"
@@ -3719,6 +4042,16 @@ export type Database = {
         | "new_public_space_by_followed_user"
         | "new_reply_to_your_message"
         | "new_direct_message"
+        | "new_job_posting"
+        | "new_collaboration_posting"
+        | "new_job_applicant"
+        | "new_collaboration_applicant"
+        | "space_join_request"
+        | "new_reaction"
+        | "new_follower"
+        | "new_company"
+        | "new_space_created"
+        | "new_member_joined"
       space_join_level: "OPEN" | "INVITE_ONLY"
       space_type: "PUBLIC" | "COMMUNITY_SPACE" | "FORUM"
       specialization:
@@ -3933,7 +4266,8 @@ export const Constants = {
         "hired",
       ],
       collab_type_enum: ["clinical_trial", "research", "advisory", "other"],
-      company_tier_enum: ["standard", "premium", "deluxe"],
+      company_manager_role: ["ADMIN", "MEMBER"],
+      company_tier_enum: ["standard", "premium", "deluxe", "basic"],
       connection_status: ["pending", "accepted", "blocked", "ignored"],
       connection_status_type: [
         "connected",
@@ -3965,6 +4299,16 @@ export const Constants = {
         "new_public_space_by_followed_user",
         "new_reply_to_your_message",
         "new_direct_message",
+        "new_job_posting",
+        "new_collaboration_posting",
+        "new_job_applicant",
+        "new_collaboration_applicant",
+        "space_join_request",
+        "new_reaction",
+        "new_follower",
+        "new_company",
+        "new_space_created",
+        "new_member_joined",
       ],
       space_join_level: ["OPEN", "INVITE_ONLY"],
       space_type: ["PUBLIC", "COMMUNITY_SPACE", "FORUM"],
