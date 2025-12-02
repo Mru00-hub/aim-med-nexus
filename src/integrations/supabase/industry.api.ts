@@ -27,6 +27,7 @@ export type CompanyJobDetails = {
   external_apply_url: string | null;
   is_active: boolean;
   created_at: string;
+  required_profile_fields?: string[];
 };
 
 // Based on the 'get_collaboration_details' RPC
@@ -48,6 +49,7 @@ export type CollaborationDetails = {
   is_active: boolean;
   applicants_count: number;
   created_at: string;
+  required_profile_fields?: string[];
 };
 
 export type CompanyManager = Tables<'company_managers'>;
