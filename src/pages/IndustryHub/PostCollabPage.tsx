@@ -30,6 +30,7 @@ import {
   FormMessage,
   FormDescription,
 } from '@/components/ui/form';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Loader2, Users, ArrowLeft } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -37,6 +38,20 @@ import { z } from 'zod';
 import { Enums } from '@/types';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { SearchableMultiSelect } from '@/components/ui/searchable-multi-select';
+
+const COLLAB_REQUIREMENTS = [
+  // Profile Data
+  { id: 'resume', label: 'Resume / CV' },
+  { id: 'bio', label: 'Bio / About Section' },
+  { id: 'work_experience', label: 'Work Experience History' },
+  { id: 'education_history', label: 'Education History' },
+  { id: 'skills', label: 'Skills List' },
+  { id: 'location', label: 'Location Details' },
+  { id: 'organization', label: 'Current Organization' },
+  { id: 'position', label: 'Current Position' },
+  // Application Data (Inputs) - CUSTOMIZED FOR COLLAB
+  { id: 'expected_salary', label: 'Expected Remuneration / Stipend' },
+] as const;
 
 const collabFormSchema = z.object({
   title: z.string().min(5, { message: 'Title must be at least 5 characters.' }),
@@ -47,6 +62,7 @@ const collabFormSchema = z.object({
   location_id: z.string().optional(),
   duration: z.string().optional(),
   specialization_ids: z.array(z.string()).optional(),
+  required_profile_fields: z.array(z.string()).optional(),
 });
 
 type CollabFormData = z.infer<typeof collabFormSchema>;
@@ -159,6 +175,7 @@ export default function PostCollabPage() {
       location_id: '',
       duration: '',
       specialization_ids: [],
+      required_profile_fields: ['resume'],
     },
   });
 
@@ -195,6 +212,7 @@ export default function PostCollabPage() {
       p_location_id: data.location_id || undefined,
       p_duration: data.duration || undefined,
       p_specialization_ids: data.specialization_ids,
+      p_required_profile_fields: data.required_profile_fields,
     };
     
     mutation.mutate(payload);
@@ -368,6 +386,43 @@ export default function PostCollabPage() {
                         />
                       </FormControl>
                       <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="required_profile_fields"
+                  render={() => (
+                    <FormItem className="rounded-md border p-4 bg-muted/10">
+                      <div className="mb-4">
+                        <FormLabel className="text-base font-semibold">Application Requirements</FormLabel>
+                        <FormDescription>Select information candidates MUST provide.</FormDescription>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {COLLAB_REQUIREMENTS.map((item) => (
+                          <FormField
+                            key={item.id}
+                            control={form.control}
+                            name="required_profile_fields"
+                            render={({ field }) => (
+                              <FormItem key={item.id} className="flex flex-row items-start space-x-3 space-y-0">
+                                <FormControl>
+                                  <Checkbox
+                                    checked={field.value?.includes(item.id)}
+                                    onCheckedChange={(checked) => {
+                                      return checked
+                                        ? field.onChange([...(field.value || []), item.id])
+                                        : field.onChange(field.value?.filter((value) => value !== item.id))
+                                    }}
+                                  />
+                                </FormControl>
+                                <FormLabel className="font-normal cursor-pointer">{item.label}</FormLabel>
+                              </FormItem>
+                            )}
+                          />
+                        ))}
+                      </div>
                     </FormItem>
                   )}
                 />
