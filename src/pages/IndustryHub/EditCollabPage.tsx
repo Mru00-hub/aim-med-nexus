@@ -44,6 +44,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Loader2, Users, ArrowLeft, Trash2 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -52,6 +53,19 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Enums } from '@/types';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { SearchableMultiSelect } from '@/components/ui/searchable-multi-select';
+
+const COLLAB_REQUIREMENTS = [
+  { id: 'resume', label: 'Resume / CV' },
+  { id: 'bio', label: 'Bio / About Section' },
+  { id: 'work_experience', label: 'Work Experience History' },
+  { id: 'education_history', label: 'Education History' },
+  { id: 'skills', label: 'Skills List' },
+  { id: 'location', label: 'Location Details' },
+  { id: 'organization', label: 'Current Organization' },
+  { id: 'position', label: 'Current Position' },
+  // Application Data (Inputs) - No Current Salary, Renamed Expected
+  { id: 'expected_salary', label: 'Expected Remuneration / Stipend' },
+] as const;
 
 const collabFormSchema = z.object({
   title: z.string().min(5, { message: 'Title must be at least 5 characters.' }),
@@ -62,6 +76,7 @@ const collabFormSchema = z.object({
   location_id: z.string().optional(),
   duration: z.string().optional(),
   specialization_ids: z.array(z.string()).optional(),
+  required_profile_fields: z.array(z.string()).optional(),
 });
 
 type CollabFormData = z.infer<typeof collabFormSchema>;
@@ -162,6 +177,7 @@ export default function EditCollabPage() {
       duration: '',
       specialization_ids: [],
       collaboration_type: 'other',
+      required_profile_fields: ['resume'],
     },
   });
 
@@ -179,6 +195,7 @@ export default function EditCollabPage() {
         location_id: collabData.location_id || '',
         duration: collabData.duration || '',
         specialization_ids: (collabData.specializations || []).map(s => s.id),
+        required_profile_fields: collabData.required_profile_fields || ['resume'],
       });
     }
   }, [collabData, form.reset]);
@@ -218,6 +235,7 @@ export default function EditCollabPage() {
       p_location_id: data.location_id || null,
       p_duration: data.duration || null,
       p_specialization_ids: data.specialization_ids,
+      p_required_profile_fields: data.required_profile_fields,
     };
     updateMutation.mutate(payload);
   };
@@ -394,6 +412,43 @@ export default function EditCollabPage() {
                         <Textarea rows={10} {...field} />
                       </FormControl>
                       <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="required_profile_fields"
+                  render={() => (
+                    <FormItem className="rounded-md border p-4 bg-muted/10">
+                      <div className="mb-4">
+                        <FormLabel className="text-base font-semibold">Application Requirements</FormLabel>
+                        <FormDescription>Select information candidates MUST provide.</FormDescription>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {COLLAB_REQUIREMENTS.map((item) => (
+                          <FormField
+                            key={item.id}
+                            control={form.control}
+                            name="required_profile_fields"
+                            render={({ field }) => (
+                              <FormItem key={item.id} className="flex flex-row items-start space-x-3 space-y-0">
+                                <FormControl>
+                                  <Checkbox
+                                    checked={field.value?.includes(item.id)}
+                                    onCheckedChange={(checked) => {
+                                      return checked
+                                        ? field.onChange([...(field.value || []), item.id])
+                                        : field.onChange(field.value?.filter((value) => value !== item.id))
+                                    }}
+                                  />
+                                </FormControl>
+                                <FormLabel className="font-normal cursor-pointer">{item.label}</FormLabel>
+                              </FormItem>
+                            )}
+                          />
+                        ))}
+                      </div>
                     </FormItem>
                   )}
                 />
