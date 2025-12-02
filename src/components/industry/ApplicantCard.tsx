@@ -145,16 +145,20 @@ export const ApplicantCard: React.FC<ApplicantCardProps> = ({ applicant, applica
             {/* Resume Section */}
             <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg border">
               <div className="flex items-center gap-3">
-                <FileText className="h-8 w-8 text-blue-500" />
+                {isFile ? <FileText className="h-8 w-8 text-blue-500" /> : <LinkIcon className="h-8 w-8 text-blue-500" />}
                 <div>
-                  <p className="font-medium">Resume / CV</p>
-                  <p className="text-xs text-muted-foreground">PDF or Document</p>
+                  <p className="font-medium">Resume / CV / Link</p>
+                  {/* ✅ FIX 2: Dynamic text for Files vs Links */}
+                  <p className="text-xs text-muted-foreground">
+                    {isFile ? 'PDF or Document' : 'External Link (LinkedIn, Drive, etc.)'}
+                  </p>
                 </div>
               </div>
-              {applicant.resume_url ? (
+              {/* ✅ FIX 3: IMPORTANT - Using 'resumeLink' here instead of 'applicant.resume_url' */}
+              {resumeLink ? (
                 <Button asChild variant="outline">
-                  <a href={applicant.resume_url} target="_blank" rel="noopener noreferrer">
-                    Open File <ExternalLink className="ml-2 h-4 w-4" />
+                  <a href={resumeLink} target="_blank" rel="noopener noreferrer">
+                    Open {isFile ? 'File' : 'Link'} <ExternalLink className="ml-2 h-4 w-4" />
                   </a>
                 </Button>
               ) : (
