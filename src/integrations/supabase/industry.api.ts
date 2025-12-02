@@ -130,6 +130,7 @@ export type CreateJobPayload = {
   p_location_id?: string; // Changed
   p_specialization_ids?: string[]; // Changed
   p_external_apply_url?: string;
+  p_required_profile_fields?: string[];
 };
 
 // --- ADDED: Type for updating a job ---
@@ -143,6 +144,7 @@ export type UpdateJobPayload = {
   p_location_id?: string | null; // Changed
   p_experience_level?: string | null;
   p_external_apply_url?: string | null;
+  p_required_profile_fields?: string[];
 };
 
 // Type for creating a new collaboration
@@ -154,6 +156,7 @@ export type CreateCollaborationPayload = {
   p_specialization_ids?: string[]; // Changed
   p_location_id?: string; // Changed
   p_duration?: string;
+  p_required_profile_fields?: string[];
 };
 
 // --- ADDED: Type for updating a collaboration ---
@@ -165,6 +168,7 @@ export type UpdateCollabPayload = {
   p_specialization_ids?: string[] | null; // Changed
   p_duration?: string | null;
   p_location_id?: string | null; // Changed
+  p_required_profile_fields?: string[];
 };
 
 // Type for 'apply_for_job' RPC arguments
@@ -260,6 +264,9 @@ export type CompanyJob = {
   applicants_count: number; // This is the new field you added
   specializations: { id: string; label: string }[];
 };
+
+export type ProfileRequirement = 'resume' | 'bio' | 'work_experience' | 'education_history' | 'skills' | 'location';
+
 // --- END OF NEW TYPE ---
 // --- Helper: Enforce Authentication ---
 const getSessionOrThrow = async () => {
