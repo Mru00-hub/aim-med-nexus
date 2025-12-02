@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Enums } from '@/types';
 import {
-  User, FileText, Mail, Check, X, Eye, Loader2, ArrowRight, ExternalLink
+  User, FileText, Mail, Check, X, Eye, Loader2, ArrowRight, ExternalLink, Link as LinkIcon
 } from 'lucide-react';
 
 // Reusable helper to display the status badge
