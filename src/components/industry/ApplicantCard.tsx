@@ -90,15 +90,11 @@ export const ApplicantCard: React.FC<ApplicantCardProps> = ({ applicant, applica
 
               {/* Resume Link (Direct) */}
               <div className="flex items-center gap-2 col-span-2">
-                <FileText className="h-4 w-4" />
-                {applicant.resume_url ? (
-                  <a 
-                    href={applicant.resume_url} 
-                    target="_blank" 
-                    rel="noopener noreferrer" 
-                    className="text-blue-600 hover:underline flex items-center gap-1 font-medium"
-                  >
-                    View Resume <ExternalLink className="h-3 w-3" />
+                {isFile ? <FileText className="h-4 w-4" /> : <LinkIcon className="h-4 w-4" />}
+                {/* 3. FIX: Use 'resumeLink' variable here, NOT 'applicant.resume_url' */}
+                {resumeLink ? (
+                  <a href={resumeLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center gap-1 font-medium">
+                    {isFile ? 'View Resume File' : 'Open Resume Link'} <ExternalLink className="h-3 w-3" />
                   </a>
                 ) : (
                   <span className="text-muted-foreground italic">No Resume Attached</span>
