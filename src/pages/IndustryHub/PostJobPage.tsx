@@ -189,6 +189,7 @@ export default function PostJobPage() {
       location_id: '', // Changed
       specialization_ids: [], // Changed
       external_apply_url: '',
+      required_profile_fields: ['resume'],
     },
   });
 
@@ -231,6 +232,7 @@ export default function PostJobPage() {
       p_location_id: data.location_id, // Changed
       p_specialization_ids: data.specialization_ids, // Changed
       p_external_apply_url: data.external_apply_url || undefined,
+      p_required_profile_fields: data.required_profile_fields,
     };
     
     mutation.mutate(payload);
