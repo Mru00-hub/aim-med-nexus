@@ -175,12 +175,16 @@ export type UpdateCollabPayload = {
 export type ApplyJobPayload = {
   p_job_id: string;
   p_cover_letter: string | null;
+  p_current_salary?: string | null;  // NEW
+  p_expected_salary?: string | null; // NEW
 };
 
 // Type for 'apply_for_collaboration' RPC arguments
 export type ApplyCollabPayload = {
   p_collab_id: string;
   p_cover_letter: string | null;
+  p_current_salary?: string | null;  // NEW
+  p_expected_salary?: string | null; // NEW
 };
 export type AddManagerPayload = {
   p_company_id: string;
