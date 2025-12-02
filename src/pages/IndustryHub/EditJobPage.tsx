@@ -44,6 +44,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { Checkbox } from '@/components/ui/checkbox'; 
 import { Loader2, Briefcase, ArrowLeft, Trash2 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -51,6 +52,19 @@ import { z } from 'zod';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { SearchableMultiSelect } from '@/components/ui/searchable-multi-select';
+
+const JOB_REQUIREMENTS = [
+  { id: 'resume', label: 'Resume / CV' },
+  { id: 'bio', label: 'Bio / About Section' },
+  { id: 'work_experience', label: 'Work Experience History' },
+  { id: 'education_history', label: 'Education History' },
+  { id: 'skills', label: 'Skills List' },
+  { id: 'location', label: 'Location Details' },
+  { id: 'organization', label: 'Current Organization' },
+  { id: 'position', label: 'Current Position' },
+  { id: 'current_salary', label: 'Current Salary / CTC' },
+  { id: 'expected_salary', label: 'Expected Salary / CTC' },
+] as const;
 
 const jobFormSchema = z.object({
   title: z.string().min(5, { message: 'Title must be at least 5 characters.' }),
@@ -169,6 +183,7 @@ export default function EditJobPage() {
       location_id: '',
       specialization_ids: [],
       external_apply_url: '',
+      required_profile_fields: ['resume'],
     },
   });
 
@@ -188,6 +203,7 @@ export default function EditJobPage() {
         location_id: jobData.location_id || '',
         specialization_ids: (jobData.specializations || []).map(s => s.id),
         external_apply_url: jobData.external_apply_url || '',
+        required_profile_fields: jobData.required_profile_fields || ['resume'], 
       });
     }
   }, [jobData, form.reset]);
@@ -229,6 +245,7 @@ export default function EditJobPage() {
       p_location_id: data.location_id,
       p_specialization_ids: data.specialization_ids,
       p_external_apply_url: data.external_apply_url || null,
+      p_required_profile_fields: data.required_profile_fields,
     };
     updateMutation.mutate(payload);
   };
@@ -454,6 +471,43 @@ export default function EditJobPage() {
                         If provided, applicants will be sent to this URL instead of applying on-site.
                       </FormDescription>
                       <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="required_profile_fields"
+                  render={() => (
+                    <FormItem className="rounded-md border p-4 bg-muted/10">
+                      <div className="mb-4">
+                        <FormLabel className="text-base font-semibold">Application Requirements</FormLabel>
+                        <FormDescription>Select information candidates MUST provide.</FormDescription>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {JOB_REQUIREMENTS.map((item) => (
+                          <FormField
+                            key={item.id}
+                            control={form.control}
+                            name="required_profile_fields"
+                            render={({ field }) => (
+                              <FormItem key={item.id} className="flex flex-row items-start space-x-3 space-y-0">
+                                <FormControl>
+                                  <Checkbox
+                                    checked={field.value?.includes(item.id)}
+                                    onCheckedChange={(checked) => {
+                                      return checked
+                                        ? field.onChange([...(field.value || []), item.id])
+                                        : field.onChange(field.value?.filter((value) => value !== item.id))
+                                    }}
+                                  />
+                                </FormControl>
+                                <FormLabel className="font-normal cursor-pointer">{item.label}</FormLabel>
+                              </FormItem>
+                            )}
+                          />
+                        ))}
+                      </div>
                     </FormItem>
                   )}
                 />
