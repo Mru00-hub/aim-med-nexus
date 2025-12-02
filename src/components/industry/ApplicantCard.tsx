@@ -34,6 +34,8 @@ export const ApplicantCard: React.FC<ApplicantCardProps> = ({ applicant, applica
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const resumeLink = (applicant as any).applicant_resume_url || applicant.resume_url;
+  const isFile = resumeLink?.includes('supabase') || resumeLink?.match(/\.(pdf|doc|docx)$/i);
 
   const mutation = useMutation({
     mutationFn: ({ status }: { status: Enums<'application_status_enum'> }) => 
