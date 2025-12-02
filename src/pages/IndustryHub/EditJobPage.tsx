@@ -75,6 +75,7 @@ const jobFormSchema = z.object({
   location_id: z.string({ required_error: 'Location is required.' }),
   specialization_ids: z.array(z.string()).optional(),
   external_apply_url: z.string().url({ message: 'Please enter a valid URL.' }).optional().or(z.literal('')),
+  required_profile_fields: z.array(z.string()).optional(),
 });
 
 type JobFormData = z.infer<typeof jobFormSchema>;
