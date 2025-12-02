@@ -31,6 +31,7 @@ import {
   FormMessage,
   FormDescription,
 } from '@/components/ui/form';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Loader2, AlertCircle, Briefcase, ArrowLeft } from 'lucide-react';
 import { useForm, Controller } from 'react-hook-form';
@@ -38,6 +39,21 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { SearchableMultiSelect } from '@/components/ui/searchable-multi-select'; 
+
+const JOB_REQUIREMENTS = [
+  // Profile Data
+  { id: 'resume', label: 'Resume / CV' },
+  { id: 'bio', label: 'Bio / About Section' },
+  { id: 'work_experience', label: 'Work Experience History' },
+  { id: 'education_history', label: 'Education History' },
+  { id: 'skills', label: 'Skills List' },
+  { id: 'location', label: 'Location Details' },
+  { id: 'organization', label: 'Current Organization' },
+  { id: 'position', label: 'Current Position' },
+  // Application Data (Inputs)
+  { id: 'current_salary', label: 'Current Salary / CTC' },
+  { id: 'expected_salary', label: 'Expected Salary / CTC' },
+] as const;
 
 // 1. Define the validation schema with Zod
 const jobFormSchema = z.object({
@@ -49,6 +65,7 @@ const jobFormSchema = z.object({
   location_id: z.string({ required_error: 'Location is required.' }),
   specialization_ids: z.array(z.string()).optional(),
   external_apply_url: z.string().url({ message: 'Please enter a valid URL.' }).optional().or(z.literal('')),
+  required_profile_fields: z.array(z.string()).optional(),
 });
 
 type JobFormData = z.infer<typeof jobFormSchema>;
@@ -438,6 +455,43 @@ export default function PostJobPage() {
                         If provided, applicants will be sent to this URL instead of applying on-site.
                       </FormDescription>
                       <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="required_profile_fields"
+                  render={() => (
+                    <FormItem className="rounded-md border p-4 bg-muted/10">
+                      <div className="mb-4">
+                        <FormLabel className="text-base font-semibold">Application Requirements</FormLabel>
+                        <FormDescription>Select information candidates MUST provide to apply.</FormDescription>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {JOB_REQUIREMENTS.map((item) => (
+                          <FormField
+                            key={item.id}
+                            control={form.control}
+                            name="required_profile_fields"
+                            render={({ field }) => (
+                              <FormItem key={item.id} className="flex flex-row items-start space-x-3 space-y-0">
+                                <FormControl>
+                                  <Checkbox
+                                    checked={field.value?.includes(item.id)}
+                                    onCheckedChange={(checked) => {
+                                      return checked
+                                        ? field.onChange([...(field.value || []), item.id])
+                                        : field.onChange(field.value?.filter((value) => value !== item.id))
+                                    }}
+                                  />
+                                </FormControl>
+                                <FormLabel className="font-normal cursor-pointer">{item.label}</FormLabel>
+                              </FormItem>
+                            )}
+                          />
+                        ))}
+                      </div>
                     </FormItem>
                   )}
                 />
