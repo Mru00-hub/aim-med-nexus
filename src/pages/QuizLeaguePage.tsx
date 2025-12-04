@@ -104,8 +104,8 @@ export const QuizLeaguePage = () => {
                 <div className="relative pb-[56.25%] h-0">
                   <iframe 
                     className="absolute top-0 left-0 w-full h-full"
-                    src="https://www.youtube.com/embed/YOUR_VIDEO_ID_HERE" 
-                    title="Quiz Teaser"
+                    src="https://www.youtube.com/embed/3Qgi-ufwHUc" 
+                    title="Video Details"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
                     allowFullScreen
                   ></iframe>
