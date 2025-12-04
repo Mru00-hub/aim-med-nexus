@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom';
 
 export const QuizLeaguePage = () => {
   const navigate = useNavigate();
+  const pdfUrl = "https://kkghalgyuxgzktcaxzht.supabase.co/storage/v1/object/public/public-assets/DOC-20251204-WA0017..pdf";
 
   return (
     <div className="min-h-screen bg-background">
@@ -121,18 +122,17 @@ export const QuizLeaguePage = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent className="flex-1 p-0 relative bg-slate-100">
-                {/* Replace 'your-brochure.pdf' with your actual file path. 
-                   If the browser doesn't support PDF embedding, the fallback link appears.
-                */}
                 <object 
-                  data="/assets/quiz-brochure.pdf" 
+                  data={pdfUrl}
                   type="application/pdf" 
                   className="w-full h-full"
                 >
                   <div className="flex flex-col items-center justify-center h-full space-y-4 p-6 text-center">
-                    <p>Your browser does not support PDF previews.</p>
-                    <Button variant="outline">
-                      <a href="/assets/quiz-brochure.pdf" download>Download Brochure</a>
+                    <p className="text-muted-foreground">Your browser does not support PDF previews.</p>
+                    <Button variant="outline" asChild>
+                      <a href={pdfUrl} target="_blank" rel="noopener noreferrer">
+                        Download Brochure
+                      </a>
                     </Button>
                   </div>
                 </object>
