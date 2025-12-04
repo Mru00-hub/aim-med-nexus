@@ -18,6 +18,7 @@ import { SpeedInsights } from "@vercel/speed-insights/react"
 import { Analytics } from "@vercel/analytics/react"
 import './App.css';
 import { pdfjs } from 'react-pdf';
+import { QuizLeaguePage } from './pages/QuizLeaguePage'; 
 pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
 console.log('workerSrc (global setup):', pdfjs.GlobalWorkerOptions.workerSrc);
 
@@ -129,6 +130,7 @@ const AppContent = () => {
 
             {/* All your normal app routes go here */}
             <Route path="/" element={<Index />} />
+            <Route path="/quiz-league" element={<QuizLeaguePage />} />
             <Route path="/please-verify" element={<PleaseVerify />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/partnerships" element={<Partnerships />} />
